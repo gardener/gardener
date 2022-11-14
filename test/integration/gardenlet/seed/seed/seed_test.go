@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -81,6 +84,12 @@ var _ = Describe("Seed controller tests", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 			}).Should(BeNotFoundError())
+
+			By("Cleanup all labels/annotations from test namespace")
+			patch := client.MergeFrom(testNamespace)
+			testNamespace.Annotations = nil
+			testNamespace.Labels = nil
+			Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
 		})
 	})
 
@@ -189,7 +198,7 @@ var _ = Describe("Seed controller tests", func() {
 					})
 				})
 
-				It("should properly maintain the Bootstrapped condition", func() {
+				test := func(seedIsGarden bool) {
 					By("Wait for Seed to have finalizer")
 					Eventually(func(g Gomega) []string {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
@@ -238,29 +247,63 @@ var _ = Describe("Seed controller tests", func() {
 						g.Expect(secret.Data).To(HaveKey("auth"))
 					}).Should(Succeed())
 
-					// The seed controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.
-					By("Patch gardener-resource-manager deployment to report healthiness")
-					Eventually(func(g Gomega) {
-						deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
-						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+					if !seedIsGarden {
+						// The seed controller waits for the gardener-resource-manager Deployment to be healthy, so
+						// let's fake this here.
+						By("Patch gardener-resource-manager deployment to report healthiness")
+						Eventually(func(g Gomega) {
+							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
+							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
-						patch := client.MergeFrom(deployment.DeepCopy())
-						deployment.Status.ObservedGeneration = deployment.Generation
-						deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
-						g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
-					}).Should(Succeed())
+							patch := client.MergeFrom(deployment.DeepCopy())
+							deployment.Status.ObservedGeneration = deployment.Generation
+							deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+						}).Should(Succeed())
 
-					// The gardener-resource-manager is not really running in this test scenario, hence there is nothing
-					// to serve the webhook endpoint. However, the envtest kube-apiserver would try to reach it, so
-					// let's better delete it here for the sake of this test.
-					By("Delete gardener-resource-manager webhook")
-					Eventually(func(g Gomega) {
-						mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
-						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
-						g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
-					}).Should(Succeed())
+						// The gardener-resource-manager is not really running in this test scenario, hence there is nothing
+						// to serve the webhook endpoint. However, the envtest kube-apiserver would try to reach it, so
+						// let's better delete it here for the sake of this test.
+						By("Delete gardener-resource-manager webhook")
+						Eventually(func(g Gomega) {
+							mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
+							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+							g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
+						}).Should(Succeed())
+					} else {
+						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
+						// ManagedResources. However, it is not really running, so we have to fake its behaviour here.
+						By("Create CustomResourceDefinition for ManagedResources")
+						var (
+							applier = kubernetes.NewApplier(testClient, testClient.RESTMapper())
+							obj     = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+						)
+
+						Expect(applier.ApplyManifest(ctx, obj, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						DeferCleanup(func() {
+							Expect(applier.DeleteManifest(ctx, obj)).To(Succeed())
+						})
+					}
 
 					By("Verify that the seed system components have been deployed")
+					expectedManagedResources := []gomegatypes.GomegaMatcher{
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("cluster-autoscaler")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("cluster-identity")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-endpoint")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-probe")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-seed-admission-controller")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("global-network-policies")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("system")})}),
+					}
+
+					if !seedIsGarden {
+						expectedManagedResources = append(expectedManagedResources,
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vpa")})}),
+						)
+					}
+
 					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
@@ -269,18 +312,7 @@ var _ = Describe("Seed controller tests", func() {
 						// a lot of CPU-intensive stuff is happening between GRM deployment and this assertion, so to
 						// prevent flakes we have to increase the timeout here manually
 						WithTimeout(10 * time.Second).
-						Should(ConsistOf(
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("cluster-autoscaler")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("cluster-identity")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-endpoint")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-probe")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-seed-admission-controller")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("global-network-policies")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("system")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vpa")})}),
-						))
+						Should(ConsistOf(expectedManagedResources))
 
 					By("Wait for Bootstrapped condition to be set to True")
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
@@ -301,16 +333,40 @@ var _ = Describe("Seed controller tests", func() {
 						return managedResourceList.Items
 					}).Should(BeEmpty())
 
-					By("Verify that gardener-resource-manager has been deleted")
-					Eventually(func(g Gomega) error {
-						deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
-						return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-					}).Should(BeNotFoundError())
+					if !seedIsGarden {
+						By("Verify that gardener-resource-manager has been deleted")
+						Eventually(func(g Gomega) error {
+							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
+							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
+						}).Should(BeNotFoundError())
+					}
 
 					By("Ensure Seed is gone")
 					Eventually(func() error {
 						return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 					}).Should(BeNotFoundError())
+				}
+
+				It("should properly maintain the Bootstrapped condition and deploy all seed system components", func() {
+					test(false)
+				})
+
+				Context("when seed cluster is garden cluster at the same time", func() {
+					BeforeEach(func() {
+						By("Create Garden")
+						garden := &operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{GenerateName: "garden-"}}
+						Expect(testClient.Create(ctx, garden)).To(Succeed())
+						log.Info("Created Garden for test", "garden", garden.Name)
+
+						DeferCleanup(func() {
+							By("Delete Garden")
+							Expect(client.IgnoreNotFound(testClient.Delete(ctx, garden))).To(Succeed())
+						})
+					})
+
+					It("should not manage components managed by gardener-operator", func() {
+						test(true)
+					})
 				})
 			})
 		})
