@@ -19,30 +19,34 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/test/e2e"
-	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-zone"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-upgrade-zone")
-	f.Shoot.Spec.ControlPlane = nil
+	f.Shoot = e2e.DefaultShoot("e2e-migrate")
+	// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
+	f.Shoot.Spec.SeedName = pointer.String("local")
 
-	It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", func() {
+	It("Create, Migrate and Delete", func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
-
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		By("Upgrade Shoot (non-HA to HA with failure tolerance type 'zone')")
+		By("Migrate Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
-		highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeZone)
+		t, err := newDefaultShootMigrationTest(ctx, f.Shoot, f.GardenerFramework)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(t.MigrateShoot(ctx)).To(Succeed())
+		Expect(t.VerifyMigration(ctx)).To(Succeed())
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
@@ -50,3 +54,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
+
+func newDefaultShootMigrationTest(ctx context.Context, shoot *v1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
+	t, err := NewShootMigrationTest(ctx, gardenerFramework, &ShootMigrationConfig{
+		ShootName:               shoot.Name,
+		ShootNamespace:          shoot.Namespace,
+		TargetSeedName:          "local2",
+		SkipShootClientCreation: true,
+		SkipNodeCheck:           true,
+		SkipMachinesCheck:       true,
+		SkipProtectedToleration: true,
+	})
+	return t, err
+}

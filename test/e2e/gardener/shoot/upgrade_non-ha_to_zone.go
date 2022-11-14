@@ -19,19 +19,19 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/test/e2e"
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-node"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-zone"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-upgrade-node")
+	f.Shoot = e2e.DefaultShoot("e2e-upgrade-zone")
 	f.Shoot.Spec.ControlPlane = nil
 
-	It("Create, Upgrade (non-HA to HA with failure tolerance type 'node') and Delete Shoot", func() {
+	It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
@@ -39,10 +39,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		By("Upgrade Shoot (non-HA to HA with failure tolerance type 'node')")
+		By("Upgrade Shoot (non-HA to HA with failure tolerance type 'zone')")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
-		highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeNode)
+		highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeZone)
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)

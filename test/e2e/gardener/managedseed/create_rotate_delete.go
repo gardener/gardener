@@ -28,7 +28,8 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/test/e2e"
+	. "github.com/gardener/gardener/pkg/utils/test"
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
 
@@ -81,7 +82,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		ceventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(g Gomega) error {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
 			if err := health.CheckManagedSeed(managedSeed); err != nil {
 				return fmt.Errorf("ManagedSeed is not ready yet: %w", err)
@@ -94,7 +95,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		defer cancel()
 
 		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: managedSeed.Name}}
-		ceventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(g Gomega) error {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 			if err := health.CheckSeed(seed, seed.Status.Gardener); err != nil {
 				return fmt.Errorf("seed is not ready yet: %w", err)
@@ -147,7 +148,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 			}).Should(Succeed())
 
 			By("Wait until no gardenlet pods exist anymore")
-			ceventually(ctx, func(g Gomega) []corev1.Pod {
+			CEventually(ctx, func(g Gomega) []corev1.Pod {
 				podList := &corev1.PodList{}
 				g.Expect(shootClient.Client().List(ctx, podList, client.InNamespace("garden"), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})).To(Succeed())
 				return podList.Items
@@ -192,7 +193,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		ceventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(g Gomega) error {
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
@@ -212,7 +213,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		ceventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(g Gomega) error {
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
@@ -234,14 +235,6 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
-
-func ceventually(ctx context.Context, actual interface{}) AsyncAssertion {
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return Eventually(actual)
-	}
-	return Eventually(actual).WithTimeout(time.Until(deadline))
-}
 
 const (
 	gardenletKubeconfigSecretName      = "gardenlet-kubeconfig"
@@ -379,7 +372,7 @@ func (v *gardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 
 	if expectPodRestart {
 		By("Verify that new gardenlet pod has taken over responsibility for seed")
-		ceventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(g Gomega) error {
 			if err := v.gardenReader.Get(ctx, client.ObjectKeyFromObject(v.seed), v.seed); err != nil {
 				return err
 			}
@@ -393,7 +386,7 @@ func (v *gardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 	}
 
 	By("Verify that gardenlet's kubeconfig secret has actually been renewed")
-	ceventually(ctx, func(g Gomega) error {
+	CEventually(ctx, func(g Gomega) error {
 		secret := &corev1.Secret{}
 		if err := v.seedReader.Get(ctx, client.ObjectKey{Name: gardenletKubeconfigSecretName, Namespace: gardenletKubeconfigSecretNamespace}, secret); err != nil {
 			return err

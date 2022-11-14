@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/test/e2e"
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

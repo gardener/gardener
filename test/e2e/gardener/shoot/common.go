@@ -12,31 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e_test
+package shoot
 
 import (
-	"flag"
-	"os"
-	"testing"
+	"context"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 
-	// imported test specs
-	_ "github.com/gardener/gardener/test/e2e/managedseed"
-	_ "github.com/gardener/gardener/test/e2e/project"
-	_ "github.com/gardener/gardener/test/e2e/shoot"
+	. "github.com/onsi/ginkgo/v2"
 )
 
-func TestMain(m *testing.M) {
-	framework.RegisterGardenerFrameworkFlags()
-	flag.Parse()
-	os.Exit(m.Run())
-}
+var (
+	parentCtx context.Context
+)
 
-func TestE2E(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "E2E Test Suite")
+var _ = BeforeEach(func() {
+	parentCtx = context.Background()
+})
+
+func defaultShootCreationFramework() *framework.ShootCreationFramework {
+	return framework.NewShootCreationFramework(&framework.ShootCreationConfig{
+		GardenerConfig: e2e.DefaultGardenConfig("garden-local"),
+	})
 }

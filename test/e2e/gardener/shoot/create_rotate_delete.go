@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/test/e2e"
-	"github.com/gardener/gardener/test/e2e/shoot/internal/rotation"
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {

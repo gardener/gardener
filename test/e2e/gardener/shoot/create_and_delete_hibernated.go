@@ -18,32 +18,27 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/test/e2e"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-wake-up")
+	f.Shoot = e2e.DefaultShoot("e2e-hibernated")
+	f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+		Enabled: pointer.Bool(true),
+	}
 
-	It("Create, Hibernate, Wake up and Delete Shoot", func() {
+	It("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
-
-		By("Hibernate Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
-		Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
-
-		By("Wake up Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
