@@ -68,7 +68,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		keepObjects          = false
 	)
 
-	if err := managedresources.Create(
+	return managedresources.Create(
 		ctx,
 		a.client,
 		namespace,
@@ -79,14 +79,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		shootResources,
 		&keepObjects,
 		injectedLabels,
-		nil); err != nil {
-		return err
-	}
-
-	twoMinutes := 2 * time.Minute
-	timeoutShootCtx, cancelShootCtx := context.WithTimeout(ctx, twoMinutes)
-	defer cancelShootCtx()
-	return managedresources.WaitUntilHealthy(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
+		nil)
 }
 
 // Delete the extension resource.
