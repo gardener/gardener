@@ -60,8 +60,10 @@ var _ = Describe("BackupEntry controller tests", func() {
 			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			operationType := extensionBackupEntry.Annotations[v1beta1constants.GardenerOperation]
 			patch := client.MergeFrom(extensionBackupEntry.DeepCopy())
-			delete(extensionBackupEntry.Annotations, v1beta1constants.GardenerOperation)
-			ExpectWithOffset(1, testClient.Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
+			if operationType == v1beta1constants.GardenerOperationReconcile {
+				delete(extensionBackupEntry.Annotations, v1beta1constants.GardenerOperation)
+				ExpectWithOffset(1, testClient.Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
+			}
 
 			patch = client.MergeFrom(extensionBackupEntry.DeepCopy())
 			lastOperationState := gardencorev1beta1.LastOperationStateSucceeded
@@ -87,6 +89,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 				}
 			}
 			ExpectWithOffset(1, testClient.Status().Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
+
+			if operationType != v1beta1constants.GardenerOperationReconcile {
+				delete(extensionBackupEntry.Annotations, v1beta1constants.GardenerOperation)
+				ExpectWithOffset(1, testClient.Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
+			}
 		}
 	)
 
