@@ -281,6 +281,14 @@ If there are no extension resources anymore, its status will be `False`.
 
 This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to deployed to which seed cluster, see [this document](controller-manager.md#controllerregistration-controller) for more details.
 
+### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
+
+The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to Kubernetes API server. 
+
+The controller resolves the IP address of Kubernetes service in `default` namespace and creates egress `NetworkPolicy`s for it.
+
+For more details about `NetworkPolicy`s in Gardener please see [this document](network_policies.md).
+
 ### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
 
 The `Seed` controller in the `gardenlet` reconciles `Seed` objects with the help of the following reconcilers.

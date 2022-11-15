@@ -27,7 +27,6 @@ import (
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
-	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"k8s.io/utils/clock"
@@ -76,11 +75,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
 	}
 
-	networkPolicyController, err := networkpolicycontroller.NewController(ctx, log, f.SeedCluster, f.Config.SeedConfig.Name)
-	if err != nil {
-		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
-	}
-
 	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, f.SeedClientSet, f.ShootClientMap, f.Config, f.Identity, f.GardenClusterIdentity, imageVector)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
@@ -92,7 +86,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go backupEntryController.Run(controllerCtx, *f.Config.Controllers.BackupEntry.ConcurrentSyncs, *f.Config.Controllers.BackupEntryMigration.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
-	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs, *f.Config.Controllers.ShootMigration.ConcurrentSyncs)
 
 	log.Info("gardenlet initialized")

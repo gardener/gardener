@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -323,6 +324,67 @@ var _ = Describe("helper", func() {
 
 			err := EnsureNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
 			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Describe("#PolicyChanged", func() {
+		var (
+			defaultEgressRules   []networkingv1.NetworkPolicyEgressRule
+			defaultNetworkPolicy networkingv1.NetworkPolicy
+		)
+
+		BeforeEach(func() {
+			defaultEgressRules = []networkingv1.NetworkPolicyEgressRule{
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: (*corev1.Protocol)(pointer.String("TCP")),
+							Port: &intstr.IntOrString{
+								Type:   intstr.Int,
+								IntVal: 12345,
+							},
+						},
+					},
+					To: []networkingv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+						},
+					},
+				},
+			}
+			defaultNetworkPolicy = networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "bar",
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					Egress: defaultEgressRules,
+					PodSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"networking.gardener.cloud/to-seed-apiserver": "allowed"},
+					},
+					PolicyTypes: []networkingv1.PolicyType{"Egress"},
+				},
+			}
+		})
+
+		It("should return false if nothing changed", func() {
+			Expect(PolicyChanged(defaultNetworkPolicy.Spec, defaultEgressRules)).To(BeFalse())
+		})
+
+		It("should return true if EgressRules changed", func() {
+			defaultEgressRules = append(defaultEgressRules, networkingv1.NetworkPolicyEgressRule{
+				To: []networkingv1.NetworkPolicyPeer{
+					{
+						NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"bar": "foo"}},
+					},
+				},
+			})
+			Expect(PolicyChanged(defaultNetworkPolicy.Spec, defaultEgressRules)).To(BeTrue())
+		})
+
+		It("should return true if NetworkPolicy changed", func() {
+			defaultNetworkPolicy.Spec.PodSelector.MatchLabels["foo"] = "bar"
+			Expect(PolicyChanged(defaultNetworkPolicy.Spec, defaultEgressRules)).To(BeTrue())
 		})
 	})
 })

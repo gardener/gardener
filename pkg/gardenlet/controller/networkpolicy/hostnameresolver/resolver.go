@@ -51,7 +51,7 @@ type lookup interface {
 // resolution updates.
 type Provider interface {
 	HasSynced() bool
-	Start(ctx context.Context)
+	Start(ctx context.Context) error
 	WithCallback(onUpdate func())
 	HostResolver
 }
@@ -84,7 +84,7 @@ func (l *resolver) HasSynced() bool {
 // Start waits for stopCtx to be done and resolves the upstream
 // hostname every resync period.
 // Updates are send if returned hosts are changed.
-func (l *resolver) Start(stopCtx context.Context) {
+func (l *resolver) Start(stopCtx context.Context) error {
 	updateFunc := func() {
 		addresses, err := l.lookup.LookupHost(stopCtx, l.upstreamFQDN)
 		if err != nil {
@@ -120,7 +120,7 @@ func (l *resolver) Start(stopCtx context.Context) {
 			l.refreshTicker.Stop()
 			l.log.Info("Stopping periodic hostname resolution")
 
-			return
+			return nil
 		}
 	}
 }
@@ -210,7 +210,9 @@ func NewNoOpProvider() Provider { return &noOpResover{} }
 func (*noOpResover) HasSynced() bool { return true }
 
 // Start does nothing.
-func (*noOpResover) Start(_ context.Context) {}
+func (*noOpResover) Start(_ context.Context) error {
+	return nil
+}
 
 // Subset returns an empty slice.
 func (*noOpResover) Subset() []corev1.EndpointSubset { return []corev1.EndpointSubset{} }

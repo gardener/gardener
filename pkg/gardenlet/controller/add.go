@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -71,6 +72,13 @@ func AddToManager(
 
 	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenNamespace, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
+	}
+
+	if err := (&networkpolicy.Reconciler{
+		Config:          *cfg.Controllers.SeedAPIServerNetworkPolicy,
+		GardenNamespace: gardenNamespace.Name,
+	}).AddToManager(mgr, seedCluster); err != nil {
+		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
 	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
