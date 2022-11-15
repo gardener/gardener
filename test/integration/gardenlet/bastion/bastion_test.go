@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,6 +42,7 @@ var _ = Describe("Bastion controller tests", func() {
 		shoot             *gardencorev1beta1.Shoot
 		operationsBastion *operationsv1alpha1.Bastion
 		extensionsBastion *extensionsv1alpha1.Bastion
+		cluster           *extensionsv1alpha1.Cluster
 		seedNamespace     *corev1.Namespace
 
 		reconcileExtensionsBastion = func() {
@@ -169,26 +171,66 @@ var _ = Describe("Bastion controller tests", func() {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
 		}).Should(Succeed())
 
-		By("Patch the Shoot status with TechincalID")
+		By("Patch the Shoot status with technical ID")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shootTechincalId := shootpkg.ComputeTechnicalID(project.Name, shoot)
-		shoot.Status.TechnicalID = shootTechincalId
+		technicalID := shootpkg.ComputeTechnicalID(project.Name, shoot)
+		shoot.Status.TechnicalID = technicalID
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 		By("creating seed namespace for test")
 		seedNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: shootTechincalId,
+				Name: technicalID,
 			},
 		}
 
 		Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
-		log.Info("Created seed Namespace for test", "namespaceName", seedNamespace.Name)
+		log.Info("Created shoot namespace in seed for test", "namespaceName", seedNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting seed namespace")
+			By("deleting shoot namespace in seed")
 			Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
+
+		By("create Cluster extension resource")
+		cluster = &extensionsv1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: technicalID,
+			},
+			Spec: extensionsv1alpha1.ClusterSpec{
+				Shoot: runtime.RawExtension{
+					Object: &gardencorev1beta1.Shoot{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "core.gardener.cloud/v1beta1",
+							Kind:       "Shoot",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      shoot.Name,
+							Namespace: shoot.Namespace,
+						},
+					},
+				},
+				Seed: runtime.RawExtension{
+					Object: seed,
+				},
+				CloudProfile: runtime.RawExtension{
+					Object: &gardencorev1alpha1.CloudProfile{},
+				},
+			},
+		}
+
+		Expect(testClient.Create(ctx, cluster)).To(Succeed())
+		log.Info("Created Cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
+
+		DeferCleanup(func() {
+			By("Delete Cluster")
+			Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		By("Wait until manager has observed cluster creation")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)
+		}).Should(Succeed())
 
 		By("Create Bastion")
 		operationsBastion.Spec.ShootRef = corev1.LocalObjectReference{Name: shoot.Name}
@@ -216,7 +258,7 @@ var _ = Describe("Bastion controller tests", func() {
 		By("ensure finalizer is added to Bastion")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
-			g.Expect(operationsBastion.Finalizers).To(ContainElement("gardener"))
+			g.Expect(operationsBastion.Finalizers).To(ConsistOf("gardener"))
 		}).Should(Succeed())
 	})
 
@@ -224,7 +266,10 @@ var _ = Describe("Bastion controller tests", func() {
 		It("should create or patch the Bastion in the Seed cluster", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)).To(Succeed())
-				g.Expect(extensionsBastion.GetAnnotations()).To(And(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile), HaveKey(v1beta1constants.GardenerTimestamp)))
+				g.Expect(extensionsBastion.GetAnnotations()).To(And(
+					HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile),
+					HaveKey(v1beta1constants.GardenerTimestamp),
+				))
 				g.Expect(extensionsBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
 				g.Expect(extensionsBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
 			}).Should(Succeed())

@@ -16,14 +16,12 @@ package bastion
 
 import (
 	"context"
-	"strings"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/extensions"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +37,7 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "bastion-controller"
+const ControllerName = "bastion"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
@@ -83,26 +81,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 
 // MapExtensionsBastionToOperationsBastion  is a mapper.MapFunc for mapping extensions Bastion in the seed cluster to operations Bastion in the project namespace.
 func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	extensionsBastion, ok := obj.(*extensionsv1alpha1.Bastion)
-	if !ok {
-		return nil
-	}
-
-	projectNamespaceName, err := GetProjectNameFromTechincalId(ctx, reader, extensionsBastion.Namespace)
+	shoot, err := extensions.GetShoot(ctx, r.SeedClient, obj.GetNamespace())
 	if err != nil {
 		return nil
 	}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: projectNamespaceName, Name: extensionsBastion.Name}}}
-}
-
-// GetProjectNameFromTechincalId returns Shoot resource name from its UID.
-func GetProjectNameFromTechincalId(ctx context.Context, reader client.Reader, shootTechnicalID string) (string, error) {
-	tokens := strings.Split(shootTechnicalID, "--")
-	projectName := tokens[len(tokens)-2]
-	project := &gardencorev1beta1.Project{}
-	if err := reader.Get(ctx, kutil.Key(projectName), project); err != nil {
-		return "", err
-	}
-	return *project.Spec.Namespace, nil
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
 }

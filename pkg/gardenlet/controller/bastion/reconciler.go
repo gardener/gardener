@@ -25,7 +25,6 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -166,8 +165,8 @@ func (r *Reconciler) reconcileBastion(
 	}
 
 	if lastObservedError != nil {
-		message := fmt.Sprintf("Error while waiting for %s to become ready", extensionKey(extensionsv1alpha1.BastionResource, extBastion.Namespace, extBastion.Name))
-		err := gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+		message := fmt.Sprintf("Error while waiting for %s %s/%s to become ready", extensionsv1alpha1.BastionResource, extBastion.Namespace, extBastion.Name)
+		err := v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 
 		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 			log.Error(patchErr, "Failed patching ready condition")
@@ -280,8 +279,4 @@ echo "gardener ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99-gardener-user
 `, bastion.Spec.SSHPublicKey)
 
 	return []byte(userData)
-}
-
-func extensionKey(kind, namespace, name string) string {
-	return fmt.Sprintf("%s %s/%s", kind, namespace, name)
 }

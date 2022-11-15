@@ -235,8 +235,7 @@ For example, if you set it to `[production]` then only the `BackupEntry`s for `S
 
 The `Bastion` controller reconciles those `operations.gardener.cloud/v1alpha1.Bastion` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 
-The controller creates an `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster with the same name as `operations.gardener.cloud/v1alpha1.Bastion` and waits until the responsible extension controller reconciled it (see [this](../extensions/bastion.md) for more details).
-The status is populated in the `.status.conditions` and `.status.ingress` fields.
+The controller creates an `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster in the shoot namespace with the same name as `operations.gardener.cloud/v1alpha1.Bastion`. Then it waits until the responsible extension controller has reconciled it (see [this](../extensions/bastion.md) for more details).The status is populated in the `.status.conditions` and `.status.ingress` fields.
 
 During the deletion of `operations.gardener.cloud/v1alpha1.Bastion` resources, the controller first sets the `Ready` condition to `False` and then deletes the `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster.
 Once this resource is gone, the finalizer of the `operations.gardener.cloud/v1alpha1.Bastion` resource is released, so it finally disappears from the system.
