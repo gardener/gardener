@@ -20,22 +20,7 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -50,6 +35,21 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // Class is a string type alias for etcd classes.
@@ -221,8 +221,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		peerNetworkPolicy   = e.emptyNetworkPolicy(NetworkPolicyNamePeer)
 		hvpa                = e.emptyHVPA()
 
-		replicas              = e.computeReplicas(existingEtcd)
-		schedulingConstraints druidv1alpha1.SchedulingConstraints
+		replicas = e.computeReplicas(existingEtcd)
 
 		protocolTCP             = corev1.ProtocolTCP
 		intStrPortEtcdClient    = intstr.FromInt(int(PortEtcdClient))
@@ -293,35 +292,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx); err != nil {
 		return err
-	}
-
-	// add pod anti-affinity rules for etcd if shoot has a HA control plane
-	if helper.IsFailureToleranceTypeZone(e.failureToleranceType) {
-		schedulingConstraints.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-					{
-						TopologyKey: corev1.LabelTopologyZone,
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: e.getRoleLabels(),
-						},
-					},
-				},
-			},
-		}
-	} else if helper.IsFailureToleranceTypeNode(e.failureToleranceType) {
-		schedulingConstraints.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-					{
-						TopologyKey: corev1.LabelHostname,
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: e.getRoleLabels(),
-						},
-					},
-				},
-			},
-		}
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, clientNetworkPolicy, func() error {
@@ -453,7 +423,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		e.etcd.Spec.Replicas = replicas
-		e.etcd.Spec.SchedulingConstraints = schedulingConstraints
 		e.etcd.Spec.PriorityClassName = pointer.String(v1beta1constants.PriorityClassNameShootControlPlane500)
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), e.getDeprecatedRoleLabels(), map[string]string{

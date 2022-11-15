@@ -404,45 +404,6 @@ var _ = Describe("Etcd", func() {
 						DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
 					},
 				}
-
-				switch *failureToleranceType {
-				case gardencorev1beta1.FailureToleranceTypeNode:
-					obj.Spec.SchedulingConstraints = druidv1alpha1.SchedulingConstraints{
-						Affinity: &corev1.Affinity{
-							PodAntiAffinity: &corev1.PodAntiAffinity{
-								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-									{
-										TopologyKey: corev1.LabelHostname,
-										LabelSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "controlplane",
-												"role":                testRole,
-											},
-										},
-									},
-								},
-							},
-						},
-					}
-				case gardencorev1beta1.FailureToleranceTypeZone:
-					obj.Spec.SchedulingConstraints = druidv1alpha1.SchedulingConstraints{
-						Affinity: &corev1.Affinity{
-							PodAntiAffinity: &corev1.PodAntiAffinity{
-								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-									{
-										TopologyKey: corev1.LabelTopologyZone,
-										LabelSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "controlplane",
-												"role":                testRole,
-											},
-										},
-									},
-								},
-							},
-						},
-					}
-				}
 			}
 
 			if pointer.StringDeref(peerServerSecretName, "") != "" {

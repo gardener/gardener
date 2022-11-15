@@ -19,7 +19,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	"github.com/Masterminds/semver"
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -39,15 +47,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
-
-	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // NewBuilder returns a new Builder.
@@ -276,6 +276,12 @@ func (b *Builder) Build(
 	}
 	operation.Seed = seed
 
+	seedVersion, err := semver.NewVersion(versionutils.Normalize(seedClientSet.Version()))
+	if err != nil {
+		return nil, err
+	}
+	operation.Seed.KubernetesVersion = seedVersion
+
 	shoot, err := b.shootFunc(ctx, gardenClient, garden, seed)
 	if err != nil {
 		return nil, err
@@ -351,7 +357,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 			kubeVersion        = o.Shoot.GetInfo().Spec.Kubernetes.Version
 		)
 
-		ok, err := version.CompareVersions(shootClientVersion, "=", kubeVersion)
+		ok, err := versionutils.CompareVersions(shootClientVersion, "=", kubeVersion)
 		if err != nil {
 			return err
 		}

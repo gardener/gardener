@@ -61,6 +61,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 			Enabled:             hvpaEnabled,
 			ScaleDownUpdateMode: &scaleDownUpdateMode,
 		},
+		b.Seed.KubernetesVersion,
 	), nil
 }
 

@@ -76,15 +76,17 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 		}
 
 		// Check that one replica of the controller exists.
-		if len(podList.Items) != 1 {
-			k.log.Info("Waiting for kube-controller-manager to have exactly one replica")
+		if len(podList.Items) < 1 {
+			k.log.Info("Waiting for kube-controller-manager to have at least one replica")
 			return retry.MinorError(fmt.Errorf("controller %s is not active", v1beta1constants.DeploymentNameKubeControllerManager))
 		}
 
-		// Check that the existing replica is not getting deleted.
-		if podList.Items[0].DeletionTimestamp != nil {
-			k.log.Info("Waiting for a new replica of kube-controller-manager")
-			return retry.MinorError(fmt.Errorf("controller %s is not active", v1beta1constants.DeploymentNameKubeControllerManager))
+		// Check that the existing replicas are not getting deleted.
+		for _, pod := range podList.Items {
+			if pod.DeletionTimestamp != nil {
+				k.log.Info("Waiting for a new replica of kube-controller-manager")
+				return retry.MinorError(fmt.Errorf("controller %s is not active", v1beta1constants.DeploymentNameKubeControllerManager))
+			}
 		}
 
 		// Check if the controller is active by reading its leader election record.

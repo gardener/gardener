@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -190,7 +191,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
-		deployment.Labels = GetLabels()
+		deployment.Labels = utils.MergeStringMaps(GetLabels(), map[string]string{
+			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
 			RevisionHistoryLimit: pointer.Int32(2),
