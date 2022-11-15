@@ -55,7 +55,7 @@ var _ = Describe("Add", func() {
 
 	BeforeEach(func() {
 		testScheme := runtime.NewScheme()
-		extensionsv1alpha1.AddToScheme(testScheme)
+		Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 
 		cluster = &extensionsv1alpha1.Cluster{
