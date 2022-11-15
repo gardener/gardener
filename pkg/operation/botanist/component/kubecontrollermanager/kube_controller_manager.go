@@ -290,6 +290,17 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
+						Env: []corev1.EnvVar{
+							{
+								Name: "POD_IP",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1",
+										FieldPath:  "status.podIP",
+									},
+								},
+							},
+						},
 						Resources: resourceRequirements,
 						VolumeMounts: []corev1.VolumeMount{
 							{
@@ -514,6 +525,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--authentication-kubeconfig="+gutil.PathGenericKubeconfig,
 		"--authorization-kubeconfig="+gutil.PathGenericKubeconfig,
 		"--kubeconfig="+gutil.PathGenericKubeconfig,
+		"--bind-address=$(POD_IP)",
 	)
 
 	if k.config.NodeCIDRMaskSize != nil {

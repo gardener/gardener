@@ -477,6 +477,17 @@ var _ = Describe("KubeControllerManager", func() {
 													Protocol:      corev1.ProtocolTCP,
 												},
 											},
+											Env: []corev1.EnvVar{
+												{
+													Name: "POD_IP",
+													ValueFrom: &corev1.EnvVarSource{
+														FieldRef: &corev1.ObjectFieldSelector{
+															APIVersion: "v1",
+															FieldPath:  "status.podIP",
+														},
+													},
+												},
+											},
 											Resources: corev1.ResourceRequirements{
 												Requests: corev1.ResourceList{
 													corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -857,6 +868,7 @@ func commandForKubernetesVersion(
 		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		"--bind-address=$(POD_IP)",
 	)
 
 	if nodeCIDRMaskSize != nil {
