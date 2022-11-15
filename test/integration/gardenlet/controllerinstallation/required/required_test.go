@@ -58,6 +58,14 @@ var _ = Describe("ControllerInstallation Required controller tests", func() {
 			Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
 		})
 
+		By("Wait until manager has observed ControllerRegistration")
+		// Use the manager's cache to ensure it has observed the ControllerRegistration. Otherwise, the controller might
+		// simply not enqueue the ControllerInstallation when extension resources get created later.
+		// See https://github.com/gardener/gardener/issues/6927
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+		}).Should(Succeed())
+
 		By("Create ControllerInstallation")
 		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -84,6 +92,14 @@ var _ = Describe("ControllerInstallation Required controller tests", func() {
 			Expect(testClient.Delete(ctx, controllerInstallation)).To(Succeed())
 		})
 
+		By("Wait until manager has observed ControllerInstallation")
+		// Use the manager's cache to ensure it has observed the ControllerInstallation. Otherwise, the controller might
+		// simply not enqueue the ControllerInstallation when extension resources get created later.
+		// See https://github.com/gardener/gardener/issues/6927
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)
+		}).Should(Succeed())
+
 		infrastructure = &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "infra1-",
@@ -109,6 +125,7 @@ var _ = Describe("ControllerInstallation Required controller tests", func() {
 
 	Context("when extension resources exist", func() {
 		It("should set the Required condition to True", func() {
+			By("Create Infrastructure")
 			Expect(testClient.Create(ctx, infrastructure)).To(Succeed())
 			log.Info("Created Infrastructure for test", "infrastructure", client.ObjectKeyFromObject(infrastructure))
 
@@ -124,6 +141,7 @@ var _ = Describe("ControllerInstallation Required controller tests", func() {
 		})
 
 		It("should set the Required condition to False when all extension resources get deleted", func() {
+			By("Create Infrastructure")
 			Expect(testClient.Create(ctx, infrastructure)).To(Succeed())
 			log.Info("Created Infrastructure for test", "infrastructure", client.ObjectKeyFromObject(infrastructure))
 
