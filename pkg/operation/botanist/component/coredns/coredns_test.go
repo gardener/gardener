@@ -253,12 +253,14 @@ metadata:
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
+    high-availability-config.resources.gardener.cloud/type: server
     k8s-app: kube-dns
     origin: gardener
   name: coredns
   namespace: kube-system
 spec:
-  revisionHistoryLimit: 1
+  replicas: 2
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       k8s-app: kube-dns
@@ -286,27 +288,6 @@ spec:
         k8s-app: kube-dns
         origin: gardener
     spec:
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: k8s-app
-                  operator: In
-                  values:
-                  - kube-dns
-              topologyKey: topology.kubernetes.io/zone
-            weight: 100
-          - podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: k8s-app
-                  operator: In
-                  values:
-                  - kube-dns
-              topologyKey: kubernetes.io/hostname
-            weight: 95
       containers:
       - args:
         - -conf
@@ -387,25 +368,6 @@ spec:
       tolerations:
       - key: CriticalAddonsOnly
         operator: Exists
-      topologySpreadConstraints:
-      - labelSelector:
-          matchExpressions:
-          - key: k8s-app
-            operator: In
-            values:
-            - kube-dns
-        maxSkew: 2
-        topologyKey: topology.kubernetes.io/zone
-        whenUnsatisfiable: ScheduleAnyway
-      - labelSelector:
-          matchExpressions:
-          - key: k8s-app
-            operator: In
-            values:
-            - kube-dns
-        maxSkew: 2
-        topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: ScheduleAnyway
       volumes:
       - configMap:
           items:

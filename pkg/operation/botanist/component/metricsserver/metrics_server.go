@@ -22,6 +22,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -261,12 +263,14 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				Name:      deploymentName,
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
-					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
+					managedresources.LabelKeyOrigin:              managedresources.LabelValueGardener,
+					v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleSystemComponent,
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32(1),
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Strategy: appsv1.DeploymentStrategy{
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -370,7 +374,9 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			},
 		}
 
-		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+		intStrOne           = intstr.FromInt(1)
+		podDisruptionBudget client.Object
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	if version.ConstraintK8sGreaterEqual119.Check(m.values.KubernetesVersion) {
@@ -387,6 +393,32 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			Name:  "KUBERNETES_SERVICE_HOST",
 			Value: *m.values.KubeAPIServerHost,
 		})
+	}
+
+	if version.ConstraintK8sGreaterEqual121.Check(m.values.KubernetesVersion) {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "metrics-server",
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getLabels(),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "metrics-server",
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getLabels(),
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
 	}
 
 	if m.values.VPAEnabled {
@@ -439,6 +471,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 		service,
 		apiService,
 		deployment,
+		podDisruptionBudget,
 		vpa,
 	)
 }

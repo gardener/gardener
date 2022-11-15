@@ -11,11 +11,12 @@ metadata:
     gardener.cloud/role: monitoring
     component: blackbox-exporter
     origin: gardener
+    high-availability-config.resources.gardener.cloud/type: server
   annotations:
 {{ include "blackbox-exporter.deployment.annotations" . | indent 4 }}
 spec:
-  revisionHistoryLimit: 1
-  replicas: 2
+  replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       component: blackbox-exporter
