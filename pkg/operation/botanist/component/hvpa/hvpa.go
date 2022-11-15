@@ -81,6 +81,8 @@ type Values struct {
 	Image string
 	// KubernetesVersion is the version of the runtime cluster.
 	KubernetesVersion *semver.Version
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 }
 
 func (h *hvpa) Deploy(ctx context.Context) error {
@@ -194,7 +196,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 						Labels: utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem700,
+						PriorityClassName:  h.values.PriorityClassName,
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            containerName,

@@ -36,7 +36,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -52,9 +51,14 @@ var _ = Describe("HVPA", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace = "some-namespace"
-		image     = "some-image:some-tag"
-		values    = Values{Image: image, KubernetesVersion: semver.MustParse("1.25.0")}
+		namespace         = "some-namespace"
+		image             = "some-image:some-tag"
+		priorityClassName = "some-priority-class"
+		values            = Values{
+			Image:             image,
+			KubernetesVersion: semver.MustParse("1.25.0"),
+			PriorityClassName: priorityClassName,
+		}
 
 		c         client.Client
 		component component.DeployWaiter
@@ -204,7 +208,7 @@ var _ = Describe("HVPA", func() {
 						},
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem700,
+						PriorityClassName:  priorityClassName,
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            "hvpa-controller",

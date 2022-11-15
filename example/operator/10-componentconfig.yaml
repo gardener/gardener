@@ -26,6 +26,7 @@ debugging:
   enableContentionProfiling: false
 featureGates:
   DefaultSeccompProfile: true
+  HVPA: true
 controllers:
   garden:
     concurrentSyncs: 1

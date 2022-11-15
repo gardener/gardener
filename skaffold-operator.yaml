@@ -56,6 +56,7 @@ build:
         - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
         - pkg/operation/botanist/component/gardensystem
+        - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/kubeapiserver
         - pkg/operation/botanist/component/kubescheduler
         - pkg/operation/botanist/component/monitoring

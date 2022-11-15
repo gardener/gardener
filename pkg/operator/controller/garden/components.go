@@ -55,6 +55,17 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 	)
 }
 
+func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
+	return sharedcomponent.NewHVPA(
+		r.RuntimeClient,
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		r.ImageVector,
+		hvpaEnabled(),
+		v1beta1constants.PriorityClassNameGardenSystem200,
+	)
+}
+
 func (r *Reconciler) newSystem() component.DeployWaiter {
 	return gardensystem.New(r.RuntimeClient, r.GardenNamespace)
 }

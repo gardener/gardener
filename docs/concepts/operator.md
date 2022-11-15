@@ -14,7 +14,7 @@ Once deployed and ready, you can create a `Garden` resource.
 
 > ℹ️ Similar to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
 > By default, `gardener-operator` deploys the VPA components.
-> However, when there already is a VPA available, then set `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=false` in the `Garden` resource. 
+> However, when there already is a VPA available, then set `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=false` in the `Garden` resource.
 
 ## Using Garden Runtime Cluster As Seed Cluster
 
@@ -26,6 +26,7 @@ As of today, this applies to:
 
 - `gardener-resource-manager`
 - `vpa-{admission-controller,recommender,updater}`
+- `hvpa-controller` (when `HVPA` feature gate is enabled)
 
 Those components are so-called "seed system components".
 As they were already made available by `gardener-operator`, the `gardenlet` just skips them.
@@ -37,7 +38,7 @@ Otherwise, you might experience unexpected behaviour or issues with your seed or
 
 ## Local Development
 
-The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy the `gardener-operator`. 
+The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy the `gardener-operator`.
 
 ```shell
 make kind-operator-up
@@ -75,10 +76,11 @@ As of today, the `gardener-operator` only has one controller which is now descri
 
 The reconciler first generates a general CA certificate which is valid for ~`30d` and auto-rotated when 80% of its lifetime is reached.
 Afterwards, it brings up the so-called "garden system components".
-The [`gardener-resource-manager`](../resource-manager.md) is deployed first since its `ManagedResource` controller will be used to bring up the remainders. 
+The [`gardener-resource-manager`](../resource-manager.md) is deployed first since its `ManagedResource` controller will be used to bring up the remainders.
 
 Other system components are:
 - garden system resources ([`PriorityClass`es](../development/priority-classes.md) for the workload resources)
 - Vertical Pod Autoscaler (if enabled via `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=true` in the `Garden`)
+- HVPA controller (when `HVPA` feature gate is enabled)
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.

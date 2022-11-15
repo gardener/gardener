@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
@@ -321,37 +320,6 @@ func defaultDependencyWatchdogs(
 	}
 
 	return
-}
-
-func defaultHVPA(
-	c client.Client,
-	seedVersion *semver.Version,
-	imageVector imagevector.ImageVector,
-	enabled bool,
-	gardenNamespaceName string,
-) (
-	deployer component.DeployWaiter,
-	err error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameHvpaController)
-	if err != nil {
-		return nil, err
-	}
-
-	deployer = hvpa.New(
-		c,
-		gardenNamespaceName,
-		hvpa.Values{
-			Image:             image.String(),
-			KubernetesVersion: seedVersion,
-		},
-	)
-
-	if !enabled {
-		deployer = component.OpDestroy(deployer)
-	}
-
-	return deployer, nil
 }
 
 func defaultVPNAuthzServer(

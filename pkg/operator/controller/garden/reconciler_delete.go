@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -43,6 +44,14 @@ func (r *Reconciler) delete(
 	reconcile.Result,
 	error,
 ) {
+	hvpaController, err := r.newHVPA()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := component.OpDestroyAndWait(hvpaController).Destroy(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	log.Info("Destroying VPA components")
 	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
 	if err != nil {
@@ -52,7 +61,7 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Destroying system components")
+	log.Info("Destroying system resources")
 	if err := component.OpDestroyAndWait(r.newSystem()).Destroy(ctx); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -81,11 +90,18 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
+	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
+
 	if vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
 		log.Info("Destroying custom resource definition for VPA")
-		applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
-
 		if err := vpa.NewCRD(applier, nil).Destroy(ctx); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	if hvpaEnabled() {
+		log.Info("Destroying custom resource definition for HVPA")
+		if err := hvpa.NewCRD(applier).Destroy(ctx); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

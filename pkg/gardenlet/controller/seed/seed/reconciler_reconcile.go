@@ -871,10 +871,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	hvpa, err := defaultHVPA(seedClient, kubernetesVersion, r.ImageVector, hvpaEnabled, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -942,10 +938,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:   dwdProbe.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying HVPA controller",
-			Fn:   hvpa.Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
@@ -973,10 +965,28 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		_ = g.Add(flow.Task{
-			Name: "Deploying Kubernetes vertical pod autoscaler",
-			Fn:   vpa.Deploy,
-		})
+		hvpa, err := sharedcomponent.NewHVPA(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			hvpaEnabled,
+			v1beta1constants.PriorityClassNameSeedSystem700,
+		)
+		if err != nil {
+			return err
+		}
+
+		var (
+			_ = g.Add(flow.Task{
+				Name: "Deploying Kubernetes vertical pod autoscaler",
+				Fn:   vpa.Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying HVPA controller",
+				Fn:   hvpa.Deploy,
+			})
+		)
 	}
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {

@@ -33,6 +33,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -46,6 +48,7 @@ var _ = Describe("Seed controller tests", func() {
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+		DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -304,6 +307,7 @@ var _ = Describe("Seed controller tests", func() {
 					if !seedIsGarden {
 						expectedManagedResources = append(expectedManagedResources,
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vpa")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpa")})}),
 						)
 					}
 

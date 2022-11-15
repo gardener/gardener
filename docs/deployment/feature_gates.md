@@ -147,7 +147,7 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 
 | Feature                                    | Relevant Components                                              | Description |
 | ------------------------------------------ | ---------------------------------------------------------------- |  -----------|
-| HVPA                                       | `gardenlet`                                                      | Enables simultaneous horizontal and vertical scaling in Seed Clusters. |
+| HVPA                                       | `gardenlet`, `gardener-operator`                                 | Enables simultaneous horizontal and vertical scaling in garden or seed clusters. |
 | HVPAForShootedSeed                         | `gardenlet`                                                      | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters. |
 | ManagedIstio (deprecated)                  | `gardenlet`                                                      | Enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information. |
 | APIServerSNI (deprecated)                  | `gardenlet`                                                      | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details. |

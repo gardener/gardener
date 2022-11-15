@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -65,18 +66,30 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
+
 	// VPA is a prerequisite. If it's enabled then we deploy the CRD (and later also the related components). However,
 	// when it's disabled then we check whether it is indeed available (and fail, otherwise).
 	if vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
 		log.Info("Deploying custom resource definition for VPA")
-		applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
-
 		if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
 			return reconcile.Result{}, err
 		}
 	} else {
 		if _, err := r.RuntimeClient.RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("VPA is required for runtime cluster but CRD is not installed: %s", err)
+		}
+	}
+
+	if hvpaEnabled() {
+		log.Info("Deploying custom resource definition for HVPA")
+		if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		log.Info("Destroying custom resource definition for HVPA")
+		if err := hvpa.NewCRD(applier).Destroy(ctx); err != nil {
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -99,17 +112,26 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Reconciling system components")
+	log.Info("Reconciling system resources")
 	if err := r.newSystem().Deploy(ctx); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Reconciling VPA components")
-	vpa, err := r.newVerticalPodAutoscaler(garden, secretsManager)
+	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := vpa.Deploy(ctx); err != nil {
+	if err := verticalPodAutoscaler.Deploy(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	log.Info("Reconciling HVPA controller")
+	hvpaController, err := r.newHVPA()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := hvpaController.Deploy(ctx); err != nil {
 		return reconcile.Result{}, err
 	}
 
