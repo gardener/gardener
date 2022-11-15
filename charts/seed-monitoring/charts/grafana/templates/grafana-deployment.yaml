@@ -41,9 +41,11 @@ spec:
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
         - name: GF_AUTH_BASIC_ENABLED
-          value: "true"
-        - name: GF_AUTH_DISABLE_LOGIN_FORM
           value: "false"
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "true"
+        - name: GF_AUTH_DISABLE_SIGNOUT_MENU
+          value: "true"
         - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
           value: "UTC"
         - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
