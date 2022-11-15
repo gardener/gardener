@@ -537,7 +537,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		destroyInfrastructure = g.Add(flow.Task{
 			Name:         "Destroying shoot infrastructure",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Infrastructure.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted, waitUntilShootManagedResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot infrastructure has been destroyed",
