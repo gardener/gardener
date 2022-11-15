@@ -13,7 +13,7 @@ spec:
         architecture: <some-cpu-architecture>
 ```
 
-If no value is specified for the architecture field it defaults to `amd64`. For a valid shoot object, a machine should be present in the respective CloudProfile with the same CPU architecture as specified in Shoot yaml.
+If no value is specified for the architecture field, it defaults to `amd64`. For a valid shoot object, a machine should be present in the respective CloudProfile with the same CPU architecture as specified in the `Shoot` yaml.
 
 Currently, Gardener supports two most widely used CPU architectures:-
 
