@@ -85,16 +85,11 @@ var _ = Describe("resolver", func() {
 	})
 
 	It("should return correct subset", func() {
-		done := make(chan interface{})
 		go func() {
-			Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
-
-			go r.Start(ctx)
-
-			Eventually(func() bool { //nolint:unlambda
+			Eventually(func() bool {
 				return r.HasSynced()
 			}).Should(BeTrue(), "HasSync should be true after start")
-			Eventually(func() uint8 { //nolint:unlambda
+			Eventually(func() uint8 {
 				return updateCount
 			}).Should(BeEquivalentTo(1), "update should be called once")
 
@@ -106,60 +101,43 @@ var _ = Describe("resolver", func() {
 			}))
 
 			cancelFunc()
-			close(done)
 		}()
-		Eventually(done).Should(BeClosed())
+		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
+		Expect(r.Start(ctx)).To(Succeed())
 	})
 
 	It("should not return that it has synced because it was not started", func() {
-		done := make(chan interface{})
-		go func() {
-			Expect(updateCount).To(BeEquivalentTo(0), "update should not be called")
-			Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false")
-
-			cancelFunc()
-			close(done)
-		}()
-		Eventually(done).Should(BeClosed())
+		Expect(updateCount).To(BeEquivalentTo(0), "update should not be called")
+		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false")
 	})
 
 	It("should not return that it has synced if error occurs", func() {
-		done := make(chan interface{})
 		go func() {
-			f.setAddrs(nil)
-			f.setErr(errors.New("some-error"))
-
-			go r.Start(ctx)
-			cancelFunc()
-
-			Eventually(func() bool { //nolint:unlambda
+			Consistently(func() bool {
 				return r.HasSynced()
 			}).Should(BeFalse(), "HasSync should always be false")
-			Eventually(func() uint8 { //nolint:unlambda
+			Consistently(func() uint8 {
 				return updateCount
 			}).Should(BeZero(), "update should never be called")
 
-			close(done)
+			cancelFunc()
 		}()
-		Eventually(done).Should(BeClosed())
+		f.setAddrs(nil)
+		f.setErr(errors.New("some-error"))
+		Expect(r.Start(ctx)).To(Succeed())
 	})
 
 	It("should return correct subset after resync", func() {
-		done := make(chan interface{})
 		go func() {
-			Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
-
-			go r.Start(ctx)
-
-			Eventually(func() bool { //nolint:unlambda
+			Eventually(func() bool {
 				return r.HasSynced()
 			}).Should(BeTrue(), "HasSync should be true after start")
 
-			Eventually(func() uint8 { //nolint:unlambda
+			Eventually(func() uint8 {
 				return updateCount
 			}).Should(BeEquivalentTo(1), "update should be called")
 
-			Consistently(func() []corev1.EndpointSubset { //nolint:unlambda
+			Consistently(func() []corev1.EndpointSubset {
 				return r.Subset()
 			}).Should(ConsistOf(corev1.EndpointSubset{
 				Addresses: []corev1.EndpointAddress{
@@ -170,7 +148,7 @@ var _ = Describe("resolver", func() {
 
 			f.setAddrs([]string{"5.6.7.8"})
 
-			Eventually(func() []corev1.EndpointSubset { //nolint:unlambda
+			Eventually(func() []corev1.EndpointSubset {
 				return r.Subset()
 			}).Should(ConsistOf(corev1.EndpointSubset{
 				Addresses: []corev1.EndpointAddress{{IP: "5.6.7.8"}},
@@ -180,9 +158,9 @@ var _ = Describe("resolver", func() {
 			Expect(updateCount).To(BeEquivalentTo(2), "update should be called twice")
 
 			cancelFunc()
-			close(done)
 		}()
-		Eventually(done).Should(BeClosed())
+		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
+		Expect(r.Start(ctx)).To(Succeed())
 	})
 })
 

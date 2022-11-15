@@ -24,10 +24,10 @@ import (
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -184,6 +185,7 @@ var _ = BeforeSuite(func() {
 	By("registering controller")
 	Expect((&networkpolicy.Reconciler{
 		Config:               config.SeedAPIServerNetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
+		Resolver:             hostnameresolver.NewNoOpProvider(),
 		GardenNamespace:      gardenNamespace,
 		IstioSystemNamespace: istioSystemNamespace,
 	}).AddToManager(mgr, mgr)).To(Succeed())

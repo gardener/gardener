@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -38,6 +39,7 @@ type Reconciler struct {
 	SeedClient           client.Client
 	Config               config.SeedAPIServerNetworkPolicyControllerConfiguration
 	Resolver             hostnameresolver.HostResolver
+	ResolverUpdate       <-chan event.GenericEvent
 	GardenNamespace      *corev1.Namespace
 	IstioSystemNamespace *corev1.Namespace
 

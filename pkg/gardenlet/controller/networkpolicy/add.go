@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -59,7 +60,18 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		if err != nil {
 			return fmt.Errorf("failed to get hostnameresolver: %w", err)
 		}
+		resolverUpdate := make(chan event.GenericEvent)
+		resolver.WithCallback(func() {
+			resolverUpdate <- event.GenericEvent{}
+		})
+		if err := mgr.Add(resolver); err != nil {
+			return fmt.Errorf("failed to add hostnameresolver to manager: %w", err)
+		}
 		r.Resolver = resolver
+		r.ResolverUpdate = resolverUpdate
+	}
+	if r.ResolverUpdate == nil {
+		r.ResolverUpdate = make(chan event.GenericEvent)
 	}
 	if r.GardenNamespace == nil {
 		r.GardenNamespace = &corev1.Namespace{
@@ -107,10 +119,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		return err
 	}
 
-	return c.Watch(
+	if err := c.Watch(
 		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, mgr.GetLogger()),
 		predicateutils.HasName(helper.AllowToSeedAPIServer),
+	); err != nil {
+		return err
+	}
+
+	return c.Watch(
+		&source.Channel{Source: r.ResolverUpdate},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, mgr.GetLogger()),
 	)
 }
 
