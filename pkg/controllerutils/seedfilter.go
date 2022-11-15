@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -125,21 +124,6 @@ func BackupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, back
 		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
 	}
 	return false
-}
-
-// BastionFilterFunc returns a filtering func for Bastions.
-func BastionFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		bastion, ok := obj.(*operationsv1alpha1.Bastion)
-		if !ok {
-			return false
-		}
-		if bastion.Spec.SeedName == nil {
-			return false
-		}
-
-		return *bastion.Spec.SeedName == seedName
-	}
 }
 
 // ManagedSeedFilterFunc returns a filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible..

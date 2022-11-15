@@ -231,6 +231,15 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
 
+### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
+
+The `Bastion` controller reconciles those `operations.gardener.cloud/v1alpha1.Bastion` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
+
+The controller creates an `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster in the shoot namespace with the same name as `operations.gardener.cloud/v1alpha1.Bastion`. Then it waits until the responsible extension controller has reconciled it (see [this](../extensions/bastion.md) for more details).The status is populated in the `.status.conditions` and `.status.ingress` fields.
+
+During the deletion of `operations.gardener.cloud/v1alpha1.Bastion` resources, the controller first sets the `Ready` condition to `False` and then deletes the `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster.
+Once this resource is gone, the finalizer of the `operations.gardener.cloud/v1alpha1.Bastion` resource is released, so it finally disappears from the system.
+
 ### [`ControllerInstallation` Controller](../../pkg/gardenlet/controller/controllerinstallation)
 
 The `ControllerInstallation` controller in the `gardenlet` reconciles `ControllerInstallation` objects with the help of the following reconcilers.
