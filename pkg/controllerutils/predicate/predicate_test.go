@@ -369,6 +369,8 @@ var _ = Describe("Predicate", func() {
 			p                     predicate.Predicate
 			extensionBackupBucket *extensionsv1alpha1.BackupBucket
 			bucketName            = "bucket"
+			extensionBackupEntry  *extensionsv1alpha1.BackupEntry
+			entryName             = "entry"
 		)
 
 		BeforeEach(func() {
@@ -377,16 +379,52 @@ var _ = Describe("Predicate", func() {
 					Name: bucketName,
 				},
 			}
+			extensionBackupEntry = &extensionsv1alpha1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: entryName,
+				},
+			}
 			p = ExtensionStatusChanged()
 		})
 
-		It("should return false because the extension backupbucket has operation annotation", func() {
+		It("should return false for all events because the extension backupbucket has operation annotation reconcile", func() {
 			metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, "gardener.cloud/operation", "reconcile")
 
 			gomega.Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(gomega.BeFalse())
 			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: extensionBackupBucket})).To(gomega.BeFalse())
 			gomega.Expect(p.Delete(event.DeleteEvent{Object: extensionBackupBucket})).To(gomega.BeFalse())
 			gomega.Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(gomega.BeFalse())
+		})
+
+		It("should not return false for create events just because the extension backupEntry has operation annotation restore or migrate", func() {
+			extensionBackupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}
+			metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, "gardener.cloud/operation", "migrate")
+
+			gomega.Expect(p.Create(event.CreateEvent{Object: extensionBackupEntry})).To(gomega.BeTrue())
+
+			metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, "gardener.cloud/operation", "restore")
+
+			gomega.Expect(p.Create(event.CreateEvent{Object: extensionBackupEntry})).To(gomega.BeTrue())
+		})
+
+		It("should return false for update because the extension backupEntry has operation annotation restore but the old backupEntry doesn't have it", func() {
+			oldExtensionBackupEntry := extensionBackupEntry.DeepCopy()
+			metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, "gardener.cloud/operation", "restore")
+
+			gomega.Expect(p.Update(event.UpdateEvent{ObjectOld: oldExtensionBackupEntry, ObjectNew: extensionBackupEntry})).To(gomega.BeFalse())
+		})
+
+		It("should not return false for update because of the operation annotation restore or migrate when the old backupEntry also have it", func() {
+			metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, "gardener.cloud/operation", "restore")
+			oldExtensionBackupEntry := extensionBackupEntry.DeepCopy()
+			extensionBackupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
+
+			gomega.Expect(p.Update(event.UpdateEvent{ObjectOld: oldExtensionBackupEntry, ObjectNew: extensionBackupEntry})).To(gomega.BeTrue())
+
+			metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, "gardener.cloud/operation", "migrate")
+			metav1.SetMetaDataAnnotation(&oldExtensionBackupEntry.ObjectMeta, "gardener.cloud/operation", "migrate")
+
+			gomega.Expect(p.Update(event.UpdateEvent{ObjectOld: oldExtensionBackupEntry, ObjectNew: extensionBackupEntry})).To(gomega.BeTrue())
 		})
 
 		It("should return false for create and update because the extension backupbucket status has no lastOperation present", func() {
