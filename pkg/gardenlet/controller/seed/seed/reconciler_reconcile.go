@@ -250,7 +250,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		return err
 	}
 
-	kubernetesVersion, err := semver.NewVersion(r.SeedClientSet.Version())
+	kubernetesVersion, err := semver.NewVersion(versionutils.Normalize(r.SeedClientSet.Version()))
 	if err != nil {
 		return err
 	}

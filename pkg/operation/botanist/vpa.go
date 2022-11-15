@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 
-	"github.com/Masterminds/semver"
 	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -70,11 +69,6 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		valuesUpdater.Interval = vpaConfig.UpdaterInterval
 	}
 
-	runtimeKubernetesVersion, err := semver.NewVersion(b.SeedVersion())
-	if err != nil {
-		return nil, err
-	}
-
 	return vpa.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
@@ -83,7 +77,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 			ClusterType:              component.ClusterTypeShoot,
 			Enabled:                  true,
 			SecretNameServerCA:       v1beta1constants.SecretNameCACluster,
-			RuntimeKubernetesVersion: runtimeKubernetesVersion,
+			RuntimeKubernetesVersion: b.Seed.KubernetesVersion,
 			AdmissionController:      valuesAdmissionController,
 			Recommender:              valuesRecommender,
 			Updater:                  valuesUpdater,
