@@ -41,7 +41,7 @@ func (b *Botanist) DefaultEtcdCopyBackupsTask() etcdcopybackupstask.Interface {
 			Namespace: b.Shoot.SeedNamespace,
 			WaitForFinalSnapshot: &druidv1alpha1.WaitForFinalSnapshotSpec{
 				Enabled: true,
-				Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultWaitForFinalSnapshotTimeout},
+				Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultTimeout},
 			},
 		},
 		etcdcopybackupstask.DefaultInterval,
