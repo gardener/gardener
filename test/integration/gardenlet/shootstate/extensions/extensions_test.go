@@ -79,6 +79,14 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 		Expect(testClient.Create(ctx, cluster)).To(Succeed())
 		log.Info("Created Cluster", "cluster", client.ObjectKeyFromObject(cluster))
 
+		By("Wait until manager has observed Cluster")
+		// Use the manager's cache to ensure it has observed the Cluster. Otherwise, the controller might simply not
+		// sync the state of the extension resource. This should not happen in reality, so make sure to stabilize the
+		// test and keep the controller simple. See https://github.com/gardener/gardener/issues/6923.
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)
+		}).Should(Succeed())
+
 		By("Create Infrastructure")
 		Expect(testClient.Create(ctx, infrastructure)).To(Succeed())
 		log.Info("Created Infrastructure", "infrastructure", client.ObjectKeyFromObject(infrastructure))
@@ -142,7 +150,7 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "some-configpap",
+					Name:      "some-configmap",
 					Namespace: infrastructure.Namespace,
 					Labels:    map[string]string{testID: testRunID},
 				},
@@ -281,7 +289,7 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 
 	Context("when reconciliation should be skipped", func() {
 		testForOperationAnnotation := func(operationAnnotation string) {
-			It("should do nothing because of operation annotation", func() {
+			It("should do nothing because of operation annotation "+operationAnnotation, func() {
 				By("Patch status.state in Infrastructure")
 				patch := client.MergeFrom(infrastructure.DeepCopy())
 				infrastructure.Status.State = &runtime.RawExtension{Raw: []byte(`{"some":"state"}`)}
