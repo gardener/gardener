@@ -186,8 +186,8 @@ var _ = BeforeSuite(func() {
 	Expect((&networkpolicy.Reconciler{
 		Config:               config.SeedAPIServerNetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
 		Resolver:             hostnameresolver.NewNoOpProvider(),
-		GardenNamespace:      gardenNamespace,
-		IstioSystemNamespace: istioSystemNamespace,
+		GardenNamespace:      gardenNamespace.Name,
+		IstioSystemNamespace: istioSystemNamespace.Name,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")

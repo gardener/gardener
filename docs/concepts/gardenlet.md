@@ -231,14 +231,6 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
 
-### `NetworkPolicy` Controller
-
-The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to Kubernetes API server. 
-
-The controller resolves the IP address of Kubernetes service in `default` namespace and creates egress `NetworkPolicy`s for it.
-
-For more details about `NetworkPolicy`s in Gardener please see [this document](network_policies.md).
-
 ### [`ControllerInstallation` Controller](../../pkg/gardenlet/controller/controllerinstallation)
 
 The `ControllerInstallation` controller in the `gardenlet` reconciles `ControllerInstallation` objects with the help of the following reconcilers.
@@ -288,6 +280,14 @@ Concretely, when there is at least one extension resource in the seed cluster a 
 If there are no extension resources anymore, its status will be `False`.
 
 This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to deployed to which seed cluster, see [this document](controller-manager.md#controllerregistration-controller) for more details.
+
+### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
+
+The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to Kubernetes API server. 
+
+The controller resolves the IP address of Kubernetes service in `default` namespace and creates egress `NetworkPolicy`s for it.
+
+For more details about `NetworkPolicy`s in Gardener please see [this document](network_policies.md).
 
 ### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
 

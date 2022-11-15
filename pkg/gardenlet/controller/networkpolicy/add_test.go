@@ -18,21 +18,21 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("Add", func() {
@@ -42,68 +42,38 @@ var _ = Describe("Add", func() {
 
 	BeforeEach(func() {
 		reconciler = &Reconciler{
-			GardenNamespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1beta1constants.GardenNamespace,
-				},
-			},
-			IstioSystemNamespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1beta1constants.IstioSystemNamespace,
-				},
-			},
+			GardenNamespace:      v1beta1constants.GardenNamespace,
+			IstioSystemNamespace: v1beta1constants.IstioSystemNamespace,
 		}
 	})
 
 	Describe("#MapToNamespaces", func() {
 		var (
-			ctrl              *gomock.Controller
-			mockRuntimeClient *mockclient.MockClient
-			ctx               = context.TODO()
-			log               = logr.Discard()
-			namespaces        []corev1.Namespace
+			ctx            = context.TODO()
+			log            = logr.Discard()
+			fakeClient     client.Client
+			shootNamespace *corev1.Namespace
+			fooNamespace   *corev1.Namespace
 		)
 
 		BeforeEach(func() {
-			namespaces = []corev1.Namespace{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "shoot-foo",
-						Labels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "shoot-bar",
-						Labels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
-					},
-				},
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+			reconciler.SeedClient = fakeClient
+
+			shootNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+				Name:   "shoot--bar",
+				Labels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}},
 			}
-		})
-
-		JustBeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			mockRuntimeClient = mockclient.NewMockClient(ctrl)
-			reconciler.SeedClient = mockRuntimeClient
-			// reconciler.ShootNamespaceSelector = shootNamespaceSelector
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
+			fooNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 		})
 
 		It("should return a request with the shoot, gardener and istio-system namespaces' names", func() {
-			mockRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NamespaceList{}), &client.ListOptions{LabelSelector: nil}).DoAndReturn(
-				func(_ context.Context, shootList *corev1.NamespaceList, _ ...client.ListOption) error {
-					shootList.Items = namespaces
-					return nil
-				},
-			)
+			Expect(fakeClient.Create(ctx, shootNamespace)).To(Succeed())
+			Expect(fakeClient.Create(ctx, fooNamespace)).To(Succeed())
 			Expect(reconciler.MapToNamespaces(ctx, log, nil, nil)).To(ConsistOf(
-				reconcile.Request{NamespacedName: types.NamespacedName{Name: reconciler.GardenNamespace.Name}},
-				reconcile.Request{NamespacedName: types.NamespacedName{Name: reconciler.IstioSystemNamespace.Name}},
-				reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot-foo"}},
-				reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot-bar"}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: reconciler.GardenNamespace}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: reconciler.IstioSystemNamespace}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot--bar"}},
 			))
 		})
 	})

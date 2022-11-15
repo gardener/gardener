@@ -18,10 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
-
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +28,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 )
+
+var shootNamespaceSelector labels.Selector = labels.SelectorFromSet(labels.Set{
+	v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+})
 
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type Reconciler struct {
@@ -40,10 +45,8 @@ type Reconciler struct {
 	Config               config.SeedAPIServerNetworkPolicyControllerConfiguration
 	Resolver             hostnameresolver.HostResolver
 	ResolverUpdate       <-chan event.GenericEvent
-	GardenNamespace      *corev1.Namespace
-	IstioSystemNamespace *corev1.Namespace
-
-	shootNamespaceSelector labels.Selector
+	GardenNamespace      string
+	IstioSystemNamespace string
 }
 
 // Reconcile reconciles namespace in order to create the "allowed-to-seed-apiserver" Network Policy
@@ -68,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log = log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
 	// if the namespace is not the Garden, IstioSystem or a Shoot namespace - delete the existing NetworkPolicy
-	if !(namespace.Name == r.GardenNamespace.Name || namespace.Name == r.IstioSystemNamespace.Name || r.shootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
+	if !(namespace.Name == r.GardenNamespace || namespace.Name == r.IstioSystemNamespace || shootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
 		if err := r.SeedClient.Delete(ctx, networkPolicy); client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %w", networkPolicy.Name, namespace.Name, err)
 		}

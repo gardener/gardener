@@ -21,8 +21,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,11 +48,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 	if r.SeedClient == nil {
 		r.SeedClient = seedCluster.GetClient()
 	}
-	if r.shootNamespaceSelector == nil {
-		r.shootNamespaceSelector = labels.SelectorFromSet(labels.Set{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-		})
-	}
 	if r.Resolver == nil {
 		resolver, err := hostnameresolver.CreateForCluster(seedCluster.GetConfig(), mgr.GetLogger())
 		if err != nil {
@@ -73,19 +66,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 	if r.ResolverUpdate == nil {
 		r.ResolverUpdate = make(chan event.GenericEvent)
 	}
-	if r.GardenNamespace == nil {
-		r.GardenNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: v1beta1constants.GardenNamespace,
-			},
-		}
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
-	if r.IstioSystemNamespace == nil {
-		r.IstioSystemNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: v1beta1constants.IstioSystemNamespace,
-			},
-		}
+	if r.IstioSystemNamespace == "" {
+		r.IstioSystemNamespace = v1beta1constants.IstioSystemNamespace
 	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
@@ -137,15 +122,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
 	namespaces := &corev1.NamespaceList{}
 	if err := r.SeedClient.List(ctx, namespaces, &client.ListOptions{
-		LabelSelector: r.shootNamespaceSelector,
+		LabelSelector: shootNamespaceSelector,
 	}); err != nil {
 		log.Error(err, "Unable to list Shoot namespace for updating NetworkPolicy", "networkPolicyName", helper.AllowToSeedAPIServer)
 		return []reconcile.Request{}
 	}
 
 	requests := []reconcile.Request{
-		{NamespacedName: client.ObjectKeyFromObject(r.GardenNamespace)},
-		{NamespacedName: client.ObjectKeyFromObject(r.IstioSystemNamespace)},
+		{NamespacedName: types.NamespacedName{Name: r.GardenNamespace}},
+		{NamespacedName: types.NamespacedName{Name: r.IstioSystemNamespace}},
 	}
 	for _, namespace := range namespaces.Items {
 		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&namespace)})
