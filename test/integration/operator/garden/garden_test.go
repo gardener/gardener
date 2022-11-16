@@ -60,6 +60,14 @@ var _ = Describe("Garden controller tests", func() {
 						},
 					},
 				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Maintenance: operatorv1alpha1.Maintenance{
+						TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
+							Begin: "220000+0100",
+							End:   "230000+0100",
+						},
+					},
+				},
 			},
 		}
 

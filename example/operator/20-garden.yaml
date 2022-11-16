@@ -1,4 +1,13 @@
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: virtual-garden-etcd-main-backup-local
+  namespace: garden
+type: Opaque
+stringData:
+  hostPath: "/etc/gardener/local-backupbuckets"
+---
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Garden
 metadata:
@@ -11,3 +20,23 @@ spec:
     settings:
       verticalPodAutoscaler:
         enabled: true
+  virtualCluster:
+    etcd:
+      main:
+        backup:
+          provider: local
+          bucketName: gardener-operator
+          secretRef:
+            name: virtual-garden-etcd-main-backup-local
+            namespace: garden
+        storage:
+          capacity: 25Gi
+        # className: default
+      events:
+        storage:
+          capacity: 10Gi
+        # className: default
+    maintenance:
+      timeWindow:
+        begin: 220000+0100
+        end: 230000+0100
