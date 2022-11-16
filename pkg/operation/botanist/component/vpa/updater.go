@@ -58,7 +58,7 @@ type ValuesUpdater struct {
 	// Interval is the interval how often the updater should run.
 	Interval *metav1.Duration
 	// Replicas is the number of pod replicas.
-	Replicas int32
+	Replicas *int32
 }
 
 func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
@@ -132,9 +132,11 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 	}
 
+	// vpa-updater is not using leader election, hence it is not capable of running multiple replicas (and as a
+	// consequence, don't need a PDB).
 	deployment.Labels = v.getDeploymentLabels(updater)
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             &v.values.Updater.Replicas,
+		Replicas:             pointer.Int32(pointer.Int32Deref(v.values.Updater.Replicas, 1)),
 		RevisionHistoryLimit: pointer.Int32(2),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(updater)},
 		Template: corev1.PodTemplateSpec{

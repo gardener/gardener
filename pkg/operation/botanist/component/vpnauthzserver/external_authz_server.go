@@ -19,13 +19,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
-
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -41,6 +34,15 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -55,14 +57,12 @@ func New(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,
-	replicas int32,
 	kubernetesVersion *semver.Version,
 ) component.DeployWaiter {
 	return &authzServer{
 		client:              client,
 		namespace:           namespace,
 		imageExtAuthzServer: imageExtAuthzServer,
-		replicas:            replicas,
 		kubernetesVersion:   kubernetesVersion,
 	}
 }
@@ -71,7 +71,6 @@ type authzServer struct {
 	client              client.Client
 	namespace           string
 	imageExtAuthzServer string
-	replicas            int32
 	kubernetesVersion   *semver.Version
 }
 
@@ -97,10 +96,12 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, deployment, func() error {
 		maxSurge := intstr.FromInt(100)
 		maxUnavailable := intstr.FromInt(0)
-		deployment.Labels = getLabels()
+		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
+			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+		})
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(a.replicas),
-			RevisionHistoryLimit: pointer.Int32(1),
+			Replicas:             pointer.Int32(1),
+			RevisionHistoryLimit: pointer.Int32(2),
 			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Strategy: appsv1.DeploymentStrategy{
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -114,21 +115,6 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 					Labels: getLabels(),
 				},
 				Spec: corev1.PodSpec{
-					Affinity: &corev1.Affinity{
-						PodAntiAffinity: &corev1.PodAntiAffinity{
-							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-								{
-									Weight: 100,
-									PodAffinityTerm: corev1.PodAffinityTerm{
-										TopologyKey: corev1.LabelHostname,
-										LabelSelector: &metav1.LabelSelector{
-											MatchLabels: getLabels(),
-										},
-									},
-								},
-							},
-						},
-					},
 					AutomountServiceAccountToken: pointer.Bool(false),
 					PriorityClassName:            v1beta1constants.PriorityClassNameSeedSystem900,
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.

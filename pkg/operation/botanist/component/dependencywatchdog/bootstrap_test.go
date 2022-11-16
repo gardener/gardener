@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -260,6 +262,7 @@ metadata:
   creationTimestamp: null
   labels:
     app: ` + dwdName + `
+    high-availability-config.resources.gardener.cloud/type: controller
   name: ` + dwdName + `
   namespace: ` + namespace + `
 spec:
@@ -383,9 +386,30 @@ status: {}
 
 					return out
 				}
+
+				podDisruptionYAML = `apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ` + dwdName + `
+  name: ` + dwdName + `
+  namespace: ` + namespace + `
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ` + dwdName + `
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+`
 			)
 
 			BeforeEach(func() {
+				values.KubernetesVersion = semver.MustParse("1.25.0")
 				dwd = NewBootstrapper(c, namespace, values)
 
 				managedResource = &resourcesv1alpha1.ManagedResource{
@@ -431,11 +455,12 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(8))
+				Expect(managedResourceSecret.Data).To(HaveLen(9))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+"_cluster-role.yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+"_cluster-role-binding.yaml"])).To(DeepEqual(clusterRoleBindingYAML))
 				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(DeepEqual(configMapYAMLFor(values.Role)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(deploymentYAMLFor(values.Role)))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(podDisruptionYAML))
 				Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+"_role.yaml"])).To(DeepEqual(roleYAML))
 				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+"_role-binding.yaml"])).To(DeepEqual(roleBindingYAML))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(serviceAccountYAML))

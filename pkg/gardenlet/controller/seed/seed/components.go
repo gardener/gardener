@@ -85,7 +85,7 @@ func defaultEtcdDruid(
 		imageVectorOverwrite = &val
 	}
 
-	return etcd.NewBootstrapper(c, gardenNamespaceName, conf, image.String(), imageVectorOverwrite), nil
+	return etcd.NewBootstrapper(c, gardenNamespaceName, seedVersion, conf, image.String(), imageVectorOverwrite), nil
 }
 
 func defaultKubeStateMetrics(
@@ -370,8 +370,8 @@ func defaultDependencyWatchdogs(
 	}
 
 	var (
-		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
-		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String()}
+		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String(), KubernetesVersion: seedVersion}
+		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String(), KubernetesVersion: seedVersion}
 	)
 
 	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
@@ -433,6 +433,7 @@ func defaultDependencyWatchdogs(
 
 func defaultHVPA(
 	c client.Client,
+	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	enabled bool,
 	gardenNamespaceName string,
@@ -449,7 +450,8 @@ func defaultHVPA(
 		c,
 		gardenNamespaceName,
 		hvpa.Values{
-			Image: image.String(),
+			Image:             image.String(),
+			KubernetesVersion: seedVersion,
 		},
 	)
 
@@ -491,23 +493,21 @@ func defaultVerticalPodAutoscaler(
 		gardenNamespaceName,
 		secretsManager,
 		vpa.Values{
-			ClusterType:        component.ClusterTypeSeed,
-			Enabled:            enabled,
-			SecretNameServerCA: v1beta1constants.SecretNameCASeed,
+			ClusterType:              component.ClusterTypeSeed,
+			Enabled:                  enabled,
+			SecretNameServerCA:       v1beta1constants.SecretNameCASeed,
+			RuntimeKubernetesVersion: seedVersion,
 			AdmissionController: vpa.ValuesAdmissionController{
-				Image:    imageAdmissionController.String(),
-				Replicas: 1,
+				Image: imageAdmissionController.String(),
 			},
 			Recommender: vpa.ValuesRecommender{
 				Image:                        imageRecommender.String(),
 				RecommendationMarginFraction: pointer.Float64(0.05),
-				Replicas:                     1,
 			},
 			Updater: vpa.ValuesUpdater{
 				EvictionTolerance:      pointer.Float64(1.0),
 				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
 				Image:                  imageUpdater.String(),
-				Replicas:               1,
 			},
 		},
 	), nil
@@ -532,7 +532,6 @@ func defaultVPNAuthzServer(
 		c,
 		gardenNamespaceName,
 		image.String(),
-		3,
 		seedVersion,
 	)
 
@@ -558,6 +557,7 @@ func defaultVPNAuthzServer(
 
 func defaultSystem(
 	c client.Client,
+	seed *seedpkg.Seed,
 	imageVector imagevector.ImageVector,
 	reserveExcessCapacity bool,
 	gardenNamespaceName string,
@@ -570,13 +570,19 @@ func defaultSystem(
 		return nil, err
 	}
 
+	var replicasExcessCapacityReservation int32 = 2
+	if numberOfZones := len(seed.GetInfo().Spec.Provider.Zones); numberOfZones > 1 {
+		replicasExcessCapacityReservation = int32(numberOfZones)
+	}
+
 	return seedsystem.New(
 		c,
 		gardenNamespaceName,
 		seedsystem.Values{
 			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
-				Enabled: reserveExcessCapacity,
-				Image:   image.String(),
+				Enabled:  reserveExcessCapacity,
+				Image:    image.String(),
+				Replicas: replicasExcessCapacityReservation,
 			},
 		},
 	), nil

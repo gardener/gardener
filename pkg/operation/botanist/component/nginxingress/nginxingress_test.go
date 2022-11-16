@@ -380,7 +380,7 @@ metadata:
   name: nginx-ingress-k8s-backend
   namespace: ` + namespace + `
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -436,7 +436,7 @@ metadata:
   name: nginx-ingress-controller
   namespace: ` + namespace + `
 spec:
-  replicas: 3
+  replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -455,17 +455,6 @@ spec:
         release: addons
         seccompprofile.resources.gardener.cloud/skip: "true"
     spec:
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: nginx-ingress
-                  component: controller
-                  release: addons
-              topologyKey: kubernetes.io/hostname
-            weight: 100
       containers:
       - args:
         - /nginx-ingress-controller

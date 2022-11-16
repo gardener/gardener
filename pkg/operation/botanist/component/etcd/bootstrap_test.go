@@ -20,18 +20,8 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,6 +33,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var (
@@ -62,6 +63,7 @@ var _ = Describe("Etcd", func() {
 		ctx                       = context.TODO()
 		fakeErr                   = fmt.Errorf("fake error")
 		namespace                 = "shoot--foo--bar"
+		kubernetesVersion         = semver.MustParse("1.25.0")
 		etcdDruidImage            = "etcd/druid:1.2.3"
 		imageVectorOverwriteEmpty *string
 		imageVectorOverwriteFull  = pointer.String("some overwrite")
@@ -90,7 +92,7 @@ var _ = Describe("Etcd", func() {
 			},
 		}
 
-		bootstrapper = NewBootstrapper(c, namespace, conf, etcdDruidImage, imageVectorOverwriteEmpty)
+		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, conf, etcdDruidImage, imageVectorOverwriteEmpty)
 	})
 
 	AfterEach(func() {
@@ -329,6 +331,7 @@ metadata:
   creationTimestamp: null
   labels:
     gardener.cloud/role: etcd-druid
+    high-availability-config.resources.gardener.cloud/type: controller
   name: etcd-druid
   namespace: ` + namespace + `
 spec:
@@ -379,6 +382,7 @@ metadata:
   creationTimestamp: null
   labels:
     gardener.cloud/role: etcd-druid
+    high-availability-config.resources.gardener.cloud/type: controller
   name: etcd-druid
   namespace: ` + namespace + `
 spec:
@@ -434,6 +438,25 @@ spec:
         name: imagevector-overwrite
 status: {}
 `
+			podDisruptionYAML = `apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+  name: etcd-druid
+  namespace: ` + namespace + `
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      gardener.cloud/role: etcd-druid
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+`
 
 			managedResourceSecret *corev1.Secret
 			managedResource       *resourcesv1alpha1.ManagedResource
@@ -447,11 +470,12 @@ status: {}
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
-					"serviceaccount__shoot--foo--bar__etcd-druid.yaml":            []byte(serviceAccountYAML),
-					"clusterrole____gardener.cloud_system_etcd-druid.yaml":        []byte(clusterRoleYAML),
-					"clusterrolebinding____gardener.cloud_system_etcd-druid.yaml": []byte(clusterRoleBindingYAML),
-					"verticalpodautoscaler__shoot--foo--bar__etcd-druid-vpa.yaml": []byte(vpaYAML),
-					"deployment__shoot--foo--bar__etcd-druid.yaml":                []byte(deploymentWithoutImageVectorOverwriteYAML),
+					"serviceaccount__" + namespace + "__etcd-druid.yaml":            []byte(serviceAccountYAML),
+					"clusterrole____gardener.cloud_system_etcd-druid.yaml":          []byte(clusterRoleYAML),
+					"clusterrolebinding____gardener.cloud_system_etcd-druid.yaml":   []byte(clusterRoleBindingYAML),
+					"verticalpodautoscaler__" + namespace + "__etcd-druid-vpa.yaml": []byte(vpaYAML),
+					"deployment__" + namespace + "__etcd-druid.yaml":                []byte(deploymentWithoutImageVectorOverwriteYAML),
+					"poddisruptionbudget__" + namespace + "__etcd-druid.yaml":       []byte(podDisruptionYAML),
 					"crd.yaml":                    []byte(etcdCRD),
 					"crdEtcdCopyBackupsTask.yaml": []byte(etcdCopyBackupsTaskCRD),
 				},
@@ -507,10 +531,10 @@ status: {}
 		})
 
 		It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-			bootstrapper = NewBootstrapper(c, namespace, conf, etcdDruidImage, imageVectorOverwriteFull)
+			bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, conf, etcdDruidImage, imageVectorOverwriteFull)
 
-			managedResourceSecret.Data["configmap__shoot--foo--bar__"+configMapName+".yaml"] = []byte(configMapImageVectorOverwriteYAML)
-			managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
+			managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"] = []byte(configMapImageVectorOverwriteYAML)
+			managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),

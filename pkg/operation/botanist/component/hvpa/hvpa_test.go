@@ -17,6 +17,24 @@ package hvpa_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -28,22 +46,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("HVPA", func() {
@@ -52,7 +54,7 @@ var _ = Describe("HVPA", func() {
 
 		namespace = "some-namespace"
 		image     = "some-image:some-tag"
-		values    = Values{Image: image}
+		values    = Values{Image: image, KubernetesVersion: semver.MustParse("1.25.0")}
 
 		c         client.Client
 		component component.DeployWaiter
@@ -61,12 +63,13 @@ var _ = Describe("HVPA", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount     *corev1.ServiceAccount
-		clusterRole        *rbacv1.ClusterRole
-		clusterRoleBinding *rbacv1.ClusterRoleBinding
-		service            *corev1.Service
-		deployment         *appsv1.Deployment
-		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceAccount      *corev1.ServiceAccount
+		clusterRole         *rbacv1.ClusterRole
+		clusterRoleBinding  *rbacv1.ClusterRoleBinding
+		service             *corev1.Service
+		deployment          *appsv1.Deployment
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+		podDisruptionBudget *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -179,8 +182,9 @@ var _ = Describe("HVPA", func() {
 				Name:      "hvpa-controller",
 				Namespace: namespace,
 				Labels: map[string]string{
-					"gardener.cloud/role": "hvpa",
 					"app":                 "hvpa-controller",
+					"gardener.cloud/role": "hvpa",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -227,6 +231,23 @@ var _ = Describe("HVPA", func() {
 				},
 			},
 		}
+
+		maxUnavailable := intstr.FromInt(1)
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hvpa-controller",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                 "hvpa-controller",
+					"gardener.cloud/role": "hvpa",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -302,12 +323,13 @@ var _ = Describe("HVPA", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(6))
+			Expect(managedResourceSecret.Data).To(HaveLen(7))
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(service)))
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(deployment)))
+			Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 		})
 	})

@@ -19,26 +19,32 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
+	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
+	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-
-	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
-	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Role is a string alias type.
@@ -66,7 +72,8 @@ type BootstrapperValues struct {
 	Role Role
 	ValuesEndpoint
 	ValuesProbe
-	Image string
+	Image             string
+	KubernetesVersion *semver.Version
 }
 
 // ValuesEndpoint contains the service dependants of dependency-watchdog.
@@ -200,7 +207,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      b.name(),
 				Namespace: b.namespace,
-				Labels:    b.getLabels(),
+				Labels: utils.MergeStringMaps(map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+				}, b.getLabels()),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32(1),
@@ -280,7 +289,36 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				},
 			},
 		}
+
+		podDisruptionBudget client.Object
+		maxUnavailable      = intstr.FromInt(1)
 	)
+
+	if version.ConstraintK8sGreaterEqual121.Check(b.values.KubernetesVersion) {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      b.name(),
+				Namespace: deployment.Namespace,
+				Labels:    b.getLabels(),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      b.name(),
+				Namespace: deployment.Namespace,
+				Labels:    b.getLabels(),
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	}
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
@@ -292,6 +330,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		roleBinding,
 		configMap,
 		deployment,
+		podDisruptionBudget,
 		vpa,
 	)
 	if err != nil {

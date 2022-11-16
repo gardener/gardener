@@ -18,11 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockvpa "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/mock"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -59,6 +62,8 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 			kubernetesClient.EXPECT().Client().AnyTimes()
 
 			botanist.SeedClientSet = kubernetesClient
+			botanist.Seed = &seedpkg.Seed{}
+			botanist.Seed.KubernetesVersion = semver.MustParse("v1.25.0")
 			botanist.Shoot = &shootpkg.Shoot{}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})

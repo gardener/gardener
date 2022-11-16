@@ -336,8 +336,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
 			},
 			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32(2),
 				RevisionHistoryLimit: pointer.Int32(2),
-				Replicas:             pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(labelValueBackend, labelValueAddons),
 				},
@@ -396,7 +396,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(3),
+				Replicas:             pointer.Int32(1),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(labelValueController, labelValueAddons),
@@ -412,19 +412,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-						Affinity: &corev1.Affinity{
-							PodAntiAffinity: &corev1.PodAntiAffinity{
-								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-									Weight: 100,
-									PodAffinityTerm: corev1.PodAffinityTerm{
-										TopologyKey: corev1.LabelHostname,
-										LabelSelector: &metav1.LabelSelector{
-											MatchLabels: getLabels(labelValueController, labelValueAddons),
-										},
-									}},
-								},
-							},
-						},
 						Containers: []corev1.Container{{
 							Name:            containerNameController,
 							Image:           n.values.ImageController,

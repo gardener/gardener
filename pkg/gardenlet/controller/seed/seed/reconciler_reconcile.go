@@ -250,7 +250,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		return err
 	}
 
-	kubernetesVersion, err := semver.NewVersion(r.SeedClientSet.Version())
+	kubernetesVersion, err := semver.NewVersion(versionutils.Normalize(r.SeedClientSet.Version()))
 	if err != nil {
 		return err
 	}
@@ -844,11 +844,11 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 	if err != nil {
 		return err
 	}
-	systemResources, err := defaultSystem(seedClient, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
+	systemResources, err := defaultSystem(seedClient, seed, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	hvpa, err := defaultHVPA(seedClient, r.ImageVector, hvpaEnabled, r.GardenNamespace)
+	hvpa, err := defaultHVPA(seedClient, kubernetesVersion, r.ImageVector, hvpaEnabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}

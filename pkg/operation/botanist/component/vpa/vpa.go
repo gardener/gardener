@@ -20,6 +20,20 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -31,17 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -108,6 +111,8 @@ type Values struct {
 	Enabled bool
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
+	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
+	RuntimeKubernetesVersion *semver.Version
 
 	// AdmissionController is a set of configuration values for the vpa-admission-controller.
 	AdmissionController ValuesAdmissionController
@@ -224,6 +229,15 @@ func (v *vpa) emptyClusterRoleBinding(name string) *rbacv1.ClusterRoleBinding {
 
 func (v *vpa) emptyDeployment(name string) *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
+}
+
+func (v *vpa) emptyPodDisruptionBudget(name string, k8sVersionGreaterEqual121 bool) client.Object {
+	objectMeta := metav1.ObjectMeta{Name: name, Namespace: v.namespace}
+
+	if k8sVersionGreaterEqual121 {
+		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
+	}
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
 }
 
 func (v *vpa) emptyVerticalPodAutoscaler(name string) *vpaautoscalingv1.VerticalPodAutoscaler {

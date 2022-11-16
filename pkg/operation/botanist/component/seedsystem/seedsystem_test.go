@@ -99,8 +99,9 @@ status: {}
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			ReserveExcessCapacity: ReserveExcessCapacityValues{
-				Enabled: true,
-				Image:   reserveExcessCapacityImage,
+				Enabled:  true,
+				Image:    reserveExcessCapacityImage,
+				Replicas: 2,
 			},
 		}
 		component = New(c, namespace, values)

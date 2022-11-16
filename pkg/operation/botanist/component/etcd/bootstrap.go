@@ -21,23 +21,15 @@ import (
 	"strconv"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -45,10 +37,24 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -78,10 +84,18 @@ var (
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
-func NewBootstrapper(c client.Client, namespace string, config *config.GardenletConfiguration, image string, imageVectorOverwrite *string) component.DeployWaiter {
+func NewBootstrapper(
+	c client.Client,
+	namespace string,
+	kubernetesVersion *semver.Version,
+	config *config.GardenletConfiguration,
+	image string,
+	imageVectorOverwrite *string,
+) component.DeployWaiter {
 	return &bootstrapper{
 		client:               c,
 		namespace:            namespace,
+		kubernetesVersion:    kubernetesVersion,
 		config:               config,
 		image:                image,
 		imageVectorOverwrite: imageVectorOverwrite,
@@ -91,6 +105,7 @@ func NewBootstrapper(c client.Client, namespace string, config *config.Gardenlet
 type bootstrapper struct {
 	client               client.Client
 	namespace            string
+	kubernetesVersion    *semver.Version
 	config               *config.GardenletConfiguration
 	image                string
 	imageVectorOverwrite *string
@@ -243,7 +258,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
 				Namespace: b.namespace,
-				Labels:    labels(),
+				Labels: utils.MergeStringMaps(map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+				}, labels()),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32(1),
@@ -289,7 +306,38 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			clusterRoleBinding,
 			vpa,
 		}
+
+		podDisruptionBudget client.Object
+		maxUnavailable      = intstr.FromInt(1)
 	)
+
+	if version.ConstraintK8sGreaterEqual121.Check(b.kubernetesVersion) {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidDeploymentName,
+				Namespace: deployment.Namespace,
+				Labels:    labels(),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidDeploymentName,
+				Namespace: deployment.Namespace,
+				Labels:    labels(),
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	}
+
+	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
 
 	if b.imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}

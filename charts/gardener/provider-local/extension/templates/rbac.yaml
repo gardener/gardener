@@ -76,6 +76,7 @@ rules:
   - ""
   - apps
   - batch
+  - policy
   - rbac.authorization.k8s.io
   - admissionregistration.k8s.io
   - apiextensions.k8s.io
@@ -104,6 +105,7 @@ rules:
   - customresourcedefinitions
   - networkpolicies
   - ingresses
+  - poddisruptionbudgets
   verbs:
   - "*"
 - apiGroups:
