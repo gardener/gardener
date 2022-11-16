@@ -34,10 +34,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -140,7 +136,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "min(\n    (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -149,7 +145,7 @@
         },
         {
           "exemplar": true,
-          "expr": "quantile(0.5, metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "quantile(0.5,\n    (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -158,7 +154,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "max(\n    (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "instant": true,
           "interval": "",
           "legendFormat": "Maximum",
@@ -166,7 +162,7 @@
         },
         {
           "exemplar": true,
-          "expr": "avg(metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "avg(\n    (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -224,7 +220,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "min(\n    (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -233,7 +229,7 @@
         },
         {
           "exemplar": true,
-          "expr": "quantile(0.5, metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "quantile(0.5,\n    (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -242,7 +238,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "max(\n    (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "instant": true,
           "interval": "",
           "legendFormat": "Maximum",
@@ -250,7 +246,7 @@
         },
         {
           "exemplar": true,
-          "expr": "avg(metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "avg(\n    (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -308,7 +304,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "min(\n    (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}\n     +\n     metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -317,7 +313,7 @@
         },
         {
           "exemplar": true,
-          "expr": "quantile(0.5, metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "quantile(0.5,\n    (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}\n     +\n     metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -326,7 +322,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "max(\n    (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}\n     +\n     metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "instant": true,
           "interval": "",
           "legendFormat": "Maximum",
@@ -334,7 +330,7 @@
         },
         {
           "exemplar": true,
-          "expr": "avg(metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "avg(\n    (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}\n     +\n     metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -392,7 +388,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "min(\n    (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -401,7 +397,7 @@
         },
         {
           "exemplar": true,
-          "expr": "quantile(0.5, metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "quantile(0.5,\n    (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -410,7 +406,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "max(\n    (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "instant": true,
           "interval": "",
           "legendFormat": "Maximum",
@@ -418,7 +414,7 @@
         },
         {
           "exemplar": true,
-          "expr": "avg(metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "expr": "avg(\n    (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"} > 0)\n  +\n    0 * (metering:memory_usage_seconds:this_month > 300)\n)",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -1090,7 +1086,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
