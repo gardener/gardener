@@ -100,8 +100,8 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroySystemResources),
 		})
 		destroyGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Destroying and waiting for gardener-resource-manager to be healthy",
-			Fn:           component.OpWaiter(gardenerResourceManager).Destroy,
+			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
+			Fn:           component.OpWait(gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
 		})
 		_ = g.Add(flow.Task{

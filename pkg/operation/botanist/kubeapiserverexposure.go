@@ -79,7 +79,7 @@ func (b *Botanist) APIServerSNIEnabled() bool {
 
 // DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
-	return component.OpDestroy(kubeapiserverexposure.NewSNI(
+	return component.OpDestroyWithoutWait(kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.Applier(),
 		b.Shoot.SeedNamespace,

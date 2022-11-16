@@ -48,7 +48,7 @@ func NewHVPA(
 	})
 
 	if !enabled {
-		deployer = component.OpDestroy(deployer)
+		deployer = component.OpDestroyWithoutWait(deployer)
 	}
 
 	return deployer, nil

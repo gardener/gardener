@@ -125,7 +125,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
-			Fn:           component.OpWaiter(gardenerResourceManager).Deploy,
+			Fn:           component.OpWait(gardenerResourceManager).Deploy,
 			Dependencies: flow.NewTaskIDs(deployVPACRD, reconcileHVPACRD),
 		})
 		_ = g.Add(flow.Task{

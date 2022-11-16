@@ -418,7 +418,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 
 		log.Info("Deploying and waiting for gardener-resource-manager to be healthy")
-		if err := component.OpWaiter(gardenerResourceManager).Deploy(ctx); err != nil {
+		if err := component.OpWait(gardenerResourceManager).Deploy(ctx); err != nil {
 			return err
 		}
 	}
@@ -1178,7 +1178,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 			return nil, err
 		}
 
-		if err = component.OpWaiter(nginxIngress).Deploy(ctx); err != nil {
+		if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
 			return nil, err
 		}
 

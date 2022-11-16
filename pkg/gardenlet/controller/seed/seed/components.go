@@ -241,8 +241,8 @@ func defaultDependencyWatchdogs(
 		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String(), KubernetesVersion: seedVersion}
 	)
 
-	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
-	dwdProbe = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues))
+	dwdEndpoint = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
+	dwdProbe = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues))
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
@@ -334,7 +334,7 @@ func defaultVPNAuthzServer(
 		return component.NoOp(), nil
 	}
 
-	return component.OpDestroy(vpnAuthzServer), nil
+	return component.OpDestroyWithoutWait(vpnAuthzServer), nil
 }
 
 func defaultSystem(
