@@ -54,18 +54,20 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	}
 
 	e := NewEtcd(
-		b.SeedClientSet.Client(),
 		b.Logger,
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
-		role,
-		class,
-		v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo()),
-		replicas,
-		b.Seed.GetValidVolumeSize("10Gi"),
-		&defragmentationSchedule,
-		gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
-		b.ShootVersion(),
+		etcd.Values{
+			Role:                    role,
+			Class:                   class,
+			FailureToleranceType:    v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo()),
+			Replicas:                replicas,
+			StorageCapacity:         b.Seed.GetValidVolumeSize("10Gi"),
+			DefragmentationSchedule: &defragmentationSchedule,
+			CARotationPhase:         gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
+			K8sVersion:              b.ShootVersion(),
+		},
 	)
 
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)

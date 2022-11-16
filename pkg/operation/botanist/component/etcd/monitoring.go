@@ -373,7 +373,7 @@ func init() {
 func (e *etcd) ScrapeConfigs() ([]string, error) {
 	values := map[string]interface{}{
 		"namespace": e.namespace,
-		"role":      e.role,
+		"role":      e.values.Role,
 	}
 
 	var scrapeConfigEtcd bytes.Buffer
@@ -396,22 +396,22 @@ func (e *etcd) ScrapeConfigs() ([]string, error) {
 func (e *etcd) AlertingRules() (map[string]string, error) {
 	var alertingRules bytes.Buffer
 
-	k8sGTE121, err := versionutils.CompareVersions(e.k8sVersion, ">=", "1.21")
+	k8sGTE121, err := versionutils.CompareVersions(e.values.K8sVersion, ">=", "1.21")
 	if err != nil {
 		return nil, err
 	}
 
 	etcdReplicas := int32(1)
-	if e.replicas != nil {
-		etcdReplicas = *e.replicas
+	if e.values.Replicas != nil {
+		etcdReplicas = *e.values.Replicas
 	}
 
 	if err := monitoringAlertingRulesTemplate.Execute(&alertingRules, map[string]interface{}{
-		"role":               e.role,
-		"Role":               strings.Title(e.role),
-		"class":              e.class,
+		"role":               e.values.Role,
+		"Role":               strings.Title(e.values.Role),
+		"class":              e.values.Class,
 		"classImportant":     ClassImportant,
-		"backupEnabled":      e.backupConfig != nil,
+		"backupEnabled":      e.values.BackupConfig != nil,
 		"k8sGTE121":          k8sGTE121,
 		"etcdQuorumReplicas": int(etcdReplicas/2) + 1,
 		"isHA":               etcdReplicas > 1,
@@ -419,5 +419,5 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 		return nil, err
 	}
 
-	return map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", e.role): alertingRules.String()}, nil
+	return map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", e.values.Role): alertingRules.String()}, nil
 }

@@ -271,7 +271,6 @@ var _ = Describe("Etcd", func() {
 			peerCASecretName *string,
 			peerServerSecretName *string,
 		) *druidv1alpha1.Etcd {
-
 			defragSchedule := defragmentationSchedule
 			if existingDefragmentationSchedule != "" {
 				defragSchedule = existingDefragmentationSchedule
@@ -619,7 +618,16 @@ var _ = Describe("Etcd", func() {
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-		etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+		etcd = New(log, c, testNamespace, sm, Values{
+			Role:                    testRole,
+			Class:                   class,
+			FailureToleranceType:    failureToleranceType,
+			Replicas:                replicas,
+			StorageCapacity:         storageCapacity,
+			DefragmentationSchedule: &defragmentationSchedule,
+			CARotationPhase:         "",
+			K8sVersion:              "1.20.1",
+		})
 	})
 
 	AfterEach(func() {
@@ -781,7 +789,16 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    nil,
+				Replicas:                nil,
+				StorageCapacity:         storageCapacity,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+			})
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -841,7 +858,16 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    failureToleranceType,
+				Replicas:                nil,
+				StorageCapacity:         storageCapacity,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+			})
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -1132,7 +1158,16 @@ var _ = Describe("Etcd", func() {
 
 				replicas = pointer.Int32(1)
 
-				etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+				etcd = New(log, c, testNamespace, sm, Values{
+					Role:                    testRole,
+					Class:                   class,
+					FailureToleranceType:    failureToleranceType,
+					Replicas:                replicas,
+					StorageCapacity:         storageCapacity,
+					DefragmentationSchedule: &defragmentationSchedule,
+					CARotationPhase:         "",
+					K8sVersion:              "1.20.1",
+				})
 				newSetHVPAConfigFunc(updateMode)()
 
 				gomock.InOrder(
@@ -1341,7 +1376,16 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
-				etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, rotationPhase, "1.20.1")
+				etcd = New(log, c, testNamespace, sm, Values{
+					Role:                    testRole,
+					Class:                   class,
+					FailureToleranceType:    failureToleranceType,
+					Replicas:                replicas,
+					StorageCapacity:         storageCapacity,
+					DefragmentationSchedule: &defragmentationSchedule,
+					CARotationPhase:         rotationPhase,
+					K8sVersion:              "1.20.1",
+				})
 			})
 
 			Context("when CA rotation phase is in `Preparing` state", func() {
@@ -1500,7 +1544,16 @@ var _ = Describe("Etcd", func() {
 		)
 
 		JustBeforeEach(func() {
-			etcd = New(c, log, testNamespace, sm, testRole, class, shootFailureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    shootFailureToleranceType,
+				Replicas:                replicas,
+				StorageCapacity:         storageCapacity,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+			})
 		})
 
 		BeforeEach(func() {
@@ -1796,7 +1849,16 @@ var _ = Describe("Etcd", func() {
 		var failureToleranceTypeZone *gardencorev1beta1.FailureToleranceType
 
 		JustBeforeEach(func() {
-			etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    failureToleranceTypeZone,
+				Replicas:                replicas,
+				StorageCapacity:         storageCapacity,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+			})
 		})
 
 		Context("when HA control-plane is not requested", func() {
