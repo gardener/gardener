@@ -55,30 +55,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func defaultEtcdDruid(
-	c client.Client,
-	seedVersion *semver.Version,
-	conf *config.GardenletConfiguration,
-	imageVector imagevector.ImageVector,
-	imageVectorOverwrites map[string]string,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	var imageVectorOverwrite *string
-	if val, ok := imageVectorOverwrites[etcd.Druid]; ok {
-		imageVectorOverwrite = &val
-	}
-
-	return etcd.NewBootstrapper(c, gardenNamespaceName, seedVersion, conf, image.String(), imageVectorOverwrite), nil
-}
-
 func defaultKubeStateMetrics(
 	c client.Client,
 	imageVector imagevector.ImageVector,

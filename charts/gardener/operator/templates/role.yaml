@@ -130,3 +130,16 @@ rules:
   - gardener-operator-leader-election
   verbs:
   - update
+- apiGroups:
+  - druid.gardener.cloud
+  resources:
+  - etcds
+  - etcdcopybackupstasks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update

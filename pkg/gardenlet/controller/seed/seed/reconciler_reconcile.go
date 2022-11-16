@@ -855,10 +855,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion, &r.Config, r.ImageVector, r.ComponentImageVectors, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -922,10 +918,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:   clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace).Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying etcd-druid",
-			Fn:   etcdDruid.Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying kube-state-metrics",
 			Fn:   kubeStateMetrics.Deploy,
 		})
@@ -977,6 +969,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		etcdDruid, err := sharedcomponent.NewEtcdDruid(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			r.ComponentImageVectors,
+			r.Config.ETCDConfig,
+			v1beta1constants.PriorityClassNameSeedSystem800,
+		)
+		if err != nil {
+			return err
+		}
+
 		var (
 			_ = g.Add(flow.Task{
 				Name: "Deploying Kubernetes vertical pod autoscaler",
@@ -985,6 +990,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			_ = g.Add(flow.Task{
 				Name: "Deploying HVPA controller",
 				Fn:   hvpa.Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying ETCD Druid",
+				Fn:   etcdDruid.Deploy,
 			})
 		)
 	}

@@ -27,6 +27,7 @@ As of today, this applies to:
 - `gardener-resource-manager`
 - `vpa-{admission-controller,recommender,updater}`
 - `hvpa-controller` (when `HVPA` feature gate is enabled)
+- `etcd-druid`
 
 Those components are so-called "seed system components".
 As they were already made available by `gardener-operator`, the `gardenlet` just skips them.
@@ -79,8 +80,10 @@ Afterwards, it brings up the so-called "garden system components".
 The [`gardener-resource-manager`](../resource-manager.md) is deployed first since its `ManagedResource` controller will be used to bring up the remainders.
 
 Other system components are:
+
 - garden system resources ([`PriorityClass`es](../development/priority-classes.md) for the workload resources)
 - Vertical Pod Autoscaler (if enabled via `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=true` in the `Garden`)
 - HVPA controller (when `HVPA` feature gate is enabled)
+- ETCD Druid
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.

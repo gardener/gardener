@@ -50,3 +50,16 @@ config:
     garden:
       concurrentSyncs: 1
       syncPeriod: 1h
+      etcdConfig:
+        etcdController:
+          workers: 3
+        custodianController:
+          workers: 3
+        backupCompactionController:
+          workers: 3
+          enableBackupCompaction: false
+          eventsThreshold: 1000000
+          activeDeadlineDuration: "3h"
+      # backupLeaderElection:
+      #   reelectionPeriod: 5s
+      #   etcdConnectionTimeout: 5s

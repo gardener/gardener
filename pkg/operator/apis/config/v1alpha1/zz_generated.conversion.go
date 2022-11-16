@@ -24,12 +24,14 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	apisconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	config "github.com/gardener/gardener/pkg/operator/apis/config"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
-	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
 
 func init() {
@@ -119,6 +121,7 @@ func Convert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(
 func autoConvert_v1alpha1_GardenControllerConfig_To_config_GardenControllerConfig(in *GardenControllerConfig, out *config.GardenControllerConfig, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.ETCDConfig = (*apisconfig.ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
 	return nil
 }
 
@@ -130,6 +133,7 @@ func Convert_v1alpha1_GardenControllerConfig_To_config_GardenControllerConfig(in
 func autoConvert_config_GardenControllerConfig_To_v1alpha1_GardenControllerConfig(in *config.GardenControllerConfig, out *GardenControllerConfig, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.ETCDConfig = (*configv1alpha1.ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
 	return nil
 }
 
@@ -139,10 +143,10 @@ func Convert_config_GardenControllerConfig_To_v1alpha1_GardenControllerConfig(in
 }
 
 func autoConvert_v1alpha1_OperatorConfiguration_To_config_OperatorConfiguration(in *OperatorConfiguration, out *config.OperatorConfiguration, s conversion.Scope) error {
-	if err := configv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.RuntimeClientConnection, &out.RuntimeClientConnection, s); err != nil {
+	if err := componentbaseconfigv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.RuntimeClientConnection, &out.RuntimeClientConnection, s); err != nil {
 		return err
 	}
-	if err := configv1alpha1.Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
+	if err := componentbaseconfigv1alpha1.Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
 		return err
 	}
 	out.LogLevel = in.LogLevel
@@ -153,7 +157,7 @@ func autoConvert_v1alpha1_OperatorConfiguration_To_config_OperatorConfiguration(
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging
 		*out = new(componentbaseconfig.DebuggingConfiguration)
-		if err := configv1alpha1.Convert_v1alpha1_DebuggingConfiguration_To_config_DebuggingConfiguration(*in, *out, s); err != nil {
+		if err := componentbaseconfigv1alpha1.Convert_v1alpha1_DebuggingConfiguration_To_config_DebuggingConfiguration(*in, *out, s); err != nil {
 			return err
 		}
 	} else {
@@ -172,10 +176,10 @@ func Convert_v1alpha1_OperatorConfiguration_To_config_OperatorConfiguration(in *
 }
 
 func autoConvert_config_OperatorConfiguration_To_v1alpha1_OperatorConfiguration(in *config.OperatorConfiguration, out *OperatorConfiguration, s conversion.Scope) error {
-	if err := configv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.RuntimeClientConnection, &out.RuntimeClientConnection, s); err != nil {
+	if err := componentbaseconfigv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.RuntimeClientConnection, &out.RuntimeClientConnection, s); err != nil {
 		return err
 	}
-	if err := configv1alpha1.Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
+	if err := componentbaseconfigv1alpha1.Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
 		return err
 	}
 	out.LogLevel = in.LogLevel
@@ -185,8 +189,8 @@ func autoConvert_config_OperatorConfiguration_To_v1alpha1_OperatorConfiguration(
 	}
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging
-		*out = new(configv1alpha1.DebuggingConfiguration)
-		if err := configv1alpha1.Convert_config_DebuggingConfiguration_To_v1alpha1_DebuggingConfiguration(*in, *out, s); err != nil {
+		*out = new(componentbaseconfigv1alpha1.DebuggingConfiguration)
+		if err := componentbaseconfigv1alpha1.Convert_config_DebuggingConfiguration_To_v1alpha1_DebuggingConfiguration(*in, *out, s); err != nil {
 			return err
 		}
 	} else {

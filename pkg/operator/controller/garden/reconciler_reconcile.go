@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -48,10 +49,20 @@ func (r *Reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
+	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
+
 	if !controllerutil.ContainsFinalizer(garden, finalizerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClient, garden, finalizerName); err != nil {
 			return reconcile.Result{}, err
+		}
+	}
+
+	// VPA is a prerequisite. If it's enabled then we deploy the CRD (and later also the related components) as part of
+	// the flow. However, when it's disabled then we check whether it is indeed available (and fail, otherwise).
+	if !vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
+		if _, err := r.RuntimeClient.RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
+			return reconcile.Result{}, fmt.Errorf("VPA is required for runtime cluster but CRD is not installed: %s", err)
 		}
 	}
 
@@ -66,33 +77,6 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
-
-	// VPA is a prerequisite. If it's enabled then we deploy the CRD (and later also the related components). However,
-	// when it's disabled then we check whether it is indeed available (and fail, otherwise).
-	if vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
-		log.Info("Deploying custom resource definition for VPA")
-		if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
-			return reconcile.Result{}, err
-		}
-	} else {
-		if _, err := r.RuntimeClient.RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("VPA is required for runtime cluster but CRD is not installed: %s", err)
-		}
-	}
-
-	if hvpaEnabled() {
-		log.Info("Deploying custom resource definition for HVPA")
-		if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
-			return reconcile.Result{}, err
-		}
-	} else {
-		log.Info("Destroying custom resource definition for HVPA")
-		if err := hvpa.NewCRD(applier).Destroy(ctx); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
 	log.Info("Generating general CA certificate for runtime cluster")
 	if _, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:       operatorv1alpha1.SecretNameCARuntime,
@@ -103,36 +87,71 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Deploying and waiting for gardener-resource-manager to be healthy")
+	log.Info("Instantiating component deployers")
+	vpaCRD := vpa.NewCRD(applier, nil)
+	hvpaCRD := hvpa.NewCRD(applier)
 	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := component.OpWaiter(gardenerResourceManager).Deploy(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	log.Info("Reconciling system resources")
-	if err := r.newSystem().Deploy(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	log.Info("Reconciling VPA components")
+	system := r.newSystem()
 	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := verticalPodAutoscaler.Deploy(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	log.Info("Reconciling HVPA controller")
 	hvpaController, err := r.newHVPA()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := hvpaController.Deploy(ctx); err != nil {
+	etcdDruid, err := r.newEtcdDruid()
+	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	var (
+		g            = flow.NewGraph("Garden reconciliation")
+		deployVPACRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definition for VPA",
+			Fn:   flow.TaskFn(vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
+		})
+		reconcileHVPACRD = g.Add(flow.Task{
+			Name: "Reconciling custom resource definition for HVPA",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if !hvpaEnabled() {
+					return hvpaCRD.Destroy(ctx)
+				}
+				return hvpaCRD.Deploy(ctx)
+			}).DoIf(hvpaEnabled()),
+		})
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
+			Fn:           component.OpWaiter(gardenerResourceManager).Deploy,
+			Dependencies: flow.NewTaskIDs(deployVPACRD, reconcileHVPACRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying system resources",
+			Fn:           system.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes vertical pod autoscaler",
+			Fn:           verticalPodAutoscaler.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying HVPA controller",
+			Fn:           hvpaController.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying ETCD Druid",
+			Fn:           etcdDruid.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+		return reconcile.Result{}, flow.Errors(err)
 	}
 
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)

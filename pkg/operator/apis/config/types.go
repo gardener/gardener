@@ -17,6 +17,8 @@ package config
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
+
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -57,6 +59,9 @@ type GardenControllerConfig struct {
 	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	SyncPeriod *metav1.Duration
+	// ETCDConfig contains an optional configuration for the
+	// backup compaction feature of ETCD backup-restore functionality.
+	ETCDConfig *gardenletconfig.ETCDConfig
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

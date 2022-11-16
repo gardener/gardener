@@ -88,17 +88,19 @@ func NewBootstrapper(
 	c client.Client,
 	namespace string,
 	kubernetesVersion *semver.Version,
-	config *config.GardenletConfiguration,
+	etcdConfig *config.ETCDConfig,
 	image string,
 	imageVectorOverwrite *string,
+	priorityClassName string,
 ) component.DeployWaiter {
 	return &bootstrapper{
 		client:               c,
 		namespace:            namespace,
 		kubernetesVersion:    kubernetesVersion,
-		config:               config,
+		etcdConfig:           etcdConfig,
 		image:                image,
 		imageVectorOverwrite: imageVectorOverwrite,
+		priorityClassName:    priorityClassName,
 	}
 }
 
@@ -106,9 +108,10 @@ type bootstrapper struct {
 	client               client.Client
 	namespace            string
 	kubernetesVersion    *semver.Version
-	config               *config.GardenletConfiguration
+	etcdConfig           *config.ETCDConfig
 	image                string
 	imageVectorOverwrite *string
+	priorityClassName    string
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
@@ -273,14 +276,14 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						Labels: labels(),
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem800,
+						PriorityClassName:  b.priorityClassName,
 						ServiceAccountName: druidServiceAccountName,
 						Containers: []corev1.Container{
 							{
 								Name:            Druid,
 								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command:         getDruidDeployCommands(b.config),
+								Command:         getDruidDeployCommands(b.etcdConfig),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -377,26 +380,25 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
-func getDruidDeployCommands(gardenletConf *config.GardenletConfiguration) []string {
+func getDruidDeployCommands(etcdConfig *config.ETCDConfig) []string {
 	command := []string{"/etcd-druid"}
 	command = append(command, "--enable-leader-election=true")
 	command = append(command, "--ignore-operation-annotation=false")
 	command = append(command, "--disable-etcd-serviceaccount-automount=true")
 
-	if gardenletConf == nil {
+	if etcdConfig == nil {
 		// TODO(abdasgupta): Following line to add 50 workers is only for backward compatibility. Please, remove.
 		command = append(command, "--workers=50")
 		return command
 	}
 
-	config := gardenletConf.ETCDConfig
-	command = append(command, "--workers="+strconv.FormatInt(*config.ETCDController.Workers, 10))
-	command = append(command, "--custodian-workers="+strconv.FormatInt(*config.CustodianController.Workers, 10))
-	command = append(command, "--compaction-workers="+strconv.FormatInt(*config.BackupCompactionController.Workers, 10))
-	command = append(command, "--enable-backup-compaction="+strconv.FormatBool(*config.BackupCompactionController.EnableBackupCompaction))
-	command = append(command, "--etcd-events-threshold="+strconv.FormatInt(*config.BackupCompactionController.EventsThreshold, 10))
-	if config.BackupCompactionController.ActiveDeadlineDuration != nil {
-		command = append(command, "--active-deadline-duration="+config.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
+	command = append(command, "--workers="+strconv.FormatInt(*etcdConfig.ETCDController.Workers, 10))
+	command = append(command, "--custodian-workers="+strconv.FormatInt(*etcdConfig.CustodianController.Workers, 10))
+	command = append(command, "--compaction-workers="+strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10))
+	command = append(command, "--enable-backup-compaction="+strconv.FormatBool(*etcdConfig.BackupCompactionController.EnableBackupCompaction))
+	command = append(command, "--etcd-events-threshold="+strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10))
+	if etcdConfig.BackupCompactionController.ActiveDeadlineDuration != nil {
+		command = append(command, "--active-deadline-duration="+etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
 	}
 
 	return command

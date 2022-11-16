@@ -66,6 +66,18 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 	)
 }
 
+func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
+	return sharedcomponent.NewEtcdDruid(
+		r.RuntimeClient,
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		r.ImageVector,
+		r.ComponentImageVectors,
+		r.Config.Controllers.Garden.ETCDConfig,
+		v1beta1constants.PriorityClassNameGardenSystem300,
+	)
+}
+
 func (r *Reconciler) newSystem() component.DeployWaiter {
 	return gardensystem.New(r.RuntimeClient, r.GardenNamespace)
 }

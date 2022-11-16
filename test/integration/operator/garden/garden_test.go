@@ -158,6 +158,7 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("garden-system")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vpa")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpa")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
 		))
 
 		By("Wait for Reconciled condition to be set to True")
@@ -185,6 +186,7 @@ var _ = Describe("Garden controller tests", func() {
 			return crdList.Items
 		}).ShouldNot(ContainElements(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
 		))
 
 		By("Verify that gardener-resource-manager has been deleted")

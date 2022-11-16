@@ -45,6 +45,7 @@ build:
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
         - pkg/controllerutils
+        - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
         - pkg/extensions
         - pkg/features

@@ -16,6 +16,7 @@ package garden
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,9 +29,11 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -44,66 +47,82 @@ func (r *Reconciler) delete(
 	reconcile.Result,
 	error,
 ) {
-	hvpaController, err := r.newHVPA()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err := component.OpDestroyAndWait(hvpaController).Destroy(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
+	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
 
-	log.Info("Destroying VPA components")
-	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err := component.OpDestroyAndWait(verticalPodAutoscaler).Destroy(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	log.Info("Destroying system resources")
-	if err := component.OpDestroyAndWait(r.newSystem()).Destroy(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	log.Info("Ensuring all ManagedResources are gone")
-	managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClient, pointer.String(v1beta1constants.SeedResourceManagerClass))
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if managedResourcesStillExist {
-		log.Info("At least one ManagedResource still exists, cannot delete gardener-resource-manager")
-		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
-	}
-
-	log.Info("Destroying gardener-resource-manager")
+	log.Info("Instantiating component destroyers")
+	hvpaCRD := hvpa.NewCRD(applier)
+	vpaCRD := vpa.NewCRD(applier, nil)
 	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := component.OpDestroyAndWait(gardenerResourceManager).Destroy(ctx); err != nil {
+	system := r.newSystem()
+	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	hvpaController, err := r.newHVPA()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	etcdDruid, err := r.newEtcdDruid()
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Cleaning up secrets")
-	if err := secretsManager.Cleanup(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
+	var (
+		g                = flow.NewGraph("Garden deletion")
+		destroyEtcdDruid = g.Add(flow.Task{
+			Name: "Destroying ETCD Druid",
+			Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
+		})
+		destroyHVPAController = g.Add(flow.Task{
+			Name: "Destroying HVPA controller",
+			Fn:   component.OpDestroyAndWait(hvpaController).Destroy,
+		})
+		destroyVerticalPodAutoscaler = g.Add(flow.Task{
+			Name: "Destroying Kubernetes vertical pod autoscaler",
+			Fn:   component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
+		})
+		syncPointCleanedUp = flow.NewTaskIDs(
+			destroyEtcdDruid,
+			destroyHVPAController,
+			destroyVerticalPodAutoscaler,
+		)
+		destroySystemResources = g.Add(flow.Task{
+			Name:         "Destroying system resources",
+			Fn:           component.OpDestroyAndWait(system).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
+		})
+		ensureNoManagedResourcesExistAnymore = g.Add(flow.Task{
+			Name:         "Ensuring no ManagedResources exist anymore",
+			Fn:           r.checkIfManagedResourcesExist(),
+			Dependencies: flow.NewTaskIDs(destroySystemResources),
+		})
+		destroyGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Destroying and waiting for gardener-resource-manager to be healthy",
+			Fn:           component.OpWaiter(gardenerResourceManager).Destroy,
+			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for VPA",
+			Fn:           flow.TaskFn(vpaCRD.Destroy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for HVPA",
+			Fn:           flow.TaskFn(hvpaCRD.Destroy).DoIf(hvpaEnabled()),
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up secrets",
+			Fn:           secretsManager.Cleanup,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+	)
 
-	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
-
-	if vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
-		log.Info("Destroying custom resource definition for VPA")
-		if err := vpa.NewCRD(applier, nil).Destroy(ctx); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
-	if hvpaEnabled() {
-		log.Info("Destroying custom resource definition for HVPA")
-		if err := hvpa.NewCRD(applier).Destroy(ctx); err != nil {
-			return reconcile.Result{}, err
-		}
+	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+		return reconcilerutils.ReconcileErr(flow.Errors(err))
 	}
 
 	if controllerutil.ContainsFinalizer(garden, finalizerName) {
@@ -114,4 +133,22 @@ func (r *Reconciler) delete(
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error {
+	return func(ctx context.Context) error {
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClient, pointer.String(v1beta1constants.SeedResourceManagerClass))
+		if err != nil {
+			return err
+		}
+
+		if !managedResourcesStillExist {
+			return nil
+		}
+
+		return &reconcilerutils.RequeueAfterError{
+			RequeueAfter: 5 * time.Second,
+			Cause:        errors.New("At least one ManagedResource still exists"),
+		}
+	}
 }

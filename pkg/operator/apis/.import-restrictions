@@ -9,5 +9,9 @@ rules:
   - sigs.k8s.io/controller-runtime/pkg/log/zap
 - selectorRegexp: github[.]com/gardener
   allowedPrefixes:
-  - github.com/gardener/gardener/pkg/operator/apis
+  - github.com/gardener/gardener/pkg/apis/core
+  - github.com/gardener/gardener/pkg/gardenlet/apis
   - github.com/gardener/gardener/pkg/logger
+  - github.com/gardener/gardener/pkg/operator/apis
+  - github.com/gardener/gardener/pkg/utils/timewindow
+  - github.com/gardener/gardener/pkg/utils/version

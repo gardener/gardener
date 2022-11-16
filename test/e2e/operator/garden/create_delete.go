@@ -94,6 +94,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("garden-system"),
 				healthyManagedResource("hvpa"),
 				healthyManagedResource("vpa"),
+				healthyManagedResource("etcd-druid"),
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 

@@ -127,26 +127,41 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
-		Describe("#SetDefaults_GardenControllerConfig", func() {
-			It("should not default the object", func() {
-				obj := &GardenControllerConfig{}
+		Describe("Controller configuration", func() {
+			Describe("Garden controller", func() {
+				It("should not default the object", func() {
+					obj := &GardenControllerConfig{}
 
-				SetDefaults_GardenControllerConfig(obj)
+					SetDefaults_GardenControllerConfig(obj)
 
-				Expect(obj.ConcurrentSyncs).To(PointTo(Equal(1)))
-				Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
-			})
+					Expect(obj.ConcurrentSyncs).To(PointTo(Equal(1)))
+					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+				})
 
-			It("should not overwrite existing values", func() {
-				obj := &GardenControllerConfig{
-					ConcurrentSyncs: pointer.Int(5),
-					SyncPeriod:      &metav1.Duration{Duration: time.Second},
-				}
+				It("should not overwrite existing values", func() {
+					obj := &GardenControllerConfig{
+						ConcurrentSyncs: pointer.Int(5),
+						SyncPeriod:      &metav1.Duration{Duration: time.Second},
+					}
 
-				SetDefaults_GardenControllerConfig(obj)
+					SetDefaults_GardenControllerConfig(obj)
 
-				Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-				Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
+					Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
+				})
+
+				It("should correctly default ETCDConfig configuration", func() {
+					SetDefaults_OperatorConfiguration(obj)
+					Expect(obj.Controllers.Garden.ETCDConfig).NotTo(BeNil())
+					Expect(obj.Controllers.Garden.ETCDConfig.ETCDController).NotTo(BeNil())
+					Expect(obj.Controllers.Garden.ETCDConfig.ETCDController.Workers).To(PointTo(Equal(int64(50))))
+					Expect(obj.Controllers.Garden.ETCDConfig.CustodianController).NotTo(BeNil())
+					Expect(obj.Controllers.Garden.ETCDConfig.CustodianController.Workers).To(PointTo(Equal(int64(10))))
+					Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController).NotTo(BeNil())
+					Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.Workers).To(PointTo(Equal(int64(3))))
+					Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EnableBackupCompaction).To(PointTo(Equal(false)))
+					Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EventsThreshold).To(PointTo(Equal(int64(1000000))))
+				})
 			})
 		})
 	})
