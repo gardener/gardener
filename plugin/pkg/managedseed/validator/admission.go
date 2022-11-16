@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
@@ -36,7 +35,6 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -47,7 +45,6 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 const (
@@ -244,28 +241,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
 
-	if a.GetOperation() == admission.Update {
-		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
-		if !ok {
-			return apierrors.NewInternalError(errors.New("could not covert old resource into ManagedSeed object"))
-		}
-		return v.validateManagedSeedUpdate(oldManagedSeed, managedSeed)
-	}
-
 	return nil
-}
-
-func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed) error {
-	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
-	if err != nil {
-		return err
-	}
-	newSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(newManagedSeed)
-	if err != nil {
-		return err
-	}
-
-	return admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed")
 }
 
 func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
@@ -366,8 +342,6 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	}
 	if shootZones := helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
 		spec.Provider.Zones = shootZones.List()
-	} else if len(spec.Provider.Zones) > 0 && !sets.NewString(spec.Provider.Zones...).Equal(shootZones) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "zones"), spec.Provider.Zones, fmt.Sprintf("seed provider zones must be equal to shoot zones (%v)", shootZones.List())))
 	}
 
 	// At this point the Shoot VPA should be already enabled (validated earlier). If the Seed does not specify VPA settings,
