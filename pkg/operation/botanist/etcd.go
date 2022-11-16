@@ -16,8 +16,6 @@ package botanist
 
 import (
 	"context"
-	"fmt"
-	"hash/crc32"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -37,7 +35,6 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 )
 
@@ -192,61 +189,31 @@ func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
 }
 
 func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
-	schedule := "%d %d * * *"
-
-	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *timewindow.MaintenanceTimeWindow, shootUID types.UID) string {
-		// Randomize the snapshot timing daily but within last hour.
-		// The 15 minutes buffer is set to snapshot upload time before actual maintenance window start.
-		snapshotWindowBegin := maintenanceTimeWindow.Begin().Add(-1, -15, 0)
-		randomMinutes := int(crc32.ChecksumIEEE([]byte(shootUID)) % 60)
-		snapshotTime := snapshotWindowBegin.Add(0, randomMinutes, 0)
-		return fmt.Sprintf(schedule, snapshotTime.Minute(), snapshotTime.Hour())
-	})
+	return timewindow.DetermineSchedule(
+		"%d %d * * *",
+		shoot.Spec.Maintenance.TimeWindow.Begin,
+		shoot.Spec.Maintenance.TimeWindow.End,
+		shoot.Status.UID,
+		shoot.CreationTimestamp,
+		timewindow.RandomizeWithinFirstHourOfTimeWindow,
+	)
 }
 
 func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed, class etcd.Class) (string, error) {
-	schedule := "%d %d */3 * *"
+	scheduleFormat := "%d %d */3 * *"
 	if managedSeed != nil && class == etcd.ClassImportant {
 		// defrag important etcds of ManagedSeeds daily in the maintenance window
-		schedule = "%d %d * * *"
+		scheduleFormat = "%d %d * * *"
 	}
 
-	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *timewindow.MaintenanceTimeWindow, shootUID types.UID) string {
-		// Randomize the defragmentation timing but within the maintenance window.
-		maintenanceWindowBegin := maintenanceTimeWindow.Begin()
-		windowInMinutes := uint32(maintenanceTimeWindow.Duration().Minutes())
-		randomMinutes := int(crc32.ChecksumIEEE([]byte(shootUID)) % windowInMinutes)
-		maintenanceTime := maintenanceWindowBegin.Add(0, randomMinutes, 0)
-		return fmt.Sprintf(schedule, maintenanceTime.Minute(), maintenanceTime.Hour())
-	})
-}
-
-func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*timewindow.MaintenanceTimeWindow, types.UID) string) (string, error) {
-	var (
-		begin, end string
-		shootUID   types.UID
+	return timewindow.DetermineSchedule(
+		scheduleFormat,
+		shoot.Spec.Maintenance.TimeWindow.Begin,
+		shoot.Spec.Maintenance.TimeWindow.End,
+		shoot.Status.UID,
+		shoot.CreationTimestamp,
+		timewindow.RandomizeWithinTimeWindow,
 	)
-
-	if shoot.Spec.Maintenance != nil && shoot.Spec.Maintenance.TimeWindow != nil {
-		begin = shoot.Spec.Maintenance.TimeWindow.Begin
-		end = shoot.Spec.Maintenance.TimeWindow.End
-		shootUID = shoot.Status.UID
-	}
-
-	if len(begin) != 0 && len(end) != 0 {
-		maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(begin, end)
-		if err != nil {
-			return "", err
-		}
-
-		if !maintenanceTimeWindow.Equal(timewindow.AlwaysTimeWindow) {
-			return f(maintenanceTimeWindow, shootUID), nil
-		}
-	}
-
-	creationMinute := shoot.CreationTimestamp.Minute()
-	creationHour := shoot.CreationTimestamp.Hour()
-	return fmt.Sprintf(schedule, creationMinute, creationHour), nil
 }
 
 func getEtcdReplicas(shoot *gardencorev1beta1.Shoot) int32 {
