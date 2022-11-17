@@ -1162,7 +1162,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:1401",
-          "format": "short",
+          "format": "s",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1171,7 +1171,7 @@
         },
         {
           "$$hashKey": "object:1402",
-          "format": "short",
+          "format": "s",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1259,7 +1259,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:1401",
-          "format": "short",
+          "format": "binBps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1268,7 +1268,7 @@
         },
         {
           "$$hashKey": "object:1402",
-          "format": "short",
+          "format": "binBps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1356,7 +1356,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:1401",
-          "format": "short",
+          "format": "binBps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1365,7 +1365,7 @@
         },
         {
           "$$hashKey": "object:1402",
-          "format": "short",
+          "format": "binBps",
           "label": null,
           "logBase": 1,
           "max": null,
