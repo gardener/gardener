@@ -70,19 +70,19 @@ var (
 	).Union(availableShootMaintenanceOperations)
 	availableShootMaintenanceOperations = sets.NewString(
 		v1beta1constants.GardenerOperationReconcile,
-		v1beta1constants.ShootOperationRotateCAStart,
-		v1beta1constants.ShootOperationRotateCAComplete,
+		v1beta1constants.OperationRotateCAStart,
+		v1beta1constants.OperationRotateCAComplete,
 		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 		v1beta1constants.ShootOperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 	).Union(forbiddenShootOperationsWhenHibernated)
 	forbiddenShootOperationsWhenHibernated = sets.NewString(
-		v1beta1constants.ShootOperationRotateCredentialsStart,
-		v1beta1constants.ShootOperationRotateCredentialsComplete,
-		v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
-		v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
-		v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
-		v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
+		v1beta1constants.OperationRotateCredentialsStart,
+		v1beta1constants.OperationRotateCredentialsComplete,
+		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+		v1beta1constants.OperationRotateServiceAccountKeyStart,
+		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
 	availableShootPurposes = sets.NewString(
 		string(core.ShootPurposeEvaluation),
@@ -1869,7 +1869,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	allErrs := field.ErrorList{}
 
 	switch operation {
-	case v1beta1constants.ShootOperationRotateCredentialsStart:
+	case v1beta1constants.OperationRotateCredentialsStart:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
@@ -1882,7 +1882,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
-	case v1beta1constants.ShootOperationRotateCredentialsComplete:
+	case v1beta1constants.OperationRotateCredentialsComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
 		}
@@ -1893,38 +1893,38 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.ShootOperationRotateCAStart:
+	case v1beta1constants.OperationRotateCAStart:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
 		if phase := helper.GetShootCARotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
 		}
-	case v1beta1constants.ShootOperationRotateCAComplete:
+	case v1beta1constants.OperationRotateCAComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.ShootOperationRotateServiceAccountKeyStart:
+	case v1beta1constants.OperationRotateServiceAccountKeyStart:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
 		if phase := helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
 		}
-	case v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
+	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
 		if helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
-	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete:
+	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		if helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}

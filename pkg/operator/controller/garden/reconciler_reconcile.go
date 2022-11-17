@@ -192,7 +192,7 @@ func caCertConfigurations() []secretutils.ConfigInterface {
 	}
 }
 
-func caCertGenerateOptionsFor(name string, rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase) []secretsmanager.GenerateOption {
+func caCertGenerateOptionsFor(name string, rotationPhase gardencorev1beta1.CredentialsRotationPhase) []secretsmanager.GenerateOption {
 	options := []secretsmanager.GenerateOption{secretsmanager.Rotate(secretsmanager.KeepOld)}
 
 	if name == operatorv1alpha1.SecretNameCARuntime {
@@ -207,7 +207,7 @@ func caCertGenerateOptionsFor(name string, rotationPhase gardencorev1beta1.Shoot
 func (r *Reconciler) deployEtcdsFunc(
 	garden *operatorv1alpha1.Garden,
 	etcdMain, etcdEvents etcd.Interface,
-	rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase,
+	rotationPhase gardencorev1beta1.CredentialsRotationPhase,
 ) func(context.Context) error {
 	return func(ctx context.Context) error {
 		if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil {

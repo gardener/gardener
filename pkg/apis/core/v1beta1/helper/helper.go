@@ -1199,7 +1199,7 @@ func GetNodeLocalDNS(systemComponents *gardencorev1beta1.SystemComponents) *gard
 }
 
 // GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
-func GetShootCARotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.ShootCredentialsRotationPhase {
+func GetShootCARotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.CertificateAuthorities != nil {
 		return credentials.Rotation.CertificateAuthorities.Phase
 	}
@@ -1317,7 +1317,7 @@ func IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime(credentia
 
 // GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
 // string.
-func GetShootServiceAccountKeyRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.ShootCredentialsRotationPhase {
+func GetShootServiceAccountKeyRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
 		return credentials.Rotation.ServiceAccountKey.Phase
 	}
@@ -1342,7 +1342,7 @@ func MutateShootServiceAccountKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 
 // GetShootETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
 // string.
-func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.ShootCredentialsRotationPhase {
+func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
 		return credentials.Rotation.ETCDEncryptionKey.Phase
 	}

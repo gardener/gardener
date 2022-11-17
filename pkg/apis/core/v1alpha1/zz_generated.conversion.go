@@ -5209,7 +5209,7 @@ func Convert_core_ShootAdvertisedAddress_To_v1alpha1_ShootAdvertisedAddress(in *
 }
 
 func autoConvert_v1alpha1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotation, out *core.ShootCARotation, s conversion.Scope) error {
-	out.Phase = core.ShootCredentialsRotationPhase(in.Phase)
+	out.Phase = core.CredentialsRotationPhase(in.Phase)
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
@@ -5221,7 +5221,7 @@ func Convert_v1alpha1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotatio
 }
 
 func autoConvert_core_ShootCARotation_To_v1alpha1_ShootCARotation(in *core.ShootCARotation, out *ShootCARotation, s conversion.Scope) error {
-	out.Phase = ShootCredentialsRotationPhase(in.Phase)
+	out.Phase = CredentialsRotationPhase(in.Phase)
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
@@ -5283,7 +5283,7 @@ func Convert_core_ShootCredentialsRotation_To_v1alpha1_ShootCredentialsRotation(
 }
 
 func autoConvert_v1alpha1_ShootETCDEncryptionKeyRotation_To_core_ShootETCDEncryptionKeyRotation(in *ShootETCDEncryptionKeyRotation, out *core.ShootETCDEncryptionKeyRotation, s conversion.Scope) error {
-	out.Phase = core.ShootCredentialsRotationPhase(in.Phase)
+	out.Phase = core.CredentialsRotationPhase(in.Phase)
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
@@ -5295,7 +5295,7 @@ func Convert_v1alpha1_ShootETCDEncryptionKeyRotation_To_core_ShootETCDEncryption
 }
 
 func autoConvert_core_ShootETCDEncryptionKeyRotation_To_v1alpha1_ShootETCDEncryptionKeyRotation(in *core.ShootETCDEncryptionKeyRotation, out *ShootETCDEncryptionKeyRotation, s conversion.Scope) error {
-	out.Phase = ShootCredentialsRotationPhase(in.Phase)
+	out.Phase = CredentialsRotationPhase(in.Phase)
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
@@ -5465,7 +5465,7 @@ func Convert_core_ShootSSHKeypairRotation_To_v1alpha1_ShootSSHKeypairRotation(in
 }
 
 func autoConvert_v1alpha1_ShootServiceAccountKeyRotation_To_core_ShootServiceAccountKeyRotation(in *ShootServiceAccountKeyRotation, out *core.ShootServiceAccountKeyRotation, s conversion.Scope) error {
-	out.Phase = core.ShootCredentialsRotationPhase(in.Phase)
+	out.Phase = core.CredentialsRotationPhase(in.Phase)
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
@@ -5477,7 +5477,7 @@ func Convert_v1alpha1_ShootServiceAccountKeyRotation_To_core_ShootServiceAccount
 }
 
 func autoConvert_core_ShootServiceAccountKeyRotation_To_v1alpha1_ShootServiceAccountKeyRotation(in *core.ShootServiceAccountKeyRotation, out *ShootServiceAccountKeyRotation, s conversion.Scope) error {
-	out.Phase = ShootCredentialsRotationPhase(in.Phase)
+	out.Phase = CredentialsRotationPhase(in.Phase)
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil

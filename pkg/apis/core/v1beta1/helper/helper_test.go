@@ -2249,19 +2249,19 @@ var _ = Describe("helper", func() {
 	)
 
 	DescribeTable("#GetShootCARotationPhase",
-		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.ShootCredentialsRotationPhase) {
+		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
 			Expect(GetShootCARotationPhase(credentials)).To(Equal(expectedPhase))
 		},
 
-		Entry("credentials nil", nil, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("ca nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{CertificateAuthorities: &gardencorev1beta1.ShootCARotation{}}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("ca nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{CertificateAuthorities: &gardencorev1beta1.ShootCARotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{CertificateAuthorities: &gardencorev1beta1.ShootCARotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
 	DescribeTable("#MutateShootCARotation",
-		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.ShootCredentialsRotationPhase) {
+		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
 			MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
 				rotation.Phase = phase
 			})
@@ -2362,19 +2362,19 @@ var _ = Describe("helper", func() {
 	)
 
 	DescribeTable("#GetShootServiceAccountKeyRotationPhase",
-		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.ShootCredentialsRotationPhase) {
+		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
 			Expect(GetShootServiceAccountKeyRotationPhase(credentials)).To(Equal(expectedPhase))
 		},
 
-		Entry("credentials nil", nil, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("serviceAccountKey nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{}}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("serviceAccountKey nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
 	DescribeTable("#MutateShootServiceAccountKeyRotation",
-		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.ShootCredentialsRotationPhase) {
+		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
 			MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
 				rotation.Phase = phase
 			})
@@ -2388,19 +2388,19 @@ var _ = Describe("helper", func() {
 	)
 
 	DescribeTable("#GetShootETCDEncryptionKeyRotationPhase",
-		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.ShootCredentialsRotationPhase) {
+		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
 			Expect(GetShootETCDEncryptionKeyRotationPhase(credentials)).To(Equal(expectedPhase))
 		},
 
-		Entry("credentials nil", nil, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("etcdEncryptionKey nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("etcdEncryptionKey nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
 	DescribeTable("#MutateShootETCDEncryptionKeyRotation",
-		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.ShootCredentialsRotationPhase) {
+		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
 			MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
 				rotation.Phase = phase
 			})

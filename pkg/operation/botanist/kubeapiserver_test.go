@@ -1356,7 +1356,7 @@ usernames: ["admin"]
 		)
 
 		DescribeTable("ETCDEncryptionConfig",
-			func(rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig kubeapiserver.ETCDEncryptionConfig, finalizeTest func()) {
+			func(rotationPhase gardencorev1beta1.CredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig kubeapiserver.ETCDEncryptionConfig, finalizeTest func()) {
 				if len(rotationPhase) > 0 {
 					shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 					shootCopy.Status.Credentials = &gardencorev1beta1.ShootCredentials{
@@ -1391,7 +1391,7 @@ usernames: ["admin"]
 			},
 
 			Entry("no rotation",
-				gardencorev1beta1.ShootCredentialsRotationPhase(""),
+				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
 				kubeapiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true},
 				nil,

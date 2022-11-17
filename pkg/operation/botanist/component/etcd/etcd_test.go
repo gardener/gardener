@@ -1333,7 +1333,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA setup is configured", func() {
 			var (
-				rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
+				rotationPhase gardencorev1beta1.CredentialsRotationPhase
 			)
 
 			createExpectations := func(failureToleranceType *gardencorev1beta1.FailureToleranceType, caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {

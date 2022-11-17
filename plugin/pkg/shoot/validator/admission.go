@@ -647,7 +647,7 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	}
 
 	if c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair ||
-		c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateCredentialsStart {
+		c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.OperationRotateCredentialsStart {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 

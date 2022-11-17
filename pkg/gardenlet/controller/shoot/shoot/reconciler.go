@@ -532,7 +532,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	var mustRemoveOperationAnnotation bool
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
-	case v1beta1constants.ShootOperationRotateCredentialsStart:
+	case v1beta1constants.OperationRotateCredentialsStart:
 		mustRemoveOperationAnnotation = true
 		startRotationCA(shoot, &now)
 		startRotationServiceAccountKey(shoot, &now)
@@ -540,16 +540,16 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		startRotationSSHKeypair(shoot, &now)
 		startRotationObservability(shoot, &now)
 		startRotationETCDEncryptionKey(shoot, &now)
-	case v1beta1constants.ShootOperationRotateCredentialsComplete:
+	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot)
 		completeRotationServiceAccountKey(shoot)
 		completeRotationETCDEncryptionKey(shoot)
 
-	case v1beta1constants.ShootOperationRotateCAStart:
+	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
 		startRotationCA(shoot, &now)
-	case v1beta1constants.ShootOperationRotateCAComplete:
+	case v1beta1constants.OperationRotateCAComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot)
 
@@ -565,17 +565,17 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		mustRemoveOperationAnnotation = true
 		startRotationObservability(shoot, &now)
 
-	case v1beta1constants.ShootOperationRotateServiceAccountKeyStart:
+	case v1beta1constants.OperationRotateServiceAccountKeyStart:
 		mustRemoveOperationAnnotation = true
 		startRotationServiceAccountKey(shoot, &now)
-	case v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
+	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationServiceAccountKey(shoot)
 
-	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
 		mustRemoveOperationAnnotation = true
 		startRotationETCDEncryptionKey(shoot, &now)
-	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete:
+	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationETCDEncryptionKey(shoot)
 	}

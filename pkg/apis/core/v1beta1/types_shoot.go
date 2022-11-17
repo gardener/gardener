@@ -246,7 +246,7 @@ type ShootCredentialsRotation struct {
 // ShootCARotation contains information about the certificate authority credential rotation.
 type ShootCARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
-	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
@@ -289,7 +289,7 @@ type ShootObservabilityRotation struct {
 // ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
 type ShootServiceAccountKeyRotation struct {
 	// Phase describes the phase of the service account key credential rotation.
-	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
@@ -302,7 +302,7 @@ type ShootServiceAccountKeyRotation struct {
 // ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
 type ShootETCDEncryptionKeyRotation struct {
 	// Phase describes the phase of the ETCD encryption key credential rotation.
-	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
@@ -312,19 +312,19 @@ type ShootETCDEncryptionKeyRotation struct {
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
 }
 
-// ShootCredentialsRotationPhase is a string alias.
-type ShootCredentialsRotationPhase string
+// CredentialsRotationPhase is a string alias.
+type CredentialsRotationPhase string
 
 const (
 	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
-	RotationPreparing ShootCredentialsRotationPhase = "Preparing"
+	RotationPreparing CredentialsRotationPhase = "Preparing"
 	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
-	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
+	RotationPrepared CredentialsRotationPhase = "Prepared"
 	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
 	// completed.
-	RotationCompleting ShootCredentialsRotationPhase = "Completing"
+	RotationCompleting CredentialsRotationPhase = "Completing"
 	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
-	RotationCompleted ShootCredentialsRotationPhase = "Completed"
+	RotationCompleted CredentialsRotationPhase = "Completed"
 )
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.

@@ -67,7 +67,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		defer cancel()
 
 		patch := client.MergeFrom(f.Shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCredentialsStart)
+		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateCredentialsStart)
 		Eventually(func() error {
 			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
 		}).Should(Succeed())
@@ -91,7 +91,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		defer cancel()
 
 		patch = client.MergeFrom(f.Shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCredentialsComplete)
+		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateCredentialsComplete)
 		Eventually(func() error {
 			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
 		}).Should(Succeed())

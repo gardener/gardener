@@ -3358,6 +3358,17 @@ Supported values are <code>horizontal</code> and <code>cluster-proportional</cod
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.CredentialsRotationPhase">CredentialsRotationPhase
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootETCDEncryptionKeyRotation">ShootETCDEncryptionKeyRotation</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootServiceAccountKeyRotation">ShootServiceAccountKeyRotation</a>)
+</p>
+<p>
+<p>CredentialsRotationPhase is a string alias.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.DNS">DNS
 </h3>
 <p>
@@ -9131,8 +9142,8 @@ string
 <td>
 <code>phase</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">
-ShootCredentialsRotationPhase
+<a href="#core.gardener.cloud/v1beta1.CredentialsRotationPhase">
+CredentialsRotationPhase
 </a>
 </em>
 </td>
@@ -9307,17 +9318,6 @@ ShootETCDEncryptionKeyRotation
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
-(<code>string</code> alias)</p></h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation</a>, 
-<a href="#core.gardener.cloud/v1beta1.ShootETCDEncryptionKeyRotation">ShootETCDEncryptionKeyRotation</a>, 
-<a href="#core.gardener.cloud/v1beta1.ShootServiceAccountKeyRotation">ShootServiceAccountKeyRotation</a>)
-</p>
-<p>
-<p>ShootCredentialsRotationPhase is a string alias.</p>
-</p>
 <h3 id="core.gardener.cloud/v1beta1.ShootETCDEncryptionKeyRotation">ShootETCDEncryptionKeyRotation
 </h3>
 <p>
@@ -9339,8 +9339,8 @@ ShootETCDEncryptionKeyRotation
 <td>
 <code>phase</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">
-ShootCredentialsRotationPhase
+<a href="#core.gardener.cloud/v1beta1.CredentialsRotationPhase">
+CredentialsRotationPhase
 </a>
 </em>
 </td>
@@ -9651,8 +9651,8 @@ Kubernetes meta/v1.Time
 <td>
 <code>phase</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">
-ShootCredentialsRotationPhase
+<a href="#core.gardener.cloud/v1beta1.CredentialsRotationPhase">
+CredentialsRotationPhase
 </a>
 </em>
 </td>
