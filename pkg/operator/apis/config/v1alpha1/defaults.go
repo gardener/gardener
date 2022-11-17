@@ -15,8 +15,12 @@
 package v1alpha1
 
 import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -38,10 +42,10 @@ func SetDefaults_OperatorConfiguration(obj *OperatorConfiguration) {
 // SetDefaults_ClientConnectionConfiguration sets defaults for the garden client connection.
 func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
 	if obj.QPS == 0.0 {
-		obj.QPS = 50.0
+		obj.QPS = 100.0
 	}
 	if obj.Burst == 0 {
-		obj.Burst = 100
+		obj.Burst = 130
 	}
 }
 
@@ -77,5 +81,15 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 	}
 	if obj.Metrics.Port == 0 {
 		obj.Metrics.Port = 2751
+	}
+}
+
+// SetDefaults_GardenControllerConfig sets defaults for the GardenControllerConfig object.
+func SetDefaults_GardenControllerConfig(obj *GardenControllerConfig) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = pointer.Int(1)
+	}
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 	}
 }

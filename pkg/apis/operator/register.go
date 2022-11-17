@@ -14,5 +14,5 @@
 
 package operator
 
-// GroupName is the group name use in this package
+// GroupName is the group name used in this package.
 const GroupName = "operator.gardener.cloud"

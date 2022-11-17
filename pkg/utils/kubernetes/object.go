@@ -87,7 +87,8 @@ func DeleteObjectsFromListConditionally(ctx context.Context, c client.Client, li
 	return flow.Parallel(fns...)(ctx)
 }
 
-// ResourcesExist checks if there is at least one object of the given gvk.
+// ResourcesExist checks if there is at least one object of the given gvk. The kind in the gvk must be the list kind,
+// for example corev1.SchemeGroupVersion.WithKind("PodList").
 func ResourcesExist(ctx context.Context, reader client.Reader, gvk schema.GroupVersionKind, listOpts ...client.ListOption) (bool, error) {
 	objects := &metav1.PartialObjectMetadataList{}
 	objects.SetGroupVersionKind(gvk)

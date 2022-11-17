@@ -19,8 +19,8 @@ set -o nounset
 set -o pipefail
 
 # Usage:
-# generate-seed-crds.sh <file-name-prefix> [<group> ...]
-#     Generate manifests for all CRDs that are present on a Seed cluster to the current working directory.
+# generate-crds.sh <file-name-prefix> [<group> ...]
+#     Generate manifests for all CRDs to the current working directory.
 #     Useful for development purposes.
 #
 #     <file-name-prefix> File name prefix for manifest files (e.g. '10-crd-')

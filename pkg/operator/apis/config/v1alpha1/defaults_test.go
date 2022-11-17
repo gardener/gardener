@@ -48,6 +48,33 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Server.Metrics.Port).To(Equal(2751))
 		})
 
+		It("should not overwrite custom settings", func() {
+			var (
+				expectedLogLevel  = "foo"
+				expectedLogFormat = "bar"
+				expectedServer    = ServerConfiguration{
+					HealthProbes: &Server{
+						BindAddress: "baz",
+						Port:        1,
+					},
+					Metrics: &Server{
+						BindAddress: "bax",
+						Port:        2,
+					},
+				}
+			)
+
+			obj.LogLevel = expectedLogLevel
+			obj.LogFormat = expectedLogFormat
+			obj.Server = expectedServer
+
+			SetObjectDefaults_OperatorConfiguration(obj)
+
+			Expect(obj.LogLevel).To(Equal(expectedLogLevel))
+			Expect(obj.LogFormat).To(Equal(expectedLogFormat))
+			Expect(obj.Server).To(Equal(expectedServer))
+		})
+
 		Describe("RuntimeClientConnection", func() {
 			It("should not default ContentType and AcceptContentTypes", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
@@ -63,8 +90,8 @@ var _ = Describe("Defaults", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
 				Expect(obj.RuntimeClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-					QPS:   50.0,
-					Burst: 100,
+					QPS:   100.0,
+					Burst: 130,
 				}))
 			})
 		})
@@ -97,6 +124,29 @@ var _ = Describe("Defaults", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
 				Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
+			})
+		})
+
+		Describe("#SetDefaults_GardenControllerConfig", func() {
+			It("should not default the object", func() {
+				obj := &GardenControllerConfig{}
+
+				SetDefaults_GardenControllerConfig(obj)
+
+				Expect(obj.ConcurrentSyncs).To(PointTo(Equal(1)))
+				Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+			})
+
+			It("should not overwrite existing values", func() {
+				obj := &GardenControllerConfig{
+					ConcurrentSyncs: pointer.Int(5),
+					SyncPeriod:      &metav1.Duration{Duration: time.Second},
+				}
+
+				SetDefaults_GardenControllerConfig(obj)
+
+				Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 			})
 		})
 	})

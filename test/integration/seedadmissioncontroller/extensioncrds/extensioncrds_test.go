@@ -17,6 +17,7 @@ package extensioncrds_test
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -57,6 +59,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "etcds.druid.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "extensions.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "infrastructures.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "networks.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "operatingsystemconfigs.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "workers.extensions.gardener.cloud"}},
@@ -81,7 +84,10 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crds.NewExtensionsCRD(applier).Deploy(ctx)).To(Succeed())
 
-		manifestReader := kubernetes.NewManifestReader([]byte(etcd.CRD))
+		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
+			etcd.CRD,
+			resourcemanager.CRD,
+		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 		Eventually(func() bool {

@@ -77,7 +77,8 @@ var (
 	codec  runtime.Codec
 
 	//go:embed templates/crd-resources.gardener.cloud_managedresources.yaml
-	managedResourcesCRD string
+	// CRD is the custom resource definition for ManagedResources.
+	CRD string
 )
 
 func init() {
@@ -380,7 +381,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyCustomResourceDefinition() (*apiextensionsv1.CustomResourceDefinition, error) {
-	obj, err := runtime.Decode(codec, []byte(managedResourcesCRD))
+	obj, err := runtime.Decode(codec, []byte(CRD))
 	if err != nil {
 		return nil, err
 	}

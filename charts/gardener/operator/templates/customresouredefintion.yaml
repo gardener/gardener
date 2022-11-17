@@ -18,7 +18,7 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - description: ' Indicates whether the garden has been reconciled.'
+    - description: Indicates whether the garden has been reconciled.
       jsonPath: .status.conditions[?(@.type=="Reconciled")].status
       name: Reconciled
       type: string

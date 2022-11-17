@@ -57,6 +57,8 @@ config.yaml: |
     enableProfiling: {{ .Values.config.debugging.enableProfiling }}
     enableContentionProfiling: {{ .Values.config.debugging.enableContentionProfiling }}
   {{- end }}
+  featureGates:
+{{ toYaml .Values.config.featureGates | indent 4 }}
   controllers:
     garden:
       {{- if .Values.config.controllers.garden.concurrentSyncs }}

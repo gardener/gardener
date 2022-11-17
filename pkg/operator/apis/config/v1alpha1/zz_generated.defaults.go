@@ -38,4 +38,5 @@ func SetObjectDefaults_OperatorConfiguration(in *OperatorConfiguration) {
 	SetDefaults_ClientConnectionConfiguration(&in.RuntimeClientConnection)
 	SetDefaults_LeaderElectionConfiguration(&in.LeaderElection)
 	SetDefaults_ServerConfiguration(&in.Server)
+	SetDefaults_GardenControllerConfig(&in.Controllers.Garden)
 }
