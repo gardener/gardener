@@ -287,13 +287,13 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer),
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilExtensionsAfterKubeAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extensions that should be handled after kube-apiserver have been deleted",
 			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer,
 			Dependencies: flow.NewTaskIDs(deleteExtensionsAfterKubeAPIServer),
 		})
 		// Add this step in interest of completeness. All extension deletions should have already been triggered by previous steps.
-		_ = g.Add(flow.Task{
+		waitUntilExtensionsDeleted = g.Add(flow.Task{
 			Name:         "Waiting until all extensions have been deleted",
 			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
@@ -308,10 +308,15 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitMigrate,
 			Dependencies: flow.NewTaskIDs(migrateInfrastructure),
 		})
-		_ = g.Add(flow.Task{
+		destroyInfrastructure = g.Add(flow.Task{
 			Name:         "Deleting shoot infrastructure",
 			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.Destroy,
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureMigrated),
+		})
+		waitUntilInfrastructureDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot infrastructure has been destroyed",
+			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(destroyInfrastructure),
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
@@ -333,20 +338,25 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           botanist.MigrateOwnerDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
+		syncPoint = flow.NewTaskIDs(
+			waitUntilExtensionsAfterKubeAPIServerDeleted,
+			waitUntilExtensionsDeleted,
+			waitUntilInfrastructureDeleted,
+		)
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
 			Fn:           botanist.DestroyDNSRecords,
-			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
+			Dependencies: flow.NewTaskIDs(syncPoint, migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",
 			Fn:           flow.TaskFn(botanist.SnapshotEtcd).DoIf(etcdSnapshotRequired),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
+			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilKubeAPIServerDeleted),
 		})
 		migrateBackupEntryInGarden = g.Add(flow.Task{
 			Name:         "Migrating BackupEntry to new seed",
 			Fn:           botanist.Shoot.Components.BackupEntry.Migrate,
-			Dependencies: flow.NewTaskIDs(createETCDSnapshot),
+			Dependencies: flow.NewTaskIDs(syncPoint, createETCDSnapshot),
 		})
 		waitUntilBackupEntryInGardenMigrated = g.Add(flow.Task{
 			Name:         "Waiting for BackupEntry to be migrated to new seed",
@@ -356,7 +366,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		destroyEtcd = g.Add(flow.Task{
 			Name:         "Destroying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DestroyEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(createETCDSnapshot, waitUntilBackupEntryInGardenMigrated),
+			Dependencies: flow.NewTaskIDs(syncPoint, createETCDSnapshot, waitUntilBackupEntryInGardenMigrated),
 		})
 		waitUntilEtcdDeleted = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd have been destroyed",
@@ -366,7 +376,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenMigrated, deleteExtensionResources, destroyDNSRecords, waitForManagedResourcesDeletion, waitUntilEtcdDeleted),
+			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilBackupEntryInGardenMigrated, deleteExtensionResources, destroyDNSRecords, waitForManagedResourcesDeletion, waitUntilEtcdDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",
