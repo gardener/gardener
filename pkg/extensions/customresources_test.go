@@ -699,6 +699,39 @@ var _ = Describe("extensions", func() {
 				Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
 			}
 		})
+
+		It("should properly annotate only the desired extension objects for migration", func() {
+			for i := 0; i < 4; i++ {
+				containerRuntimeExtension := &extensionsv1alpha1.ContainerRuntime{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      fmt.Sprintf("containerruntime-%d", i),
+					},
+				}
+				Expect(c.Create(ctx, containerRuntimeExtension)).To(Succeed())
+			}
+
+			Expect(
+				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.ContainerRuntimeList{}, namespace, func(obj extensionsv1alpha1.Object) bool {
+					return obj.GetName() == "containerruntime-2"
+				}),
+			).To(Succeed())
+
+			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
+			Expect(c.List(ctx, containerRuntimeList, client.InNamespace(namespace))).To(Succeed())
+			Expect(len(containerRuntimeList.Items)).To(Equal(4))
+			oneAnnotated := 0
+			for _, item := range containerRuntimeList.Items {
+				if item.ObjectMeta.Name == "containerruntime-2" {
+					Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
+					oneAnnotated++
+				} else {
+					_, ok := item.Annotations[v1beta1constants.GardenerOperation]
+					Expect(ok).To(BeFalse())
+				}
+			}
+			Expect(oneAnnotated).To(Equal(1))
+		})
 	})
 
 	Describe("#WaitUntilExtensionObjectMigrated", func() {
