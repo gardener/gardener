@@ -125,7 +125,7 @@ var _ = Describe("Project controller tests", func() {
 		})
 	})
 
-	triggerAndWaitForReconciliation := func() {
+	triggerAndWaitForReconciliation := func(project *gardencorev1beta1.Project) {
 		By("Trigger Project Reconciliation")
 		patch := client.MergeFrom(project.DeepCopy())
 		project.Spec.Description = pointer.String(time.Now().UTC().Format(time.RFC3339Nano))
@@ -138,7 +138,7 @@ var _ = Describe("Project controller tests", func() {
 		}).Should(Succeed())
 	}
 
-	waitForProjectPhase := func(phase gardencorev1beta1.ProjectPhase) {
+	waitForProjectPhase := func(project *gardencorev1beta1.Project, phase gardencorev1beta1.ProjectPhase) {
 		By("Wait for Project to be reconciled")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
@@ -148,7 +148,7 @@ var _ = Describe("Project controller tests", func() {
 	}
 
 	It("should add the finalizer and release it on deletion", func() {
-		waitForProjectPhase(gardencorev1beta1.ProjectReady)
+		waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 		Expect(project.Finalizers).To(ConsistOf("gardener"))
 
 		By("Delete Project")
@@ -161,7 +161,7 @@ var _ = Describe("Project controller tests", func() {
 	})
 
 	It("should not release the project as long as it still contains shoots", func() {
-		waitForProjectPhase(gardencorev1beta1.ProjectReady)
+		waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 
 		By("Create Shoot")
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
@@ -178,7 +178,7 @@ var _ = Describe("Project controller tests", func() {
 		By("Delete Project")
 		Expect(testClient.Delete(ctx, project)).To(Succeed())
 
-		waitForProjectPhase(gardencorev1beta1.ProjectTerminating)
+		waitForProjectPhase(project, gardencorev1beta1.ProjectTerminating)
 
 		By("Ensure Project is not released")
 		Consistently(func(g Gomega) {
@@ -200,7 +200,7 @@ var _ = Describe("Project controller tests", func() {
 	Describe("Project Namespace", func() {
 		testNamespaceLifecycle := func(text string) {
 			It(text, Offset(1), func() {
-				waitForProjectPhase(gardencorev1beta1.ProjectReady)
+				waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 
 				By("Wait for project namespace to be created")
 				Eventually(func(g Gomega) {
@@ -229,7 +229,7 @@ var _ = Describe("Project controller tests", func() {
 			testNamespaceLifecycle("should create and delete the specified namespace")
 
 			It("should keep the namespace if it has the annotation", func() {
-				waitForProjectPhase(gardencorev1beta1.ProjectReady)
+				waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 
 				By("Wait for project namespace to be created")
 				Eventually(func(g Gomega) {
@@ -281,7 +281,7 @@ var _ = Describe("Project controller tests", func() {
 
 			Context("namespace without proper project labels", func() {
 				It("should fail to adopt existing namespace", func() {
-					waitForProjectPhase(gardencorev1beta1.ProjectFailed)
+					waitForProjectPhase(project, gardencorev1beta1.ProjectFailed)
 
 					By("Delete Project")
 					Expect(testClient.Delete(ctx, project)).To(Succeed())
@@ -305,7 +305,7 @@ var _ = Describe("Project controller tests", func() {
 				})
 
 				It("should adopt existing namespace but not delete it", func() {
-					waitForProjectPhase(gardencorev1beta1.ProjectReady)
+					waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 
 					By("Delete Project")
 					Expect(testClient.Delete(ctx, project)).To(Succeed())
@@ -334,7 +334,7 @@ var _ = Describe("Project controller tests", func() {
 				})
 
 				It("should fail to adopt existing namespace", func() {
-					waitForProjectPhase(gardencorev1beta1.ProjectFailed)
+					waitForProjectPhase(project, gardencorev1beta1.ProjectFailed)
 
 					By("Delete Project")
 					Expect(testClient.Delete(ctx, project)).To(Succeed())
@@ -358,7 +358,7 @@ var _ = Describe("Project controller tests", func() {
 			})
 
 			JustBeforeEach(func() {
-				waitForProjectPhase(gardencorev1beta1.ProjectReady)
+				waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 				projectNamespaceKey = client.ObjectKey{Name: *project.Spec.Namespace}
 				log.Info("Project uses generated project namespace", "projectNamespace", projectNamespaceKey)
 			})
@@ -378,10 +378,10 @@ var _ = Describe("Project controller tests", func() {
 		})
 
 		JustBeforeEach(func() {
-			waitForProjectPhase(gardencorev1beta1.ProjectReady)
+			waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 		})
 
-		waitForQuota := func() {
+		waitForQuota := func(resourceQuota *corev1.ResourceQuota) {
 			By("Wait for quota to be created")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), resourceQuota)).To(Succeed())
@@ -392,7 +392,7 @@ var _ = Describe("Project controller tests", func() {
 		}
 
 		It("should maintain the configured default quota", func() {
-			waitForQuota()
+			waitForQuota(resourceQuota)
 
 			By("Modify quota metadata")
 			patch := client.MergeFrom(resourceQuota.DeepCopy())
@@ -403,7 +403,7 @@ var _ = Describe("Project controller tests", func() {
 			expectedLabels := resourceQuota.DeepCopy().Labels
 			expectedAnnotations := resourceQuota.DeepCopy().Annotations
 
-			triggerAndWaitForReconciliation()
+			triggerAndWaitForReconciliation(project)
 
 			By("Ensure quota metadata is not overwritten")
 			Consistently(func(g Gomega) {
@@ -414,7 +414,7 @@ var _ = Describe("Project controller tests", func() {
 		})
 
 		It("should not overwrite increased quota settings", func() {
-			waitForQuota()
+			waitForQuota(resourceQuota)
 
 			By("Increase quota")
 			patch := client.MergeFrom(resourceQuota.DeepCopy())
@@ -425,7 +425,7 @@ var _ = Describe("Project controller tests", func() {
 			Expect(testClient.Patch(ctx, resourceQuota, patch)).To(Succeed())
 			increasedQuota := resourceQuota.DeepCopy()
 
-			triggerAndWaitForReconciliation()
+			triggerAndWaitForReconciliation(project)
 
 			By("Ensure increased quota is not overwritten")
 			Consistently(func(g Gomega) {
@@ -435,12 +435,12 @@ var _ = Describe("Project controller tests", func() {
 		})
 
 		It("should add new resources to existing quotas", func() {
-			waitForQuota()
+			waitForQuota(resourceQuota)
 
 			By("Add new resource to quota config")
 			defaultResourceQuota.Spec.Hard["count/secrets"] = resource.MustParse("42")
 
-			triggerAndWaitForReconciliation()
+			triggerAndWaitForReconciliation(project)
 
 			By("Ensure new resource is added")
 			expectedQuota := defaultResourceQuota.DeepCopy()
@@ -472,7 +472,7 @@ var _ = Describe("Project controller tests", func() {
 		})
 
 		JustBeforeEach(func() {
-			waitForProjectPhase(gardencorev1beta1.ProjectReady)
+			waitForProjectPhase(project, gardencorev1beta1.ProjectReady)
 		})
 
 		It("should allow admins to access the project namespace", func() {
