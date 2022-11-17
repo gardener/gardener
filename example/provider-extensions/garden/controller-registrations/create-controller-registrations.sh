@@ -16,8 +16,6 @@
 
 set -e
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
 usage() {
   echo "Usage:"
   echo "> create-controller-registrations.sh [ -h | <garden-kubeconfig> ]"
@@ -34,9 +32,10 @@ fi
 garden_kubeconfig=$1
 
 echo "Creating controller-registrations"
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-gcp/v1.24.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/v1.37.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-azure/v1.29.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-os-gardenlinux/v0.14.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-os-suse-chost/v1.18.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.26.0/example/controller-registration.yaml
+kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-gcp/v1.25.1/example/controller-registration.yaml
+kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/v1.39.1/example/controller-registration.yaml
+kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-azure/v1.31.0/example/controller-registration.yaml
+kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-os-gardenlinux/v0.15.0/example/controller-registration.yaml
+kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-os-suse-chost/v1.19.0/example/controller-registration.yaml
+kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.27.0/example/controller-registration.yaml
+kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/master/example/controller-registration.yaml
