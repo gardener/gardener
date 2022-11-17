@@ -17,6 +17,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -130,7 +131,7 @@ func New(
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
-	name := "etcd-" + values.Role
+	name := values.NamePrefix + "etcd-" + values.Role
 	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
 
 	return &etcd{
@@ -159,16 +160,19 @@ type etcd struct {
 
 // Values are the configuration values for the ETCD.
 type Values struct {
+	NamePrefix              string
 	Role                    string
 	Class                   Class
 	FailureToleranceType    *gardencorev1beta1.FailureToleranceType
 	Replicas                *int32
 	StorageCapacity         string
+	StorageClassName        *string
 	DefragmentationSchedule *string
 	CARotationPhase         gardencorev1beta1.ShootCredentialsRotationPhase
 	K8sVersion              string
 	BackupConfig            *BackupConfig
 	HvpaConfig              *HVPAConfig
+	PriorityClassName       string
 }
 
 func (e *etcd) hasHAControlPlane() bool {
@@ -238,7 +242,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	if e.values.Class == ClassImportant {
 		annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		metrics = druidv1alpha1.Extensive
-		volumeClaimTemplate = e.values.Role + "-etcd"
+		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		minAllowed = corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("200m"),
 			corev1.ResourceMemory: resource.MustParse("700M"),
@@ -281,97 +285,33 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, clientNetworkPolicy, func() error {
-		clientNetworkPolicy.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
-		}
-		clientNetworkPolicy.Labels = map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		}
-		clientNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
-			MatchLabels: GetLabels(),
-		}
-		clientNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
-			{
-				From: []networkingv1.NetworkPolicyPeer{
-					{
-						PodSelector: &metav1.LabelSelector{
-							// TODO: Replace below map with a function call to the to-be-introduced kubeapiserver package.
-							MatchLabels: map[string]string{
-								v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-								v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-								v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-							},
-						},
-					},
-					{
-						PodSelector: &metav1.LabelSelector{
-							MatchLabels: monitoring.GetPrometheusLabels(),
-						},
-					},
-				},
-				Ports: []networkingv1.NetworkPolicyPort{
-					{
-						Protocol: &protocolTCP,
-						Port:     &intStrPortEtcdClient,
-					},
-					{
-						Protocol: &protocolTCP,
-						Port:     &intStrPortBackupRestore,
-					},
-				},
-			},
-		}
-		clientNetworkPolicy.Spec.Egress = nil
-		clientNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	// create peer network policy only if the shoot has a HA control plane
-	if e.hasHAControlPlane() {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
-			peerNetworkPolicy.Annotations = map[string]string{
-				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
+	if e.values.Role == v1beta1constants.ETCDRoleMain {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, clientNetworkPolicy, func() error {
+			clientNetworkPolicy.Annotations = map[string]string{
+				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
 			}
-			peerNetworkPolicy.Labels = map[string]string{
+			clientNetworkPolicy.Labels = map[string]string{
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			}
-			peerNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
+			clientNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			}
-			peerNetworkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{
-				{
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortEtcdClient,
-						},
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortBackupRestore,
-						},
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortEtcdPeer,
-						},
-					},
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: GetLabels(),
-							},
-						},
-					},
-				},
-			}
-			peerNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+			clientNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
 				{
 					From: []networkingv1.NetworkPolicyPeer{
 						{
 							PodSelector: &metav1.LabelSelector{
-								MatchLabels: GetLabels(),
+								// TODO: Replace below map with a function call to the to-be-introduced kubeapiserver package.
+								MatchLabels: map[string]string{
+									v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+									v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+									v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
+								},
+							},
+						},
+						{
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: monitoring.GetPrometheusLabels(),
 							},
 						},
 					},
@@ -384,20 +324,86 @@ func (e *etcd) Deploy(ctx context.Context) error {
 							Protocol: &protocolTCP,
 							Port:     &intStrPortBackupRestore,
 						},
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortEtcdPeer,
-						},
 					},
 				},
 			}
-			peerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{
-				networkingv1.PolicyTypeIngress,
-				networkingv1.PolicyTypeEgress,
-			}
+			clientNetworkPolicy.Spec.Egress = nil
+			clientNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 			return nil
 		}); err != nil {
 			return err
+		}
+
+		// create peer network policy only if the shoot has a HA control plane
+		if e.hasHAControlPlane() {
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
+				peerNetworkPolicy.Annotations = map[string]string{
+					v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
+				}
+				peerNetworkPolicy.Labels = map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+				}
+				peerNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
+					MatchLabels: GetLabels(),
+				}
+				peerNetworkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{
+					{
+						Ports: []networkingv1.NetworkPolicyPort{
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdClient,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortBackupRestore,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdPeer,
+							},
+						},
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: GetLabels(),
+								},
+							},
+						},
+					},
+				}
+				peerNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+					{
+						From: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: GetLabels(),
+								},
+							},
+						},
+						Ports: []networkingv1.NetworkPolicyPort{
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdClient,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortBackupRestore,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdPeer,
+							},
+						},
+					},
+				}
+				peerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{
+					networkingv1.PolicyTypeIngress,
+					networkingv1.PolicyTypeEgress,
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -410,7 +416,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		e.etcd.Spec.Replicas = replicas
-		e.etcd.Spec.PriorityClassName = pointer.String(v1beta1constants.PriorityClassNameShootControlPlane500)
+		e.etcd.Spec.PriorityClassName = &e.values.PriorityClassName
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
 			v1beta1constants.LabelApp:                            LabelAppValue,
@@ -518,6 +524,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		e.etcd.Spec.StorageCapacity = &storageCapacity
+		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil
 	}); err != nil {
@@ -744,7 +751,7 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 
 func (e *etcd) clientServiceDNSNames() []string {
 	var domainNames []string
-	domainNames = append(domainNames, fmt.Sprintf("etcd-%s-local", e.values.Role))
+	domainNames = append(domainNames, fmt.Sprintf("%s-local", e.etcd.Name))
 	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.values.Role), e.namespace)...)
 
 	// The peer service needs to be considered here since the etcd-backup-restore side-car
@@ -756,8 +763,10 @@ func (e *etcd) clientServiceDNSNames() []string {
 }
 
 func (e *etcd) peerServiceDNSNames() []string {
-	return append(kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-peer", e.values.Role), e.namespace),
-		kutil.DNSNamesForService(fmt.Sprintf("*.etcd-%s-peer", e.values.Role), e.namespace)...)
+	return append(
+		kutil.DNSNamesForService(fmt.Sprintf("%s-peer", e.etcd.Name), e.namespace),
+		kutil.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...,
+	)
 }
 
 // Get retrieves the Etcd resource

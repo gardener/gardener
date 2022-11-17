@@ -80,7 +80,9 @@ var _ = Describe("Etcd", func() {
 		replicas                = pointer.Int32(1)
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
+		storageClassName        = "my-storage-class"
 		defragmentationSchedule = "abcd"
+		priorityClassName       = "some-priority-class"
 
 		secretNameCA         = "ca-etcd"
 		secretNamePeerCA     = "ca-etcd-peer"
@@ -311,7 +313,7 @@ var _ = Describe("Etcd", func() {
 				},
 				Spec: druidv1alpha1.EtcdSpec{
 					Replicas:          replicas,
-					PriorityClassName: pointer.String("gardener-system-500"),
+					PriorityClassName: &priorityClassName,
 					Labels: map[string]string{
 						"gardener.cloud/role":              "controlplane",
 						"role":                             testRole,
@@ -378,6 +380,7 @@ var _ = Describe("Etcd", func() {
 						SnapshotCompression:     &compressionSpec,
 					},
 					StorageCapacity:     &storageCapacityQuantity,
+					StorageClass:        &storageClassName,
 					VolumeClaimTemplate: pointer.String(etcdName),
 				},
 			}
@@ -624,9 +627,11 @@ var _ = Describe("Etcd", func() {
 			FailureToleranceType:    failureToleranceType,
 			Replicas:                replicas,
 			StorageCapacity:         storageCapacity,
+			StorageClassName:        &storageClassName,
 			DefragmentationSchedule: &defragmentationSchedule,
 			CARotationPhase:         "",
 			K8sVersion:              "1.20.1",
+			PriorityClassName:       priorityClassName,
 		})
 	})
 
@@ -795,9 +800,11 @@ var _ = Describe("Etcd", func() {
 				FailureToleranceType:    nil,
 				Replicas:                nil,
 				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
 			})
 			setHVPAConfig()
 
@@ -864,9 +871,11 @@ var _ = Describe("Etcd", func() {
 				FailureToleranceType:    failureToleranceType,
 				Replicas:                nil,
 				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
 			})
 			setHVPAConfig()
 
@@ -1164,9 +1173,11 @@ var _ = Describe("Etcd", func() {
 					FailureToleranceType:    failureToleranceType,
 					Replicas:                replicas,
 					StorageCapacity:         storageCapacity,
+					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         "",
 					K8sVersion:              "1.20.1",
+					PriorityClassName:       priorityClassName,
 				})
 				newSetHVPAConfigFunc(updateMode)()
 
@@ -1382,9 +1393,11 @@ var _ = Describe("Etcd", func() {
 					FailureToleranceType:    failureToleranceType,
 					Replicas:                replicas,
 					StorageCapacity:         storageCapacity,
+					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         rotationPhase,
 					K8sVersion:              "1.20.1",
+					PriorityClassName:       priorityClassName,
 				})
 			})
 
@@ -1550,9 +1563,11 @@ var _ = Describe("Etcd", func() {
 				FailureToleranceType:    shootFailureToleranceType,
 				Replicas:                replicas,
 				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
 			})
 		})
 
@@ -1855,9 +1870,11 @@ var _ = Describe("Etcd", func() {
 				FailureToleranceType:    failureToleranceTypeZone,
 				Replicas:                replicas,
 				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
 			})
 		})
 

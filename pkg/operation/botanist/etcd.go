@@ -67,6 +67,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			DefragmentationSchedule: &defragmentationSchedule,
 			CARotationPhase:         gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
 			K8sVersion:              b.ShootVersion(),
+			PriorityClassName:       v1beta1constants.PriorityClassNameShootControlPlane500,
 		},
 	)
 

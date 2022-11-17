@@ -143,3 +143,35 @@ rules:
   - watch
   - patch
   - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - hvpas
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - hvpas
+  resourceNames:
+  - virtual-garden-etcd-events
+  - virtual-garden-etcd-main
+  verbs:
+  - delete
+  - patch
+  - update

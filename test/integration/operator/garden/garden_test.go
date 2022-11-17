@@ -15,6 +15,9 @@
 package garden_test
 
 import (
+	"time"
+
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -31,6 +34,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -43,6 +47,10 @@ var _ = Describe("Garden controller tests", func() {
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
 		DeferCleanup(test.WithFeatureGate(operatorfeatures.FeatureGate, features.HVPA, true))
+		DeferCleanup(test.WithVars(
+			&etcd.DefaultInterval, 100*time.Millisecond,
+			&etcd.DefaultTimeout, 500*time.Millisecond,
+		))
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -117,7 +125,7 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
 		))
 
-		By("Verify that CA secret was generated")
+		By("Verify that garden runtime CA secret was generated")
 		Eventually(func(g Gomega) []corev1.Secret {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels{"name": "ca-garden-runtime", "managed-by": "secrets-manager", "manager-identity": "gardener-operator"})).To(Succeed())
@@ -169,6 +177,35 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
 		))
 
+		By("Verify that the virtual garden control plane components have been deployed")
+		Eventually(func(g Gomega) []druidv1alpha1.Etcd {
+			etcdList := &druidv1alpha1.EtcdList{}
+			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return etcdList.Items
+		}).Should(ConsistOf(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-etcd-main")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-etcd-events")})}),
+		))
+
+		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in
+		// this test, so let's fake this here.
+		By("Patch Etcd resources to report healthiness")
+		Eventually(func(g Gomega) {
+			for _, suffix := range []string{"main", "events"} {
+				etcd := &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-etcd-" + suffix, Namespace: testNamespace.Name}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed(), "for "+etcd.Name)
+
+				patch := client.MergeFrom(etcd.DeepCopy())
+				delete(etcd.Annotations, "gardener.cloud/operation")
+				g.Expect(testClient.Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
+
+				patch = client.MergeFrom(etcd.DeepCopy())
+				etcd.Status.ObservedGeneration = &etcd.Generation
+				etcd.Status.Ready = pointer.Bool(true)
+				g.Expect(testClient.Status().Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
+			}
+		}).Should(Succeed())
+
 		By("Wait for Reconciled condition to be set to True")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -177,6 +214,16 @@ var _ = Describe("Garden controller tests", func() {
 
 		By("Delete Garden")
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
+
+		By("Verify that the virtual garden control plane components have been deleted")
+		Eventually(func(g Gomega) []druidv1alpha1.Etcd {
+			etcdList := &druidv1alpha1.EtcdList{}
+			g.Expect(testClient.List(ctx, etcdList)).To(Succeed())
+			return etcdList.Items
+		}).ShouldNot(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-etcd-main")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-etcd-events")})}),
+		))
 
 		By("Verify that the garden system components have been deleted")
 		// When the controller succeeds then it deletes the `ManagedResource` CRD, so we only need to ensure here that
@@ -202,6 +249,13 @@ var _ = Describe("Garden controller tests", func() {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 			return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 		}).Should(BeNotFoundError())
+
+		By("Verify that secrets have been deleted")
+		Eventually(func(g Gomega) []corev1.Secret {
+			secretList := &corev1.SecretList{}
+			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels{"managed-by": "secrets-manager", "manager-identity": "gardener-operator"})).To(Succeed())
+			return secretList.Items
+		}).Should(BeEmpty())
 
 		By("Ensure Garden is gone")
 		Eventually(func() error {

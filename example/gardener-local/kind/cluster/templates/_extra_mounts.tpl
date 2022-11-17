@@ -6,8 +6,8 @@
 {{- end }}
 {{- end -}}
 
-{{- define "extraMounts.gardener.seed.backupBuckets" -}}
-{{- if .Values.gardener.seed.deployed -}}
+{{- define "extraMounts.backupBucket" -}}
+{{- if .Values.backupBucket.deployed -}}
 - hostPath: dev/local-backupbuckets
   containerPath: /etc/gardener/local-backupbuckets
 {{- end -}}

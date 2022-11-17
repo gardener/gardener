@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -50,6 +51,7 @@ func (r *Reconciler) delete(
 	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
 
 	log.Info("Instantiating component destroyers")
+	// garden system components
 	hvpaCRD := hvpa.NewCRD(applier)
 	vpaCRD := vpa.NewCRD(applier, nil)
 	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
@@ -70,19 +72,44 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
+	// virtual garden control plane components
+	etcdMain, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	etcdEvents, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	var (
-		g                = flow.NewGraph("Garden deletion")
+		g           = flow.NewGraph("Garden deletion")
+		destroyEtcd = g.Add(flow.Task{
+			Name: "Destroying main and events ETCDs of virtual garden",
+			Fn:   flow.Parallel(etcdMain.Destroy, etcdEvents.Destroy),
+		})
+		waitUntilEtcdDeleted = g.Add(flow.Task{
+			Name:         "Waiting until main and event ETCDs have been destroyed",
+			Fn:           flow.Parallel(etcdMain.WaitCleanup, etcdEvents.WaitCleanup),
+			Dependencies: flow.NewTaskIDs(destroyEtcd),
+		})
+		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
+			waitUntilEtcdDeleted,
+		)
 		destroyEtcdDruid = g.Add(flow.Task{
-			Name: "Destroying ETCD Druid",
-			Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
+			Name:         "Destroying ETCD Druid",
+			Fn:           component.OpDestroyAndWait(etcdDruid).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyHVPAController = g.Add(flow.Task{
-			Name: "Destroying HVPA controller",
-			Fn:   component.OpDestroyAndWait(hvpaController).Destroy,
+			Name:         "Destroying HVPA controller",
+			Fn:           component.OpDestroyAndWait(hvpaController).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyVerticalPodAutoscaler = g.Add(flow.Task{
-			Name: "Destroying Kubernetes vertical pod autoscaler",
-			Fn:   component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
+			Name:         "Destroying Kubernetes vertical pod autoscaler",
+			Fn:           component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyEtcdDruid,
