@@ -90,8 +90,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 	}
 
-	expirationTime, exits := shoot.Annotations[v1beta1constants.ShootExpirationTimestamp]
-	if !exits {
+	expirationTime, exist := shoot.Annotations[v1beta1constants.ShootExpirationTimestamp]
+	if !exist {
 		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		log.Info("Setting expiration timestamp annotation", "expirationTime", expirationTime)
 
