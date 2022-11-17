@@ -38,9 +38,6 @@ const (
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait
 	// for a successful reconciliation of an EtcdCopyBackupsTasks resource.
 	DefaultTimeout = 5 * time.Minute
-
-	// DefaultWaitForFinalSnapshotTimeout is the default timeout for waiting for a final full snapshot.
-	DefaultWaitForFinalSnapshotTimeout = 30 * time.Minute
 )
 
 // Interface contains functions to manage EtcdCopyBackupsTasks.
