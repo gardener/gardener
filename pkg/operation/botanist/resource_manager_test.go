@@ -43,6 +43,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -145,6 +146,12 @@ var _ = Describe("ResourceManager", func() {
 
 						// set secrets
 						resourceManager.EXPECT().SetSecrets(secrets),
+
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).DoAndReturn(func(_ context.Context, obj *vpaautoscalingv1.VerticalPodAutoscaler, opts ...client.DeleteOption) error {
+							Expect(obj.Name).To(Equal("kube-addon-manager-vpa"))
+							Expect(obj.Namespace).To(Equal(seedNamespace))
+							return nil
+						}),
 					)
 
 					resourceManager.EXPECT().Deploy(ctx)
@@ -258,6 +265,12 @@ var _ = Describe("ResourceManager", func() {
 				})
 
 				It("should set the secrets and deploy", func() {
+					c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).DoAndReturn(func(_ context.Context, obj *vpaautoscalingv1.VerticalPodAutoscaler, opts ...client.DeleteOption) error {
+						Expect(obj.Name).To(Equal("kube-addon-manager-vpa"))
+						Expect(obj.Namespace).To(Equal(seedNamespace))
+						return nil
+					})
+
 					resourceManager.EXPECT().Deploy(ctx)
 					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
 				})
@@ -311,6 +324,12 @@ var _ = Describe("ResourceManager", func() {
 						// set secrets and deploy with shoot access token
 						resourceManager.EXPECT().SetSecrets(secrets),
 						resourceManager.EXPECT().Deploy(ctx),
+
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).DoAndReturn(func(_ context.Context, obj *vpaautoscalingv1.VerticalPodAutoscaler, opts ...client.DeleteOption) error {
+							Expect(obj.Name).To(Equal("kube-addon-manager-vpa"))
+							Expect(obj.Namespace).To(Equal(seedNamespace))
+							return nil
+						}),
 					)
 
 					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())

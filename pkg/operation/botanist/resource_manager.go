@@ -43,6 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -153,7 +154,12 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	secrets.BootstrapKubeconfig = nil
 	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(secrets)
 
-	return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
+	if err := b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx); err != nil {
+		return err
+	}
+
+	// TODO(ialidzhikov): Remove in 1.63.
+	return kutil.DeleteObject(ctx, b.SeedClientSet.Client(), &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-addon-manager-vpa"}})
 }
 
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
