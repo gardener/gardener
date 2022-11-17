@@ -18,7 +18,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -129,7 +128,6 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 		DeferCleanup(func() {
 			By("Delete Shoot")
-			Expect(client.IgnoreNotFound(gutil.ConfirmDeletion(ctx, testClient, shoot))).To(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 		})
 	})
@@ -178,7 +176,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 	It("should consider shorter (manually set) expiration times and delete the shoot", func() {
 		patch := client.MergeFrom(shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/expiration-timestamp", time.Now().UTC().Add(time.Hour).Format(time.RFC3339))
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/expiration-timestamp", fakeClock.Now().UTC().Add(time.Hour).Format(time.RFC3339))
 		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 		fakeClock.Step(2 * time.Hour)
@@ -190,8 +188,15 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 	It("should consider longer (manually set) expiration times and delete the shoot", func() {
 		patch := client.MergeFrom(shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/expiration-timestamp", time.Now().UTC().Add(48*time.Hour).Format(time.RFC3339))
+		newTimestamp := fakeClock.Now().UTC().Add(48 * time.Hour).Format(time.RFC3339)
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/expiration-timestamp", newTimestamp)
 		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+		By("Ensure manager has observed the updated Shoot")
+		Eventually(func(g Gomega) map[string]string {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			return shoot.Annotations
+		}).Should(HaveKeyWithValue("shoot.gardener.cloud/expiration-timestamp", newTimestamp))
 
 		By("Verify that shoot is not deleted after original expiration time (1 day) has passed")
 		fakeClock.Step(25 * time.Hour)
