@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -69,6 +68,7 @@ type Controller struct {
 
 	numberOfRunningWorkers int
 	workerCh               chan int
+	gardenNamespace        string
 }
 
 // NewManagedSeedController creates a new Gardener controller for ManagedSeeds.
@@ -80,6 +80,8 @@ func NewManagedSeedController(
 	shootClientMap clientmap.ClientMap,
 	config *config.GardenletConfiguration,
 	imageVector imagevector.ImageVector,
+	chartsPath string,
+	gardenNamespace string,
 ) (
 	*Controller,
 	error,
@@ -106,6 +108,8 @@ func NewManagedSeedController(
 			shootClientMap,
 			valuesHelper,
 			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
+			chartsPath,
+			gardenNamespace,
 		)
 	)
 
@@ -118,6 +122,7 @@ func NewManagedSeedController(
 		seedInformer:        seedInformer,
 		managedSeedQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeed"),
 		workerCh:            make(chan int),
+		gardenNamespace:     gardenNamespace,
 	}, nil
 }
 
@@ -141,7 +146,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			ControllerTypes: []kutil.ControllerType{
 				{
 					Type:      &seedmanagementv1alpha1.ManagedSeed{},
-					Namespace: pointer.String(gardencorev1beta1constants.GardenNamespace),
+					Namespace: pointer.String(c.gardenNamespace),
 					NameFunc:  func(obj client.Object) string { return obj.GetName() },
 				},
 			},
