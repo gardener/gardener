@@ -124,10 +124,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("metadata.namespace"),
 					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("metadata.namespace"),
-					})),
 				),
 			),
 			Entry("should forbid ManagedSeed with empty name",
@@ -149,13 +145,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("metadata.name"),
-				}))),
-			),
-			Entry("should forbid ManagedSeed with namespace different from garden",
-				metav1.ObjectMeta{Name: name, Namespace: "foo"},
-				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("metadata.namespace"),
 				}))),
 			),
 		)

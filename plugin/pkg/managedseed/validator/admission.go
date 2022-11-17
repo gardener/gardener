@@ -179,6 +179,11 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 	var allErrs field.ErrorList
 	gk := schema.GroupKind{Group: seedmanagement.GroupName, Kind: "ManagedSeed"}
 
+	// Ensure namespace is garden
+	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")))
+	}
+
 	// Ensure shoot and shoot name are specified
 	shootPath := field.NewPath("spec", "shoot")
 	shootNamePath := shootPath.Child("name")

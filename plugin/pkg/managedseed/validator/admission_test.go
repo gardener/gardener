@@ -208,6 +208,19 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should forbid the ManagedSeed creation with namespace different from garden", func() {
+			managedSeed.Namespace = "foo"
+
+			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.namespace"),
+				})),
+			))
+		})
+
 		It("should forbid the ManagedSeed creation if a Shoot name is not specified", func() {
 			managedSeed.Spec.Shoot.Name = ""
 
