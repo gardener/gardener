@@ -90,7 +90,7 @@ var _ = BeforeSuite(func() {
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ExtensionLabels,ExtensionValidator,ResourceReferenceManager"},
 		},
 	}
 

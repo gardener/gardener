@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	backupbucket "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -47,6 +47,12 @@ var _ = Describe("BackupBucket controller tests", func() {
 		expectedExtensionBackupBucketSpec extensionsv1alpha1.BackupBucketSpec
 		providerStatus                    = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
 		resourceName                      string
+
+		reconcileExtensionBackupBucket func(bool)
+	)
+
+	BeforeEach(func() {
+		DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 30*time.Millisecond))
 
 		reconcileExtensionBackupBucket = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
@@ -104,10 +110,6 @@ var _ = Describe("BackupBucket controller tests", func() {
 			}
 			ExpectWithOffset(1, testClient.Status().Patch(ctx, extensionBackupBucket, patch)).To(Succeed())
 		}
-	)
-
-	BeforeEach(func() {
-		DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 30*time.Millisecond))
 
 		resourceName = "bucket-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:12]
 
@@ -154,11 +156,6 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
 		log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))
-
-		By("Ensure BackupBucket is created")
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
-		}).Should(Succeed())
 
 		DeferCleanup(func() {
 			By("deleting BackupBucket")
@@ -281,7 +278,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 			Expect(testClient.Create(ctx, backupEntry)).To(Succeed())
 			log.Info("Created BackupEntry for test", "backupEntry", client.ObjectKeyFromObject(backupEntry))
 
-			By("Wait until mgrClient has observed backupEntry creation")
+			By("Wait until manager cache has observed backupEntry creation")
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
 			}).Should(Succeed())
