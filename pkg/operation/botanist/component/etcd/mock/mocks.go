@@ -162,18 +162,6 @@ func (mr *MockInterfaceMockRecorder) SetHVPAConfig(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHVPAConfig", reflect.TypeOf((*MockInterface)(nil).SetHVPAConfig), arg0)
 }
 
-// SetOwnerCheckConfig mocks base method.
-func (m *MockInterface) SetOwnerCheckConfig(arg0 *etcd.OwnerCheckConfig) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetOwnerCheckConfig", arg0)
-}
-
-// SetOwnerCheckConfig indicates an expected call of SetOwnerCheckConfig.
-func (mr *MockInterfaceMockRecorder) SetOwnerCheckConfig(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOwnerCheckConfig", reflect.TypeOf((*MockInterface)(nil).SetOwnerCheckConfig), arg0)
-}
-
 // Snapshot mocks base method.
 func (m *MockInterface) Snapshot(arg0 context.Context, arg1 kubernetes.PodExecutor) error {
 	m.ctrl.T.Helper()

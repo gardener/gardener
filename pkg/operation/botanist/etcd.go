@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 
@@ -122,16 +121,6 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			FullSnapshotSchedule: snapshotSchedule,
 			LeaderElection:       backupLeaderElection,
 		})
-
-		// Owner checks are only enabled if the `etcd-main` resource is deployed with 1 replica.
-		// They must not be used for clustered etcd. Ref: https://github.com/gardener/gardener/issues/6302
-		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) &&
-			getEtcdReplicas(b.Shoot.GetInfo()) == 1 {
-			b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
-				Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
-				ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
-			})
-		}
 	}
 
 	// Roll out the new peer CA first so that every member in the cluster trusts the old and the new CA.

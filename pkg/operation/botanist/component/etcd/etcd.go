@@ -115,8 +115,6 @@ type Interface interface {
 	SetHVPAConfig(config *HVPAConfig)
 	// Get retrieves the Etcd resource
 	Get(context.Context) (*druidv1alpha1.Etcd, error)
-	// SetOwnerCheckConfig sets the owner check configuration.
-	SetOwnerCheckConfig(config *OwnerCheckConfig)
 	// Scale scales the etcd resource to the given replica count.
 	Scale(context.Context, int32) error
 	// RolloutPeerCA gets the peer CA and patches the
@@ -181,7 +179,6 @@ type etcd struct {
 	etcd                    *druidv1alpha1.Etcd
 	backupConfig            *BackupConfig
 	hvpaConfig              *HVPAConfig
-	ownerCheckConfig        *OwnerCheckConfig
 }
 
 func (e *etcd) hasHAControlPlane() bool {
@@ -530,16 +527,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		if e.ownerCheckConfig != nil {
-			e.etcd.Spec.Backup.OwnerCheck = &druidv1alpha1.OwnerCheckSpec{
-				Name:        e.ownerCheckConfig.Name,
-				ID:          e.ownerCheckConfig.ID,
-				Interval:    &metav1.Duration{Duration: 30 * time.Second},
-				Timeout:     &metav1.Duration{Duration: 2 * time.Minute},
-				DNSCacheTTL: &metav1.Duration{Duration: 1 * time.Minute},
-			}
-		}
-
 		e.etcd.Spec.StorageCapacity = &storageCapacity
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil
@@ -802,9 +789,6 @@ func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
 
 func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.backupConfig = backupConfig }
 func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.hvpaConfig = hvpaConfig }
-func (e *etcd) SetOwnerCheckConfig(ownerCheckConfig *OwnerCheckConfig) {
-	e.ownerCheckConfig = ownerCheckConfig
-}
 
 func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 	etcdObj := &druidv1alpha1.Etcd{}
@@ -1007,13 +991,4 @@ type HVPAConfig struct {
 	MaintenanceTimeWindow gardencorev1beta1.MaintenanceTimeWindow
 	// The update mode to use for scale down.
 	ScaleDownUpdateMode *string
-}
-
-// OwnerCheckConfig contains parameters related to checking if the seed is an owner
-// of the shoot. The ownership can change during control plane migration.
-type OwnerCheckConfig struct {
-	// Name is the domain name of the owner DNS record.
-	Name string
-	// ID is the seed ID value that is expected to be found in the owner DNS record.
-	ID string
 }

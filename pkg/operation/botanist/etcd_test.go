@@ -353,12 +353,6 @@ var _ = Describe("Etcd", func() {
 						LeaderElection:       backupLeaderElectionConfig,
 					})
 				}
-				expectSetOwnerCheckConfig = func() {
-					etcdMain.EXPECT().SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
-						Name: "owner.internal.example.com",
-						ID:   "seed-identity",
-					})
-				}
 			)
 
 			BeforeEach(func() {
@@ -372,37 +366,12 @@ var _ = Describe("Etcd", func() {
 				}
 			})
 
-			It("should set the secrets and deploy with owner checks", func() {
-				expectGetBackupSecret()
-				expectSetBackupConfig()
-				expectSetOwnerCheckConfig()
-				etcdMain.EXPECT().Deploy(ctx)
-				etcdEvents.EXPECT().Deploy(ctx)
-
-				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
-			})
-
-			It("should set secrets and deploy without owner checks if high-availability is set on the shoot", func() {
+			It("should set secrets and deploy", func() {
 				botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 					HighAvailability: &gardencorev1beta1.HighAvailability{
 						FailureTolerance: gardencorev1beta1.FailureTolerance{
 							Type: gardencorev1beta1.FailureToleranceTypeNode,
 						},
-					},
-				}
-
-				expectGetBackupSecret()
-				expectSetBackupConfig()
-				etcdMain.EXPECT().Deploy(ctx)
-				etcdEvents.EXPECT().Deploy(ctx)
-
-				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
-			})
-
-			It("should set the secrets and deploy without owner checks if they are disabled", func() {
-				botanist.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
-					OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
-						Enabled: false,
 					},
 				}
 
