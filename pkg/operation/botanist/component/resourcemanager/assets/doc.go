@@ -14,4 +14,4 @@
 
 //go:generate ../../../../../../hack/generate-crds.sh crd- -l resources.gardener.cloud
 
-package templates
+package assets

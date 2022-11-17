@@ -27,7 +27,7 @@ Resource Types:
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -261,7 +261,8 @@ bool
 <em>(Optional)</em>
 <p>Enabled controls whether the VPA components shall be deployed into this cluster. It is true by default because
 the operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime
-cluster already has another, manually/custom managed VPA deployment.</p>
+cluster already has another, manually/custom managed VPA deployment. If this is not the case, but you still
+disable it, then reconciliation will fail.</p>
 </td>
 </tr>
 </tbody>

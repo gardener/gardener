@@ -88,7 +88,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 }
 
 // remember to update docs/development/priority-classes.md when making changes here
-var gardenletManagedPriorityClasses = []struct {
+var managedPriorityClasses = []struct {
 	name        string
 	value       int32
 	description string
@@ -101,7 +101,7 @@ var gardenletManagedPriorityClasses = []struct {
 }
 
 func addPriorityClasses(registry *managedresources.Registry) error {
-	for _, class := range gardenletManagedPriorityClasses {
+	for _, class := range managedPriorityClasses {
 		if err := registry.Add(&schedulingv1.PriorityClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: class.name,

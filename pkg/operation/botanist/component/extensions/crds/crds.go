@@ -24,29 +24,29 @@ import (
 )
 
 var (
-	//go:embed templates/crd-extensions.gardener.cloud_backupbuckets.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_backupbuckets.yaml
 	backupBucketCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_backupentries.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_backupentries.yaml
 	backupEntryCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_bastions.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_bastions.yaml
 	bastionCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_clusters.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_clusters.yaml
 	clusterCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_containerruntimes.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_containerruntimes.yaml
 	containerRuntimeCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_controlplanes.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_controlplanes.yaml
 	controlPlaneCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_dnsrecords.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_dnsrecords.yaml
 	dnsRecordCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_extensions.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_extensions.yaml
 	extensionCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_infrastructures.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_infrastructures.yaml
 	infrastructureCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_networks.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_networks.yaml
 	networkCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
 	operatingSystemConfigCRD string
-	//go:embed templates/crd-extensions.gardener.cloud_workers.yaml
+	//go:embed assets/crd-extensions.gardener.cloud_workers.yaml
 	workerCRD string
 
 	resources []string

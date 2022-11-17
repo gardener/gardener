@@ -76,7 +76,7 @@ var (
 	scheme *runtime.Scheme
 	codec  runtime.Codec
 
-	//go:embed templates/crd-resources.gardener.cloud_managedresources.yaml
+	//go:embed assets/crd-resources.gardener.cloud_managedresources.yaml
 	// CRD is the custom resource definition for ManagedResources.
 	CRD string
 )

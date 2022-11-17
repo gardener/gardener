@@ -84,7 +84,8 @@ type Settings struct {
 type SettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into this cluster. It is true by default because
 	// the operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime
-	// cluster already has another, manually/custom managed VPA deployment.
+	// cluster already has another, manually/custom managed VPA deployment. If this is not the case, but you still
+	// disable it, then reconciliation will fail.
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`

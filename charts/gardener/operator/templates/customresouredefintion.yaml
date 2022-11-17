@@ -76,7 +76,8 @@ spec:
                               because the operator (and Gardener) heavily rely on
                               a VPA being deployed. You should only disable this if
                               your runtime cluster already has another, manually/custom
-                              managed VPA deployment.
+                              managed VPA deployment. If this is not the case, but
+                              you still disable it, then reconciliation will fail.
                             type: boolean
                         type: object
                     type: object
