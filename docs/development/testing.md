@@ -227,7 +227,7 @@ This can be helpful for debugging integration tests, because you can easily insp
 Run an `envtest` suite (not using `gardener-apiserver`) against an existing cluster:
 
 ```bash
-make kind-up
+make kind-up KIND_ENV=local
 export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 export USE_EXISTING_CLUSTER=true
 
@@ -241,7 +241,7 @@ k get managedresource -A -w
 Run a `gardenerenvtest` suite (using `gardener-apiserver`) against an existing gardener setup:
 
 ```bash
-make kind-up
+make kind-up KIND_ENV=local
 export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 make dev-setup
 # you might need to disable some admission plugins in hack/local-development/start-apiserver
@@ -267,7 +267,7 @@ Stress-test an `envtest` suite (not using `gardener-apiserver`):
 ginkgo build ./test/integration/resourcemanager/health
 
 # prepare a cluster to run the test against
-make kind-up
+make kind-up KIND_ENV=local
 export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 export USE_EXISTING_CLUSTER=true
 
@@ -286,7 +286,7 @@ Stress-test a `gardenerenvtest` suite (using `gardener-apiserver`):
 ginkgo build ./test/integration/controllermanager/bastion
 
 # prepare a cluster including gardener-apiserver to run the test against
-make kind-up
+make kind-up KIND_ENV=local
 export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 make dev-setup
 # you might need to disable some admission plugins in hack/local-development/start-apiserver
