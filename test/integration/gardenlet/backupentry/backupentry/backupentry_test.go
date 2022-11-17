@@ -154,6 +154,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
 		log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))
 
+		By("Ensure manager cache observes BackupBucket creation")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+		}).Should(Succeed())
+
 		DeferCleanup(func() {
 			By("deleting BackupBucket")
 			Expect(testClient.Delete(ctx, backupBucket)).To(Or(Succeed(), BeNotFoundError()))

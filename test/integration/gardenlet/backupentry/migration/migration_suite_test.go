@@ -64,6 +64,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Client
 	testRunID  string
 
 	seed            *gardencorev1beta1.Seed
@@ -88,7 +89,7 @@ var _ = BeforeSuite(func() {
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ExtensionLabels,ExtensionValidator,ResourceReferenceManager"},
 		},
 	}
 
@@ -183,6 +184,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	mgrClient = mgr.GetClient()
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 	By("registering controller")
 	Expect((&migration.Reconciler{
