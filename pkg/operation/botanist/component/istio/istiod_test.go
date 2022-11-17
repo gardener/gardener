@@ -1498,10 +1498,6 @@ spec:
     foo: bar
     
   ports:
-  - name: status-port
-    port: 15021
-    targetPort: 15021
-    protocol: TCP
   - name: foo
     port: 999
     targetPort: 999
@@ -1576,7 +1572,6 @@ spec:
           runAsGroup: 1337
           runAsNonRoot: true
         ports:
-        - containerPort: 15021
         - containerPort: 999
           protocol: TCP
         args:

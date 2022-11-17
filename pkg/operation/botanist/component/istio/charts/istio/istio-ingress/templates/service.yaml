@@ -17,10 +17,6 @@ spec:
   selector:
 {{ .Values.labels  | toYaml | indent 4 }}
   ports:
-  - name: {{ .Values.portsNames.status }}
-    port: 15021
-    targetPort: 15021
-    protocol: TCP
 {{- if .Values.ports }}
 {{ toYaml .Values.ports | indent 2 }}
 {{- end }}
