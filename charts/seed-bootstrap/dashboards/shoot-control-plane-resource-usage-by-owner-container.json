@@ -349,7 +349,7 @@
         },
         {
           "exemplar": true,
-          "expr": "metering:network_receive:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"} + metering:network_transmit:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "expr": "metering:network_receive:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"} + metering:network_transmit:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -624,13 +624,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1160",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -740,13 +734,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1349",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -869,13 +857,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1115",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -984,13 +966,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1115",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1099,13 +1075,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1115",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1228,13 +1198,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1115",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1344,13 +1308,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1115",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1473,13 +1431,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1115",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1589,13 +1541,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "$$hashKey": "object:1115",
-          "alias": "/Total/",
-          "dashes": true
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
