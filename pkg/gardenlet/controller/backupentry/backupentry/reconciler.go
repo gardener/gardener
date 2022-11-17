@@ -61,7 +61,7 @@ var (
 )
 
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
-// the process of being deleted when deleting a BackupBucket.
+// the process of being deleted when deleting a BackupEntry.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 
 // Reconciler reconciles the BackupEntries.

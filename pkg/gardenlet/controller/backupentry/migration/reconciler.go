@@ -33,14 +33,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// Reconciler reconciles the BackupEntry during migration.
+// Reconciler reconciles the BackupEntry by forcing the backup entry's restoration to this seed during control plane
+// migration if the preparation for migration in the source seed is not finished after a certain grace period and
+// is considered unlikely to succeed ("bad case" scenario).
 type Reconciler struct {
 	GardenClient client.Client
 	Config       config.GardenletConfiguration
 	Clock        clock.Clock
 }
 
-// Reconcile reconciles the BackupEntry during migration.
+// Reconcile reconciles the BackupEntry by forcing the backup entry's restoration to this seed during control plane
+// migration if the preparation for migration in the source seed is not finished after a certain grace period and
+// is considered unlikely to succeed ("bad case" scenario).
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
 	log := logf.FromContext(ctx)
 

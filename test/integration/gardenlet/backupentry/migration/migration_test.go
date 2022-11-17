@@ -15,6 +15,8 @@
 package backupentry_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -39,6 +41,8 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now().Round(time.Second))
+
 		By("creating BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -165,6 +169,7 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 	})
 
 	It("should update the backup entry status to force the restoration if forceRestore annotation is present", func() {
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 		patch := client.MergeFrom(backupEntry.DeepCopy())
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.AnnotationShootForceRestore, "true")
 		Expect(testClient.Patch(ctx, backupEntry, patch)).To(Succeed())
@@ -173,10 +178,26 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			g.Expect(backupEntry.Status.MigrationStartTime).To(BeNil())
 			g.Expect(backupEntry.Status.SeedName).To(BeNil())
-			g.Expect(backupEntry.Status.LastOperation).To(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(gardencorev1beta1.LastOperationTypeMigrate),
-				"State": Equal(gardencorev1beta1.LastOperationStateAborted),
-			})))
+			g.Expect(backupEntry.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeMigrate))
+			g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateAborted))
+			g.Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationShootForceRestore))
+		}).Should(Succeed())
+	})
+
+	It("should update the backup entry status to force the restoration if grace period is elapsed", func() {
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+			g.Expect(backupEntry.Status.MigrationStartTime).To(PointTo(Equal(metav1.Time{Time: fakeClock.Now()})))
+		}).Should(Succeed())
+
+		fakeClock.Step(2 * gracePeriod)
+
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+			g.Expect(backupEntry.Status.MigrationStartTime).To(BeNil())
+			g.Expect(backupEntry.Status.SeedName).To(BeNil())
+			g.Expect(backupEntry.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeMigrate))
+			g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateAborted))
 		}).Should(Succeed())
 	})
 })
