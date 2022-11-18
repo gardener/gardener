@@ -32,7 +32,7 @@ config:
     resourceNamespace: garden
     resourceName: gardener-operator-leader-election
   logLevel: info
-  logFormat: text
+  logFormat: json
   server:
     healthProbes:
       bindAddress: 0.0.0.0

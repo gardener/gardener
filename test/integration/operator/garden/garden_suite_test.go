@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/charts"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -139,6 +140,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		ImageVector:     imageVector,
+		Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
 		GardenNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 

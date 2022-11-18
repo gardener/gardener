@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -54,6 +55,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 func (r *Reconciler) delete(
@@ -310,10 +312,25 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 		syncPointCleanedUp.Insert(destroyVPA)
 
+		ensureNoManagedResourcesExist := g.Add(flow.Task{
+			Name: "Ensuring all ManagedResources are gone",
+			Fn: func(ctx context.Context) error {
+				managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
+				if err != nil {
+					return err
+				}
+				if managedResourcesStillExist {
+					return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
+				}
+				return nil
+			},
+			Dependencies: flow.NewTaskIDs(destroySystemResources),
+		})
+
 		_ = g.Add(flow.Task{
 			Name:         "Destroying gardener-resource-manager",
 			Fn:           resourceManager.Destroy,
-			Dependencies: flow.NewTaskIDs(destroySystemResources),
+			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
 		})
 	}
 

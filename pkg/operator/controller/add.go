@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -42,8 +43,14 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 		}
 	}
 
+	identity, err := gutil.DetermineIdentity()
+	if err != nil {
+		return err
+	}
+
 	if err := (&garden.Reconciler{
 		Config:                *cfg,
+		Identity:              identity,
 		ImageVector:           imageVector,
 		ComponentImageVectors: componentImageVectors,
 	}).AddToManager(mgr); err != nil {

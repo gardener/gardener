@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package gardener
 
 import (
 	"bufio"
@@ -27,10 +27,11 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+// DetermineIdentity determines the Gardener component identity.
 // We want to determine the Docker container id of the currently running instance because we need to identify for still
 // ongoing operations whether another instance is still operating the respective Shoots. When running locally, we
 // generate a random string because there is no container id.
-func determineIdentity() (*gardencorev1beta1.Gardener, error) {
+func DetermineIdentity() (*gardencorev1beta1.Gardener, error) {
 	var (
 		validID = regexp.MustCompile(`([0-9a-f]{64})`)
 		id      string

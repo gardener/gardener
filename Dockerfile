@@ -81,6 +81,7 @@ ENTRYPOINT ["/gardener-resource-manager"]
 FROM distroless-static AS operator
 
 COPY --from=builder /go/bin/gardener-operator /gardener-operator
+COPY charts /charts
 
 WORKDIR /
 

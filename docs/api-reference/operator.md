@@ -134,12 +134,25 @@ RuntimeCluster
 <tbody>
 <tr>
 <td>
+<code>gardener</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Gardener holds information about the Gardener which last acted on the Shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>conditions</code></br>
 <em>
 []github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
 </em>
 </td>
 <td>
+<p>Conditions is a list of conditions.</p>
 </td>
 </tr>
 <tr>

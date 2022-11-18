@@ -17,16 +17,20 @@ package garden
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -51,6 +55,16 @@ func (r *Reconciler) delete(
 	log.Info("Destroying system components")
 	if err := component.OpDestroyAndWait(r.newSystem()).Destroy(ctx); err != nil {
 		return reconcile.Result{}, err
+	}
+
+	log.Info("Ensuring all ManagedResources are gone")
+	managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClient, pointer.String(v1beta1constants.SeedResourceManagerClass))
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if managedResourcesStillExist {
+		log.Info("At least one ManagedResource still exists, cannot delete gardener-resource-manager")
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	log.Info("Destroying gardener-resource-manager")

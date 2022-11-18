@@ -45,9 +45,10 @@ type Reconciler struct {
 	Config                config.OperatorConfiguration
 	Clock                 clock.Clock
 	Recorder              record.EventRecorder
-	GardenNamespace       string
+	Identity              *gardencorev1beta1.Gardener
 	ImageVector           imagevector.ImageVector
 	ComponentImageVectors imagevector.ComponentImageVectors
+	GardenNamespace       string
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -65,7 +66,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
 	conditionReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", "Garden operation is currently being processed.")
-	if err := r.patchConditions(ctx, garden, conditionReconciled); err != nil {
+
+	patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, conditionReconciled)
+	garden.Status.Gardener = r.Identity
+	garden.Status.ObservedGeneration = garden.Generation
+	if err := r.RuntimeClient.Status().Patch(ctx, garden, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not patch status of %s condition to %s: %w", conditionReconciled.Type, conditionReconciled.Status, err)
 	}
 
@@ -93,20 +99,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
 	}
 
-	patch := client.MergeFrom(garden.DeepCopy())
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
-	garden.Status.ObservedGeneration = garden.Generation
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.RuntimeClient.Status().Patch(ctx, garden, patch)
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
 }
 
 func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition) error {
-	patch := client.MergeFrom(garden.DeepCopy())
+	patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, condition)
 	return r.RuntimeClient.Status().Patch(ctx, garden, patch)
 }
 
 func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition, err error) error {
-	if patchErr := r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, condition, gardencorev1beta1.ConditionFalse, conditionReasonPrefix(garden)+"Failed", err.Error())); err != nil {
+	if patchErr := r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, condition, gardencorev1beta1.ConditionFalse, conditionReasonPrefix(garden)+"Failed", err.Error())); patchErr != nil {
 		log.Error(patchErr, "Could not patch status", "condition", condition, "err", patchErr.Error())
 	}
 	return err

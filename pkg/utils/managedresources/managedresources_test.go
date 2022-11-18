@@ -20,12 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/managedresources"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,6 +29,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 var _ = Describe("managedresources", func() {
@@ -468,6 +470,71 @@ var _ = Describe("managedresources", func() {
 					},
 				})).AnyTimes()
 			Expect(WaitUntilDeleted(timeoutCtx, c, namespace, name)).To(MatchError(ContainSubstring(blockingResourcesMessage)))
+		})
+	})
+
+	Describe("#CheckIfManagedResourcesExist", func() {
+		var (
+			fakeClient client.Client
+			class      = "foo"
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		})
+
+		Context("w/o class", func() {
+			It("should return false because no resources exist", func() {
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeFalse())
+			})
+
+			It("should return false because no resources exist", func() {
+				obj := managedResource(false)
+				obj.Spec.Class = &class
+				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
+
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeFalse())
+			})
+
+			It("should return true because resources exist", func() {
+				Expect(fakeClient.Create(ctx, managedResource(false))).To(Succeed())
+
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeTrue())
+			})
+		})
+
+		Context("w/ class", func() {
+			It("should return false because no resources exist", func() {
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeFalse())
+			})
+
+			It("should return false because no resources exist", func() {
+				obj := managedResource(false)
+				obj.Spec.Class = pointer.String("bar")
+				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
+
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeFalse())
+			})
+
+			It("should return true because resources exist", func() {
+				obj := managedResource(false)
+				obj.Spec.Class = &class
+				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
+
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeTrue())
+			})
 		})
 	})
 })

@@ -32,6 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -113,6 +114,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  operatorclient.RuntimeScheme,
+		Namespace:               v1beta1constants.GardenNamespace,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
 		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),

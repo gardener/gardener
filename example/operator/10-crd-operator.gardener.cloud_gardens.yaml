@@ -91,6 +91,7 @@ spec:
             description: Status contains the status of this garden.
             properties:
               conditions:
+                description: Conditions is a list of conditions.
                 items:
                   description: Condition holds the information about the state of
                     a resource.
@@ -133,6 +134,27 @@ spec:
                   - type
                   type: object
                 type: array
+              gardener:
+                description: Gardener holds information about the Gardener which last
+                  acted on the Shoot.
+                properties:
+                  id:
+                    description: ID is the Docker container id of the Gardener which
+                      last acted on a resource.
+                    type: string
+                  name:
+                    description: Name is the hostname (pod name) of the Gardener which
+                      last acted on a resource.
+                    type: string
+                  version:
+                    description: Version is the version of the Gardener which last
+                      acted on a resource.
+                    type: string
+                required:
+                - id
+                - name
+                - version
+                type: object
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   for this resource.

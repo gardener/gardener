@@ -92,6 +92,7 @@ var _ = Describe("Garden controller tests", func() {
 			OfType(operatorv1alpha1.GardenReconciled),
 			WithStatus(gardencorev1beta1.ConditionProgressing),
 		))
+		Expect(garden.Status.Gardener).NotTo(BeNil())
 
 		By("Verify that CA secret was generated")
 		Eventually(func(g Gomega) []corev1.Secret {
