@@ -18,3 +18,7 @@ spec:
     protocol: TCP
     port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }}
     targetPort: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }}
+  - name: server
+    port: 443
+    targetPort: {{ required ".Values.config.server.webhooks.port is required" .Values.config.server.webhooks.port }}
+    protocol: TCP

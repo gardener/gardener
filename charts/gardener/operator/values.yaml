@@ -34,12 +34,15 @@ config:
   logLevel: info
   logFormat: json
   server:
-    healthProbes:
+    webhooks:
       bindAddress: 0.0.0.0
       port: 2750
-    metrics:
+    healthProbes:
       bindAddress: 0.0.0.0
       port: 2751
+    metrics:
+      bindAddress: 0.0.0.0
+      port: 2752
   debugging:
     enableProfiling: false
     enableContentionProfiling: false

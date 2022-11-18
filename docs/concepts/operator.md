@@ -108,3 +108,13 @@ The virtual garden control plane components are:
 - `virtual-garden-etcd-events`
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
+
+### Webhooks
+
+As of today, the `gardener-operator` only has one webhook handler which is now described in more detail.
+
+#### Validation
+
+This webhook handler validates `CREATE`/`UPDATE`/`DELETE` operations on `Garden` resources.
+Simple validation is performed via [standard CRD validation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation).
+However, more advanced validation hard to express via these means is performed by this webhook handler.

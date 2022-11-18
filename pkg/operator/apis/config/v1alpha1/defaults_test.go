@@ -42,10 +42,12 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
 
+			Expect(obj.Server.Webhooks.BindAddress).To(Equal("0.0.0.0"))
+			Expect(obj.Server.Webhooks.Port).To(Equal(2750))
 			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
-			Expect(obj.Server.HealthProbes.Port).To(Equal(2750))
+			Expect(obj.Server.HealthProbes.Port).To(Equal(2751))
 			Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Metrics.Port).To(Equal(2751))
+			Expect(obj.Server.Metrics.Port).To(Equal(2752))
 		})
 
 		It("should not overwrite custom settings", func() {
@@ -53,6 +55,10 @@ var _ = Describe("Defaults", func() {
 				expectedLogLevel  = "foo"
 				expectedLogFormat = "bar"
 				expectedServer    = ServerConfiguration{
+					Webhooks: Server{
+						BindAddress: "bay",
+						Port:        3,
+					},
 					HealthProbes: &Server{
 						BindAddress: "baz",
 						Port:        1,

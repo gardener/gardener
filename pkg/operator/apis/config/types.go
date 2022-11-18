@@ -66,6 +66,8 @@ type GardenControllerConfig struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
+	// Webhooks is the configuration for the HTTPS webhook server.
+	Webhooks Server
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
 	HealthProbes *Server
 	// Metrics is the configuration for serving the metrics endpoint.

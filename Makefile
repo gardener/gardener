@@ -105,7 +105,7 @@ start-admission-controller:
 start-resource-manager:
 	@./hack/local-development/start-resource-manager
 
-.PHONY: start-operator
+.PHONY: start-operator $(YQ)
 start-operator:
 	@./hack/local-development/start-operator
 
