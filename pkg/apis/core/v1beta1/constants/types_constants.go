@@ -200,10 +200,6 @@ const (
 	// GardenerOperationRenewKubeconfig is a constant for the value of the operation annotation to renew the gardenlet's kubeconfig secret.
 	GardenerOperationRenewKubeconfig = "renew-kubeconfig"
 
-	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
-	//
-	// Deprecated: Use `GardenRole` instead.
-	DeprecatedGardenRole = "garden.sapcloud.io/role"
 	// GardenRole is a constant for a label that describes a role.
 	GardenRole = "gardener.cloud/role"
 	// GardenRoleExtension is a constant for a label that describes the 'extensions' role.
