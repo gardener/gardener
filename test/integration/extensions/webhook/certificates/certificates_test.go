@@ -24,6 +24,22 @@ import (
 	"sync/atomic"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/util/uuid"
+	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
@@ -36,22 +52,6 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"k8s.io/apimachinery/pkg/util/uuid"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
@@ -123,9 +123,7 @@ var _ = Describe("Certificates tests", func() {
 			By("deleting shoot namespace")
 			Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
-	})
 
-	BeforeEach(func() {
 		// use unique extension name for each test,for unique webhook config name
 		extensionName = "provider-test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
@@ -335,7 +333,6 @@ var _ = Describe("Certificates tests", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName},
 				Webhooks:   []admissionregistrationv1.MutatingWebhook{seedWebhook},
 			}
-
 		})
 
 		JustBeforeEach(func() {
@@ -522,7 +519,6 @@ var _ = Describe("Certificates tests", func() {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
 				}).Should(Equal(caBundle3))
-
 			})
 		})
 	})

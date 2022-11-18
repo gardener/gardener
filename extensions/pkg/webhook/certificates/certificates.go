@@ -62,7 +62,7 @@ func getWebhookCAConfig(name string) *secretutils.CertificateSecretConfig {
 	}
 }
 
-func getWebhookServerCertConfig(name, namespace, providerName, mode, url string) *secretutils.CertificateSecretConfig {
+func getWebhookServerCertConfig(name, namespace, componentName, mode, url string) *secretutils.CertificateSecretConfig {
 	var (
 		dnsNames    []string
 		ipAddresses []net.IP
@@ -84,20 +84,18 @@ func getWebhookServerCertConfig(name, namespace, providerName, mode, url string)
 		}
 
 	case webhook.ModeService:
-		dnsNames = []string{
-			fmt.Sprintf("gardener-extension-%s", providerName),
-		}
+		dnsNames = []string{webhook.PrefixedName(componentName)}
 		if namespace != "" {
 			dnsNames = append(dnsNames,
-				fmt.Sprintf("gardener-extension-%s.%s", providerName, namespace),
-				fmt.Sprintf("gardener-extension-%s.%s.svc", providerName, namespace),
+				fmt.Sprintf("%s.%s", webhook.PrefixedName(componentName), namespace),
+				fmt.Sprintf("%s.%s.svc", webhook.PrefixedName(componentName), namespace),
 			)
 		}
 	}
 
 	return &secretutils.CertificateSecretConfig{
 		Name:                        name,
-		CommonName:                  providerName,
+		CommonName:                  componentName,
 		DNSNames:                    dnsNames,
 		IPAddresses:                 ipAddresses,
 		CertType:                    secretutils.ServerCert,

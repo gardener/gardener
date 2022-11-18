@@ -19,16 +19,17 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
-	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
-	"github.com/gardener/gardener/pkg/utils/flow"
-
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
+	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 const (
@@ -288,8 +289,8 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
 				return nil, err
 			}
+			atomicShootWebhookConfig.Store(shootWebhookConfig.DeepCopy())
 		}
-		atomicShootWebhookConfig.Store(shootWebhookConfig.DeepCopy())
 
 		// register seed webhook config once we become leader – with the CA bundle we just generated
 		// also reconcile all shoot webhook configs to update the CA bundle
@@ -320,9 +321,9 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		seedWebhookConfig,
 		shootWebhookConfig,
 		atomicShootWebhookConfig,
-		c.extensionName,
-		c.shootWebhookManagedResourceName,
 		c.shootNamespaceSelector,
+		c.shootWebhookManagedResourceName,
+		c.extensionName,
 		c.Server.Namespace,
 		c.Server.Mode,
 		c.Server.URL,
@@ -333,7 +334,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	return atomicShootWebhookConfig, nil
 }
 
-func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, seedWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, caBundle []byte) func(ctx context.Context) error {
+func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, seedWebhookConfig client.Object, caBundle []byte) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		if seedWebhookConfig != nil {
 			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), seedWebhookConfig, c.Server.Namespace, caBundle); err != nil {
