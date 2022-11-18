@@ -37,6 +37,18 @@ As they were already made available by `gardener-operator`, the `gardenlet` just
 ⚠️ Note that such setup requires that you upgrade the versions of `gardener-operator` and `gardenlet` in lock-step.
 Otherwise, you might experience unexpected behaviour or issues with your seed or shoot clusters.
 
+## Credentials Rotation
+
+The credentials rotation works in the same way like it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
+
+For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
+
+**🚨 Hence, it is the responsibility of the operator to regularly perform the credentials rotation.**
+
+Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
+
+- certificate authorities (and related server and client certificates) 
+
 ## Local Development
 
 The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy the `gardener-operator`.
