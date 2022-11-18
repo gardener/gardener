@@ -157,6 +157,11 @@ var _ = Describe("Seed controller tests", func() {
 				}}
 				Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
 
+				By("Wait until the manager cache observes the internal domain secret")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
+				}).Should(Succeed())
+
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, internalDomainSecret)).To(Succeed())
 				})
@@ -195,6 +200,11 @@ var _ = Describe("Seed controller tests", func() {
 						Data: map[string][]byte{"foo": []byte("bar")},
 					}
 					Expect(testClient.Create(ctx, globalMonitoringSecret)).To(Succeed())
+
+					By("Wait until the manager cache observes the global monitoring secret")
+					Eventually(func() error {
+						return mgrClient.Get(ctx, client.ObjectKeyFromObject(globalMonitoringSecret), globalMonitoringSecret)
+					}).Should(Succeed())
 
 					DeferCleanup(func() {
 						Expect(testClient.Delete(ctx, globalMonitoringSecret)).To(Succeed())

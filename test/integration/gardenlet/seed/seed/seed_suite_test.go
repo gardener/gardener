@@ -171,7 +171,7 @@ var _ = BeforeSuite(func() {
 		Config: config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				Seed: &config.SeedControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: time.Minute},
+					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
 				},
 			},
 			SNI: &config.SNI{
