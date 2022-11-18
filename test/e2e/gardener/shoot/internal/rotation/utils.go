@@ -15,9 +15,6 @@
 package rotation
 
 import (
-	"sort"
-
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -25,28 +22,3 @@ var managedByGardenletSecretsManager = client.MatchingLabels{
 	"managed-by":       "secrets-manager",
 	"manager-identity": "gardenlet",
 }
-
-type secretConfigNamesToSecrets map[string][]corev1.Secret
-
-func groupByName(allSecrets []corev1.Secret) secretConfigNamesToSecrets {
-	grouped := make(secretConfigNamesToSecrets)
-	for _, secret := range allSecrets {
-		grouped[secret.Labels["name"]] = append(grouped[secret.Labels["name"]], secret)
-	}
-
-	for _, secrets := range grouped {
-		sort.Sort(ageSorter(secrets))
-	}
-	return grouped
-}
-
-// ageSorter implements sort.Interface for a slice of secrets for sorting by age.
-type ageSorter []corev1.Secret
-
-func (x ageSorter) Len() int { return len(x) }
-
-func (x ageSorter) Less(i, j int) bool {
-	return x[i].CreationTimestamp.Before(&x[j].CreationTimestamp)
-}
-
-func (x ageSorter) Swap(i, j int) { x[i], x[j] = x[j], x[i] }

@@ -28,6 +28,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/utils/rotation"
 )
 
 // CAVerifier verifies the certificate authorities rotation.
@@ -38,11 +39,11 @@ type CAVerifier struct {
 	caBundle  []byte
 	newCACert []byte
 
-	gardenletSecretsBefore       secretConfigNamesToSecrets
-	gardenletSecretsPrepared     secretConfigNamesToSecrets
-	gardenletSecretsCompleted    secretConfigNamesToSecrets
-	providerLocalSecretsBefore   secretConfigNamesToSecrets
-	providerLocalSecretsPrepared secretConfigNamesToSecrets
+	gardenletSecretsBefore       rotation.SecretConfigNamesToSecrets
+	gardenletSecretsPrepared     rotation.SecretConfigNamesToSecrets
+	gardenletSecretsCompleted    rotation.SecretConfigNamesToSecrets
+	providerLocalSecretsBefore   rotation.SecretConfigNamesToSecrets
+	providerLocalSecretsPrepared rotation.SecretConfigNamesToSecrets
 }
 
 var managedByProviderLocalSecretsManager = client.MatchingLabels{
@@ -87,7 +88,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
 			bundle := ca + "-bundle"
 			g.Expect(grouped[ca]).To(HaveLen(1), ca+" secret should get created, but not rotated yet")
@@ -114,7 +115,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[caProviderLocalControlPlane]).To(HaveLen(1), "CA secret should get created, but not rotated yet")
 		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(HaveLen(1), "CA bundle secret should get created, but not rotated yet")
 		g.Expect(grouped[providerLocalDummyServer]).To(HaveLen(1))
@@ -140,7 +141,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
 			bundle := ca + "-bundle"
 			g.Expect(grouped[ca]).To(HaveLen(2), ca+" secret should get rotated, but old CA is kept")
@@ -173,7 +174,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[caProviderLocalControlPlane]).To(HaveLen(2), "CA secret should get rotated, but old CA is kept")
 		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(HaveLen(1), "CA bundle secret should have changed")
 		g.Expect(grouped[providerLocalDummyServer]).To(HaveLen(1))
@@ -206,7 +207,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
 			bundle := ca + "-bundle"
 			g.Expect(grouped[ca]).To(HaveLen(1), "old "+ca+" secret should get cleaned up")
@@ -235,7 +236,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[caProviderLocalControlPlane]).To(HaveLen(1), "old CA secret should get cleaned up")
 		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(HaveLen(1), "CA bundle secret should have changed")
 		g.Expect(grouped[providerLocalDummyServer]).To(HaveLen(1))

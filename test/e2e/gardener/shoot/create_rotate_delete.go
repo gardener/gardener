@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
+	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -40,7 +41,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		v := rotation.Verifiers{
+		v := rotationutils.Verifiers{
 			// basic verifiers checking secrets
 			&rotation.CAVerifier{ShootCreationFramework: f},
 			&rotation.ETCDEncryptionKeyVerifier{ShootCreationFramework: f},
