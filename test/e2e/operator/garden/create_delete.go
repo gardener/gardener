@@ -16,7 +16,6 @@ package garden
 
 import (
 	"context"
-	"os"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -27,17 +26,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	componentbaseconfig "k8s.io/component-base/config"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -45,67 +39,9 @@ import (
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
-		parentCtx     = context.Background()
-		runtimeClient client.Client
-
-		backupSecret *corev1.Secret
-		garden       *operatorv1alpha1.Garden
+		backupSecret = defaultBackupSecret()
+		garden       = defaultGarden(backupSecret)
 	)
-
-	BeforeEach(func() {
-		restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&componentbaseconfig.ClientConnectionConfiguration{Kubeconfig: os.Getenv("KUBECONFIG")}, nil, kubernetes.AuthTokenFile)
-		Expect(err).NotTo(HaveOccurred())
-
-		runtimeClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
-		Expect(err).NotTo(HaveOccurred())
-
-		backupSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "virtual-garden-etcd-main-backup",
-				Namespace: "garden",
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{"hostPath": []byte("/etc/gardener/local-backupbuckets")},
-		}
-
-		garden = &operatorv1alpha1.Garden{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "garden-",
-			},
-			Spec: operatorv1alpha1.GardenSpec{
-				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
-					Provider: operatorv1alpha1.Provider{
-						Zones: []string{"0"},
-					},
-					Settings: &operatorv1alpha1.Settings{
-						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: pointer.Bool(true),
-						},
-					},
-				},
-				VirtualCluster: operatorv1alpha1.VirtualCluster{
-					ETCD: &operatorv1alpha1.ETCD{
-						Main: &operatorv1alpha1.ETCDMain{
-							Backup: &operatorv1alpha1.Backup{
-								Provider:   "local",
-								BucketName: "gardener-operator",
-								SecretRef: corev1.SecretReference{
-									Name:      backupSecret.Name,
-									Namespace: backupSecret.Namespace,
-								},
-							},
-						},
-					},
-					Maintenance: operatorv1alpha1.Maintenance{
-						TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
-							Begin: "220000+0100",
-							End:   "230000+0100",
-						},
-					},
-				},
-			},
-		}
-	})
 
 	It("Create, Delete", Label("simple"), func() {
 		By("Create Garden")
@@ -114,10 +50,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
-		CEventually(ctx, func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-			return garden.Status.Conditions
-		}).WithPolling(2 * time.Second).Should(ContainCondition(OfType(operatorv1alpha1.GardenReconciled), WithStatus(gardencorev1beta1.ConditionTrue)))
+		waitForGardenToBeReconciled(ctx, garden)
 
 		By("Verify creation")
 		CEventually(ctx, func(g Gomega) {
@@ -146,10 +79,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 		Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
-
-		CEventually(ctx, func() error {
-			return runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
-		}).WithPolling(2 * time.Second).Should(BeNotFoundError())
+		waitForGardenToBeDeleted(ctx, garden)
 
 		By("Verify deletion")
 		secretList := &corev1.SecretList{}
