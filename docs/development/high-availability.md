@@ -43,7 +43,7 @@ Concretely, all seed system components should respect the following conventions:
   Apart from the above, there might be special cases where these rules do not apply, for example:
 
   - `istio-ingressgateway` is scaled horizontally, hence the above numbers are the minimum values.
-  - `nginx-ingress-controller` in the seed cluster is only used to advertise observability endpoints, hence it also only runs with `1` replica at all times. In the future, this component might disappear in favor of the `istio-ingressgateway` anyways.
+  - `nginx-ingress-controller` in the seed cluster is used to advertise all shoot observability endpoints, so due to performance reasons it runs with `2` replicas at all times. In the future, this component might disappear in favor of the `istio-ingressgateway` anyways.
 
 - **Topology Spread Constraints**
 
