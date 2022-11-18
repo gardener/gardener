@@ -53,7 +53,6 @@ spec:
           runAsGroup: 1337
           runAsNonRoot: true
         ports:
-        - containerPort: 15021
         {{- range .Values.ports }}
         - containerPort: {{ .targetPort }}
           protocol: TCP
