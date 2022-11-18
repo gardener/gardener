@@ -65,6 +65,70 @@ backups should be stored. It should have enough privileges to manipulate the obj
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.Credentials">Credentials
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenStatus">GardenStatus</a>)
+</p>
+<p>
+<p>Credentials contains information about the virtual garden cluster credentials.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>rotation</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Rotation contains information about the credential rotations.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Credentials">Credentials</a>)
+</p>
+<p>
+<p>CredentialsRotation contains information about the rotation of credentials.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>certificateAuthorities</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CertificateAuthorities contains information about the certificate authority credential rotation.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.ETCD">ETCD
 </h3>
 <p>
@@ -372,6 +436,20 @@ int64
 </td>
 <td>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentials</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Credentials">
+Credentials
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Credentials contains information about the virtual garden cluster credentials.</p>
 </td>
 </tr>
 </tbody>
