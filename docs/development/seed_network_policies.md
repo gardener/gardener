@@ -52,7 +52,7 @@ allow-to-private-networks         networking.gardener.cloud/to-private-networks=
 allow-to-public-networks          networking.gardener.cloud/to-public-networks=allowed
 
 # allows Ingress to etcd pods from the Shoot's Kubernetes API Server
-allow-etcd                        app=etcd-statefulset,garden.sapcloud.io/role=controlplane
+allow-etcd                        app=etcd-statefulset,gardener.cloud/role=controlplane
 
 # used by the Shoot API server to allows ingress from pods labeled
 # with'networking.gardener.cloud/to-shoot-apiserver=allowed', from Prometheus, and allows Egress to etcd pods
