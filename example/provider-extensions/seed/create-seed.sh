@@ -20,21 +20,20 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 usage() {
   echo "Usage:"
-  echo "> create-seed.sh [ -h | <path to skaffold binary> <garden-kubeconfig> <seed-kubeconfig> <seed-name> ]"
+  echo "> create-seed.sh [ -h | <garden-kubeconfig> <seed-kubeconfig> <seed-name> ]"
   echo
-  echo ">> For example: create-seed.sh /usr/bin/skaffold ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml provider-extensions"
+  echo ">> For example: create-seed.sh ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml provider-extensions"
 
   exit 0
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 4 ]; then
+if [ "$1" == "-h" ] || [ "$#" -ne 3 ]; then
   usage
 fi
 
-skaffold=$1
-garden_kubeconfig=$2
-seed_kubeconfig=$3
-seed_name=$4
+garden_kubeconfig=$1
+seed_kubeconfig=$2
+seed_name=$3
 
 temp_shoot_info=$(mktemp)
 cleanup-shoot-info() {
@@ -92,4 +91,4 @@ GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
   DNS_PROVIDER_TYPE=$dns_provider_type \
   INGRESS_DOMAIN=$ingress_domain \
   SKAFFOLD_PUSH=true \
-  $skaffold run -m gardenlet -p extensions --kubeconfig="$seed_kubeconfig"
+  skaffold run -m gardenlet -p extensions --kubeconfig="$seed_kubeconfig"

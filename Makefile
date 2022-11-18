@@ -346,34 +346,11 @@ gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
-gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# Configure seed cluster
-	$(REPO_ROOT)/example/provider-extensions/seed/configure-seed.sh $(KUBECONFIG) $(SEED_KUBECONFIG)
-	@# Start bootstrapping Gardener
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m etcd,controlplane,extensions-env -p extensions
-	$(REPO_ROOT)/example/provider-extensions/garden/controller-registrations/create-controller-registrations.sh $(KUBECONFIG)
-	$(REPO_ROOT)/example/provider-extensions/garden/cloud-profiles/create-cloud-profiles.sh $(KUBECONFIG)
-	$(REPO_ROOT)/example/provider-extensions/seed/create-seed.sh $(SKAFFOLD) $(KUBECONFIG) $(SEED_KUBECONFIG) $(SEED_NAME)
 
+gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig --seed-name $(SEED_NAME)
 gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@echo "Deleting all shoots"
-	@# Deleting all shoots to ensure that there are no orphan infrastructure elements left
-	$(KUBECTL) annotate shoots -A --all confirmation.gardener.cloud/deletion=true --overwrite
-	$(KUBECTL) delete shoots -A --all --wait
-	@echo "Deleting $(SEED_NAME) seed"
-	$(KUBECTL) delete seeds $(SEED_NAME) --wait --ignore-not-found
-	$(SKAFFOLD) delete -m gardenlet -p extensions --kubeconfig=$(SEED_KUBECONFIG)
-	$(KUBECTL) delete ns relay --ignore-not-found
-	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete ns garden registry relay --ignore-not-found
-	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete -k $(REPO_ROOT)/example/provider-extensions/kyverno --ignore-not-found
-	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete mutatingwebhookconfigurations kyverno-policy-mutating-webhook-cfg kyverno-resource-mutating-webhook-cfg kyverno-verify-mutating-webhook-cfg --ignore-not-found
-	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete validatingwebhookconfigurations kyverno-policy-validating-webhook-cfg kyverno-resource-validating-webhook-cfg --ignore-not-found
-	@echo "Cleaning up kind cluster"
-	$(KUBECTL) delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
-	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m extensions-env -p extensions
-	$(SKAFFOLD) delete -m etcd,controlplane -p extensions
-	$(KUBECTL) delete ns garden gardener-system-seed-lease --ignore-not-found
+	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig --seed-name $(SEED_NAME)
 
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
