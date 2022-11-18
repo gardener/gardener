@@ -23,8 +23,11 @@ import (
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/webhook/validation"
 )
 
@@ -33,12 +36,14 @@ var _ = Describe("Handler", func() {
 		ctx = context.TODO()
 		log = logr.Discard()
 
-		handler *Handler
-		garden  *operatorv1alpha1.Garden
+		fakeClient client.Client
+		handler    *Handler
+		garden     *operatorv1alpha1.Garden
 	)
 
 	BeforeEach(func() {
-		handler = &Handler{Logger: log}
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
+		handler = &Handler{Logger: log, RuntimeClient: fakeClient}
 		garden = &operatorv1alpha1.Garden{}
 	})
 
@@ -55,6 +60,18 @@ var _ = Describe("Handler", func() {
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(statusError.Status().Reason).To(Equal(metav1.StatusReasonInvalid))
+		})
+
+		It("should return an error if there is already another Garden resource", func() {
+			garden2 := garden.DeepCopy()
+			garden2.SetName("garden2")
+			Expect(fakeClient.Create(ctx, garden2)).To(Succeed())
+
+			err := handler.ValidateCreate(ctx, garden)
+			statusError, ok := err.(*apierrors.StatusError)
+			Expect(ok).To(BeTrue())
+			Expect(statusError.Status().Code).To(Equal(int32(http.StatusBadRequest)))
+			Expect(statusError.Status().Message).To(ContainSubstring("there can be only one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time"))
 		})
 	})
 

@@ -11,6 +11,7 @@ A lot of production- and enterprise-grade features were built into Gardener for 
 
 There is a [Helm chart](../../charts/gardener/operator) which can be used to deploy the `gardener-operator`.
 Once deployed and ready, you can create a `Garden` resource.
+Note that there can only be one `Garden` resource per system at a time.
 
 > ℹ️ Similar to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
 > By default, `gardener-operator` deploys the VPA components.
@@ -122,3 +123,6 @@ However, more advanced validation hard to express via these means is performed b
 Furthermore, for deletion requests, it is validated that the `Garden` is annotated with a deletion confirmation annotation, namely `confirmation.gardener.cloud/deletion=true`.
 Only if this annotation is present it allows the `DELETE` operation to pass.
 This prevents users from accidental/undesired deletions.
+
+Another validation is to check that there is no only one `Garden` resource at a time.
+It prevents creating a second `Garden` when there is already one in the system.

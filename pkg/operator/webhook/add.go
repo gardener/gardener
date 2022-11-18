@@ -31,7 +31,8 @@ import (
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager) error {
 	if err := (&validation.Handler{
-		Logger: mgr.GetLogger().WithName("webhook").WithName(validation.HandlerName),
+		Logger:        mgr.GetLogger().WithName("webhook").WithName(validation.HandlerName),
+		RuntimeClient: mgr.GetClient(),
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", validation.HandlerName, err)
 	}

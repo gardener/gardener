@@ -21,20 +21,22 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler checks, if the secrets contains a kubeconfig and denies kubeconfigs with invalid fields (e.g. tokenFile or
 // exec).
 type Handler struct {
-	Logger logr.Logger
+	Logger        logr.Logger
+	RuntimeClient client.Client
 }
 
-// ValidateCreate performs the validation.
-func (h *Handler) ValidateCreate(_ context.Context, obj runtime.Object) error {
+func validate(obj runtime.Object) error {
 	garden, ok := obj.(*operatorv1alpha1.Garden)
 	if !ok {
 		return fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
@@ -47,9 +49,22 @@ func (h *Handler) ValidateCreate(_ context.Context, obj runtime.Object) error {
 	return nil
 }
 
+// ValidateCreate performs the validation.
+func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	otherGardensAlreadyExist, err := kutil.ResourcesExist(ctx, h.RuntimeClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+	if otherGardensAlreadyExist {
+		return apierrors.NewBadRequest("there can be only one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
+	}
+
+	return validate(obj)
+}
+
 // ValidateUpdate performs the validation.
-func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) error {
-	return h.ValidateCreate(ctx, newObj)
+func (h *Handler) ValidateUpdate(_ context.Context, _, newObj runtime.Object) error {
+	return validate(newObj)
 }
 
 // ValidateDelete performs the validation.
