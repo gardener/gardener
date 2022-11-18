@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Project Activity controller tests", func() {
+var _ = Describe("Project Activity controller tests", Ordered, func() {
 	var project *gardencorev1beta1.Project
 
 	BeforeEach(func() {
