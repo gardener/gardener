@@ -75,8 +75,14 @@ var _ = Describe("Handler", func() {
 	})
 
 	Describe("#ValidateDelete", func() {
-		It("should return nil", func() {
-			Expect(handler.ValidateDelete(ctx, garden)).To(BeNil())
+		It("should prevent deletion if it was not confirmed", func() {
+			Expect(handler.ValidateDelete(ctx, garden)).To(MatchError(ContainSubstring(`must have a "confirmation.gardener.cloud/deletion" annotation to delete`)))
+		})
+
+		It("should allow deletion if it was confirmed", func() {
+			metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "confirmation.gardener.cloud/deletion", "true")
+
+			Expect(handler.ValidateDelete(ctx, garden)).To(Succeed())
 		})
 	})
 })

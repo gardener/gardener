@@ -118,3 +118,7 @@ As of today, the `gardener-operator` only has one webhook handler which is now d
 This webhook handler validates `CREATE`/`UPDATE`/`DELETE` operations on `Garden` resources.
 Simple validation is performed via [standard CRD validation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation).
 However, more advanced validation hard to express via these means is performed by this webhook handler.
+
+Furthermore, for deletion requests, it is validated that the `Garden` is annotated with a deletion confirmation annotation, namely `confirmation.gardener.cloud/deletion=true`.
+Only if this annotation is present it allows the `DELETE` operation to pass.
+This prevents users from accidental/undesired deletions.

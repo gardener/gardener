@@ -24,6 +24,7 @@ import (
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Handler checks, if the secrets contains a kubeconfig and denies kubeconfigs with invalid fields (e.g. tokenFile or
@@ -51,7 +52,12 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 	return h.ValidateCreate(ctx, newObj)
 }
 
-// ValidateDelete returns nil (not implemented by this handler).
-func (h *Handler) ValidateDelete(_ context.Context, _ runtime.Object) error {
-	return nil
+// ValidateDelete performs the validation.
+func (h *Handler) ValidateDelete(_ context.Context, obj runtime.Object) error {
+	garden, ok := obj.(*operatorv1alpha1.Garden)
+	if !ok {
+		return fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
+	}
+
+	return gutil.CheckIfDeletionIsConfirmed(garden)
 }
