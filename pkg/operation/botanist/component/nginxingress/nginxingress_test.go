@@ -436,7 +436,7 @@ metadata:
   name: nginx-ingress-controller
   namespace: ` + namespace + `
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 2
   selector:
     matchLabels:
