@@ -15,7 +15,8 @@ We are following the same approaches.
 
 The Gardener API is defined in `pkg/apis/{core,extensions,settings}` directories and is the main point of interaction with the system.
 It must be ensured that the API is always backwards-compatible.
-If fields shall be removed permanently from the API then a proper deprecation period must be adhered to so that end-users have enough time adapt their clients.
+
+#### Changing the API
 
 **Checklist** when changing the API:
 
@@ -29,6 +30,25 @@ If fields shall be removed permanently from the API then a proper deprecation pe
 1. If necessary then adapt the exemplary YAML manifests of the Gardener resources defined in `example/*.yaml`.
 1. In most cases it makes sense to add/adapt the documentation for administrators/operators and/or end-users in the `docs` folder to provide information on purpose and usage of the added/changed fields.
 1. When opening the pull request then always add a release note so that end-users are becoming aware of the changes.
+
+#### Removing a field
+
+If fields shall be removed permanently from the API then a proper deprecation period must be adhered to so that end-users have enough time adapt their clients. The followed process for removing a field is:
+1. The field in the external version(s) has to be commented out with appropriate doc string that the protobuf number of the corresponding field is reserved. Example:
+
+   ```diff
+   -	SeedTemplate *gardencorev1beta1.SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
+
+   +	// SeedTemplate is tombstoned to show why 2 is reserved protobuf tag.
+   +	// SeedTemplate *gardencorev1beta1.SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
+   ```
+
+   The reasoning behind this is to prevent the same protobuf number to be used by a new field. Introducing a new field with the same protobuf number would be a breaking change for clients still using the old protobuf definitions that have the old field for the given protobuf number.
+   The field in the internal version can be removed.
+
+2. Unit test has to be added to make sure that a new field does not reuse the already reserved protobuf tag.
+
+Example of field removal can be found in https://github.com/gardener/gardener/pull/6972.
 
 ## Component configuration APIs
 
