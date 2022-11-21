@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Project Activity controller tests", Ordered, func() {
+var _ = Describe("Project Activity controller tests", func() {
 	var project *gardencorev1beta1.Project
 
 	BeforeEach(func() {
@@ -85,6 +85,11 @@ var _ = Describe("Project Activity controller tests", Ordered, func() {
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 			log.Info("Created object", "kind", kind, "object", client.ObjectKeyFromObject(obj))
 
+			By("Wait until manager has observed " + kind + " creation")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			}).Should(Succeed())
+
 			By("Ensure lastActivityTimestamp was updated after object creation")
 			lastActivityTimestamp = assertLastActivityTimestampUpdated(ctx, project, lastActivityTimestamp)
 
@@ -95,6 +100,28 @@ var _ = Describe("Project Activity controller tests", Ordered, func() {
 			Expect(testClient.Update(ctx, obj)).To(Succeed())
 			log.Info("Updated object", "kind", kind, "object", client.ObjectKeyFromObject(obj))
 
+			By("Wait until manager has observed updated" + kind)
+			Eventually(func(g Gomega) {
+				switch currentObj := obj.(type) {
+				case *corev1.Secret:
+					updatedSecret := &corev1.Secret{}
+					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedSecret)).To(Succeed())
+					g.Expect(currentObj.Data).To(DeepEqual(updatedSecret.Data))
+				case *gardencorev1beta1.BackupEntry:
+					updatedBackupEntry := &gardencorev1beta1.BackupEntry{}
+					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedBackupEntry)).To(Succeed())
+					g.Expect(currentObj.Spec).To(DeepEqual(updatedBackupEntry.Spec))
+				case *gardencorev1beta1.Quota:
+					updatedQuota := &gardencorev1beta1.Quota{}
+					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedQuota)).To(Succeed())
+					g.Expect(currentObj.Spec).To(DeepEqual(updatedQuota.Spec))
+				case *gardencorev1beta1.Shoot:
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedShoot)).To(Succeed())
+					g.Expect(currentObj.Spec).To(DeepEqual(updatedShoot.Spec))
+				}
+			}).Should(Succeed())
+
 			By("Ensure lastActivityTimestamp was updated after object update")
 			lastActivityTimestamp = assertLastActivityTimestampUpdated(ctx, project, lastActivityTimestamp)
 
@@ -103,6 +130,11 @@ var _ = Describe("Project Activity controller tests", Ordered, func() {
 			By("Delete " + kind)
 			Expect(testClient.Delete(ctx, obj)).To(Succeed())
 			log.Info("Deleted object", "kind", kind, "object", client.ObjectKeyFromObject(obj))
+
+			By("Wait until manager has observed " + kind + " deletion")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			}).Should(BeNotFoundError())
 
 			By("Ensure lastActivityTimestamp was updated after object deletion")
 			_ = assertLastActivityTimestampUpdated(ctx, project, lastActivityTimestamp)
@@ -116,6 +148,11 @@ var _ = Describe("Project Activity controller tests", Ordered, func() {
 			By("Create " + kind)
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 			log.Info("Created object", "kind", kind, "object", client.ObjectKeyFromObject(obj))
+
+			By("Wait until manager has observed " + kind)
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			}).Should(Succeed())
 
 			By("Ensure lastActivityTimestamp was not updated")
 			assertLastActivityTimestampUnchanged(ctx, project)
