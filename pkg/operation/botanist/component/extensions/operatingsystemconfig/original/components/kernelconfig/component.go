@@ -64,6 +64,9 @@ net.core.netdev_max_backlog = 5000
 net.core.rmem_max = 16777216
 # Default Socket Send Buffer
 net.core.wmem_max = 16777216
+# explicitly enable IPv4 forwarding for all interfaces by default if not enabled by the OS image already
+net.ipv4.conf.all.forwarding = 1
+net.ipv4.conf.default.forwarding = 1
 # enable martian packets
 net.ipv4.conf.default.log_martians = 1
 # Increase the maximum total buffer-space allocatable
