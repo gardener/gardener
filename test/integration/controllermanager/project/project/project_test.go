@@ -167,6 +167,11 @@ var _ = Describe("Project controller tests", func() {
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
+		By("Wait until manager has observed Shoot creation")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		}).Should(Succeed())
+
 		DeferCleanup(func() {
 			By("Cleanup Shoot")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
