@@ -29,6 +29,8 @@ fi
 export KUBEBUILDER_ASSETS="$(setup-envtest use -p path ${ENVTEST_K8S_VERSION})"
 echo "using envtest tools installed at '$KUBEBUILDER_ASSETS'"
 
+export LD_FLAGS="$($(dirname "$0")/get-build-ld-flags.sh)"
+
 echo "> Integration Tests"
 
 source "$(dirname "$0")/test-integration.env"
@@ -42,4 +44,4 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ] ; then
   test_flags="--ginkgo.junit-report=junit.xml"
 fi
 
-GO111MODULE=on go test -timeout=5m -mod=vendor $@ $test_flags | grep -v 'no test files'
+GO111MODULE=on go test -timeout=5m -mod=vendor -ldflags "$LD_FLAGS" $@ $test_flags | grep -v 'no test files'
