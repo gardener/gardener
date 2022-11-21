@@ -1451,7 +1451,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_slow_apply_total{job=\"kube-etcd3-$cluster\"}[5m])",
+          "expr": "rate(etcd_server_slow_apply_total{job=\"kube-etcd3-$cluster\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1548,7 +1548,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_slow_read_indexes_total{job=\"kube-etcd3-$cluster\"}[5m])",
+          "expr": "rate(etcd_server_slow_read_indexes_total{job=\"kube-etcd3-$cluster\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
