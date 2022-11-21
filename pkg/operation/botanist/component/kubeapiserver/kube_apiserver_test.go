@@ -75,6 +75,7 @@ var _ = Describe("KubeAPIServer", func() {
 		vpaUpdateMode      = vpaautoscalingv1.UpdateModeOff
 		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
+		directoryOrCreate  = corev1.HostPathDirectoryOrCreate
 
 		kubernetesInterface kubernetes.Interface
 		c                   client.Client
@@ -90,6 +91,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameCAClient                = "ca-client"
 		secretNameCAEtcd                  = "ca-etcd"
 		secretNameCAFrontProxy            = "ca-front-proxy"
+		secretNameCAKubelet               = "ca-kubelet"
 		secretNameCAVPN                   = "ca-vpn"
 		secretNameEtcd                    = "etcd-client"
 		secretNameHTTPProxy               = "kube-apiserver-http-proxy"
@@ -146,6 +148,7 @@ var _ = Describe("KubeAPIServer", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-vpn", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-bundle", Namespace: namespace}})).To(Succeed())
@@ -1604,6 +1607,7 @@ rules:
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+					"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
 					"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
@@ -1653,6 +1657,7 @@ rules:
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+					"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
 					"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
@@ -1687,6 +1692,7 @@ rules:
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+					"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
 					"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
@@ -1986,9 +1992,10 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))
 					Expect(deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ConsistOf(
 						"/usr/local/bin/kube-apiserver",
 						"--enable-admission-plugins="+admissionPlugin1+","+admissionPlugin2,
+						"--disable-admission-plugins=",
 						"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
 						"--allow-privileged=true",
 						"--anonymous-auth=false",
@@ -2011,6 +2018,7 @@ rules:
 						"--external-hostname="+externalHostname,
 						"--insecure-port=0",
 						"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
+						"--kubelet-certificate-authority=/srv/kubernetes/ca-kubelet/bundle.crt",
 						"--kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/tls.crt",
 						"--kubelet-client-key=/srv/kubernetes/apiserver-kubelet/tls.key",
 						"--livez-grace-period=1m",
@@ -2048,7 +2056,7 @@ rules:
 						Protocol:      corev1.ProtocolTCP,
 					}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ConsistOf(
 						corev1.VolumeMount{
 							Name:      "audit-policy-config",
 							MountPath: "/etc/kubernetes/audit",
@@ -2066,8 +2074,16 @@ rules:
 							MountPath: "/srv/kubernetes/etcd/ca",
 						},
 						corev1.VolumeMount{
+							Name:      "ca-client",
+							MountPath: "/srv/kubernetes/ca-client",
+						},
+						corev1.VolumeMount{
 							Name:      "ca-front-proxy",
 							MountPath: "/srv/kubernetes/ca-front-proxy",
+						},
+						corev1.VolumeMount{
+							Name:      "ca-kubelet",
+							MountPath: "/srv/kubernetes/ca-kubelet",
 						},
 						corev1.VolumeMount{
 							Name:      "etcd-client",
@@ -2102,8 +2118,28 @@ rules:
 							MountPath: "/etc/kubernetes/etcd-encryption-secret",
 							ReadOnly:  true,
 						},
+						corev1.VolumeMount{
+							Name:      "fedora-rhel6-openelec-cabundle",
+							MountPath: "/etc/pki/tls",
+							ReadOnly:  true,
+						},
+						corev1.VolumeMount{
+							Name:      "centos-rhel7-cabundle",
+							MountPath: "/etc/pki/ca-trust/extracted/pem",
+							ReadOnly:  true,
+						},
+						corev1.VolumeMount{
+							Name:      "etc-ssl",
+							MountPath: "/etc/ssl",
+							ReadOnly:  true,
+						},
+						corev1.VolumeMount{
+							Name:      "usr-share-cacerts",
+							MountPath: "/usr/share/ca-certificates",
+							ReadOnly:  true,
+						},
 					))
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ConsistOf(
 						corev1.Volume{
 							Name: "audit-policy-config",
 							VolumeSource: corev1.VolumeSource{
@@ -2141,10 +2177,26 @@ rules:
 							},
 						},
 						corev1.Volume{
+							Name: "ca-client",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAClient,
+								},
+							},
+						},
+						corev1.Volume{
 							Name: "ca-front-proxy",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretNameCAFrontProxy,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "ca-kubelet",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAKubelet,
 								},
 							},
 						},
@@ -2212,6 +2264,46 @@ rules:
 								},
 							},
 						},
+						corev1.Volume{
+							Name: "fedora-rhel6-openelec-cabundle",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/etc/pki/tls",
+									Type: &directoryOrCreate,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "centos-rhel7-cabundle",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/etc/pki/ca-trust/extracted/pem",
+									Type: &directoryOrCreate,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "etc-ssl",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/etc/ssl",
+									Type: &directoryOrCreate,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "usr-share-cacerts",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/usr/share/ca-certificates",
+									Type: &directoryOrCreate,
+								},
+							},
+						},
+						// VPN-related secrets (will be asserted in detail later)
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("modules")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed-tlsauth")}),
 					))
 
 					secret := &corev1.Secret{}

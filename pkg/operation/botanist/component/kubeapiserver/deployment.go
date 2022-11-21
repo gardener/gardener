@@ -62,6 +62,7 @@ const (
 	volumeNameCAClient                             = "ca-client"
 	volumeNameCAEtcd                               = "ca-etcd"
 	volumeNameCAFrontProxy                         = "ca-front-proxy"
+	volumeNameCAKubelet                            = "ca-kubelet"
 	volumeNameCAVPN                                = "ca-vpn"
 	volumeNameEgressSelector                       = "egress-selection-config"
 	volumeNameEtcdClient                           = "etcd-client"
@@ -90,6 +91,7 @@ const (
 	volumeMountPathCAClient                             = "/srv/kubernetes/ca-client"
 	volumeMountPathCAEtcd                               = "/srv/kubernetes/etcd/ca"
 	volumeMountPathCAFrontProxy                         = "/srv/kubernetes/ca-front-proxy"
+	volumeMountPathCAKubelet                            = "/srv/kubernetes/ca-kubelet"
 	volumeMountPathCAVPN                                = "/srv/kubernetes/ca-vpn"
 	volumeMountPathEgressSelector                       = "/etc/kubernetes/egress"
 	volumeMountPathEtcdEncryptionConfig                 = "/etc/kubernetes/etcd-encryption-secret"
@@ -173,6 +175,11 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretCAVPN, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
+	}
+
+	secretCAKubelet, found := k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
 	}
 
 	secretCAETCD, found := k.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
@@ -297,6 +304,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 								MountPath: volumeMountPathCAFrontProxy,
 							},
 							{
+								Name:      volumeNameCAKubelet,
+								MountPath: volumeMountPathCAKubelet,
+							},
+							{
 								Name:      volumeNameEtcdClient,
 								MountPath: volumeMountPathEtcdClient,
 							},
@@ -381,6 +392,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretCAFrontProxy.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameCAKubelet,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretCAKubelet.Name,
 								},
 							},
 						},
@@ -512,6 +531,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	out = append(out, "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP")
+	out = append(out, fmt.Sprintf("--kubelet-certificate-authority=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateBundle))
 	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyPrivateKey))
 
@@ -710,7 +730,7 @@ func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 func (k *kubeAPIServer) handleVPNSettings(
 	deployment *appsv1.Deployment,
 	configMapEgressSelector *corev1.ConfigMap,
-	vpnCASecret *corev1.Secret,
+	secretCAVPN *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretLegacyVPNCAClient *corev1.Secret,
 	secretLegacyVPNSeed *corev1.Secret,
@@ -890,7 +910,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 				Name: volumeNameCAVPN,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: vpnCASecret.Name,
+						SecretName: secretCAVPN.Name,
 					},
 				},
 			},
