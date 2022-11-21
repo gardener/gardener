@@ -17,6 +17,7 @@ package vpnseedserver
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -60,9 +61,9 @@ const (
 	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	EnvoyPort = 9443
 	// OpenVPNPort is the port exposed by the vpn seed server for tcp tunneling.
-	OpenVPNPort          = 1194
-	envoyMetricsPort     = 15000
-	envoyMetricsPortName = "metrics"
+	OpenVPNPort     = 1194
+	metricsPort     = 15000
+	metricsPortName = "metrics"
 
 	secretNameDH            = "vpn-seed-server-dh"
 	envoyProxyContainerName = "envoy-proxy"
@@ -75,12 +76,14 @@ const (
 	volumeMountPathTLSAuth     = "/srv/secrets/tlsauth"
 	volumeMountPathDH          = "/srv/secrets/dh"
 	volumeMountPathEnvoyConfig = "/etc/envoy"
+	volumeMountPathStatusDir   = "/srv/status"
 
 	volumeNameDevNetTun   = "dev-net-tun"
 	volumeNameCerts       = "certs"
 	volumeNameTLSAuth     = "tlsauth"
 	volumeNameDH          = "dh"
 	volumeNameEnvoyConfig = "envoy-config"
+	volumeNameStatusDir   = "openvpn-status"
 )
 
 // Interface contains functions for a vpn-seed-server deployer.
@@ -515,6 +518,73 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 				},
 			},
 		})
+	} else {
+		mount := corev1.VolumeMount{
+			Name:      volumeNameStatusDir,
+			MountPath: volumeMountPathStatusDir,
+		}
+		statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
+		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+			Name:            "openvpn-exporter",
+			Image:           v.imageVPNSeedServer,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command: []string{
+				"/openvpn-exporter",
+				"-openvpn.status_paths",
+				statusPath,
+				"-web.listen-address",
+				fmt.Sprintf(":%d", metricsPort),
+			},
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          metricsPortName,
+					ContainerPort: metricsPort,
+					Protocol:      corev1.ProtocolTCP,
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{
+						"all",
+					},
+				},
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt(metricsPort),
+					},
+				},
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt(metricsPort),
+					},
+				},
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("20m"),
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+			},
+			VolumeMounts: []corev1.VolumeMount{mount},
+		})
+		template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "OPENVPN_STATUS_PATH",
+			Value: statusPath,
+		})
+		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
+		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameStatusDir,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
 	}
 
 	if v.nodeNetwork != nil {
@@ -620,9 +690,9 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 				TargetPort: intstr.FromInt(EnvoyPort),
 			},
 			{
-				Name:       envoyMetricsPortName,
-				Port:       envoyMetricsPort,
-				TargetPort: intstr.FromInt(envoyMetricsPort),
+				Name:       metricsPortName,
+				Port:       metricsPort,
+				TargetPort: intstr.FromInt(metricsPort),
 			},
 		}
 		if idx == nil {
@@ -971,7 +1041,7 @@ var envoyConfig = `static_resources:
     address:
       socket_address:
         address: 0.0.0.0
-        port_value: ` + fmt.Sprintf("%d", envoyMetricsPort) + `
+        port_value: ` + fmt.Sprintf("%d", metricsPort) + `
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
