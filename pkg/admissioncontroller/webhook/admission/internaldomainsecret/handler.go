@@ -22,7 +22,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler validates the immutability of the internal domain secret.
@@ -151,39 +151,18 @@ func (h *Handler) ValidateDelete(ctx context.Context, obj runtime.Object) error 
 }
 
 func (h *Handler) atLeastOneShootExists(ctx context.Context, seedName string) (bool, error) {
-	var (
-		shoots      = &metav1.PartialObjectMetadataList{}
-		listOptions = []client.ListOption{client.Limit(1)}
-	)
-
+	var listOpts []client.ListOption
 	if seedName != "" {
-		listOptions = append(listOptions, client.MatchingFields{
+		listOpts = append(listOpts, client.MatchingFields{
 			gardercore.ShootSeedName: seedName,
 		})
 	}
 
-	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-
-	if err := h.APIReader.List(ctx, shoots, listOptions...); err != nil {
-		return false, err
-	}
-
-	return len(shoots.Items) > 0, nil
+	return kutil.ResourcesExist(ctx, h.APIReader, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), listOpts...)
 }
 
 func (h *Handler) internalDomainSecretExists(ctx context.Context, namespace string) (bool, error) {
-	secrets := &metav1.PartialObjectMetadataList{}
-	secrets.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
-
-	if err := h.APIReader.List(
-		ctx,
-		secrets,
-		client.InNamespace(namespace),
-		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-		client.Limit(1),
-	); err != nil {
-		return false, err
-	}
-
-	return len(secrets.Items) > 0, nil
+	return kutil.ResourcesExist(ctx, h.APIReader, corev1.SchemeGroupVersion.WithKind("SecretList"), client.InNamespace(namespace), client.MatchingLabels{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain,
+	})
 }

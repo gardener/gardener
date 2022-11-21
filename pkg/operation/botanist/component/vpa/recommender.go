@@ -48,6 +48,8 @@ type ValuesRecommender struct {
 	Image string
 	// Interval is the interval how often the recommender should run.
 	Interval *metav1.Duration
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Replicas is the number of pod replicas.
 	Replicas *int32
 }
@@ -147,11 +149,6 @@ func (v *vpa) reconcileRecommenderClusterRoleBinding(clusterRoleBinding *rbacv1.
 }
 
 func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
-	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
-	if v.values.ClusterType == component.ClusterTypeShoot {
-		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
-	}
-
 	var cpuRequest string
 	var memoryRequest string
 	if v.values.ClusterType == component.ClusterTypeShoot {
@@ -179,7 +176,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 				}),
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName: priorityClassName,
+				PriorityClassName: v.values.Recommender.PriorityClassName,
 				Containers: []corev1.Container{{
 					Name:            "recommender",
 					Image:           v.values.Recommender.Image,

@@ -1,0 +1,17 @@
+{{- if .Values.componentImageVectorOverwrites }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "operator.imagevector-overwrite-components.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: operator
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
+data:
+{{ include "operator.imagevector-overwrite-components.data" . | indent 2 }}
+{{- end }}

@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -54,9 +55,18 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-func (r *Reconciler) delete(ctx context.Context, log logr.Logger, seedObj *seedpkg.Seed) (reconcile.Result, error) {
+func (r *Reconciler) delete(
+	ctx context.Context,
+	log logr.Logger,
+	seedObj *seedpkg.Seed,
+	seedIsGarden bool,
+) (
+	reconcile.Result,
+	error,
+) {
 	seed := seedObj.GetInfo()
 
 	if !sets.NewString(seed.Finalizers...).Has(gardencorev1beta1.GardenerName) {
@@ -100,7 +110,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, seedObj *seedp
 
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
-	if err := r.runDeleteSeedFlow(ctx, log, seedObj); err != nil {
+	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
 		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
@@ -135,7 +145,12 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, seedObj *seedp
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, seed *seedpkg.Seed) error {
+func (r *Reconciler) runDeleteSeedFlow(
+	ctx context.Context,
+	log logr.Logger,
+	seed *seedpkg.Seed,
+	seedIsGarden bool,
+) error {
 	seedClient := r.SeedClientSet.Client()
 	kubernetesVersion, err := semver.NewVersion(r.SeedClientSet.Version())
 	if err != nil {
@@ -167,7 +182,6 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 		gsac             = seedadmissioncontroller.New(seedClient, r.GardenNamespace, nil, seedadmissioncontroller.Values{})
 		hvpa             = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-		resourceManager  = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{Version: kubernetesVersion})
 		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
 		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, &r.Config, "", nil)
 		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
@@ -175,7 +189,6 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		systemResources  = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
-		vpa              = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
 		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
 		istioCRDs        = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
 		istio            = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
@@ -241,10 +254,6 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 			Name: "Destroy HVPA controller",
 			Fn:   component.OpDestroyAndWait(hvpa).Destroy,
 		})
-		destroyVPA = g.Add(flow.Task{
-			Name: "Destroy Kubernetes vertical pod autoscaler",
-			Fn:   component.OpDestroyAndWait(vpa).Destroy,
-		})
 		destroyKubeStateMetrics = g.Add(flow.Task{
 			Name: "Destroy kube-state-metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
@@ -277,7 +286,6 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 			destroyDWDEndpoint,
 			destroyDWDProbe,
 			destroyHVPA,
-			destroyVPA,
 			destroyKubeStateMetrics,
 			destroyVPNAuthzServer,
 			destroyIstio,
@@ -289,12 +297,42 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 			Fn:           component.OpDestroyAndWait(systemResources).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
 		})
+	)
+
+	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
+	if !seedIsGarden {
+		var (
+			verticalPodAutoscaler = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
+			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{Version: kubernetesVersion})
+		)
+
+		destroyVPA := g.Add(flow.Task{
+			Name: "Destroy Kubernetes vertical pod autoscaler",
+			Fn:   component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
+		})
+		syncPointCleanedUp.Insert(destroyVPA)
+
+		ensureNoManagedResourcesExist := g.Add(flow.Task{
+			Name: "Ensuring all ManagedResources are gone",
+			Fn: func(ctx context.Context) error {
+				managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
+				if err != nil {
+					return err
+				}
+				if managedResourcesStillExist {
+					return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
+				}
+				return nil
+			},
+			Dependencies: flow.NewTaskIDs(destroySystemResources),
+		})
+
 		_ = g.Add(flow.Task{
 			Name:         "Destroying gardener-resource-manager",
 			Fn:           resourceManager.Destroy,
-			Dependencies: flow.NewTaskIDs(destroySystemResources),
+			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
 		})
-	)
+	}
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)

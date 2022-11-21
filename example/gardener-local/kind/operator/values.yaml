@@ -1,0 +1,8 @@
+gardener:
+  controlPlane:
+    deployed: false
+  seed:
+    deployed: false
+
+registry:
+  hostname: gardener-operator-local-control-plane

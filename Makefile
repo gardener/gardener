@@ -19,6 +19,7 @@ SCHEDULER_IMAGE_REPOSITORY                 := $(REGISTRY)/scheduler
 ADMISSION_IMAGE_REPOSITORY                 := $(REGISTRY)/admission-controller
 SEED_ADMISSION_IMAGE_REPOSITORY            := $(REGISTRY)/seed-admission-controller
 RESOURCE_MANAGER_IMAGE_REPOSITORY          := $(REGISTRY)/resource-manager
+OPERATOR_IMAGE_REPOSITORY                  := $(REGISTRY)/operator
 GARDENLET_IMAGE_REPOSITORY                 := $(REGISTRY)/gardenlet
 EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY  := $(REGISTRY)/extensions/provider-local
 PUSH_LATEST_TAG                            := false
@@ -29,6 +30,7 @@ GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-loca
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/local2/kubeconfig
 GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG   := $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/kubeconfig
 GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG    := $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/kubeconfig
+GARDENER_LOCAL_OPERATOR_KUBECONFIG         := $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
 ACTIVATE_SEEDAUTHORIZER                    := false
@@ -105,6 +107,10 @@ start-seed-admission-controller:
 start-resource-manager:
 	@./hack/local-development/start-resource-manager
 
+.PHONY: start-operator
+start-operator:
+	@./hack/local-development/start-operator
+
 .PHONY: start-gardenlet
 start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
 	@./hack/local-development/start-gardenlet
@@ -112,7 +118,6 @@ start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
 .PHONY: start-extension-provider-local
 start-extension-provider-local:
 	@./hack/local-development/start-extension-provider-local
-
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
@@ -131,6 +136,7 @@ docker-images:
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(ADMISSION_IMAGE_REPOSITORY):latest                -f Dockerfile --target admission-controller .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(SEED_ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)           -t $(SEED_ADMISSION_IMAGE_REPOSITORY):latest           -f Dockerfile --target seed-admission-controller .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)         -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest         -f Dockerfile --target resource-manager .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(OPERATOR_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(OPERATOR_IMAGE_REPOSITORY):latest                 -f Dockerfile --target operator .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(GARDENLET_IMAGE_REPOSITORY):latest                -f Dockerfile --target gardenlet .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-provider-local .
 
@@ -143,6 +149,7 @@ docker-images-ppc:
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(ADMISSION_IMAGE_REPOSITORY):latest                -f Dockerfile --target admission-controller .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(SEED_ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)           -t $(SEED_ADMISSION_IMAGE_REPOSITORY):latest           -f Dockerfile --target seed-admission-controller .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)         -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest         -f Dockerfile --target resource-manager .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(OPERATOR_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(OPERATOR_IMAGE_REPOSITORY):latest                 -f Dockerfile --target operator .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(GARDENLET_IMAGE_REPOSITORY):latest                -f Dockerfile --target gardenlet .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-provider-local .
 
@@ -284,6 +291,7 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
+kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
 kind-up: $(KIND) $(KUBECTL) $(HELM)
 	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
@@ -305,12 +313,17 @@ kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM)
 kind-ha-multi-zone-down: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-local-ha-multi-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
 
+kind-operator-up: $(KIND) $(KUBECTL) $(HELM)
+	./hack/kind-up.sh --cluster-name gardener-operator-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
+kind-operator-down: $(KIND)
+	./hack/kind-down.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
+
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener-up gardener-down gardener-ha-single-zone-up gardener-ha-single-zone-down gardener-ha-multi-zone-up gardener-ha-multi-zone-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 # set ldflags for skaffold
-gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up operator-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
@@ -360,22 +373,32 @@ tear-down-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
-test-e2e-local-simple: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && simple"
-test-e2e-local-migration: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration"
+operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -f skaffold-operator.yaml
+operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
+	$(SKAFFOLD) delete -f skaffold-operator.yaml
+
 test-e2e-local: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default"
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
+test-e2e-local-simple: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && simple" ./test/e2e/gardener/...
+test-e2e-local-migration: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration" ./test/e2e/gardener/...
 test-e2e-local-ha-single-zone: $(GINKGO)
-	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-node)"
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-node)" ./test/e2e/gardener/...
 test-e2e-local-ha-multi-zone: $(GINKGO)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-zone)"
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-zone)" ./test/e2e/gardener/...
+test-e2e-local-operator: $(GINKGO)
+	./hack/test-e2e-local.sh operator --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/operator/...
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
+ci-e2e-kind-migration: $(KIND) $(YQ)
+	./hack/ci-e2e-kind-migration.sh
 ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-single-zone.sh
 ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-multi-zone.sh
-ci-e2e-kind-migration: $(KIND) $(YQ)
-	./hack/ci-e2e-kind-migration.sh
+ci-e2e-kind-operator: $(KIND) $(YQ)
+	./hack/ci-e2e-kind-operator.sh

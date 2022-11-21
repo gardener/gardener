@@ -712,6 +712,25 @@ var (
 
 // constants for well-known PriorityClass names
 const (
+	// PriorityClassNameGardenSystemCritical is the name of a PriorityClass for Garden system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameGardenSystemCritical = "gardener-garden-system-critical"
+	// PriorityClassNameGardenSystem500 is the name of a PriorityClass for Garden system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameGardenSystem500 = "gardener-garden-system-500"
+	// PriorityClassNameGardenSystem400 is the name of a PriorityClass for Garden system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameGardenSystem400 = "gardener-garden-system-400"
+	// PriorityClassNameGardenSystem300 is the name of a PriorityClass for Garden system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameGardenSystem300 = "gardener-garden-system-300"
+	// PriorityClassNameGardenSystem200 is the name of a PriorityClass for Garden system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameGardenSystem200 = "gardener-garden-system-200"
+	// PriorityClassNameGardenSystem100 is the name of a PriorityClass for Garden system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameGardenSystem100 = "gardener-garden-system-100"
+
 	// PriorityClassNameShootSystem900 is the name of a PriorityClass for Shoot system components.
 	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
 	PriorityClassNameShootSystem900 = "gardener-shoot-system-900"

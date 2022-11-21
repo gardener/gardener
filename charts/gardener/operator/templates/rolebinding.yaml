@@ -1,0 +1,20 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gardener.cloud:system:gardener-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: operator
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gardener.cloud:system:gardener-operator
+subjects:
+- kind: ServiceAccount
+  name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
+  namespace: {{ .Release.Namespace }}

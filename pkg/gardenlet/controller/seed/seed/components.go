@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -37,10 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -49,6 +46,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
@@ -56,8 +54,6 @@ import (
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
@@ -157,56 +153,6 @@ func defaultGardenerSeedAdmissionController(
 	}
 
 	return seedadmissioncontroller.New(c, gardenNamespaceName, secretsManager, values), nil
-}
-
-func defaultGardenerResourceManager(
-	c client.Client,
-	seed *seedpkg.Seed,
-	seedVersion *semver.Version,
-	imageVector imagevector.ImageVector,
-	secretsManager secretsmanager.Interface,
-	conf config.GardenletConfiguration,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
-	if err != nil {
-		return nil, err
-	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevector.Image{Repository: repository, Tag: &tag}
-
-	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:                      pointer.Int(20),
-		DefaultSeccompProfileEnabled:         gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
-		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
-		Image:                                image.String(),
-		LogLevel:                             conf.LogLevel,
-		LogFormat:                            conf.LogFormat,
-		MaxConcurrentRootCAPublisherWorkers:  pointer.Int(5),
-		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
-		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
-		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
-		PodTopologySpreadConstraintsEnabled: true,
-		Replicas:                            pointer.Int32(2),
-		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
-		SecretNameServerCA:                  v1beta1constants.SecretNameCASeed,
-		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
-		Version:                             seedVersion,
-		VPA: &resourcemanager.VPAConfig{
-			MinAllowed: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("20m"),
-				corev1.ResourceMemory: resource.MustParse("64Mi"),
-			},
-		},
-		Zones: seed.GetInfo().Spec.Provider.Zones,
-	}), nil
 }
 
 func defaultIstio(
@@ -462,57 +408,6 @@ func defaultHVPA(
 	return deployer, nil
 }
 
-func defaultVerticalPodAutoscaler(
-	c client.Client,
-	seedVersion *semver.Version,
-	imageVector imagevector.ImageVector,
-	secretsManager secretsmanager.Interface,
-	enabled bool,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	return vpa.New(
-		c,
-		gardenNamespaceName,
-		secretsManager,
-		vpa.Values{
-			ClusterType:              component.ClusterTypeSeed,
-			Enabled:                  enabled,
-			SecretNameServerCA:       v1beta1constants.SecretNameCASeed,
-			RuntimeKubernetesVersion: seedVersion,
-			AdmissionController: vpa.ValuesAdmissionController{
-				Image: imageAdmissionController.String(),
-			},
-			Recommender: vpa.ValuesRecommender{
-				Image:                        imageRecommender.String(),
-				RecommendationMarginFraction: pointer.Float64(0.05),
-			},
-			Updater: vpa.ValuesUpdater{
-				EvictionTolerance:      pointer.Float64(1.0),
-				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
-				Image:                  imageUpdater.String(),
-			},
-		},
-	), nil
-}
-
 func defaultVPNAuthzServer(
 	ctx context.Context,
 	c client.Client,
@@ -539,16 +434,13 @@ func defaultVPNAuthzServer(
 		return vpnAuthzServer, nil
 	}
 
-	vpnSeedDeployments := &metav1.PartialObjectMetadataList{}
-	vpnSeedDeployments.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("DeploymentList"))
-
-	if err := c.List(ctx, vpnSeedDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}), client.Limit(1)); err != nil {
+	hasVPNSeedDeployments, err := kutil.ResourcesExist(ctx, c, appsv1.SchemeGroupVersion.WithKind("DeploymentList"), client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}))
+	if err != nil {
 		return nil, err
 	}
-
-	// Even though the ManagedIstio feature gate is turned off, there are still shoots which have not been reconciled yet.
-	// Thus, we cannot destroy the ext-authz-server.
-	if len(vpnSeedDeployments.Items) > 0 {
+	if hasVPNSeedDeployments {
+		// Even though the ManagedIstio feature gate is turned off, there are still shoots which have not been reconciled yet.
+		// Thus, we cannot destroy the ext-authz-server.
 		return component.NoOp(), nil
 	}
 

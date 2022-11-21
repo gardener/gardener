@@ -42,6 +42,7 @@ import (
 	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenoperationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenseedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	gardensettingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
@@ -105,6 +106,7 @@ func init() {
 		kubernetesscheme.AddToScheme,
 		extensionsv1alpha1.AddToScheme,
 		resourcesv1alpha1.AddToScheme,
+		operatorv1alpha1.AddToScheme,
 		vpaautoscalingv1.AddToScheme,
 		hvpav1alpha1.AddToScheme,
 		druidv1alpha1.AddToScheme,

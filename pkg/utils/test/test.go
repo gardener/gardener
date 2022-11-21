@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/onsi/ginkgo/v2"
@@ -241,4 +242,14 @@ func expectPatch(ctx interface{}, c *mockclient.MockClient, expectedObj client.O
 			return nil
 		}).
 		Return(rets...)
+}
+
+// CEventually is like gomega.Eventually but with a context.Context. When it has a deadline then the gomega.Eventually
+// call with be configured with a the respective timeout.
+func CEventually(ctx context.Context, actual interface{}) AsyncAssertion {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return Eventually(actual)
+	}
+	return Eventually(actual).WithTimeout(time.Until(deadline))
 }

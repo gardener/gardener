@@ -16,6 +16,7 @@ package seed_test
 
 import (
 	"context"
+	_ "embed"
 	"path/filepath"
 	"testing"
 	"time"
@@ -71,6 +72,9 @@ var (
 	testNamespace *corev1.Namespace
 	seedName      string
 	identity      = &gardencorev1beta1.Gardener{Version: "1.2.3"}
+
+	//go:embed testdata/crd-managedresources.yaml
+	managedResourcesCRD string
 )
 
 var _ = BeforeSuite(func() {
@@ -83,7 +87,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
+				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml")},
 			},
 			ErrorIfCRDPathMissing: true,
 		},

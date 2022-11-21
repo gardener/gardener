@@ -57,6 +57,8 @@ type ValuesUpdater struct {
 	Image string
 	// Interval is the interval how often the updater should run.
 	Interval *metav1.Duration
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Replicas is the number of pod replicas.
 	Replicas *int32
 }
@@ -127,11 +129,6 @@ func (v *vpa) reconcileUpdaterClusterRoleBinding(clusterRoleBinding *rbacv1.Clus
 }
 
 func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
-	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
-	if v.values.ClusterType == component.ClusterTypeShoot {
-		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
-	}
-
 	// vpa-updater is not using leader election, hence it is not capable of running multiple replicas (and as a
 	// consequence, don't need a PDB).
 	deployment.Labels = v.getDeploymentLabels(updater)
@@ -146,7 +143,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 				}),
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName: priorityClassName,
+				PriorityClassName: v.values.Updater.PriorityClassName,
 				Containers: []corev1.Container{{
 					Name:            "updater",
 					Image:           v.values.Updater.Image,

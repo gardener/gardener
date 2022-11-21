@@ -42,7 +42,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -155,9 +154,18 @@ var _ = Describe("VPA", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
 
-		valuesAdmissionController = ValuesAdmissionController{Image: imageAdmissionController}
-		valuesRecommender = ValuesRecommender{Image: imageRecommender}
-		valuesUpdater = ValuesUpdater{Image: imageUpdater}
+		valuesAdmissionController = ValuesAdmissionController{
+			Image:             imageAdmissionController,
+			PriorityClassName: "priority-admission-controller",
+		}
+		valuesRecommender = ValuesRecommender{
+			Image:             imageRecommender,
+			PriorityClassName: "priority-recommender",
+		}
+		valuesUpdater = ValuesUpdater{
+			Image:             imageUpdater,
+			PriorityClassName: "priority-updater",
+		}
 
 		vpa = New(c, namespace, sm, values)
 		managedResourceName = ""
@@ -280,11 +288,6 @@ var _ = Describe("VPA", func() {
 				flagEvictionToleranceValue = fmt.Sprintf("%f", *evictionTolerance)
 			}
 
-			priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
-			if clusterType == component.ClusterTypeShoot {
-				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
-			}
-
 			obj := &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps/v1",
@@ -317,7 +320,7 @@ var _ = Describe("VPA", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							PriorityClassName: priorityClassName,
+							PriorityClassName: valuesUpdater.PriorityClassName,
 							Containers: []corev1.Container{{
 								Name:            "updater",
 								Image:           imageUpdater,
@@ -558,11 +561,9 @@ var _ = Describe("VPA", func() {
 				flagRecommendationMarginFraction = fmt.Sprintf("%f", *recommendationMarginFraction)
 			}
 
-			priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
 			var cpuRequest string
 			var memoryRequest string
 			if clusterType == component.ClusterTypeShoot {
-				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 				cpuRequest = "30m"
 				memoryRequest = "200Mi"
 			} else {
@@ -602,7 +603,7 @@ var _ = Describe("VPA", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							PriorityClassName: priorityClassName,
+							PriorityClassName: valuesRecommender.PriorityClassName,
 							Containers: []corev1.Container{{
 								Name:            "recommender",
 								Image:           imageRecommender,
@@ -835,11 +836,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		deploymentAdmissionControllerFor = func(withServiceAccount bool, clusterType component.ClusterType) *appsv1.Deployment {
-			priorityClassName := v1beta1constants.PriorityClassNameSeedSystem800
-			if clusterType == component.ClusterTypeShoot {
-				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
-			}
-
 			obj := &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps/v1",
@@ -873,7 +869,7 @@ var _ = Describe("VPA", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							PriorityClassName: priorityClassName,
+							PriorityClassName: valuesAdmissionController.PriorityClassName,
 							Containers: []corev1.Container{{
 								Name:            "admission-controller",
 								Image:           imageAdmissionController,

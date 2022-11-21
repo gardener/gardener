@@ -72,6 +72,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -90,7 +91,15 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, seedObj *seedpkg.Seed) (reconcile.Result, error) {
+func (r *Reconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	seedObj *seedpkg.Seed,
+	seedIsGarden bool,
+) (
+	reconcile.Result,
+	error,
+) {
 	var (
 		seed                      = seedObj.GetInfo()
 		conditionSeedBootstrapped = v1beta1helper.GetOrInitCondition(seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
@@ -162,7 +171,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, seedObj *se
 	}
 
 	// Bootstrap the Seed cluster.
-	if err := r.runReconcileSeedFlow(ctx, log, seedObj, gardenSecrets); err != nil {
+	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, gardenSecrets); err != nil {
 		conditionSeedBootstrapped = v1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after reconciliation flow failed: %w", err)
@@ -218,7 +227,13 @@ const (
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 )
 
-func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, seed *seedpkg.Seed, secrets map[string]*corev1.Secret) error {
+func (r *Reconciler) runReconcileSeedFlow(
+	ctx context.Context,
+	log logr.Logger,
+	seed *seedpkg.Seed,
+	seedIsGarden bool,
+	secrets map[string]*corev1.Secret,
+) error {
 	var (
 		applier       = r.SeedClientSet.Applier()
 		seedClient    = r.SeedClientSet.Client()
@@ -282,8 +297,12 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 	log.Info("Labeling and annotating namespace", "namespaceName", gardenNamespace.Name)
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, seedClient, gardenNamespace, func() error {
 		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
-		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-		metav1.SetMetaDataAnnotation(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.GetInfo().Spec.Provider.Zones, ","))
+
+		// When the seed is the garden cluster then this information is managed by gardener-operator.
+		if !seedIsGarden {
+			metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+			metav1.SetMetaDataAnnotation(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.GetInfo().Spec.Provider.Zones, ","))
+		}
 		return nil
 	}); err != nil {
 		return err
@@ -369,7 +388,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		}
 	}
 
-	if vpaEnabled {
+	if !seedIsGarden && vpaEnabled {
 		if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
 			return err
 		}
@@ -379,16 +398,30 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		return err
 	}
 
-	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
-	// which is required for all other components to start-up.
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, seed, kubernetesVersion, r.ImageVector, secretsManager, r.Config, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
+	// When the seed is the garden cluster then gardener-resource-manager is reconciled by the gardener-operator.
+	if !seedIsGarden {
+		// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount
+		// webhook) which is required for all other components to start-up.
+		gardenerResourceManager, err := sharedcomponent.NewGardenerResourceManager(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			secretsManager,
+			r.Config.LogLevel, r.Config.LogFormat,
+			v1beta1constants.SecretNameCASeed,
+			v1beta1constants.PriorityClassNameSeedSystemCritical,
+			gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
+			seed.GetInfo().Spec.Provider.Zones,
+		)
+		if err != nil {
+			return err
+		}
 
-	log.Info("Deploying and waiting for gardener-resource-manager to be healthy")
-	if err := component.OpWaiter(gardenerResourceManager).Deploy(ctx); err != nil {
-		return err
+		log.Info("Deploying and waiting for gardener-resource-manager to be healthy")
+		if err := component.OpWaiter(gardenerResourceManager).Deploy(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Fetch component-specific aggregate and central monitoring configuration
@@ -852,10 +885,6 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 	if err != nil {
 		return err
 	}
-	vpa, err := defaultVerticalPodAutoscaler(seedClient, kubernetesVersion, r.ImageVector, secretsManager, vpaEnabled, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -921,10 +950,6 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 			Fn:   dwdProbe.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying Kubernetes vertical pod autoscaler",
-			Fn:   vpa.Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying HVPA controller",
 			Fn:   hvpa.Deploy,
 		})
@@ -937,6 +962,30 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 			Fn:   systemResources.Deploy,
 		})
 	)
+
+	// When the seed is the garden cluster then the VPA is reconciled by the gardener-operator
+	if !seedIsGarden {
+		vpa, err := sharedcomponent.NewVerticalPodAutoscaler(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			secretsManager,
+			vpaEnabled,
+			v1beta1constants.SecretNameCASeed,
+			v1beta1constants.PriorityClassNameSeedSystem800,
+			v1beta1constants.PriorityClassNameSeedSystem700,
+			v1beta1constants.PriorityClassNameSeedSystem700,
+		)
+		if err != nil {
+			return err
+		}
+
+		_ = g.Add(flow.Task{
+			Name: "Deploying Kubernetes vertical pod autoscaler",
+			Fn:   vpa.Deploy,
+		})
+	}
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)

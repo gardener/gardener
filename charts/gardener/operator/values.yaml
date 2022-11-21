@@ -1,0 +1,51 @@
+replicaCount: 1
+revisionHistoryLimit: 2
+serviceAccountName: gardener-operator
+invalidateServiceAccountToken: true
+image:
+  repository: eu.gcr.io/gardener-project/gardener/operator
+  tag: latest
+  pullPolicy: IfNotPresent
+resources:
+  requests:
+    cpu: 100m
+    memory: 100Mi
+# podAnnotations: # YAML formated annotations used for pod template
+# podLabels: # YAML formated labels used for pod template
+additionalVolumes: []
+additionalVolumeMounts: []
+env: []
+# imageVectorOverwrite: |
+#  Please find documentation in docs/deployment/image_vector.md
+# componentImageVectorOverwrites: |
+#  Please find documentation in docs/deployment/image_vector.md
+config:
+  runtimeClientConnection:
+    qps: 100
+    burst: 130
+  leaderElection:
+    leaderElect: true
+    leaseDuration: 15s
+    renewDeadline: 10s
+    retryPeriod: 2s
+    resourceLock: leases
+    resourceNamespace: garden
+    resourceName: gardener-operator-leader-election
+  logLevel: info
+  logFormat: json
+  server:
+    healthProbes:
+      bindAddress: 0.0.0.0
+      port: 2750
+    metrics:
+      bindAddress: 0.0.0.0
+      port: 2751
+  debugging:
+    enableProfiling: false
+    enableContentionProfiling: false
+  featureGates:
+    DefaultSeccompProfile: true
+  controllers:
+    garden:
+      concurrentSyncs: 1
+      syncPeriod: 1h

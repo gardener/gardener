@@ -5,6 +5,7 @@ gardener:
   controlPlane:
     deployed: true
   seed:
+    deployed: true
     istio:
       listenAddress: 127.0.0.1
 

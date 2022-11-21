@@ -154,19 +154,20 @@ var _ = Describe("Object", func() {
 		})
 	})
 
-	Describe("#IsNamespaceInUse", func() {
+	Describe("#ResourcesExist", func() {
 		var (
 			group                     = "group"
 			version                   = "v43"
 			kind                      = "kind"
 			gvk                       = schema.GroupVersionKind{Group: group, Version: version, Kind: kind}
 			partialObjectMetadataList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: group + "/" + version, Kind: kind}}
+			listOpts                  = []client.ListOption{client.InNamespace(namespace)}
 		)
 
 		It("should return an error because the listing failed", func() {
 			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1)).Return(fakeErr)
 
-			inUse, err := IsNamespaceInUse(ctx, c, namespace, gvk)
+			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(inUse).To(BeTrue())
 		})
@@ -177,7 +178,7 @@ var _ = Describe("Object", func() {
 				return nil
 			})
 
-			inUse, err := IsNamespaceInUse(ctx, c, namespace, gvk)
+			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(inUse).To(BeTrue())
 		})
@@ -185,7 +186,7 @@ var _ = Describe("Object", func() {
 		It("should return false because no objects found", func() {
 			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1))
 
-			inUse, err := IsNamespaceInUse(ctx, c, namespace, gvk)
+			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(inUse).To(BeFalse())
 		})

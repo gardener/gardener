@@ -23,13 +23,13 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -209,18 +209,11 @@ func (r *reconciler) reconcileSeedWebhookConfig(ctx context.Context, caBundleSec
 }
 
 func isWebhookServerSecretPresent(ctx context.Context, c client.Reader, secretName, namespace, identity string) (bool, error) {
-	secretList := &metav1.PartialObjectMetadataList{}
-	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
-
-	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.Limit(1), client.MatchingLabels{
+	return kutil.ResourcesExist(ctx, c, corev1.SchemeGroupVersion.WithKind("SecretList"), client.InNamespace(namespace), client.MatchingLabels{
 		secretsmanager.LabelKeyName:            secretName,
 		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 		secretsmanager.LabelKeyManagerIdentity: identity,
-	}); err != nil {
-		return false, err
-	}
-
-	return len(secretList.Items) > 0, nil
+	})
 }
 
 func (r *reconciler) newSecretsManager(ctx context.Context, log logr.Logger, c client.Client) (secretsmanager.Interface, error) {

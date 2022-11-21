@@ -1,0 +1,168 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: gardens.operator.gardener.cloud
+spec:
+  group: operator.gardener.cloud
+  names:
+    kind: Garden
+    listKind: GardenList
+    plural: gardens
+    shortNames:
+    - grdn
+    singular: garden
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Indicates whether the garden has been reconciled.
+      jsonPath: .status.conditions[?(@.type=="Reconciled")].status
+      name: Reconciled
+      type: string
+    - description: creation timestamp
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Garden describes a list of gardens.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec contains the specification of this garden.
+            properties:
+              runtimeCluster:
+                description: RuntimeCluster contains configuration for the runtime
+                  cluster.
+                properties:
+                  provider:
+                    description: Provider defines the provider-specific information
+                      for this cluster.
+                    properties:
+                      zones:
+                        description: Zones is the list of availability zones the cluster
+                          is deployed to.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  settings:
+                    description: Settings contains certain settings for this cluster.
+                    properties:
+                      verticalPodAutoscaler:
+                        description: VerticalPodAutoscaler controls certain settings
+                          for the vertical pod autoscaler components deployed in the
+                          cluster.
+                        properties:
+                          enabled:
+                            default: true
+                            description: Enabled controls whether the VPA components
+                              shall be deployed into this cluster. It is true by default
+                              because the operator (and Gardener) heavily rely on
+                              a VPA being deployed. You should only disable this if
+                              your runtime cluster already has another, manually/custom
+                              managed VPA deployment. If this is not the case, but
+                              you still disable it, then reconciliation will fail.
+                            type: boolean
+                        type: object
+                    type: object
+                required:
+                - provider
+                type: object
+            required:
+            - runtimeCluster
+            type: object
+          status:
+            description: Status contains the status of this garden.
+            properties:
+              conditions:
+                description: Conditions is a list of conditions.
+                items:
+                  description: Condition holds the information about the state of
+                    a resource.
+                  properties:
+                    codes:
+                      description: Well-defined error codes in case the condition
+                        reports a problem.
+                      items:
+                        description: ErrorCode is a string alias.
+                        type: string
+                      type: array
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: Last time the condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - lastUpdateTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              gardener:
+                description: Gardener holds information about the Gardener which last
+                  acted on the Garden.
+                properties:
+                  id:
+                    description: ID is the Docker container id of the Gardener which
+                      last acted on a resource.
+                    type: string
+                  name:
+                    description: Name is the hostname (pod name) of the Gardener which
+                      last acted on a resource.
+                    type: string
+                  version:
+                    description: Version is the version of the Gardener which last
+                      acted on a resource.
+                    type: string
+                required:
+                - id
+                - name
+                - version
+                type: object
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  for this resource.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

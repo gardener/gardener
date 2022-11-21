@@ -1,0 +1,13 @@
+rules:
+- selectorRegexp: (.+[.])?k8s[.]io
+  allowedPrefixes:
+  - k8s.io/apimachinery
+  - k8s.io/api
+  - k8s.io/component-base/config
+  - k8s.io/klog
+  - k8s.io/utils/pointer
+  - sigs.k8s.io/controller-runtime/pkg/log/zap
+- selectorRegexp: github[.]com/gardener
+  allowedPrefixes:
+  - github.com/gardener/gardener/pkg/operator/apis
+  - github.com/gardener/gardener/pkg/logger

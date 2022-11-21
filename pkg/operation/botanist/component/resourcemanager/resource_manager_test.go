@@ -32,6 +32,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -112,6 +113,7 @@ var _ = Describe("ResourceManager", func() {
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
 		networkPolicyProtocol                = corev1.ProtocolTCP
 		networkPolicyPort                    = intstr.FromInt(serverPort)
+		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
 
 		allowAll                     []rbacv1.PolicyRule
 		allowManagedResources        []rbacv1.PolicyRule
@@ -303,6 +305,7 @@ var _ = Describe("ResourceManager", func() {
 			MaxConcurrentTokenRequestorWorkers:   &maxConcurrentTokenRequestorWorkers,
 			MaxConcurrentRootCAPublisherWorkers:  &maxConcurrentRootCAPublisherWorkers,
 			MaxConcurrentCSRApproverWorkers:      &maxConcurrentCSRApproverWorkers,
+			PriorityClassName:                    priorityClassName,
 			Replicas:                             &replicas,
 			ResourceClass:                        &resourceClass,
 			SecretNameServerCA:                   "ca",
@@ -458,11 +461,6 @@ var _ = Describe("ResourceManager", func() {
 			targetClusterDiffersFromSourceCluster bool,
 			secretNameBootstrapKubeconfig *string,
 		) *appsv1.Deployment {
-			priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
-			if targetClusterDiffersFromSourceCluster {
-				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
-			}
-
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -1619,6 +1617,8 @@ subjects:
 
 			It("should deploy a cluster role allowing all access", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key("managedresources.resources.gardener.cloud"), gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1866,6 +1866,7 @@ subjects:
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}}),
 					c.EXPECT().Delete(ctx, &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),

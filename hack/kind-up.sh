@@ -49,7 +49,9 @@ kubectl get nodes -o name |\
   cut -d/ -f2 |\
   xargs -I {} docker exec {} sh -c "sysctl fs.inotify.max_user_instances=8192"
 
-cp "$KUBECONFIG" "$PATH_KUBECONFIG"
+if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
+  cp "$KUBECONFIG" "$PATH_KUBECONFIG"
+fi
 
 if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
   kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry"       --server-side

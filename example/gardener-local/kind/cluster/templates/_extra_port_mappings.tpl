@@ -6,6 +6,7 @@
 {{- end -}}
 
 {{- define "extraPortMappings.gardener.seed.istio" -}}
+{{- if .Values.gardener.seed.deployed -}}
 - containerPort: 30443
 {{- if or (eq .Values.environment "local") .Values.gardener.controlPlane.deployed }}
   hostPort: 443
@@ -18,6 +19,7 @@
 {{- if eq .Values.environment "local" }}
   listenAddress: {{ .Values.gardener.seed.istio.listenAddress }}
 {{- end }}
+{{- end -}}
 {{- end -}}
 
 {{- define "extraPortMappings.gardener.seed.nginx" -}}

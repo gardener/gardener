@@ -52,6 +52,7 @@ rules:
   - leases
   verbs:
   - create
+  - get
   - list
   - watch
 - apiGroups:
@@ -61,7 +62,6 @@ rules:
   resourceNames:
   - provider-local-leader-election
   verbs:
-  - get
   - update
 - apiGroups:
   - coordination.k8s.io

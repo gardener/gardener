@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart to deploy the Gardener Operator
+name: gardener-operator
+version: 0.1.0

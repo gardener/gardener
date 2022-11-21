@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// GroupName is the group name use in this package
+// GroupName is the group name used in this package.
 const GroupName = "gardenlet.config.gardener.cloud"
 
 // SchemeGroupVersion is group version used to register these objects

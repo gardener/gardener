@@ -1,0 +1,17 @@
+apiVersion: {{ include "poddisruptionbudgetversion" .}}
+kind: PodDisruptionBudget
+metadata:
+  name: gardener-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: operator
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: gardener
+      role: operator

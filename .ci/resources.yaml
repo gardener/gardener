@@ -54,3 +54,11 @@ relation: 'local'
 access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/seed-admission-controller:${COMPONENT_VERSION}'
+---
+name: 'operator'
+version: '${COMPONENT_VERSION}'
+type: 'ociImage'
+relation: 'local'
+access:
+  type: 'ociRegistry'
+  imageReference: 'eu.gcr.io/gardener-project/gardener/operator:${COMPONENT_VERSION}'

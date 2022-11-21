@@ -87,12 +87,13 @@ func DeleteObjectsFromListConditionally(ctx context.Context, c client.Client, li
 	return flow.Parallel(fns...)(ctx)
 }
 
-// IsNamespaceInUse checks if there are is at least one object of the given kind left inside the given namespace.
-func IsNamespaceInUse(ctx context.Context, reader client.Reader, namespace string, gvk schema.GroupVersionKind) (bool, error) {
+// ResourcesExist checks if there is at least one object of the given gvk. The kind in the gvk must be the list kind,
+// for example corev1.SchemeGroupVersion.WithKind("PodList").
+func ResourcesExist(ctx context.Context, reader client.Reader, gvk schema.GroupVersionKind, listOpts ...client.ListOption) (bool, error) {
 	objects := &metav1.PartialObjectMetadataList{}
 	objects.SetGroupVersionKind(gvk)
 
-	if err := reader.List(ctx, objects, client.InNamespace(namespace), client.Limit(1)); err != nil {
+	if err := reader.List(ctx, objects, append(listOpts, client.Limit(1))...); err != nil {
 		return true, err
 	}
 

@@ -16,6 +16,7 @@ package resourcemanager
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,11 +75,16 @@ import (
 var (
 	scheme *runtime.Scheme
 	codec  runtime.Codec
+
+	//go:embed assets/crd-resources.gardener.cloud_managedresources.yaml
+	// CRD is the custom resource definition for ManagedResources.
+	CRD string
 )
 
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
@@ -87,6 +94,7 @@ func init() {
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
 			resourcemanagerconfigv1alpha1.SchemeGroupVersion,
+			apiextensionsv1.SchemeGroupVersion,
 		})
 	)
 
@@ -242,6 +250,8 @@ type Values struct {
 	MaxConcurrentRootCAPublisherWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations
 	MaxConcurrentCSRApproverWorkers *int
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Replicas is the number of replicas for the gardener-resource-manager deployment.
 	Replicas *int32
 	// ResourceClass is used to filter resource resources
@@ -286,6 +296,10 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
 			return err
 		}
+	} else {
+		if err := r.ensureCustomResourceDefinition(ctx); err != nil {
+			return err
+		}
 	}
 
 	configMap := r.emptyConfigMap()
@@ -319,6 +333,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	objectsToDelete := []client.Object{
 		r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121),
 		r.emptyVPA(),
@@ -345,7 +360,13 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			r.emptyRoleBindingInWatchedNamespace(),
 		)
 	} else {
+		crd, err := r.emptyCustomResourceDefinition()
+		if err != nil {
+			return err
+		}
+
 		objectsToDelete = append(objectsToDelete,
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crd.Name}},
 			r.emptyMutatingWebhookConfiguration(),
 			r.emptyClusterRole(),
 			r.emptyClusterRoleBinding(),
@@ -357,6 +378,36 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.client,
 		objectsToDelete...,
 	)
+}
+
+func (r *resourceManager) emptyCustomResourceDefinition() (*apiextensionsv1.CustomResourceDefinition, error) {
+	obj, err := runtime.Decode(codec, []byte(CRD))
+	if err != nil {
+		return nil, err
+	}
+
+	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+	if !ok {
+		return nil, fmt.Errorf("expected *apiextensionsv1.CustomResourceDefinition but got %T", obj)
+	}
+
+	return crd, nil
+}
+
+func (r *resourceManager) ensureCustomResourceDefinition(ctx context.Context) error {
+	desiredCRD, err := r.emptyCustomResourceDefinition()
+	if err != nil {
+		return err
+	}
+
+	crd := &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: desiredCRD.Name}}
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, crd, func() error {
+		crd.Annotations = utils.MergeStringMaps(crd.Annotations, desiredCRD.Annotations)
+		crd.Labels = utils.MergeStringMaps(crd.Labels, desiredCRD.Labels)
+		crd.Spec = desiredCRD.Spec
+		return nil
+	})
+	return err
 }
 
 func (r *resourceManager) ensureRBAC(ctx context.Context) error {
@@ -632,11 +683,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		return err
 	}
 
-	priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
-	if r.values.TargetDiffersFromSourceCluster {
-		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
-	}
-
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
@@ -651,7 +697,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				}),
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName: priorityClassName,
+				PriorityClassName: r.values.PriorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					// Workaround for https://github.com/kubernetes/kubernetes/issues/82573
 					// Fixed with https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19

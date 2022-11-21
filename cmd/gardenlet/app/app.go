@@ -389,7 +389,7 @@ func (g *garden) Start(ctx context.Context) error {
 
 	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once the shoot legacy controller has
 	//  been refactored.
-	identity, err := determineIdentity()
+	identity, err := gutil.DetermineIdentity()
 	if err != nil {
 		return err
 	}

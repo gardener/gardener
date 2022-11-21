@@ -17,16 +17,9 @@ package extensioncrds_test
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +29,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Extension CRDs Webhook Handler", func() {
@@ -82,7 +84,10 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crds.NewExtensionsCRD(applier).Deploy(ctx)).To(Succeed())
 
-		manifestReader := kubernetes.NewManifestReader([]byte(etcd.CRD))
+		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
+			etcd.CRD,
+			resourcemanager.CRD,
+		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 		Eventually(func() bool {
