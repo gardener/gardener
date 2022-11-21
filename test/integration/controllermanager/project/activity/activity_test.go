@@ -101,26 +101,13 @@ var _ = Describe("Project Activity controller tests", func() {
 			log.Info("Updated object", "kind", kind, "object", client.ObjectKeyFromObject(obj))
 
 			By("Wait until manager has observed updated" + kind)
-			Eventually(func(g Gomega) {
-				switch currentObj := obj.(type) {
-				case *corev1.Secret:
-					updatedSecret := &corev1.Secret{}
-					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedSecret)).To(Succeed())
-					g.Expect(currentObj.Data).To(DeepEqual(updatedSecret.Data))
-				case *gardencorev1beta1.BackupEntry:
-					updatedBackupEntry := &gardencorev1beta1.BackupEntry{}
-					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedBackupEntry)).To(Succeed())
-					g.Expect(currentObj.Spec).To(DeepEqual(updatedBackupEntry.Spec))
-				case *gardencorev1beta1.Quota:
-					updatedQuota := &gardencorev1beta1.Quota{}
-					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedQuota)).To(Succeed())
-					g.Expect(currentObj.Spec).To(DeepEqual(updatedQuota.Spec))
-				case *gardencorev1beta1.Shoot:
-					updatedShoot := &gardencorev1beta1.Shoot{}
-					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedShoot)).To(Succeed())
-					g.Expect(currentObj.Spec).To(DeepEqual(updatedShoot.Spec))
-				}
-			}).Should(Succeed())
+			updatedObjMeta := &metav1.PartialObjectMetadata{}
+			updatedObjMeta.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
+
+			Eventually(func(g Gomega) string {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedObjMeta)).To(Succeed())
+				return updatedObjMeta.GetResourceVersion()
+			}).Should(Equal(obj.GetResourceVersion()))
 
 			By("Ensure lastActivityTimestamp was updated after object update")
 			lastActivityTimestamp = assertLastActivityTimestampUpdated(ctx, project, lastActivityTimestamp)
