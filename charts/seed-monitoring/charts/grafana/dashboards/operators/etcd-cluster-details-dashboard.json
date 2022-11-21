@@ -451,7 +451,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "changes(etcd_server_leader_changes_seen_total{job=\"kube-etcd3-$cluster\"}[1d])",
+          "expr": "increase(etcd_server_leader_changes_seen_total{job=\"kube-etcd3-$cluster\"}[1d])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
