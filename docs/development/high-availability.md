@@ -2,16 +2,9 @@
 
 `gardenlet` and extension controllers are deploying components via `Deployment`s, `StatefulSet`s, etc. as part of the shoot control plane, or the seed or shoot system components.
 
-Before we commence, all components should be generally equipped with `PodDisruptionBudget`s with `.spec.maxUnavailable=1`:
-
-```yaml
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels: ...
-```
-
 Some of the above component deployments must be further tuned to improve fault tolerance / resilience of the service. This document outlines what needs to be done to achieve this goal.
+
+Please be forwarded to [this section](#convenient-application-of-these-rules), if you want to take a shortcut to the list of actions that require developers' attention.
 
 ## Seed Clusters
 
@@ -212,10 +205,24 @@ According to above scenarios and conventions, the `replicas`, `topologySpreadCon
 
 In order to apply those conveniently and easily for developers, Gardener installs a mutating webhook into both seed and shoot clusters which reacts on `Deployment`s and `StatefulSet`s deployed to namespaces with the `high-availability-config.resources.gardener.cloud/consider=true` label set.
 
-The only action developers have to do is labeling their `components` with `high-availability-config.resources.gardener.cloud/type` where the following two values are possible:
+**The following actions have to be taken by developers:**
+1. Check if `components` are prepared to run concurrently with multiple replicas, e.g. controllers usually use [leader election](https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/leaderelection) to achieve this.
+
+2. All components should be generally equipped with `PodDisruptionBudget`s with `.spec.maxUnavailable=1`:
+
+```yaml
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: ...
+```
+
+3. Add label `high-availability-config.resources.gardener.cloud/type` to `deployment`s or `statefulset`s where the following two values are possible:
 
 - `controller`
 - `server`
+
+Type `server` is also preferred if a component is a controller and (webhook) server at the same time.
 
 You can read more about the webhook's internals in [this document](../concepts/resource-manager.md#high-availability-config).
 
