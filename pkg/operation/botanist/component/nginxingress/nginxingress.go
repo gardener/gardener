@@ -396,7 +396,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
+				Replicas:             pointer.Int32(2),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(labelValueController, labelValueAddons),
