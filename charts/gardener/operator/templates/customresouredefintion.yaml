@@ -136,7 +136,7 @@ spec:
                 type: array
               gardener:
                 description: Gardener holds information about the Gardener which last
-                  acted on the Shoot.
+                  acted on the Garden.
                 properties:
                   id:
                     description: ID is the Docker container id of the Gardener which

@@ -40,6 +40,14 @@ rules:
   - update
   - patch
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
@@ -79,6 +87,8 @@ rules:
   - watch
   - patch
   - update
+# gardener-operator deploys other components like gardener-resource-manager which might have elevated privileges, so
+# let's allow both 'bind' and 'escalate' verbs for now.
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

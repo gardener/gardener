@@ -110,7 +110,7 @@ func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alph
 
 func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition, err error) error {
 	if patchErr := r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, condition, gardencorev1beta1.ConditionFalse, conditionReasonPrefix(garden)+"Failed", err.Error())); patchErr != nil {
-		log.Error(patchErr, "Could not patch status", "condition", condition, "err", patchErr.Error())
+		log.Error(patchErr, "Could not patch status", "condition", condition)
 	}
 	return err
 }

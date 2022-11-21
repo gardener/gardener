@@ -28,8 +28,12 @@ helm template \
   -n garden \
   -s templates/clusterrole.yaml \
   -s templates/clusterrolebinding.yaml \
+  -s templates/role.yaml \
+  -s templates/rolebinding.yaml \
   -s templates/priorityclass.yaml |\
   KUBECONFIG="$kubeconfig" kubectl apply -f -
+
+kubectl create namespace garden || true
 
 if [[ $(k8s_env) == "$KIND" ]]; then
   serviceaccount_based_kubeconfig "gardener-operator" > "$kubeconfig"

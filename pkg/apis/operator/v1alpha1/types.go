@@ -93,7 +93,7 @@ type SettingVerticalPodAutoscaler struct {
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {
-	// Gardener holds information about the Gardener which last acted on the Shoot.
+	// Gardener holds information about the Gardener which last acted on the Garden.
 	// +optional
 	Gardener *gardencorev1beta1.Gardener `json:"gardener,omitempty"`
 	// Conditions is a list of conditions.

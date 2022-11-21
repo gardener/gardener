@@ -490,7 +490,7 @@ var _ = Describe("managedresources", func() {
 				Expect(resourcesExist).To(BeFalse())
 			})
 
-			It("should return false because no resources exist", func() {
+			It("should return false because existing resources have a class", func() {
 				obj := managedResource(false)
 				obj.Spec.Class = &class
 				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
@@ -516,7 +516,7 @@ var _ = Describe("managedresources", func() {
 				Expect(resourcesExist).To(BeFalse())
 			})
 
-			It("should return false because no resources exist", func() {
+			It("should return false because existing resources have another class", func() {
 				obj := managedResource(false)
 				obj.Spec.Class = pointer.String("bar")
 				Expect(fakeClient.Create(ctx, obj)).To(Succeed())

@@ -14,14 +14,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - events
-  verbs:
-  - create
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
   - configmaps
   - namespaces
   - secrets
@@ -127,6 +119,7 @@ rules:
   - leases
   verbs:
   - create
+  - get
   - list
   - watch
 - apiGroups:
@@ -136,5 +129,4 @@ rules:
   resourceNames:
   - gardener-operator-leader-election
   verbs:
-  - get
   - update

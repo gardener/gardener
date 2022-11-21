@@ -141,7 +141,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener
 </td>
 <td>
 <em>(Optional)</em>
-<p>Gardener holds information about the Gardener which last acted on the Shoot.</p>
+<p>Gardener holds information about the Gardener which last acted on the Garden.</p>
 </td>
 </tr>
 <tr>
