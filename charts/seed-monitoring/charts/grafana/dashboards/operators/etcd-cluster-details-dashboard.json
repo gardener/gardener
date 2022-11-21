@@ -1,8 +1,19 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
+  "gnetId": null,
   "graphTooltip": 0,
   "id": 9,
   "iteration": 1542111230310,
@@ -10,6 +21,7 @@
   "panels": [
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1586,7 +1598,7 @@
       }
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "controlplane",
@@ -1595,12 +1607,16 @@
   "templating": {
     "list": [
       {
+        "allValue": null,
         "current": {
           "tags": [],
           "text": "main",
           "value": "main"
         },
+        "description": null,
+        "error": null,
         "hide": 0,
+        "includeAll": false,
         "label": null,
         "multi": false,
         "name": "cluster",
@@ -1621,12 +1637,16 @@
         "type": "custom"
       },
       {
+        "allValue": null,
         "current": {
-          "tags": [],
+          "selected": true,
           "text": "0",
           "value": "0"
         },
+        "description": null,
+        "error": null,
         "hide": 0,
+        "includeAll": false,
         "label": null,
         "multi": false,
         "name": "member",
@@ -1648,6 +1668,7 @@
           }
         ],
         "query": "0, 1, 2",
+        "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
       }
