@@ -101,13 +101,11 @@ var _ = Describe("Project Activity controller tests", func() {
 			log.Info("Updated object", "kind", kind, "object", client.ObjectKeyFromObject(obj))
 
 			By("Wait until manager has observed updated" + kind)
-			updatedObjMeta := &metav1.PartialObjectMetadata{}
-			updatedObjMeta.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-
+			objResourceVersion := obj.GetResourceVersion()
 			Eventually(func(g Gomega) string {
-				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), updatedObjMeta)).To(Succeed())
-				return updatedObjMeta.GetResourceVersion()
-			}).Should(Equal(obj.GetResourceVersion()))
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+				return obj.GetResourceVersion()
+			}).Should(Equal(objResourceVersion))
 
 			By("Ensure lastActivityTimestamp was updated after object update")
 			lastActivityTimestamp = assertLastActivityTimestampUpdated(ctx, project, lastActivityTimestamp)
