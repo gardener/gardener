@@ -164,11 +164,10 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		// TODO(plkokanov): This step can be removed in a future version, when all owner
-		// DNSRecords have been cleaned up from existing Shoots. Currently this step deletes
-		// the owner DNSRecord.
-		deployOwnerDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying owner domain DNS record",
-			Fn:           botanist.DeployOwnerDNSResources,
+		// DNSRecords have been cleaned up from existing Shoots.
+		destroyOwnerDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Deleting owner domain DNS record",
+			Fn:           botanist.DestroyOwnerDNSRecord,
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
@@ -179,7 +178,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordInternal)
 			}).DoIf(!o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, destroyOwnerDomainDNSRecord),
 		})
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",
@@ -189,12 +188,12 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordExternal)
 			}).DoIf(!o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, destroyOwnerDomainDNSRecord),
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
 			Fn:           flow.TaskFn(botanist.DeployInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployReferencedResources, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployReferencedResources, destroyOwnerDomainDNSRecord),
 		})
 		waitUntilInfrastructureReady = g.Add(flow.Task{
 			Name: "Waiting until shoot infrastructure has been reconciled",
@@ -230,7 +229,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deploySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Deploying source backup entry",
 			Fn:           flow.TaskFn(botanist.DeploySourceBackupEntry).DoIf(isCopyOfBackupsRequired),
-			Dependencies: flow.NewTaskIDs(deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(destroyOwnerDomainDNSRecord),
 		})
 		waitUntilSourceBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the source backup entry has been reconciled",
@@ -240,7 +239,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployBackupEntryInGarden = g.Add(flow.Task{
 			Name:         "Deploying backup entry",
 			Fn:           flow.TaskFn(botanist.DeployBackupEntry).DoIf(allowBackup),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployOwnerDomainDNSRecord, waitUntilSourceBackupEntryInGardenReconciled),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, destroyOwnerDomainDNSRecord, waitUntilSourceBackupEntryInGardenReconciled),
 		})
 		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",
@@ -574,7 +573,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		_ = g.Add(flow.Task{
 			Name:         "Cleaning up orphaned DNSRecord secrets",
 			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets).DoIf(!o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, destroyOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
 		})
 		vpnLBReady = g.Add(flow.Task{
 			Name:         "Waiting until vpn-shoot LoadBalancer is ready",

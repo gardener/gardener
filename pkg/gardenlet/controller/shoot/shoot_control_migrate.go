@@ -333,15 +333,15 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		})
 		// TODO(plkokanov): This step can be removed in a future version, when all owner
 		// DNSRecords have been cleaned up from existing Shoots.
-		migrateOwnerDNSRecord = g.Add(flow.Task{
-			Name:         "Migrating owner domain DNS record",
-			Fn:           botanist.MigrateOwnerDNSResources,
+		destroyOwnerDNSRecord = g.Add(flow.Task{
+			Name:         "Deleting owner domain DNS record",
+			Fn:           botanist.DestroyOwnerDNSRecord,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
 			Fn:           botanist.DestroyDNSRecords,
-			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
+			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, destroyOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",

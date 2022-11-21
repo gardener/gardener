@@ -120,22 +120,6 @@ var _ = Describe("dnsrecord", func() {
 		})
 	})
 
-	Describe("#DeployOwnerDNSResources", func() {
-
-		It("should delete the owner DNSRecord resource", func() {
-			b.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
-				OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
-					Enabled: false,
-				},
-			}
-			gomock.InOrder(
-				ownerDNSRecord.EXPECT().Destroy(ctx),
-				ownerDNSRecord.EXPECT().WaitCleanup(ctx),
-			)
-			Expect(b.DeployOwnerDNSResources(ctx)).To(Succeed())
-		})
-	})
-
 	Describe("#DestroyInternalDNSRecord", func() {
 		It("should delete the internal DNS record", func() {
 			gomock.InOrder(
@@ -166,16 +150,6 @@ var _ = Describe("dnsrecord", func() {
 		})
 	})
 
-	Describe("#DestroyOwnerDNSResources", func() {
-		It("should delete the owner DNSRecord resource", func() {
-			gomock.InOrder(
-				ownerDNSRecord.EXPECT().Destroy(ctx),
-				ownerDNSRecord.EXPECT().WaitCleanup(ctx),
-			)
-			Expect(b.DestroyOwnerDNSResources(ctx)).To(Succeed())
-		})
-	})
-
 	Describe("#MigrateInternalDNSRecord", func() {
 		It("should migrate the internal DNS record", func() {
 			gomock.InOrder(
@@ -203,21 +177,6 @@ var _ = Describe("dnsrecord", func() {
 				ingressDNSRecord.EXPECT().WaitMigrate(ctx),
 			)
 			Expect(b.MigrateIngressDNSRecord(ctx)).To(Succeed())
-		})
-	})
-
-	Describe("#MigrateOwnerDNSResources", func() {
-		It("should delete the owner DNSRecord resource", func() {
-			b.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
-				OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
-					Enabled: false,
-				},
-			}
-			gomock.InOrder(
-				ownerDNSRecord.EXPECT().Destroy(ctx),
-				ownerDNSRecord.EXPECT().WaitCleanup(ctx),
-			)
-			Expect(b.MigrateOwnerDNSResources(ctx)).To(Succeed())
 		})
 	})
 })

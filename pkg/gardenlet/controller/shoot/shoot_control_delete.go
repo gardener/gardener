@@ -570,7 +570,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		// DNSRecords have been cleaned up from existing Shoots.
 		destroyOwnerDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyOwnerDNSResources).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.DestroyOwnerDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		destroyReferencedResources = g.Add(flow.Task{
