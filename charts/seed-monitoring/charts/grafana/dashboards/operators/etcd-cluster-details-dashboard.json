@@ -548,7 +548,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_server_heartbeat_send_failures_total{job=\"kube-etcd3-$cluster\"}",
+          "expr": "rate(etcd_server_heartbeat_send_failures_total{job=\"kube-etcd3-$cluster\"}[$__rate_interval])",
           "instant": false,
           "interval": "",
           "legendFormat": "{{pod}}",
