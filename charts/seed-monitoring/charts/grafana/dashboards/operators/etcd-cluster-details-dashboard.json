@@ -627,7 +627,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -660,7 +660,7 @@
         {
           "expr": "sum(etcd_server_proposals_pending{role=~\"$cluster\"})",
           "intervalFactor": 2,
-          "legendFormat": "Proposal Pending Total",
+          "legendFormat": "Proposal Pending",
           "metric": "etcd_server_proposals_pending",
           "refId": "B",
           "step": 2
