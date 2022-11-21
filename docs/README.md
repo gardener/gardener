@@ -104,6 +104,7 @@
 * [GEP-18: Automated Shoot CA Rotation](proposals/18-shoot-CA-rotation.md)
 * [GEP-19: Monitoring Stack - Migrating to the prometheus-operator](proposals/19-migrating-to-prometheus-operator.md)
 * [GEP-20: Highly Available Shoot Control Planes](proposals/20-ha-control-planes.md)
+* [GEP-21: IPv6 Single-Stack Support in Local Gardener](proposals/21-ipv6-singlestack-local.md)
 
 ## Development
 

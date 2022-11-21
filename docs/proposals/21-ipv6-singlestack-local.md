@@ -1,0 +1,213 @@
+---
+title: IPv6 Single-Stack Support in Local Gardener
+gep-number: 21
+creation-date: 2022-11-21
+status: implementable
+authors:
+- "@einfachnuralex"
+- "@timebertt"
+reviewers:
+- "TBD"
+---
+
+# GEP-21: IPv6 Single-Stack Support in Local Gardener
+
+## Table of Contents
+
+<!-- TOC -->
+* [GEP-21: IPv6 Single-Stack Support in Local Gardener](#gep-21--ipv6-single-stack-support-in-local-gardener)
+  * [Table of Contents](#table-of-contents)
+  * [Summary](#summary)
+  * [Motivation](#motivation)
+    * [Goals](#goals)
+    * [Non-Goals](#non-goals)
+  * [Proposal](#proposal)
+    * [`Shoot` API](#shoot-api)
+    * [`Seed` API](#seed-api)
+    * [`DNSRecord` API](#dnsrecord-api)
+    * [Implementation Overview](#implementation-overview)
+      * [Preparing the Local Setup](#preparing-the-local-setup)
+      * [Scheduling](#scheduling)
+      * [DNS Records](#dns-records)
+      * [Network Policies](#network-policies)
+      * [Shoot Worker Node Kernel Configuration](#shoot-worker-node-kernel-configuration)
+      * [Docker Hub Images](#docker-hub-images)
+      * [E2E Tests](#e2e-tests)
+      * [Networking Extensions](#networking-extensions)
+  * [Alternatives Considered](#alternatives-considered)
+<!-- TOC -->
+
+## Summary
+
+Today, all shoot clusters provisioned by Gardener use IPv4 single-stack networking.
+This GEP proposes changes to support IPv6 single-stack networking for shoots using provider-local.
+
+## Motivation
+
+Depending on the underlying cloud infrastructure, there is a need to provide shoot networking setups different from what Gardener currently provides.
+This might include IPv6 single-stack or IPv4/IPv6 dual-stack setups.
+Kubernetes already supports such setups as described in [this doc](https://kubernetes.io/docs/concepts/services-networking/dual-stack/).
+However, supporting these in Gardener requires changes to the API and many components (networking extensions, VPN tunnel, etc.).
+
+To bring Gardener closer to supporting these kinds of networking setups, this GEP focuses on supporting IPv6 single-stack networking in the local Gardener environment.
+This keeps things focused on the most important changes to the API and central components while neglecting infrastructure-specific quirks and other difficulties that will arise with dual-stack networking.
+
+Once this enhancement has been implemented and IPv6 single-stack networking in local shoots is a stable feature, further changes can be proposed to support IPv6 single-stack on cloud infrastructure or IPv4/IPv6 dual-stack networking.
+
+### Goals
+
+- augment the Gardener API to allow selecting either IPv4 or IPv6 single-stack networking
+  - define a contract that all components (including networking extensions) need to follow to support this configuration
+  - allow extending the API for dual-stack networking later on while keeping backward-/forward-compatibility
+- adapt all relevant components in the local Gardener environment to support this configuration
+- add e2e tests to prevent regressions and guarantee the stability of the feature (especially because nobody is running it in productive environments)
+
+### Non-Goals
+
+- support IPv4/IPv6 dual-stack networking
+- support IPv6 single-stack networking on cloud infrastructure
+- support changing the networking setup of shoots from IPv4 to IPv6 single-stack or vice-versa
+- propose changes to `NetworkConfig` APIs of networking extensions or their implementation
+- support the legacy VPN tunnel (`ReversedVPN` feature gate is disabled)
+
+## Proposal
+
+A new feature gate `IPv6SingleStack` is added to gardener-apiserver.
+The IPv6-related fields and values can only be used if the feature gate is enabled.
+The feature gate cannot be enabled if the `ReversedVPN` feature gate is disabled (the legacy VPN tunnel solution is [not supported by provider-local](https://github.com/gardener/gardener/blob/83de074f1bc1c009f92e97a08289340591377af6/docs/extensions/provider-local.md#current-limitations) anyway).
+
+### `Shoot` API
+
+The `Shoot.spec.networking` section is extended as follows:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+spec:
+  networking:
+    # ...
+    ipFamilies:
+    - IPv6
+    podsV6: dead:.../64
+    nodesV6: dead:.../64
+    servicesV6: dead:.../64
+```
+
+`ipFamilies` is the central setting for specifying the IP families used for shoot networking.
+This field is inspired by the `Service.spec.ipFamilies` field in Kubernetes ([doc](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services)).
+The only valid value and default is `["IPv4"]` (IPv4 single-stack).
+If the `IPv6SingleStack` feature gate is enabled, `["IPv6"]` can be specified to switch to IPv6 single-stack.
+Later on, `["IPv4","IPv6"]` or `["IPv6","IPv4"]` can be supported for dual-stack networking (ordering is relevant for Kubernetes configuration like the `--service-cluster-ip-range` flag).
+
+Additionally, IPv6-equivalents of all CIDR and mask fields are introduced, e.g., `Shoot.spec.networking.{pods,services,nodes}V6` and `Shoot.spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeV6`.
+Depending on the `ipFamilies` value, either the IPv4 field or the IPv6 field may be specified – or both in a potential dual-stack implementation.
+
+All gardener components and extensions need to respect the `ipFamilies` field and handle it correctly, e.g., in API validation, defaulting, and configuring Shoot components.
+
+### `Seed` API
+
+Similar to the `Shoot` API, the `Seed.spec.networks` section is extended as follows:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Seed
+spec:
+  networks:
+    ipFamilies:
+    - IPv6
+    nodesV6: dead:.../64
+    podsV6: dead:.../64
+    servicesV6: dead:.../64
+    shootDefaults:
+      podsV6: dead:.../64
+      servicesV6: dead:.../64
+```
+
+`ipFamilies` has the same semantics as `Shoot.spec.networking.ipFamilies`.
+Again, IPv6-equivalents of all CIDR and mask fields are introduced, e.g. `Seed.spec.networks.{nodes,pods,services}V6` and `Seed.spec.networks.shootDefaults.{pods,services}V6`
+Depending on the `ipFamilies` value, either the IPv4 field or the IPv6 field may be specified – or both in a potential dual-stack implementation.
+
+The existing `Seed.spec.networks.blockCIDRs` field is augmented to allow IPv6 CIDR values in addition to IPv4 values.
+Validation for this field is laxer and CIDRs of both IP families are allowed independently of the `ipFamilies` setting.
+Values of the `blockCIDRs` field are only relevant for excluding blocks in `NetworkPolicies` and hence it doesn't hurt to add CIDR blocks that are not reachable anyway.
+
+### `DNSRecord` API
+
+The `DNSRecord` API validation is changed to allow creating `AAAA` records:
+
+```yaml
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: DNSRecord
+spec:
+  # ...
+  recordType: AAAA
+  values:
+  - dead::1
+```
+
+- `spec.recordType` allows specifying `AAAA` in addition to the current set of valid record types
+- `spec.values` allows specifying IPv6 values if `spec.recordType=AAAA`
+
+### Implementation Overview
+
+This section gives a rough overview of the most important changes for handling the `ipFamilies` fields.
+We won't go into detail here but only highlight a few selected changes.
+The most important takeaway is, that all components need to respect the `ipFamilies` fields.
+
+#### Preparing the Local Setup
+
+The kind cluster (used as garden runtime and seed cluster) is switched to IPv6 single-stack networking.
+This includes the kind cluster configuration itself as well as its calico configuration.
+Developers will need to perform some configuration of their machine and Docker installation.
+Corresponding instructions are made available for macOS and Linux machines.
+
+provider-local is configured to use IPv6 addresses for patching the status of LoadBalancer services.
+This is auto-detected if provider-local runs on the seed itself and configured explicitly if running on the host machine (which might have both IPv4 and IPv6 addresses).
+
+#### Scheduling
+
+gardener-apiserver only allows scheduling shoots to seeds with matching `ipFamilies` settings.
+I.e., all `Shoot.spec.networking.ipFamilies` values must be included in `Seed.spec.networks.ipFamilies`.
+This might be changed later on if "networking magic" is in place to host dual-stack shoots on IPv6 singe-stack seeds or similar.
+
+Also, gardener-scheduler chooses seeds with `ipFamilies` settings matching the shoot's configuration.
+
+#### DNS Records
+
+gardenlet creates `DNSRecord` objects for the shoot API server with the record type corresponding to the `Shoot.spec.networking.ipFamilies` setting (`A` for IPv4, `AAAA` for IPv6).
+`AAAA` records are created with a suffix to avoid name collisions in a potential dual-stack implementation.
+
+#### Network Policies
+
+Gardener manages several `NetworkPolicy` objects with static CIDRs (e.g. `allow-to-public-networks` in seeds).
+For these, IPv6-equivalents of the IPv4 CIDRs are added, e.g., `::/0` as an equivalent to `0.0.0.0/0`.
+
+#### Shoot Worker Node Kernel Configuration
+
+Kubernetes networking requires IPv6 forwarding to be enabled on the OS level.
+Hence, gardenlet explicitly enables the corresponding kernel setting for shoot worker nodes via `OperatingSystemConfigurations`, similar to IPv4 (ref [gardener/gardener#7046](https://github.com/gardener/gardener/pull/7046)).
+
+#### Docker Hub Images
+
+The `docker.io` registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
+
+Container images from `docker.io` used on shoots and seeds are rewritten to `registry.ipv6.docker.com` if the corresponding `ipFamilies` field specifies IPv6 singe-stack.
+
+#### E2E Tests
+
+Small changes in the OS and networking stack might lead to regressions of the IPv6 feature.
+Hence, [e2e tests](../development/testing.md#end-to-end-e2e-tests-using-provider-local) (presubmits and periodics) are added to prevent unnoticed regressions of the feature.
+
+#### Networking Extensions
+
+Networking extensions need to support the configuration of IPv6-related settings of the networking implementation in their `NetworkConfig` API.
+This is not specified any further by gardener and will be implemented differently in different extensions (as the `NetworkConfig` API design differs already today).
+In general, extensions need to respect the `Shoot.spec.networking.ipFamilies` settings in all aspects: API validation, defaulting, and corresponding handling in code (i.e., configuring IPAM, etc.).
+
+## Alternatives Considered
+
+Instead of adding IPv6-equivalent fields in the `Shoot` and `Seed` API (e.g., `Shoot.spec.networking.{pods,services,nodes}V6`), new arrays could be added that allow specifying both settings in a single list (similar to `Service.spec.clusterIPs`).
+However, to guarantee backward and forward compatibility, the new array would need to be kept in sync with the existing field and the existing field must not be removed.
+This makes API validation more complex and might confuse users.
+For the sake of simplicity and a more expressive and less confusing API, this approach was discarded.
+However, a potential `core.gardener.cloud/v1` API might choose to use a single array for both settings instead of separate fields.
