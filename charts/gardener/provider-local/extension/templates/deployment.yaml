@@ -11,8 +11,8 @@ metadata:
 {{ include "labels" . | indent 4 }}
     high-availability-config.resources.gardener.cloud/type: server
 spec:
-  revisionHistoryLimit: 5
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
 {{ include "labels" . | indent 6 }}
