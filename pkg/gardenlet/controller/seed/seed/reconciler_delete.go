@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
@@ -194,11 +193,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		istio            = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)
 
-	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, r.GardenNamespace, nil, kubernetesVersion)
-	if err != nil {
-		return err
-	}
-
 	var (
 		g                = flow.NewGraph("Seed cluster deletion")
 		destroyDNSRecord = g.Add(flow.Task{
@@ -233,10 +227,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyNginxIngress = g.Add(flow.Task{
 			Name: "Destroying nginx-ingress",
 			Fn:   component.OpDestroyAndWait(nginxIngress).Destroy,
-		})
-		destroyKubeScheduler = g.Add(flow.Task{
-			Name: "Destroying kube-scheduler",
-			Fn:   component.OpDestroyAndWait(scheduler).Destroy,
 		})
 		destroyNetworkPolicies = g.Add(flow.Task{
 			Name: "Destroy network policies",
@@ -281,7 +271,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyEtcdDruid,
 			destroyClusterIdentity,
 			destroyClusterAutoscaler,
-			destroyKubeScheduler,
 			destroyNetworkPolicies,
 			destroyDWDEndpoint,
 			destroyDWDProbe,

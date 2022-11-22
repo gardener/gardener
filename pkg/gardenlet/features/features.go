@@ -31,7 +31,6 @@ func RegisterFeatureGates() {
 		features.HVPAForShootedSeed,
 		features.ManagedIstio,
 		features.APIServerSNI,
-		features.SeedKubeScheduler,
 		features.ReversedVPN,
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.ForceRestore,

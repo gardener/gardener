@@ -879,14 +879,6 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/extensions/worker
         - pkg/operation/botanist/component/gardeneraccess
-        - pkg/operation/botanist/component/gardenerkubescheduler
-        - pkg/operation/botanist/component/gardenerkubescheduler/configurator
-        - pkg/operation/botanist/component/gardenerkubescheduler/v18
-        - pkg/operation/botanist/component/gardenerkubescheduler/v19
-        - pkg/operation/botanist/component/gardenerkubescheduler/v20
-        - pkg/operation/botanist/component/gardenerkubescheduler/v21
-        - pkg/operation/botanist/component/gardenerkubescheduler/v22
-        - pkg/operation/botanist/component/gardenerkubescheduler/v23
         - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/istio
         - pkg/operation/botanist/component/kubeapiserver
@@ -932,7 +924,6 @@ build:
         - pkg/seedadmissioncontroller/webhook/admission
         - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
         - pkg/seedadmissioncontroller/webhook/admission/extensionresources
-        - pkg/seedadmissioncontroller/webhook/admission/podschedulername
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context
@@ -957,17 +948,6 @@ build:
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
         - pkg/utils/version
-        - third_party/kube-scheduler/v18/v1
-        - third_party/kube-scheduler/v18/v1alpha2
-        - third_party/kube-scheduler/v19/v1
-        - third_party/kube-scheduler/v19/v1beta1
-        - third_party/kube-scheduler/v20/v1
-        - third_party/kube-scheduler/v20/v1beta1
-        - third_party/kube-scheduler/v21/v1
-        - third_party/kube-scheduler/v21/v1beta1
-        - third_party/kube-scheduler/v22/v1
-        - third_party/kube-scheduler/v22/v1beta2
-        - third_party/kube-scheduler/v23/v1beta3
         - vendor
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
@@ -1100,7 +1080,6 @@ build:
         - pkg/seedadmissioncontroller/webhook/admission
         - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
         - pkg/seedadmissioncontroller/webhook/admission/extensionresources
-        - pkg/seedadmissioncontroller/webhook/admission/podschedulername
         - pkg/utils
         - pkg/utils/context
         - pkg/utils/errors

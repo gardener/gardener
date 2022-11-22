@@ -865,10 +865,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	kubeScheduler, err := defaultKubeScheduler(seedClient, r.ImageVector, secretsManager, kubernetesVersion, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -936,10 +932,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying kube-state-metrics",
 			Fn:   kubeStateMetrics.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying kube-scheduler for shoot control plane pods",
-			Fn:   kubeScheduler.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying dependency-watchdog-endpoint",
