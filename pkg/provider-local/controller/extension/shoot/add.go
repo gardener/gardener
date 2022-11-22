@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dummyshoot
+package shoot
 
 import (
 	"time"
@@ -25,7 +25,7 @@ import (
 
 const (
 	// Type is type of the extension.
-	Type string = "dummy-shoot"
+	Type string = "local-ext-shoot"
 	// ControllerName is the name of the controller.
 	ControllerName = Type
 )
@@ -35,7 +35,7 @@ var (
 	DefaultAddOptions = AddOptions{}
 )
 
-// AddOptions are options to apply when adding the local dnsrecord controller to the manager.
+// AddOptions are options to apply when adding the extension controller to the manager.
 type AddOptions struct {
 	// Controller are the controller.Options.
 	Controller controller.Options

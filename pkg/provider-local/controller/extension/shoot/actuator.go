@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dummyshoot
+package shoot
 
 import (
 	"context"
@@ -33,7 +33,7 @@ import (
 
 const (
 	// ApplicationName is the name of the application.
-	ApplicationName string = "dummy-shoot"
+	ApplicationName string = "local-ext-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
 	ManagedResourceNamesShoot string = ApplicationName
 )
@@ -79,7 +79,8 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		shootResources,
 		&keepObjects,
 		injectedLabels,
-		nil)
+		nil,
+	)
 }
 
 // Delete the extension resource.

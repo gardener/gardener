@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dummyseed
+package seed
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 
 const (
 	// ApplicationName is the name of the application.
-	ApplicationName string = "dummy-seed"
+	ApplicationName string = "local-ext-seed"
 	// ManagedResourceNamesSeed is the name used to describe the managed seed resources.
 	ManagedResourceNamesSeed string = ApplicationName
 )
@@ -106,7 +106,7 @@ func getSeedResources(namespace string) (map[string][]byte, error) {
 	return registry.AddAllAndSerialize(
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      ApplicationName + "-seed",
+				Name:      ApplicationName,
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},

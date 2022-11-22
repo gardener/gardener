@@ -30,8 +30,8 @@ import (
 	backupentrycontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	controlplanecontroller "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	dnsrecordcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
-	dummyseedcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dummyseed"
-	dummyshootcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dummyshoot"
+	localextensionseedcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/seed"
+	localextensionshootcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	ingresscontroller "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
@@ -60,8 +60,8 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 		controllercmd.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
 		controllercmd.Switch(extensionsoperatingsystemconfgcontroller.ControllerName, operatingsystemconfigcontroller.AddToManager),
 		controllercmd.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
-		controllercmd.Switch(dummyseedcontroller.ControllerName, dummyseedcontroller.AddToManager),
-		controllercmd.Switch(dummyshootcontroller.ControllerName, dummyshootcontroller.AddToManager),
+		controllercmd.Switch(localextensionseedcontroller.ControllerName, localextensionseedcontroller.AddToManager),
+		controllercmd.Switch(localextensionshootcontroller.ControllerName, localextensionshootcontroller.AddToManager),
 	)
 }
 

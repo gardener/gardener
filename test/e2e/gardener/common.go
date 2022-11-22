@@ -103,10 +103,10 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			},
 			Extensions: []gardencorev1beta1.Extension{
 				{
-					Type: "dummy-seed",
+					Type: "local-ext-seed",
 				},
 				{
-					Type: "dummy-shoot",
+					Type: "local-ext-shoot",
 				},
 			},
 		},
