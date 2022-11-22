@@ -188,11 +188,7 @@ func ExtensionStatusChanged() predicate.Predicate {
 			}
 
 			// If lastOperation State has changed to Succeeded or Error then we admit reconciliation.
-			if lastOperationStateChanged(e.ObjectOld, e.ObjectNew) {
-				return true
-			}
-
-			return false
+			return lastOperationStateChanged(e.ObjectOld, e.ObjectNew)
 		},
 
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
