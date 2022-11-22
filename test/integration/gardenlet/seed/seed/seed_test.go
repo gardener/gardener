@@ -15,6 +15,7 @@
 package seed_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -35,13 +36,15 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Seed controller tests", func() {
+var _ = Describe("Seed controller tests", Ordered, func() {
 	var (
 		seed *gardencorev1beta1.Seed
 	)
@@ -115,6 +118,11 @@ var _ = Describe("Seed controller tests", func() {
 			seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: gutil.ComputeGardenNamespace(seed.Name)}}
 			Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
 
+			By("wait till the manager obeserves seed namespace")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), &corev1.Namespace{})
+			}).Should(Succeed())
+
 			DeferCleanup(func() {
 				Expect(testClient.Delete(ctx, seedNamespace)).To(Succeed())
 			})
@@ -187,6 +195,12 @@ var _ = Describe("Seed controller tests", func() {
 				var globalMonitoringSecret *corev1.Secret
 
 				BeforeEach(func() {
+					DeferCleanup(
+						test.WithVars(
+							&resourcemanager.WaitForDeployment, waitForDeploymentInTest,
+							&resourcemanager.TimeoutWaitForDeployment, 50*time.Millisecond,
+						),
+					)
 					By("Create global monitoring secret in seed namespace")
 					globalMonitoringSecret = &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
@@ -234,17 +248,19 @@ var _ = Describe("Seed controller tests", func() {
 						return secretList.Items
 					}).Should(HaveLen(1))
 
-					By("Verify that garden namespace was labeled and annotated appropriately")
-					Eventually(func(g Gomega) {
-						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(testNamespace), testNamespace)).To(Succeed())
-						g.Expect(testNamespace.Labels).To(And(
-							HaveKeyWithValue("role", "garden"),
-							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
-						))
-						g.Expect(testNamespace.Annotations).To(And(
-							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
-						))
-					}).Should(Succeed())
+					if !seedIsGarden {
+						By("Verify that garden namespace was labeled and annotated appropriately")
+						Eventually(func(g Gomega) {
+							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(testNamespace), testNamespace)).To(Succeed())
+							g.Expect(testNamespace.Labels).To(And(
+								HaveKeyWithValue("role", "garden"),
+								HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+							))
+							g.Expect(testNamespace.Annotations).To(And(
+								HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+							))
+						}).Should(Succeed())
+					}
 
 					By("Verify that kube-system namespace was labeled appropriately")
 					Eventually(func(g Gomega) map[string]string {
@@ -286,6 +302,11 @@ var _ = Describe("Seed controller tests", func() {
 
 							g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
 							g.Expect(testClient.Delete(ctx, validatingWebhookConfiguration)).To(Succeed())
+						}).Should(Succeed())
+
+						Eventually(func(g Gomega) {
+							g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).Should(BeNotFoundError())
+							g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).Should(BeNotFoundError())
 						}).Should(Succeed())
 					} else {
 						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
@@ -343,25 +364,27 @@ var _ = Describe("Seed controller tests", func() {
 					By("Delete Seed")
 					Expect(testClient.Delete(ctx, seed)).To(Succeed())
 
-					By("Verify that the seed system components have been deleted")
-					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
-						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-						return managedResourceList.Items
-					}).Should(BeEmpty())
+					if seedIsGarden {
+						By("Verify that the seed system components have been deleted")
+						Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
+							managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+							g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
+							return managedResourceList.Items
+						}).WithTimeout(10 * time.Second).Should(BeEmpty())
+					}
 
 					if !seedIsGarden {
 						By("Verify that gardener-resource-manager has been deleted")
 						Eventually(func(g Gomega) error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).Should(BeNotFoundError())
+						}).WithTimeout(10 * time.Second).Should(BeNotFoundError())
 					}
 
 					By("Ensure Seed is gone")
 					Eventually(func() error {
 						return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
-					}).Should(BeNotFoundError())
+					}).WithTimeout(10 * time.Second).Should(BeNotFoundError())
 				}
 
 				It("should properly maintain the Bootstrapped condition and deploy all seed system components", func() {
@@ -371,9 +394,21 @@ var _ = Describe("Seed controller tests", func() {
 				Context("when seed cluster is garden cluster at the same time", func() {
 					BeforeEach(func() {
 						By("Create Garden")
-						garden := &operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{GenerateName: "garden-"}}
+						garden := &operatorv1alpha1.Garden{
+							ObjectMeta: metav1.ObjectMeta{
+								GenerateName: "garden-",
+								Labels: map[string]string{
+									testID: testRunID,
+								},
+							},
+						}
 						Expect(testClient.Create(ctx, garden)).To(Succeed())
 						log.Info("Created Garden for test", "garden", garden.Name)
+
+						By("Wait until manager has observed garden")
+						Eventually(func() error {
+							return mgrClient.Get(ctx, client.ObjectKeyFromObject(garden), &operatorv1alpha1.Garden{})
+						}).Should(Succeed())
 
 						DeferCleanup(func() {
 							By("Delete Garden")
@@ -389,3 +424,7 @@ var _ = Describe("Seed controller tests", func() {
 		})
 	})
 })
+
+func waitForDeploymentInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
+	return nil
+}

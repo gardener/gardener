@@ -1772,6 +1772,8 @@ var (
 	// TimeoutWaitForDeployment is the timeout used while waiting for the Deployments to become healthy
 	// or deleted.
 	TimeoutWaitForDeployment = 5 * time.Minute
+	// WaitForDeployment is an alias for retry.Until. Exposed for tests.
+	WaitForDeployment = retry.Until
 )
 
 // Wait signals whether a deployment is ready or needs more time to be deployed.
@@ -1779,7 +1781,7 @@ func (r *resourceManager) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
 	defer cancel()
 
-	return retry.Until(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
+	return WaitForDeployment(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
 		deployment := r.emptyDeployment()
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
 			return retry.SevereError(err)
