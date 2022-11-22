@@ -131,6 +131,8 @@ data:
     webhooks:
       crdDeletionProtection:
         enabled: {{ .Values.global.config.webhooks.crdDeletionProtection.enabled }}
+      extensionValidation:
+        enabled: {{ .Values.global.config.webhooks.extensionValidation.enabled }}
       highAvailabilityConfig:
         enabled: {{ .Values.global.config.webhooks.highAvailabilityConfig.enabled }}
       podSchedulerName:

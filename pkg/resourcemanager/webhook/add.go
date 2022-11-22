@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
@@ -55,6 +56,12 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			SourceReader: sourceCluster.GetAPIReader(),
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", crddeletionprotection.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.ExtensionValidation.Enabled {
+		if err := extensionvalidation.AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handlers: %w", extensionvalidation.HandlerName, err)
 		}
 	}
 

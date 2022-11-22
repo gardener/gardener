@@ -202,6 +202,8 @@ type TokenRequestorControllerConfig struct {
 type ResourceManagerWebhookConfiguration struct {
 	// CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
 	CRDDeletionProtection CRDDeletionProtection
+	// ExtensionValidation is the configuration for the extension-validation webhook.
+	ExtensionValidation ExtensionValidation
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
@@ -218,6 +220,12 @@ type ResourceManagerWebhookConfiguration struct {
 
 // CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
 type CRDDeletionProtection struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool
+}
+
+// ExtensionValidation is the configuration for the extension-validation webhook.
+type ExtensionValidation struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool
 }

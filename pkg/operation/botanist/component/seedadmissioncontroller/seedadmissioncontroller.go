@@ -21,8 +21,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	admissionv1 "k8s.io/api/admission/v1"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -43,7 +41,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -99,7 +96,7 @@ type gardenerSeedAdmissionController struct {
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
-	caSecret, found := g.secretsManager.Get(v1beta1constants.SecretNameCASeed)
+	_, found := g.secretsManager.Get(v1beta1constants.SecretNameCASeed)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
 	}
@@ -337,7 +334,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		validatingWebhookConfiguration = GetValidatingWebhookConfig(caSecret.Data[secretutils.DataKeyCertificateBundle], service)
+		validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
 		podDisruptionBudget            client.Object
 	)
 
@@ -390,113 +387,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 func (g *gardenerSeedAdmissionController) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceName)
-}
-
-// GetValidatingWebhookConfig returns the ValidatingWebhookConfiguration for the seedadmissioncontroller component for
-// reuse between the component and integration tests.
-func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Service) *admissionregistrationv1.ValidatingWebhookConfiguration {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-	webhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   Name,
-			Labels: getLabels(),
-		},
-		Webhooks: []admissionregistrationv1.ValidatingWebhook{{
-			Name: "validation.extensions.etcd.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{
-				{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
-						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
-						Resources:   []string{"etcds"},
-					},
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-				},
-			},
-			FailurePolicy:     &failurePolicy,
-			NamespaceSelector: &metav1.LabelSelector{},
-			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				CABundle: caBundle,
-				Service: &admissionregistrationv1.ServiceReference{
-					Name:      webhookClientService.Name,
-					Namespace: webhookClientService.Namespace,
-					Path:      pointer.String(extensionresources.EtcdWebhookPath),
-				},
-			},
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			MatchPolicy:             &matchPolicy,
-			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
-		}},
-	}
-
-	webhookConfig.Webhooks = append(webhookConfig.Webhooks, getWebhooks(caBundle, webhookClientService)...)
-	return webhookConfig
-}
-
-func getWebhooks(caBundle []byte, webhookClientService *corev1.Service) []admissionregistrationv1.ValidatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-		webhooks      []admissionregistrationv1.ValidatingWebhook
-	)
-
-	resources := map[string]string{
-		"backupbuckets":          extensionresources.BackupBucketWebhookPath,
-		"backupentries":          extensionresources.BackupEntryWebhookPath,
-		"bastions":               extensionresources.BastionWebhookPath,
-		"containerruntimes":      extensionresources.ContainerRuntimeWebhookPath,
-		"controlplanes":          extensionresources.ControlPlaneWebhookPath,
-		"dnsrecords":             extensionresources.DNSRecordWebhookPath,
-		"extensions":             extensionresources.ExtensionWebhookPath,
-		"infrastructures":        extensionresources.InfrastructureWebhookPath,
-		"networks":               extensionresources.NetworkWebhookPath,
-		"operatingsystemconfigs": extensionresources.OperatingSystemConfigWebhookPath,
-		"workers":                extensionresources.WorkerWebhookPath,
-	}
-
-	resourcesName := []string{"backupbuckets", "backupentries", "bastions", "containerruntimes", "controlplanes", "dnsrecords", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"}
-
-	for _, resource := range resourcesName {
-		webhook := admissionregistrationv1.ValidatingWebhook{
-			Name: "validation.extensions." + resource + ".admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{
-				{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
-						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
-						Resources: []string{
-							resource,
-						},
-					},
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-				},
-			},
-			FailurePolicy:     &failurePolicy,
-			NamespaceSelector: &metav1.LabelSelector{},
-			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				CABundle: caBundle,
-				Service: &admissionregistrationv1.ServiceReference{
-					Name:      webhookClientService.Name,
-					Namespace: webhookClientService.Namespace,
-					Path:      pointer.String(resources[resource]),
-				},
-			},
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			MatchPolicy:             &matchPolicy,
-			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
-		}
-
-		webhooks = append(webhooks, webhook)
-	}
-
-	return webhooks
 }
 
 func getLabels() map[string]string {

@@ -16,15 +16,9 @@ package webhook
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager) error {
-	if err := extensionresources.AddWebhooks(mgr); err != nil {
-		return err
-	}
-
 	return nil
 }

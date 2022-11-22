@@ -225,9 +225,11 @@ build:
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
+        - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
         - pkg/apis/extensions/v1alpha1/helper
+        - pkg/apis/extensions/validation
         - pkg/apis/operations
         - pkg/apis/operations/install
         - pkg/apis/operations/v1alpha1
@@ -345,6 +347,7 @@ build:
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/crddeletionprotection
+        - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -368,6 +371,9 @@ build:
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
         - pkg/utils/timewindow
+        - pkg/utils/validation/admissionplugins
+        - pkg/utils/validation/cidr
+        - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
   - image: eu.gcr.io/gardener-project/gardener/scheduler
@@ -917,15 +923,13 @@ build:
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/crddeletionprotection
+        - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/tokeninvalidator
-        - pkg/seedadmissioncontroller/webhook/admission
-        - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
-        - pkg/seedadmissioncontroller/webhook/admission/extensionresources
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context
@@ -963,13 +967,17 @@ build:
         - cmd/utils
         - pkg/api/extensions
         - pkg/apis/core
+        - pkg/apis/core/helper
         - pkg/apis/core/install
         - pkg/apis/core/v1alpha1
+        - pkg/apis/core/v1alpha1/helper
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
+        - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
+        - pkg/apis/extensions/validation
         - pkg/apis/operations
         - pkg/apis/operations/install
         - pkg/apis/operations/v1alpha1
@@ -993,6 +1001,7 @@ build:
         - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
+        - pkg/extensions
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
@@ -1017,6 +1026,7 @@ build:
         - pkg/resourcemanager/predicate
         - pkg/resourcemanager/webhook
         - pkg/resourcemanager/webhook/crddeletionprotection
+        - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -1030,9 +1040,13 @@ build:
         - pkg/utils/gardener
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/health
+        - pkg/utils/kubernetes/unstructured
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/timewindow
+        - pkg/utils/validation/admissionplugins
+        - pkg/utils/validation/cidr
+        - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
   - image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
@@ -1045,17 +1059,12 @@ build:
         - cmd/gardener-seed-admission-controller/app
         - cmd/utils
         - pkg/apis/core
-        - pkg/apis/core/helper
         - pkg/apis/core/install
         - pkg/apis/core/v1alpha1
-        - pkg/apis/core/v1alpha1/helper
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
-        - pkg/apis/core/v1beta1/helper
-        - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
-        - pkg/apis/extensions/validation
         - pkg/apis/operations
         - pkg/apis/operations/install
         - pkg/apis/operations/v1alpha1
@@ -1073,32 +1082,17 @@ build:
         - pkg/chartrenderer
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
-        - pkg/controllerutils
         - pkg/controllerutils/routes
-        - pkg/extensions
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
         - pkg/logger
-        - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/seedadmissioncontroller/webhook
-        - pkg/seedadmissioncontroller/webhook/admission
-        - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
-        - pkg/seedadmissioncontroller/webhook/admission/extensionresources
         - pkg/utils
         - pkg/utils/context
         - pkg/utils/errors
-        - pkg/utils/flow
-        - pkg/utils/gardener
-        - pkg/utils/kubernetes
-        - pkg/utils/kubernetes/health
-        - pkg/utils/kubernetes/unstructured
         - pkg/utils/retry
-        - pkg/utils/secrets
         - pkg/utils/timewindow
-        - pkg/utils/validation/admissionplugins
-        - pkg/utils/validation/cidr
-        - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
 deploy:

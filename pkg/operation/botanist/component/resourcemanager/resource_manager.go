@@ -58,6 +58,7 @@ import (
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
@@ -1290,6 +1291,138 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			TimeoutSeconds:          pointer.Int32(10),
 		},
 	}
+}
+
+// GetExtensionValidationValidatingWebhooks returns the ValidatingWebhooks for the crd-deletion-protection webhook for
+// reuse between the component and integration tests.
+func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.ValidatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+		webhooks      []admissionregistrationv1.ValidatingWebhook
+	)
+
+	for resource, webhook := range map[string]struct {
+		path string
+		rule admissionregistrationv1.Rule
+	}{
+		"backupbuckets": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"backupbuckets"},
+			},
+			path: extensionvalidation.WebhookPathBackupBucket,
+		},
+		"backupentries": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"backupentries"},
+			},
+			path: extensionvalidation.WebhookPathBackupEntry,
+		},
+		"bastions": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"bastions"},
+			},
+			path: extensionvalidation.WebhookPathBastion,
+		},
+		"containerruntimes": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"containerruntimes"},
+			},
+			path: extensionvalidation.WebhookPathContainerRuntime,
+		},
+		"controlplanes": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"controlplanes"},
+			},
+			path: extensionvalidation.WebhookPathControlPlane,
+		},
+		"dnsrecords": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"dnsrecords"},
+			},
+			path: extensionvalidation.WebhookPathDNSRecord,
+		},
+		"etcds": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
+				APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+				Resources:   []string{"etcds"},
+			},
+			path: extensionvalidation.WebhookPathEtcd,
+		},
+		"extensions": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"extensions"},
+			},
+			path: extensionvalidation.WebhookPathExtension,
+		},
+		"infrastructures": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"infrastructures"},
+			},
+			path: extensionvalidation.WebhookPathInfrastructure,
+		},
+		"networks": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"networks"},
+			},
+			path: extensionvalidation.WebhookPathNetwork,
+		},
+		"operatingsystemconfigs": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"operatingsystemconfigs"},
+			},
+			path: extensionvalidation.WebhookPathOperatingSystemConfig,
+		},
+		"workers": {
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"workers"},
+			},
+			path: extensionvalidation.WebhookPathWorker,
+		},
+	} {
+		webhooks = append(webhooks, admissionregistrationv1.ValidatingWebhook{
+			Name: "validation.extensions." + resource + ".resources.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule:       webhook.rule,
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:           &failurePolicy,
+			NamespaceSelector:       &metav1.LabelSelector{},
+			ClientConfig:            buildClientConfigFn(secretServerCA, webhook.path),
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		})
+	}
+
+	return webhooks
 }
 
 func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {

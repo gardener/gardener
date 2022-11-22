@@ -22,8 +22,11 @@ build:
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
+        - pkg/apis/core/helper
+        - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
+        - pkg/apis/extensions/validation
         - pkg/apis/operations
         - pkg/apis/operations/install
         - pkg/apis/operations/v1alpha1
@@ -72,6 +75,7 @@ build:
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/crddeletionprotection
+        - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -95,6 +99,9 @@ build:
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
         - pkg/utils/timewindow
+        - pkg/utils/validation/admissionplugins
+        - pkg/utils/validation/cidr
+        - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
@@ -109,13 +116,17 @@ build:
         - cmd/utils
         - pkg/api/extensions
         - pkg/apis/core
+        - pkg/apis/core/helper
         - pkg/apis/core/install
         - pkg/apis/core/v1alpha1
+        - pkg/apis/core/v1alpha1/helper
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
+        - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
+        - pkg/apis/extensions/validation
         - pkg/apis/operations
         - pkg/apis/operations/install
         - pkg/apis/operations/v1alpha1
@@ -139,6 +150,7 @@ build:
         - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
+        - pkg/extensions
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
@@ -163,6 +175,7 @@ build:
         - pkg/resourcemanager/predicate
         - pkg/resourcemanager/webhook
         - pkg/resourcemanager/webhook/crddeletionprotection
+        - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -176,9 +189,13 @@ build:
         - pkg/utils/gardener
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/health
+        - pkg/utils/kubernetes/unstructured
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/timewindow
+        - pkg/utils/validation/admissionplugins
+        - pkg/utils/validation/cidr
+        - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
 deploy:

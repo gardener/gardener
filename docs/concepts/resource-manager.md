@@ -680,3 +680,10 @@ It also reacts for the `druid.gardener.cloud/v1alpha1.Etcd` resources.
 
 The webhook prevents `DELETE` requests for those `CustomResourceDefinition`s labeled with `gardener.cloud/deletion-protected=true`, and for all mentioned custom resources if they were not previously annotated with the `confirmation.gardener.cloud/deletion=true`.
 This prevents that undesired `kubectl delete <...>` requests are accepted.
+
+#### Extension Resource Validation
+
+When this webhook is activated, it reacts for most of the custom resources in the `extensions.gardener.cloud/v1alpha1` API group.
+It also reacts for the `druid.gardener.cloud/v1alpha1.Etcd` resources.
+
+The webhook validates the resources specifications for `CREATE` and `UPDATE` requests.
