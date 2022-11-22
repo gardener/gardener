@@ -261,6 +261,38 @@ spec:
     updateMode: Auto
 status: {}
 `
+			vpaHAYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: vpn-shoot
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: vpn-shoot-s0
+      controlledValues: RequestsOnly
+      minAllowed:
+        cpu: 100m
+        memory: 10Mi
+    - containerName: vpn-shoot-s1
+      controlledValues: RequestsOnly
+      minAllowed:
+        cpu: 100m
+        memory: 10Mi
+    - containerName: vpn-shoot-s2
+      controlledValues: RequestsOnly
+      minAllowed:
+        cpu: 100m
+        memory: 10Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: vpn-shoot
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
 			containerFor = func(clients int, index *int, reversedVPNEnabled, vpaEnabled, highAvailable bool) *corev1.Container {
 				var (
 					limits = corev1.ResourceList{
@@ -886,8 +918,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					vpaYAMLpatched := strings.ReplaceAll(vpaYAML, "kind: Deployment", "kind: StatefulSet")
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAMLpatched))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaHAYAML))
 
 					var (
 						secretNameClient0 = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled, "-0")
