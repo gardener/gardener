@@ -24,9 +24,10 @@ import (
 
 var _ = Describe("BackupEntry", func() {
 	var (
-		shootTechnicalID = "seednamespace"
-		shootUID         = types.UID("1234")
-		backupEntryName  = shootTechnicalID + "--" + string(shootUID)
+		shootTechnicalID      = "seednamespace"
+		shootUID              = types.UID("1234")
+		backupEntryName       = shootTechnicalID + "--" + string(shootUID)
+		sourceBackupEntryName = "source-" + shootTechnicalID + "--" + string(shootUID)
 	)
 
 	Describe("#GenerateBackupEntryName", func() {
@@ -48,8 +49,14 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#ExtractShootDetailsFromBackupEntryName", func() {
-		It("should return the correct parts of the name", func() {
+		It("should return the correct parts of the name for core backupentry", func() {
 			technicalID, uid := ExtractShootDetailsFromBackupEntryName(backupEntryName)
+			Expect(technicalID).To(Equal(shootTechnicalID))
+			Expect(uid).To(Equal(shootUID))
+		})
+
+		It("should return the correct parts of the name for soure backupentry", func() {
+			technicalID, uid := ExtractShootDetailsFromBackupEntryName(sourceBackupEntryName)
 			Expect(technicalID).To(Equal(shootTechnicalID))
 			Expect(uid).To(Equal(shootUID))
 		})
