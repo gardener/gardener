@@ -129,6 +129,8 @@ data:
         concurrentSyncs: {{ .Values.global.config.controllers.tokenRequestor.concurrentSyncs }}
         {{- end }}
     webhooks:
+      crdDeletionProtection:
+        enabled: {{ .Values.global.config.webhooks.crdDeletionProtection.enabled }}
       highAvailabilityConfig:
         enabled: {{ .Values.global.config.webhooks.highAvailabilityConfig.enabled }}
       podSchedulerName:

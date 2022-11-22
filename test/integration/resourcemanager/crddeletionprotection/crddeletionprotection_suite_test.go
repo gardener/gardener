@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extensioncrds_test
+package crddeletionprotection_test
 
 import (
 	"context"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -32,23 +31,22 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	cmdutils "github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestExtensionCRDs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedAdmissionController Extension CRDs Webhook Integration Test Suite")
+	RunSpecs(t, "ResourceManager ExtensionCRDs Webhook Integration Test Suite")
 }
 
-const testID = "extensioncrds-webhook-test"
+const testID = "crddeletionprotection-webhook-test"
 
 var (
 	ctx = context.Background()
@@ -85,7 +83,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.SourceScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -114,9 +112,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering webhooks")
-	server := mgr.GetWebhookServer()
-	Expect(extensionresources.AddWebhooks(mgr)).To(Succeed())
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(log)})
+	Expect((&crddeletionprotection.Handler{
+		Logger:       log,
+		SourceReader: mgr.GetAPIReader(),
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -139,23 +138,16 @@ var _ = BeforeSuite(func() {
 })
 
 func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConfiguration {
-	service := &corev1.Service{
+	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-name",
-			Namespace: "service-ns",
+			Name: "gardener-resource-manager",
 		},
+		Webhooks: resourcemanager.GetCRDDeletionProtectionValidatingWebhooks(nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+			return admissionregistrationv1.WebhookClientConfig{
+				Service: &admissionregistrationv1.ServiceReference{
+					Path: &path,
+				},
+			}
+		}),
 	}
-
-	webhookConfig := seedadmissioncontroller.GetValidatingWebhookConfig(nil, service)
-	webhooks := make([]admissionregistrationv1.ValidatingWebhook, 0, len(webhookConfig.Webhooks)-1)
-
-	// disable extension validation webhooks for this test
-	for _, w := range webhookConfig.Webhooks {
-		if !strings.HasPrefix(w.Name, "validation.extensions") {
-			webhooks = append(webhooks, w)
-		}
-	}
-
-	webhookConfig.Webhooks = webhooks
-	return webhookConfig
 }

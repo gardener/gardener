@@ -67,6 +67,8 @@ controllers:
     enabled: true
     concurrentSyncs: 5
 webhooks:
+  crdDeletionProtection:
+    enabled: true
   highAvailabilityConfig:
     enabled: true
   podSchedulerName:

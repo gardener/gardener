@@ -225,6 +225,8 @@ type TokenRequestorControllerConfig struct {
 
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.
 type ResourceManagerWebhookConfiguration struct {
+	// CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
+	CRDDeletionProtection CRDDeletionProtection `json:"crdDeletionProtection"`
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
@@ -237,6 +239,12 @@ type ResourceManagerWebhookConfiguration struct {
 	SeccompProfile SeccompProfileWebhookConfig `json:"seccompProfile"`
 	// TokenInvalidator is the configuration for the token-invalidator webhook.
 	TokenInvalidator TokenInvalidatorWebhookConfig `json:"tokenInvalidator"`
+}
+
+// CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
+type CRDDeletionProtection struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
 }
 
 // HighAvailabilityConfigWebhookConfig is the configuration for the high-availability-config webhook.

@@ -100,6 +100,8 @@ global:
         enabled: false
       # concurrentSyncs: 5
     webhooks:
+      crdDeletionProtection:
+        enabled: false
       highAvailabilityConfig:
         enabled: false
       podSchedulerName:

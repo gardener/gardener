@@ -31,7 +31,6 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -44,7 +43,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -408,79 +406,6 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 			Labels: getLabels(),
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{{
-			Name: "crds.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{{
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{apiextensionsv1.GroupName},
-					APIVersions: []string{apiextensionsv1beta1.SchemeGroupVersion.Version, apiextensionsv1.SchemeGroupVersion.Version},
-					Resources:   []string{"customresourcedefinitions"},
-				},
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
-			}},
-			FailurePolicy:     &failurePolicy,
-			NamespaceSelector: &metav1.LabelSelector{},
-			ObjectSelector: &metav1.LabelSelector{
-				MatchLabels: extensioncrds.ObjectSelector,
-			},
-			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				CABundle: caBundle,
-				Service: &admissionregistrationv1.ServiceReference{
-					Name:      webhookClientService.Name,
-					Namespace: webhookClientService.Namespace,
-					Path:      pointer.String(extensioncrds.WebhookPath),
-				},
-			},
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			MatchPolicy:             &matchPolicy,
-			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
-		}, {
-			Name: "crs.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{
-				{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
-						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
-						Resources:   []string{"etcds"},
-					},
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
-				},
-				{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
-						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
-						Resources: []string{
-							"backupbuckets",
-							"backupentries",
-							"bastions",
-							"containerruntimes",
-							"controlplanes",
-							"dnsrecords",
-							"extensions",
-							"infrastructures",
-							"networks",
-							"operatingsystemconfigs",
-							"workers",
-						},
-					},
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
-				},
-			},
-			FailurePolicy:     &failurePolicy,
-			NamespaceSelector: &metav1.LabelSelector{},
-			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				CABundle: caBundle,
-				Service: &admissionregistrationv1.ServiceReference{
-					Name:      webhookClientService.Name,
-					Namespace: webhookClientService.Namespace,
-					Path:      pointer.String(extensioncrds.WebhookPath),
-				},
-			},
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			MatchPolicy:             &matchPolicy,
-			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
-		}, {
 			Name: "validation.extensions.etcd.admission.core.gardener.cloud",
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{

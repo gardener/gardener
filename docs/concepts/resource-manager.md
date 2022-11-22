@@ -519,7 +519,9 @@ Otherwise, once approved the `kube-controller-manager`'s `csrsigner` controller 
 
 ## Webhooks
 
-### High Availability Config
+### Mutating Webhooks
+
+#### High Availability Config
 
 This webhook is used to conveniently apply the configuration to make components deployed to seed or shoot clusters highly available.
 The details and scenarios are described in [this document](../development/high-availability.md).
@@ -595,7 +597,7 @@ The webhook performs the following actions:
 
    Independent on the number of zones, when the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty, then the `whenUnsatisfiable` is set to `DoNotSchedule` for the constraint with `topologyKey=kubernetes.io/hostname` (which enforces the node-spread).
 
-### Auto-Mounting Projected `ServiceAccount` Tokens
+#### Auto-Mounting Projected `ServiceAccount` Tokens
 
 When this webhook is activated then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:
 
@@ -640,7 +642,7 @@ Please find an overview below for pods deployed in the Shoot cluster:
 
 ![image](images/resource-manager-projected-token-shoot-to-shoot-apiserver.jpg)
 
-### Pod Topology Spread Constraints
+#### Pod Topology Spread Constraints
 
 When this webhook is enabled then it mimics the [topologyKey feature](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#spread-constraint-definition) for [Topology Spread Constraints (TSC)](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints) on the label `pod-template-hash`.
 Concretely, when a pod is labelled with `pod-template-hash` the handler of this webhook extends any topology spread constraint in the pod:
@@ -663,3 +665,18 @@ The procedure circumvents a [known limitation](https://github.com/kubernetes/kub
 Gardener enables this webhook to schedule pods of deployments across nodes and zones.
 
 Please note, the `gardener-resource-manager` itself as well as pods labelled with `topology-spread-constraints.resources.gardener.cloud/skip` are excluded from any mutations.
+
+### Validating Webhooks
+
+#### Unconfirmed Deletion Prevention For Custom Resources And Definitions
+
+As part of Gardener's [extensibility concepts](../extensions/overview.md), a lot of `CustomResourceDefinition`s are deployed to the seed clusters that serve as extension points for provider-specific controllers.
+For example, the [`Infrastructure` CRD](../extensions/infrastructure.md) triggers the provider extension to prepare the IaaS infrastructure of the underlying cloud provider for a to-be-created shoot cluster.
+Consequently, these extension CRDs have a lot of power and control large portions of the end-user's shoot cluster.
+Accidental or undesired deletions of those resource can cause tremendous and hard-to-recover-from outages and should be prevented.
+
+When this webhook is activated, it reacts for `CustomResourceDefinition`s and most of the custom resources in the `extensions.gardener.cloud/v1alpha1` API group.
+It also reacts for the `druid.gardener.cloud/v1alpha1.Etcd` resources.
+
+The webhook prevents `DELETE` requests for those `CustomResourceDefinition`s labeled with `gardener.cloud/deletion-protected=true`, and for all mentioned custom resources if they were not previously annotated with the `confirmation.gardener.cloud/deletion=true`.
+This prevents that undesired `kubectl delete <...>` requests are accepted.

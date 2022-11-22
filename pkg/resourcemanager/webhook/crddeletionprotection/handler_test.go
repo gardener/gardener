@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extensioncrds_test
+package crddeletionprotection_test
 
 import (
 	"context"
@@ -20,14 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/gardener/gardener/pkg/apis/core"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -44,8 +36,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("handler", func() {
@@ -75,8 +74,7 @@ var _ = Describe("handler", func() {
 			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			handler = extensioncrds.New(log)
-			Expect(inject.APIReaderInto(c, handler)).To(BeTrue())
+			handler = &Handler{Logger: log, SourceReader: c}
 			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 		})
 

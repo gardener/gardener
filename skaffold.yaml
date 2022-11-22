@@ -344,6 +344,7 @@ build:
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
+        - pkg/resourcemanager/webhook/crddeletionprotection
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -915,6 +916,7 @@ build:
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
+        - pkg/resourcemanager/webhook/crddeletionprotection
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -1014,6 +1016,7 @@ build:
         - pkg/resourcemanager/controller/tokenrequestor
         - pkg/resourcemanager/predicate
         - pkg/resourcemanager/webhook
+        - pkg/resourcemanager/webhook/crddeletionprotection
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -1024,9 +1027,11 @@ build:
         - pkg/utils/context
         - pkg/utils/errors
         - pkg/utils/flow
+        - pkg/utils/gardener
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/health
         - pkg/utils/retry
+        - pkg/utils/secrets
         - pkg/utils/timewindow
         - pkg/utils/version
         - vendor

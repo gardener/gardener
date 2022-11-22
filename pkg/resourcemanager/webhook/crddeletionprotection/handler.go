@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extensioncrds
+package crddeletionprotection
 
 import (
 	"context"
@@ -22,10 +22,6 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	sacadmission "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -36,45 +32,31 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
 
-const (
-	// HandlerName is the name of this admission webhook handler.
-	HandlerName = "extension_crds"
-	// WebhookPath is the HTTP handler path for this admission webhook handler.
-	WebhookPath = "/webhooks/validate-extension-crd-deletion"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ObjectSelector is the object selector for CustomResourceDefinitions used by this admission controller.
-var ObjectSelector = map[string]string{
-	gutil.DeletionProtected: "true",
-}
+var ObjectSelector = map[string]string{gutil.DeletionProtected: "true"}
 
-// New creates a new webhook handler validating DELETE requests for extension CRDs and extension resources, that are
-// marked for deletion protection (`gardener.cloud/deletion-protected`).
-func New(logger logr.Logger) *handler {
-	return &handler{logger: logger}
-}
+// Handler validating DELETE requests for extension CRDs and extension resources, that are marked for deletion
+// protection (`gardener.cloud/deletion-protected`).
+type Handler struct {
+	Logger       logr.Logger
+	SourceReader client.Reader
 
-type handler struct {
-	logger  logr.Logger
-	reader  client.Reader
 	decoder *admission.Decoder
 }
 
-var _ admission.Handler = &handler{}
-
-func (h *handler) InjectAPIReader(reader client.Reader) error {
-	h.reader = reader
-	return nil
-}
-
-func (h *handler) InjectDecoder(d *admission.Decoder) error {
+// InjectDecoder injects the decoder.
+func (h *Handler) InjectDecoder(d *admission.Decoder) error {
 	h.decoder = d
 	return nil
 }
 
-func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
+// Handle validates the DELETE request.
+func (h *Handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -91,6 +73,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		metav1.GroupVersionResource{Group: apiextensionsv1beta1.SchemeGroupVersion.Group, Version: apiextensionsv1beta1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"},
 		metav1.GroupVersionResource{Group: apiextensionsv1.SchemeGroupVersion.Group, Version: apiextensionsv1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"}:
 		listOp = client.MatchingLabels(ObjectSelector)
+
 	case
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupbuckets"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupentries"},
@@ -104,11 +87,12 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "operatingsystemconfigs"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "workers"}:
 		listOp = client.InNamespace(request.Namespace)
+
 	default:
 		return admission.Allowed("resource is not deletion-protected")
 	}
 
-	obj, err := sacadmission.ExtractRequestObject(ctx, h.reader, h.decoder, request, listOp)
+	obj, err := ExtractRequestObject(ctx, h.SourceReader, h.decoder, request, listOp)
 	if apierrors.IsNotFound(err) {
 		return admission.Allowed("object was not found")
 	}
@@ -116,14 +100,12 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	var operation string
+	operation := "DELETE"
 	if strings.HasSuffix(obj.GetObjectKind().GroupVersionKind().Kind, "List") {
 		operation = "DELETECOLLECTION"
-	} else {
-		operation = "DELETE"
 	}
 
-	log := h.logger.
+	log := h.Logger.
 		WithValues("resource", request.Resource).
 		WithValues("operation", operation).
 		WithValues("namespace", request.Namespace)

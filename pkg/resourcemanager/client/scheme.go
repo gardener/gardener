@@ -15,6 +15,7 @@
 package client
 
 import (
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
@@ -24,6 +25,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	apiregistrationinstall "k8s.io/kube-aggregator/pkg/apis/apiregistration/install"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
@@ -42,6 +44,8 @@ func init() {
 			kubernetesscheme.AddToScheme,
 			resourcesv1alpha1.AddToScheme,
 			machinev1alpha1.AddToScheme,
+			extensionsv1alpha1.AddToScheme,
+			druidv1alpha1.AddToScheme,
 		)
 		targetSchemeBuilder = runtime.NewSchemeBuilder(
 			kubernetesscheme.AddToScheme,
@@ -56,6 +60,7 @@ func init() {
 	utilruntime.Must(targetSchemeBuilder.AddToScheme(TargetScheme))
 	utilruntime.Must(targetSchemeBuilder.AddToScheme(CombinedScheme))
 
+	apiextensionsinstall.Install(SourceScheme)
 	apiextensionsinstall.Install(TargetScheme)
 	apiregistrationinstall.Install(TargetScheme)
 	apiextensionsinstall.Install(CombinedScheme)
