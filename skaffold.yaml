@@ -847,6 +847,7 @@ build:
         - pkg/gardenlet/controller/seed/lease
         - pkg/gardenlet/controller/seed/seed
         - pkg/gardenlet/controller/shoot
+        - pkg/gardenlet/controller/shoot/migration
         - pkg/gardenlet/controller/shootstate
         - pkg/gardenlet/controller/shootstate/secret
         - pkg/gardenlet/controller/shootstate/extensions

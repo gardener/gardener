@@ -19,7 +19,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -43,31 +42,6 @@ func ShootFilterFunc(seedName string) func(obj interface{}) bool {
 
 		return *shoot.Status.SeedName == seedName
 	}
-}
-
-// ShootMigrationFilterFunc returns a filtering func for shoots that are being migrated to a different seed.
-func ShootMigrationFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		shoot, ok := obj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return false
-		}
-
-		return ShootIsBeingMigratedToSeed(ctx, c, shoot, seedName)
-	}
-}
-
-// ShootIsBeingMigratedToSeed checks if the given shoot is currently being migrated to the seed with the given name,
-// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
-func ShootIsBeingMigratedToSeed(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, seedName string) bool {
-	if shoot.Spec.SeedName != nil && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName && *shoot.Spec.SeedName == seedName {
-		seed := &gardencorev1beta1.Seed{}
-		if err := c.Get(ctx, kutil.Key(*shoot.Status.SeedName), seed); err != nil {
-			return false
-		}
-		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
-	}
-	return false
 }
 
 // ManagedSeedFilterFunc returns a filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible..

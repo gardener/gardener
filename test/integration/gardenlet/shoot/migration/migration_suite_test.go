@@ -36,14 +36,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/migration"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -166,6 +165,19 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
+	By("registering controller")
+	Expect((&migration.Reconciler{
+		Clock: fakeClock,
+		Config: config.ShootMigrationControllerConfiguration{
+			ConcurrentSyncs:            pointer.Int(5),
+			SyncPeriod:                 &metav1.Duration{Duration: 500 * time.Millisecond},
+			GracePeriod:                &metav1.Duration{Duration: gracePeriod},
+			LastOperationStaleDuration: &metav1.Duration{Duration: lastOperationStaleDuration},
+		},
+		SeedName: seed.Name,
+	}).AddToManager(mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -178,37 +190,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
-	By("starting controller")
-	c, err := shoot.NewShootController(ctx, mgr.GetLogger(), mgr, nil, nil, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			ShootMigration: &config.ShootMigrationControllerConfiguration{
-				ConcurrentSyncs:            pointer.Int(5),
-				SyncPeriod:                 &metav1.Duration{Duration: 500 * time.Millisecond},
-				GracePeriod:                &metav1.Duration{Duration: 1 * time.Second},
-				LastOperationStaleDuration: &metav1.Duration{Duration: 500 * time.Millisecond},
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seed.Name,
-				},
-				Spec: gardencore.SeedSpec{
-					Settings: &gardencore.SeedSettings{
-						OwnerChecks: &gardencore.SeedSettingOwnerChecks{
-							Enabled: true,
-						},
-					},
-				},
-			},
-		},
-	}, nil, "", nil, fakeClock)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 0, 0, 5)
-	}()
 })
