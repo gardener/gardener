@@ -324,6 +324,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		fns = append(fns, r.ensureNetworkPolicy)
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
+		fns = append(fns, r.ensureValidatingWebhookConfiguration)
 	}
 
 	if err := flow.Sequential(fns...)(ctx); err != nil {
@@ -370,19 +371,20 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			return err
 		}
 
-		objectsToDelete = append(objectsToDelete,
+		if err := gutil.ConfirmDeletion(ctx, r.client, crd); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+
+		objectsToDelete = append([]client.Object{
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crd.Name}},
 			r.emptyMutatingWebhookConfiguration(),
+			r.emptyValidatingWebhookConfiguration(),
 			r.emptyClusterRole(),
 			r.emptyClusterRoleBinding(),
-		)
+		}, objectsToDelete...)
 	}
 
-	return kutil.DeleteObjects(
-		ctx,
-		r.client,
-		objectsToDelete...,
-	)
+	return kutil.DeleteObjects(ctx, r.client, objectsToDelete...)
 }
 
 func (r *resourceManager) emptyCustomResourceDefinition() (*apiextensionsv1.CustomResourceDefinition, error) {
@@ -547,6 +549,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			DisableCachedClient: r.values.TargetDisableCache,
 		}
+	} else {
+		config.Webhooks.CRDDeletionProtection.Enabled = true
+		config.Webhooks.ExtensionValidation.Enabled = true
 	}
 
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
@@ -1056,6 +1061,28 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager" + suffix, Namespace: r.namespace}}
 }
 
+func (r *resourceManager) ensureValidatingWebhookConfiguration(ctx context.Context) error {
+	validatingWebhookConfiguration := r.emptyValidatingWebhookConfiguration()
+
+	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, validatingWebhookConfiguration, func() error {
+		validatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
+			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
+		})
+		validatingWebhookConfiguration.Webhooks = r.getValidatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
+		return nil
+	})
+	return err
+}
+
+func (r *resourceManager) emptyValidatingWebhookConfiguration() *admissionregistrationv1.ValidatingWebhookConfiguration {
+	return &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+}
+
 func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
 	if !found {
@@ -1184,6 +1211,16 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	return webhooks
 }
 
+func (r *resourceManager) getValidatingWebhookConfigurationWebhooks(
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+) []admissionregistrationv1.ValidatingWebhook {
+	return append(
+		GetCRDDeletionProtectionValidatingWebhooks(secretServerCA, buildClientConfigFn),
+		GetExtensionValidationValidatingWebhooks(secretServerCA, buildClientConfigFn)...,
+	)
+}
+
 // GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
@@ -1303,11 +1340,13 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 		webhooks      []admissionregistrationv1.ValidatingWebhook
 	)
 
-	for resource, webhook := range map[string]struct {
-		path string
-		rule admissionregistrationv1.Rule
+	for _, webhook := range []struct {
+		resource string
+		path     string
+		rule     admissionregistrationv1.Rule
 	}{
-		"backupbuckets": {
+		{
+			resource: "backupbuckets",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1315,7 +1354,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathBackupBucket,
 		},
-		"backupentries": {
+		{
+			resource: "backupentries",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1323,7 +1363,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathBackupEntry,
 		},
-		"bastions": {
+		{
+			resource: "bastions",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1331,7 +1372,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathBastion,
 		},
-		"containerruntimes": {
+		{
+			resource: "containerruntimes",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1339,7 +1381,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathContainerRuntime,
 		},
-		"controlplanes": {
+		{
+			resource: "controlplanes",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1347,7 +1390,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathControlPlane,
 		},
-		"dnsrecords": {
+		{
+			resource: "dnsrecords",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1355,7 +1399,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathDNSRecord,
 		},
-		"etcds": {
+		{
+			resource: "etcds",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
 				APIVersions: []string{druidv1alpha1.GroupVersion.Version},
@@ -1363,7 +1408,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathEtcd,
 		},
-		"extensions": {
+		{
+			resource: "extensions",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1371,7 +1417,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathExtension,
 		},
-		"infrastructures": {
+		{
+			resource: "infrastructures",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1379,7 +1426,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathInfrastructure,
 		},
-		"networks": {
+		{
+			resource: "networks",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1387,7 +1435,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathNetwork,
 		},
-		"operatingsystemconfigs": {
+		{
+			resource: "operatingsystemconfigs",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1395,7 +1444,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			},
 			path: extensionvalidation.WebhookPathOperatingSystemConfig,
 		},
-		"workers": {
+		{
+			resource: "workers",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
@@ -1405,7 +1455,7 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 		},
 	} {
 		webhooks = append(webhooks, admissionregistrationv1.ValidatingWebhook{
-			Name: "validation.extensions." + resource + ".resources.gardener.cloud",
+			Name: "validation.extensions." + webhook.resource + ".resources.gardener.cloud",
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Rule:       webhook.rule,

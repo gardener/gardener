@@ -261,14 +261,18 @@ var _ = Describe("Seed controller tests", func() {
 							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 						}).Should(Succeed())
 
-						// The gardener-resource-manager is not really running in this test scenario, hence there is nothing
-						// to serve the webhook endpoint. However, the envtest kube-apiserver would try to reach it, so
-						// let's better delete it here for the sake of this test.
-						By("Delete gardener-resource-manager webhook")
+						// The gardener-resource-manager is not really running in this test scenario, hence there is
+						// nothing to serve the webhook endpoints. However, the envtest kube-apiserver would try to
+						// reach them, so let's better delete them here for the sake of this test.
+						By("Delete gardener-resource-manager webhooks")
+						mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
+						validatingWebhookConfiguration := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
 						Eventually(func(g Gomega) {
-							mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+
 							g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
+							g.Expect(testClient.Delete(ctx, validatingWebhookConfiguration)).To(Succeed())
 						}).Should(Succeed())
 					} else {
 						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for

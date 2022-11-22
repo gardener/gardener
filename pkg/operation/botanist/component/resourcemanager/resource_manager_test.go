@@ -115,31 +115,32 @@ var _ = Describe("ResourceManager", func() {
 		networkPolicyPort                    = intstr.FromInt(serverPort)
 		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
 
-		allowAll                     []rbacv1.PolicyRule
-		allowManagedResources        []rbacv1.PolicyRule
-		allowMachines                []rbacv1.PolicyRule
-		cfg                          Values
-		clusterRole                  *rbacv1.ClusterRole
-		clusterRoleBinding           *rbacv1.ClusterRoleBinding
-		configMap                    *corev1.ConfigMap
-		deployment                   *appsv1.Deployment
-		configMapFor                 func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap
-		deploymentFor                func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
-		defaultLabels                map[string]string
-		roleBinding                  *rbacv1.RoleBinding
-		role                         *rbacv1.Role
-		secret                       *corev1.Secret
-		service                      *corev1.Service
-		serviceAccount               *corev1.ServiceAccount
-		updateMode                   = vpaautoscalingv1.UpdateModeAuto
-		controlledValues             = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		pdbV1beta1                   *policyv1beta1.PodDisruptionBudget
-		pdbV1                        *policyv1.PodDisruptionBudget
-		vpa                          *vpaautoscalingv1.VerticalPodAutoscaler
-		mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration
-		managedResourceSecret        *corev1.Secret
-		managedResource              *resourcesv1alpha1.ManagedResource
-		networkPolicy                *networkingv1.NetworkPolicy
+		allowAll                       []rbacv1.PolicyRule
+		allowManagedResources          []rbacv1.PolicyRule
+		allowMachines                  []rbacv1.PolicyRule
+		cfg                            Values
+		clusterRole                    *rbacv1.ClusterRole
+		clusterRoleBinding             *rbacv1.ClusterRoleBinding
+		configMap                      *corev1.ConfigMap
+		deployment                     *appsv1.Deployment
+		configMapFor                   func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap
+		deploymentFor                  func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
+		defaultLabels                  map[string]string
+		roleBinding                    *rbacv1.RoleBinding
+		role                           *rbacv1.Role
+		secret                         *corev1.Secret
+		service                        *corev1.Service
+		serviceAccount                 *corev1.ServiceAccount
+		updateMode                     = vpaautoscalingv1.UpdateModeAuto
+		controlledValues               = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		pdbV1beta1                     *policyv1beta1.PodDisruptionBudget
+		pdbV1                          *policyv1.PodDisruptionBudget
+		vpa                            *vpaautoscalingv1.VerticalPodAutoscaler
+		mutatingWebhookConfiguration   *admissionregistrationv1.MutatingWebhookConfiguration
+		validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
+		managedResourceSecret          *corev1.Secret
+		managedResource                *resourcesv1alpha1.ManagedResource
+		networkPolicy                  *networkingv1.NetworkPolicy
 	)
 
 	BeforeEach(func() {
@@ -442,6 +443,9 @@ var _ = Describe("ResourceManager", func() {
 					Enabled:       true,
 					SchedulerName: pointer.String("bin-packing-scheduler"),
 				}
+			} else {
+				config.Webhooks.CRDDeletionProtection.Enabled = true
+				config.Webhooks.ExtensionValidation.Enabled = true
 			}
 
 			data, err := runtime.Encode(codec, config)
@@ -1204,6 +1208,404 @@ subjects:
   namespace: kube-system
 `
 
+		validatingWebhookConfiguration = &admissionregistrationv1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-resource-manager",
+				Namespace: deployNamespace,
+				Labels: map[string]string{
+					"app": "gardener-resource-manager",
+					"remediation.webhook.shoot.gardener.cloud/exclude": "true",
+				},
+			},
+			Webhooks: []admissionregistrationv1.ValidatingWebhook{
+				{
+					Name: "crd-deletion-protection.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"apiextensions.k8s.io"},
+							APIVersions: []string{"v1beta1", "v1"},
+							Resources:   []string{"customresourcedefinitions"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"DELETE"},
+					}},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ObjectSelector:    &metav1.LabelSelector{MatchLabels: map[string]string{"gardener.cloud/deletion-protected": "true"}},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/webhooks/validate-crd-deletion"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "cr-deletion-protection.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"druid.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources: []string{
+									"etcds",
+								},
+							},
+							Operations: []admissionregistrationv1.OperationType{"DELETE"},
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources: []string{
+									"backupbuckets",
+									"backupentries",
+									"bastions",
+									"containerruntimes",
+									"controlplanes",
+									"dnsrecords",
+									"extensions",
+									"infrastructures",
+									"networks",
+									"operatingsystemconfigs",
+									"workers",
+								},
+							},
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/webhooks/validate-crd-deletion"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.backupbuckets.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"backupbuckets"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-backupbucket"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.backupentries.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"backupentries"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-backupentry"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.bastions.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"bastions"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-bastion"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.containerruntimes.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"containerruntimes"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-containerruntime"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.controlplanes.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"controlplanes"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-controlplane"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.dnsrecords.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"dnsrecords"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-dnsrecord"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.etcds.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"druid.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"etcds"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-druid-gardener-cloud-v1alpha1-etcd"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.extensions.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"extensions"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-extension"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.infrastructures.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"infrastructures"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-infrastructure"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.networks.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"networks"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-network"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.operatingsystemconfigs.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"operatingsystemconfigs"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "validation.extensions.workers.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"workers"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicy,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-worker"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+			},
+		}
+
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-gardener-resource-manager",
@@ -1663,6 +2065,11 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(mutatingWebhookConfiguration))
 						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&admissionregistrationv1.ValidatingWebhookConfiguration{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&admissionregistrationv1.ValidatingWebhookConfiguration{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(validatingWebhookConfiguration))
+						}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
@@ -1861,15 +2268,17 @@ subjects:
 
 			It("should delete all created resources", func() {
 				gomock.InOrder(
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
+					c.EXPECT().Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}}),
+					c.EXPECT().Delete(ctx, &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}}),
-					c.EXPECT().Delete(ctx, &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
-					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 				)
 
 				Expect(resourceManager.Destroy(ctx)).To(Succeed())
