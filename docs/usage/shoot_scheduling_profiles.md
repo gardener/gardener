@@ -2,7 +2,7 @@
 
 This guide describes the available scheduling profiles and how they can be configured in the Shoot cluster. It also clarifies how a custom scheduling profile can be configured.
 
-## Scheduling profiles 
+## Scheduling profiles
 
 The scheduling process in the [kube-scheduler](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-scheduler/) happens in series of stages. A [scheduling profile](https://kubernetes.io/docs/reference/scheduling/config/#profiles) allows configuring the different stages of the scheduling.
 

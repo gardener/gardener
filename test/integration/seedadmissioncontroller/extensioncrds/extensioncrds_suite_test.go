@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,11 +37,9 @@ import (
 	cmdutils "github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/podschedulername"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -74,7 +71,6 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			ValidatingWebhooks: []*admissionregistrationv1.ValidatingWebhookConfiguration{getValidatingWebhookConfig()},
-			MutatingWebhooks:   []*admissionregistrationv1.MutatingWebhookConfiguration{getMutatingWebhookConfig()},
 		},
 	}
 
@@ -162,14 +158,4 @@ func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConf
 
 	webhookConfig.Webhooks = webhooks
 	return webhookConfig
-}
-
-func getMutatingWebhookConfig() *admissionregistrationv1.MutatingWebhookConfiguration {
-	clientConfig := admissionregistrationv1.WebhookClientConfig{
-		Service: &admissionregistrationv1.ServiceReference{
-			Path: pointer.String(podschedulername.WebhookPath),
-		},
-	}
-
-	return gardenerkubescheduler.GetMutatingWebhookConfig(clientConfig)
 }

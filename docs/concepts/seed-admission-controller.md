@@ -16,9 +16,3 @@ Accidental or undesired deletions of those resource can cause tremendous and har
 Together with the deployment of the Gardener seed admission controller a `ValidatingWebhookConfiguration` for `CustomResourceDefinitions` and most (custom) resources in the `extensions.gardener.cloud/v1alpha1` API group is registered.
 It prevents `DELETE` requests for those `CustomResourceDefinitions` labeled with `gardener.cloud/deletion-protected=true`, and for all mentioned custom resources if they were not previously annotated with the `confirmation.gardener.cloud/deletion=true`.
 This prevents that undesired `kubectl delete <...>` requests are accepted.
-
-### Mutating Webhooks
-
-The admission controller endpoint `/webhooks/default-pod-scheduler-name/gardener-kube-scheduler` mutates `pods` and adds `gardener-kube-scheduler` to `.spec.scheduleName`.
-
-When `SeedKubeScheduler` feature gate is enabled, all control plane components are mutated. The scheduler scores `Nodes` with most resource usage higher than the rest, resulting in greater resource utilization.

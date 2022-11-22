@@ -17,11 +17,9 @@ package webhook
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/podschedulername"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -36,7 +34,6 @@ func AddToManager(mgr manager.Manager) error {
 	}
 
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(log.WithName(extensioncrds.HandlerName)), RecoverPanic: true})
-	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName), RecoverPanic: true})
 
 	return nil
 }

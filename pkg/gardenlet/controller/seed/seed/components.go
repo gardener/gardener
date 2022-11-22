@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -103,24 +102,6 @@ func defaultKubeStateMetrics(
 		Image:       image.String(),
 		Replicas:    1,
 	}), nil
-}
-
-func defaultKubeScheduler(
-	c client.Client,
-	imageVector imagevector.ImageVector,
-	secretsManager secretsmanager.Interface,
-	seedVersion *semver.Version,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	return gardenerkubescheduler.Bootstrap(c, secretsManager, gardenNamespaceName, image, seedVersion)
 }
 
 func defaultGardenerSeedAdmissionController(
