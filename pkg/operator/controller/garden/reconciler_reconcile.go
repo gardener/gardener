@@ -108,6 +108,10 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	if !hvpaEnabled() {
+		hvpaCRD = component.OpDestroy(hvpaCRD)
+	}
+
 	var (
 		g            = flow.NewGraph("Garden reconciliation")
 		deployVPACRD = g.Add(flow.Task{
@@ -116,12 +120,7 @@ func (r *Reconciler) reconcile(
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
 			Name: "Reconciling custom resource definition for HVPA",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if !hvpaEnabled() {
-					return hvpaCRD.Destroy(ctx)
-				}
-				return hvpaCRD.Deploy(ctx)
-			}).DoIf(hvpaEnabled()),
+			Fn:   hvpaCRD.Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
