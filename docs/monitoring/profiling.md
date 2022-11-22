@@ -46,9 +46,9 @@ $ curl -k --cert ./hack/local-development/local-garden/certificates/certs/defaul
 $ go tool pprof /tmp/heap
 ```
 
-## gardener-admission-controller, gardener-controller-manager, gardener-scheduler, gardenlet
+## gardener-{admission-controller,controller-manager,scheduler,resource-manager}, gardenlet
 
-gardener-controller-manager, gardener-admission-controller, gardener-scheduler and gardenlet also allow enabling profiling handlers via their respective component configs (currently disabled by default).
+gardener-controller-manager, gardener-admission-controller, gardener-scheduler, gardener-resource-manager and gardenlet also allow enabling profiling handlers via their respective component configs (currently disabled by default).
 Here is an example for the `gardener-admission-controller`'s configuration and how to enable it (it looks similar for the other components):
 
 ```yaml
@@ -71,22 +71,3 @@ For example (gardener-admission-controller):
 $ curl http://localhost:2723/debug/pprof/heap > /tmp/heap
 $ go tool pprof /tmp/heap
 ```
-
-## gardener-seed-admission-controller, gardener-resource-manager
-
-gardener-seed-admission-controller and gardener-resource-manager provide the following flags for enabling profiling handlers (disabled by default):
-
-```
---contention-profiling    Enable lock contention profiling, if profiling is enabled
---profiling               Enable profiling via web interface host:port/debug/pprof/
-```
-
-The handlers are served on the same port as configured in the `--metrics-bind-address` flag (defaults to `":8080"`) via HTTP.
-
-For example (gardener-seed-admission-controller):
-
-```bash
-$ curl http://localhost:8080/debug/pprof/heap > /tmp/heap
-$ go tool pprof /tmp/heap
-```
-

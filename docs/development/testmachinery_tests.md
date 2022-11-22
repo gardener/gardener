@@ -33,7 +33,6 @@ test
 │  ├── envtest
 │  ├── resourcemanager
 │  ├── scheduler
-│  ├── seedadmissioncontroller
 │  ├── shootmaintenance
 │  └── ...
 └── testmachinery # test machinery tests

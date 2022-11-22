@@ -15,7 +15,6 @@
   * [Gardener Controller Manager](concepts/controller-manager.md)
   * [Gardener Scheduler](concepts/scheduler.md)
   * [Gardener Admission Controller](concepts/admission-controller.md)
-  * [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
   * [Gardener Resource Manager](concepts/resource-manager.md)
   * [Gardener Operator](concepts/operator.md)
   * [Gardenlet](concepts/gardenlet.md)

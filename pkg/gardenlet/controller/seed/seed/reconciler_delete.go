@@ -34,6 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -48,12 +49,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -178,7 +179,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 	var (
 		dnsRecord        = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
 		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
-		gsac             = seedadmissioncontroller.New(seedClient, r.GardenNamespace, nil, seedadmissioncontroller.Values{})
 		hvpa             = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
@@ -192,6 +192,16 @@ func (r *Reconciler) runDeleteSeedFlow(
 		istioCRDs        = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
 		istio            = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)
+
+	// TODO(rfranzke): Delete this in a future version.
+	{
+		if err := kutil.DeleteObjects(ctx, seedClient,
+			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
+		); err != nil {
+			return err
+		}
+	}
 
 	var (
 		g                = flow.NewGraph("Seed cluster deletion")
@@ -219,10 +229,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyClusterAutoscaler = g.Add(flow.Task{
 			Name: "Destroying cluster-autoscaler",
 			Fn:   component.OpDestroyAndWait(autoscaler).Destroy,
-		})
-		destroySeedAdmissionController = g.Add(flow.Task{
-			Name: "Destroying gardener-seed-admission-controller",
-			Fn:   component.OpDestroyAndWait(gsac).Destroy,
 		})
 		destroyNginxIngress = g.Add(flow.Task{
 			Name: "Destroying nginx-ingress",
@@ -266,7 +272,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
-			destroySeedAdmissionController,
 			destroyNginxIngress,
 			destroyEtcdDruid,
 			destroyClusterIdentity,

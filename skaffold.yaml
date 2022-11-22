@@ -904,7 +904,6 @@ build:
         - pkg/operation/botanist/component/nodelocaldns
         - pkg/operation/botanist/component/nodeproblemdetector
         - pkg/operation/botanist/component/resourcemanager
-        - pkg/operation/botanist/component/seedadmissioncontroller
         - pkg/operation/botanist/component/seedsystem
         - pkg/operation/botanist/component/shared
         - pkg/operation/botanist/component/shootsystem
@@ -1049,52 +1048,6 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
-  - image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
-    ko:
-      main: ./cmd/gardener-seed-admission-controller
-      ldflags:
-      - "{{.LD_FLAGS}}"
-      dependencies:
-        paths:
-        - cmd/gardener-seed-admission-controller/app
-        - cmd/utils
-        - pkg/apis/core
-        - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
-        - pkg/apis/core/v1beta1
-        - pkg/apis/core/v1beta1/constants
-        - pkg/apis/extensions
-        - pkg/apis/extensions/v1alpha1
-        - pkg/apis/operations
-        - pkg/apis/operations/install
-        - pkg/apis/operations/v1alpha1
-        - pkg/apis/operator
-        - pkg/apis/operator/v1alpha1
-        - pkg/apis/resources
-        - pkg/apis/resources/v1alpha1
-        - pkg/apis/seedmanagement
-        - pkg/apis/seedmanagement/encoding
-        - pkg/apis/seedmanagement/install
-        - pkg/apis/seedmanagement/v1alpha1
-        - pkg/apis/settings
-        - pkg/apis/settings/install
-        - pkg/apis/settings/v1alpha1
-        - pkg/chartrenderer
-        - pkg/client/kubernetes
-        - pkg/client/kubernetes/cache
-        - pkg/controllerutils/routes
-        - pkg/gardenlet/apis/config
-        - pkg/gardenlet/apis/config/v1alpha1
-        - pkg/healthz
-        - pkg/logger
-        - pkg/seedadmissioncontroller/webhook
-        - pkg/utils
-        - pkg/utils/context
-        - pkg/utils/errors
-        - pkg/utils/retry
-        - pkg/utils/timewindow
-        - pkg/utils/version
-        - vendor
 deploy:
   helm:
     hooks:
@@ -1126,8 +1079,6 @@ deploy:
         # dummy artifact overrides to make skaffold load images into cluster
         resource-manager:
           image: eu.gcr.io/gardener-project/gardener/resource-manager
-        seed-admission-controller:
-          image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
       setValueTemplates:
         # on a local cluster, skaffold uses a local immutable tag for artifacts,
         # overwrite our image vector to use the image that was just built
@@ -1140,9 +1091,6 @@ deploy:
           - name: gardener-resource-manager
             repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
             tag: "{{.IMAGE_TAG7}}"
-          - name: gardener-seed-admission-controller
-            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
-            tag: "{{.IMAGE_TAG8}}"
       imageStrategy:
         helm: {}
       valuesFiles:
@@ -1169,7 +1117,7 @@ profiles:
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind2.yaml
-    # for the kind2 profile only 4 images are built: provider-local, gardenlet, resource-manager and gardener-seed-admission-controller
+    # for the kind2 profile only 4 images are built: provider-local, gardenlet, resource-manager
     # so the imageVectorOverwrite must be patched to specify the correct tags
   - op: replace
     path: /deploy/helm/releases/0/setValueTemplates
@@ -1179,9 +1127,6 @@ profiles:
         - name: gardener-resource-manager
           repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
           tag: "{{.IMAGE_TAG3}}"
-        - name: gardener-seed-admission-controller
-          repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
-          tag: "{{.IMAGE_TAG4}}"
 
 - name: ha-single-zone
   patches:

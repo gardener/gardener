@@ -59,15 +59,6 @@ WORKDIR /
 
 ENTRYPOINT ["/gardener-admission-controller"]
 
-############# seed-admission-controller #############
-FROM distroless-static AS seed-admission-controller
-
-COPY --from=builder /go/bin/gardener-seed-admission-controller /gardener-seed-admission-controller
-
-WORKDIR /
-
-ENTRYPOINT ["/gardener-seed-admission-controller"]
-
 ############# resource-manager #############
 FROM distroless-static AS resource-manager
 
