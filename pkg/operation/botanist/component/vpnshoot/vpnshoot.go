@@ -505,6 +505,24 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		if _, ok := deploymentOrStatefulSet.(*appsv1.StatefulSet); ok {
 			kind = "StatefulSet"
 		}
+		containerNames := []string{containerName}
+		if v.values.ReversedVPN.Enabled && v.values.VPNHighAvailabilityEnabled {
+			containerNames = nil
+			for i := 0; i < v.values.VPNHighAvailabilitySeedServers; i++ {
+				containerNames = append(containerNames, fmt.Sprintf("%s-s%d", containerName, i))
+			}
+		}
+		var containerPolicies []vpaautoscalingv1.ContainerResourcePolicy
+		for _, name := range containerNames {
+			containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName: name,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("10Mi"),
+				},
+				ControlledValues: &controlledValues,
+			})
+		}
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpn-shoot",
@@ -520,16 +538,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 					UpdateMode: &vpaUpdateMode,
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: containerName,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("10Mi"),
-							},
-							ControlledValues: &controlledValues,
-						},
-					},
+					ContainerPolicies: containerPolicies,
 				},
 			},
 		}
