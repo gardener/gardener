@@ -29,10 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
 )
 
@@ -51,22 +49,8 @@ var _ = Describe("Add", func() {
 
 		reconciler = &Reconciler{
 			GardenClient: fakeClient,
-			Config: config.GardenletConfiguration{
-				SeedConfig: &config.SeedConfig{
-					SeedTemplate: gardencore.SeedTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "seed",
-						},
-						Spec: gardencore.SeedSpec{
-							Settings: &gardencore.SeedSettings{
-								OwnerChecks: &gardencore.SeedSettingOwnerChecks{
-									Enabled: true,
-								},
-							},
-						},
-					},
-				},
-			}}
+			SeedName:     "seed",
+		}
 
 		backupEntry = &gardencorev1beta1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{

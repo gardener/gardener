@@ -44,7 +44,8 @@ func AddToManager(
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
 		if err := (&migration.Reconciler{
-			Config: cfg,
+			Config:   *cfg.Controllers.BackupEntryMigration,
+			SeedName: cfg.SeedConfig.Name,
 		}).AddToManager(mgr, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding migration reconciler: %w", err)
 		}

@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -189,30 +188,13 @@ var _ = BeforeSuite(func() {
 	By("registering controller")
 	Expect((&migration.Reconciler{
 		Clock: fakeClock,
-		Config: config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
-				BackupEntryMigration: &config.BackupEntryMigrationControllerConfiguration{
-					ConcurrentSyncs:            pointer.Int(5),
-					SyncPeriod:                 &metav1.Duration{Duration: 500 * time.Millisecond},
-					GracePeriod:                &metav1.Duration{Duration: gracePeriod},
-					LastOperationStaleDuration: &metav1.Duration{Duration: lastOperationStaleDuration},
-				},
-			},
-			SeedConfig: &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: seed.Name,
-					},
-					Spec: gardencore.SeedSpec{
-						Settings: &gardencore.SeedSettings{
-							OwnerChecks: &gardencore.SeedSettingOwnerChecks{
-								Enabled: true,
-							},
-						},
-					},
-				},
-			},
+		Config: config.BackupEntryMigrationControllerConfiguration{
+			ConcurrentSyncs:            pointer.Int(5),
+			SyncPeriod:                 &metav1.Duration{Duration: 500 * time.Millisecond},
+			GracePeriod:                &metav1.Duration{Duration: gracePeriod},
+			LastOperationStaleDuration: &metav1.Duration{Duration: lastOperationStaleDuration},
 		},
+		SeedName: seed.Name,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")

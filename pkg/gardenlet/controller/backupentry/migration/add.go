@@ -51,7 +51,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		mgr,
 		controller.Options{
 			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.BackupEntryMigration.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
 		},
 	)
@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 func (r *Reconciler) IsBeingMigratedPredicate() predicate.Predicate {
 	return &isBeingMigratedPredicate{
 		reader:   r.GardenClient,
-		seedName: r.Config.SeedConfig.Name,
+		seedName: r.SeedName,
 	}
 }
 
