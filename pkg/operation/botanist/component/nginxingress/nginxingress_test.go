@@ -380,7 +380,7 @@ metadata:
   name: nginx-ingress-k8s-backend
   namespace: ` + namespace + `
 spec:
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
