@@ -92,7 +92,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("garden"))).To(Succeed())
 			g.Expect(managedResourceList.Items).To(ConsistOf(
 				healthyManagedResource("garden-system"),
+				healthyManagedResource("hvpa"),
 				healthyManagedResource("vpa"),
+				healthyManagedResource("etcd-druid"),
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 

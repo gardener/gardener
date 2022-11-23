@@ -15,6 +15,7 @@
 package client
 
 import (
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	apiextensionsinstall "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -37,6 +38,7 @@ func init() {
 			operatorv1alpha1.AddToScheme,
 			resourcesv1alpha1.AddToScheme,
 			vpaautoscalingv1.AddToScheme,
+			druidv1alpha1.AddToScheme,
 		)
 	)
 

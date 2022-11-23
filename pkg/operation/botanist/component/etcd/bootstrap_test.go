@@ -58,7 +58,7 @@ var _ = Describe("Etcd", func() {
 		ctrl         *gomock.Controller
 		c            *mockclient.MockClient
 		bootstrapper component.DeployWaiter
-		conf         *config.GardenletConfiguration
+		etcdConfig   *config.ETCDConfig
 
 		ctx                       = context.TODO()
 		fakeErr                   = fmt.Errorf("fake error")
@@ -67,6 +67,7 @@ var _ = Describe("Etcd", func() {
 		etcdDruidImage            = "etcd/druid:1.2.3"
 		imageVectorOverwriteEmpty *string
 		imageVectorOverwriteFull  = pointer.String("some overwrite")
+		priorityClassName         = "some-priority-class"
 
 		managedResourceName       = "etcd-druid"
 		managedResourceSecretName = "managedresource-" + managedResourceName
@@ -75,24 +76,22 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		conf = &config.GardenletConfiguration{
-			ETCDConfig: &config.ETCDConfig{
-				ETCDController: &config.ETCDController{
-					Workers: pointer.Int64Ptr(50),
-				},
-				CustodianController: &config.CustodianController{
-					Workers: pointer.Int64Ptr(3),
-				},
-				BackupCompactionController: &config.BackupCompactionController{
-					Workers:                pointer.Int64Ptr(3),
-					EnableBackupCompaction: pointer.Bool(true),
-					EventsThreshold:        pointer.Int64(1000000),
-					ActiveDeadlineDuration: &metav1.Duration{Duration: time.Hour * 3},
-				},
+		etcdConfig = &config.ETCDConfig{
+			ETCDController: &config.ETCDController{
+				Workers: pointer.Int64Ptr(50),
+			},
+			CustodianController: &config.CustodianController{
+				Workers: pointer.Int64Ptr(3),
+			},
+			BackupCompactionController: &config.BackupCompactionController{
+				Workers:                pointer.Int64Ptr(3),
+				EnableBackupCompaction: pointer.Bool(true),
+				EventsThreshold:        pointer.Int64(1000000),
+				ActiveDeadlineDuration: &metav1.Duration{Duration: time.Hour * 3},
 			},
 		}
 
-		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, conf, etcdDruidImage, imageVectorOverwriteEmpty)
+		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteEmpty, priorityClassName)
 	})
 
 	AfterEach(func() {
@@ -370,7 +369,7 @@ spec:
           requests:
             cpu: 50m
             memory: 128Mi
-      priorityClassName: gardener-system-800
+      priorityClassName: ` + priorityClassName + `
       serviceAccountName: etcd-druid
 status: {}
 `
@@ -430,7 +429,7 @@ spec:
         - mountPath: /charts_overwrite
           name: imagevector-overwrite
           readOnly: true
-      priorityClassName: gardener-system-800
+      priorityClassName: ` + priorityClassName + `
       serviceAccountName: etcd-druid
       volumes:
       - configMap:
@@ -531,7 +530,7 @@ status:
 		})
 
 		It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-			bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, conf, etcdDruidImage, imageVectorOverwriteFull)
+			bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, priorityClassName)
 
 			managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"] = []byte(configMapImageVectorOverwriteYAML)
 			managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)

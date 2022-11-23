@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
@@ -55,30 +54,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func defaultEtcdDruid(
-	c client.Client,
-	seedVersion *semver.Version,
-	conf *config.GardenletConfiguration,
-	imageVector imagevector.ImageVector,
-	imageVectorOverwrites map[string]string,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	var imageVectorOverwrite *string
-	if val, ok := imageVectorOverwrites[etcd.Druid]; ok {
-		imageVectorOverwrite = &val
-	}
-
-	return etcd.NewBootstrapper(c, gardenNamespaceName, seedVersion, conf, image.String(), imageVectorOverwrite), nil
-}
 
 func defaultKubeStateMetrics(
 	c client.Client,
@@ -266,8 +241,8 @@ func defaultDependencyWatchdogs(
 		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String(), KubernetesVersion: seedVersion}
 	)
 
-	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
-	dwdProbe = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues))
+	dwdEndpoint = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
+	dwdProbe = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues))
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
@@ -323,37 +298,6 @@ func defaultDependencyWatchdogs(
 	return
 }
 
-func defaultHVPA(
-	c client.Client,
-	seedVersion *semver.Version,
-	imageVector imagevector.ImageVector,
-	enabled bool,
-	gardenNamespaceName string,
-) (
-	deployer component.DeployWaiter,
-	err error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameHvpaController)
-	if err != nil {
-		return nil, err
-	}
-
-	deployer = hvpa.New(
-		c,
-		gardenNamespaceName,
-		hvpa.Values{
-			Image:             image.String(),
-			KubernetesVersion: seedVersion,
-		},
-	)
-
-	if !enabled {
-		deployer = component.OpDestroy(deployer)
-	}
-
-	return deployer, nil
-}
-
 func defaultVPNAuthzServer(
 	ctx context.Context,
 	c client.Client,
@@ -390,7 +334,7 @@ func defaultVPNAuthzServer(
 		return component.NoOp(), nil
 	}
 
-	return component.OpDestroy(vpnAuthzServer), nil
+	return component.OpDestroyWithoutWait(vpnAuthzServer), nil
 }
 
 func defaultSystem(

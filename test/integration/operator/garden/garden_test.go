@@ -21,6 +21,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +30,8 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -39,6 +42,7 @@ var _ = Describe("Garden controller tests", func() {
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+		DeferCleanup(test.WithFeatureGate(operatorfeatures.FeatureGate, features.HVPA, true))
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -94,6 +98,17 @@ var _ = Describe("Garden controller tests", func() {
 		))
 		Expect(garden.Status.Gardener).NotTo(BeNil())
 
+		By("Verify that the custom resource definitions have been created")
+		// When the controller succeeds then it deletes the `ManagedResource` CRD, so we only need to ensure here that
+		// the `ManagedResource` API is no longer available.
+		Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
+			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
+			return crdList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
+		))
+
 		By("Verify that CA secret was generated")
 		Eventually(func(g Gomega) []corev1.Secret {
 			secretList := &corev1.SecretList{}
@@ -142,6 +157,8 @@ var _ = Describe("Garden controller tests", func() {
 		}).Should(ConsistOf(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("garden-system")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vpa")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpa")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
 		))
 
 		By("Wait for Reconciled condition to be set to True")
@@ -159,6 +176,18 @@ var _ = Describe("Garden controller tests", func() {
 		Eventually(func(g Gomega) error {
 			return testClient.List(ctx, &resourcesv1alpha1.ManagedResourceList{}, client.InNamespace(testNamespace.Name))
 		}).Should(BeNotFoundError())
+
+		By("Verify that the custom resource definitions have been deleted")
+		// When the controller succeeds then it deletes the `ManagedResource` CRD, so we only need to ensure here that
+		// the `ManagedResource` API is no longer available.
+		Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
+			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
+			return crdList.Items
+		}).ShouldNot(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
+		))
 
 		By("Verify that gardener-resource-manager has been deleted")
 		Eventually(func(g Gomega) error {

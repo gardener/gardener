@@ -28,5 +28,6 @@ var FeatureGate = featuregate.NewFeatureGate()
 func RegisterFeatureGates() {
 	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
 		features.DefaultSeccompProfile,
+		features.HVPA,
 	)))
 }

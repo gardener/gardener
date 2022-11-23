@@ -418,7 +418,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 
 		log.Info("Deploying and waiting for gardener-resource-manager to be healthy")
-		if err := component.OpWaiter(gardenerResourceManager).Deploy(ctx); err != nil {
+		if err := component.OpWait(gardenerResourceManager).Deploy(ctx); err != nil {
 			return err
 		}
 	}
@@ -855,10 +855,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion, &r.Config, r.ImageVector, r.ComponentImageVectors, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -868,10 +864,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 	systemResources, err := defaultSystem(seedClient, seed, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
-	hvpa, err := defaultHVPA(seedClient, kubernetesVersion, r.ImageVector, hvpaEnabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -926,10 +918,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:   clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace).Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying etcd-druid",
-			Fn:   etcdDruid.Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying kube-state-metrics",
 			Fn:   kubeStateMetrics.Deploy,
 		})
@@ -940,10 +928,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying dependency-watchdog-probe",
 			Fn:   dwdProbe.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying HVPA controller",
-			Fn:   hvpa.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
@@ -973,10 +957,45 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		_ = g.Add(flow.Task{
-			Name: "Deploying Kubernetes vertical pod autoscaler",
-			Fn:   vpa.Deploy,
-		})
+		hvpa, err := sharedcomponent.NewHVPA(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			hvpaEnabled,
+			v1beta1constants.PriorityClassNameSeedSystem700,
+		)
+		if err != nil {
+			return err
+		}
+
+		etcdDruid, err := sharedcomponent.NewEtcdDruid(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			r.ComponentImageVectors,
+			r.Config.ETCDConfig,
+			v1beta1constants.PriorityClassNameSeedSystem800,
+		)
+		if err != nil {
+			return err
+		}
+
+		var (
+			_ = g.Add(flow.Task{
+				Name: "Deploying Kubernetes vertical pod autoscaler",
+				Fn:   vpa.Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying HVPA controller",
+				Fn:   hvpa.Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying ETCD Druid",
+				Fn:   etcdDruid.Deploy,
+			})
+		)
 	}
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
@@ -1159,7 +1178,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 			return nil, err
 		}
 
-		if err = component.OpWaiter(nginxIngress).Deploy(ctx); err != nil {
+		if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
 			return nil, err
 		}
 

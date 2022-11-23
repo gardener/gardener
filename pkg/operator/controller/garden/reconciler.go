@@ -31,7 +31,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -127,4 +129,8 @@ func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 		return pointer.BoolDeref(settings.VerticalPodAutoscaler.Enabled, false)
 	}
 	return false
+}
+
+func hvpaEnabled() bool {
+	return operatorfeatures.FeatureGate.Enabled(features.HVPA)
 }

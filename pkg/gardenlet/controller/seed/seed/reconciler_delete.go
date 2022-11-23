@@ -182,7 +182,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		hvpa             = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, &r.Config, "", nil)
+		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
 		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity  = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
 		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})

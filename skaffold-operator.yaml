@@ -45,6 +45,7 @@ build:
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
         - pkg/controllerutils
+        - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
         - pkg/extensions
         - pkg/features
@@ -56,6 +57,7 @@ build:
         - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
         - pkg/operation/botanist/component/gardensystem
+        - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/kubeapiserver
         - pkg/operation/botanist/component/kubescheduler
         - pkg/operation/botanist/component/monitoring

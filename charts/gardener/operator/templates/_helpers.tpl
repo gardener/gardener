@@ -67,6 +67,10 @@ config.yaml: |
       {{- if .Values.config.controllers.garden.syncPeriod }}
       syncPeriod: {{ .Values.config.controllers.garden.syncPeriod }}
       {{- end }}
+      {{- if .Values.config.controllers.garden.etcdConfig }}
+      etcdConfig:
+{{ toYaml .Values.config.controllers.garden.etcdConfig | indent 8 }}
+      {{- end }}
 {{- end -}}
 
 {{- define "operator.config.name" -}}
