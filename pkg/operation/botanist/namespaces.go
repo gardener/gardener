@@ -99,14 +99,16 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 			if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
 				chosenZones.Insert(strings.Split(zones, ",")...)
-			} else {
-				// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
-				// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
-				// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
-				// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
-				// use their zones from now on.
-				// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
-				// TODO(rfranzke): Clean up this else-block in a future release.
+			}
+
+			// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
+			// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
+			// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
+			// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
+			// use their zones from now on.
+			// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
+			// TODO(rfranzke): Clean up this block in a future release.
+			{
 				pvcList := &corev1.PersistentVolumeClaimList{}
 				if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 					return fmt.Errorf("failed listing PVCs: %w", err)

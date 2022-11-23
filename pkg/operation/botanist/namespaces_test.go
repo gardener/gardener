@@ -397,6 +397,37 @@ var _ = Describe("Namespaces", func() {
 					Or(Equal("a"), Equal("b"), Equal("c"), Equal("d"), Equal("e")),
 				))
 			})
+
+			It("should use zone information from namespace and find existing ones via persistent volumes", func() {
+				Expect(seedClient.Create(ctx, &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespace,
+						Annotations: map[string]string{
+							"high-availability-config.resources.gardener.cloud/zones": "a",
+						},
+					},
+				})).To(Succeed())
+
+				defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+					HighAvailability: &gardencorev1beta1.HighAvailability{
+						FailureTolerance: gardencorev1beta1.FailureTolerance{
+							Type: gardencorev1beta1.FailureToleranceTypeZone,
+						},
+					},
+				}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+				defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+				Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+					"1",
+					"2",
+					"a"),
+				)
+			})
 		})
 
 		It("should successfully remove extension labels from the namespace when extensions are deleted from shoot spec or marked as disabled", func() {
