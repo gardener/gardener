@@ -319,14 +319,35 @@ var _ = Describe("Namespaces", func() {
 
 		Context("zone pinning backwards compatibility", func() {
 			BeforeEach(func() {
-				for label, existingZone := range map[string]string{
-					"failure-domain.beta.kubernetes.io/zone": "1",
-					"topology.kubernetes.io/zone":            "2",
+				for key, existingZones := range map[string][]string{
+					"failure-domain.beta.kubernetes.io/zone": {"1", "2"},
+					"topology.foo.bar/zone":                  {"2", "1"},
 				} {
 					pv := &corev1.PersistentVolume{
 						ObjectMeta: metav1.ObjectMeta{
 							GenerateName: "pv-",
-							Labels:       map[string]string{label: existingZone},
+						},
+						Spec: corev1.PersistentVolumeSpec{
+							NodeAffinity: &corev1.VolumeNodeAffinity{
+								Required: &corev1.NodeSelector{
+									NodeSelectorTerms: []corev1.NodeSelectorTerm{
+										{
+											MatchExpressions: []corev1.NodeSelectorRequirement{
+												{
+													Key:      "foo",
+													Operator: "In",
+													Values:   []string{"11", "12", "13"},
+												},
+												{
+													Key:      key,
+													Operator: "In",
+													Values:   existingZones,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					}
 					Expect(seedClient.Create(ctx, pv)).To(Succeed())
@@ -375,6 +396,37 @@ var _ = Describe("Namespaces", func() {
 					"2",
 					Or(Equal("a"), Equal("b"), Equal("c"), Equal("d"), Equal("e")),
 				))
+			})
+
+			It("should use zone information from namespace and find existing ones via persistent volumes", func() {
+				Expect(seedClient.Create(ctx, &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespace,
+						Annotations: map[string]string{
+							"high-availability-config.resources.gardener.cloud/zones": "a",
+						},
+					},
+				})).To(Succeed())
+
+				defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+					HighAvailability: &gardencorev1beta1.HighAvailability{
+						FailureTolerance: gardencorev1beta1.FailureTolerance{
+							Type: gardencorev1beta1.FailureToleranceTypeZone,
+						},
+					},
+				}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+				defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+				Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+					"1",
+					"2",
+					"a"),
+				)
 			})
 		})
 

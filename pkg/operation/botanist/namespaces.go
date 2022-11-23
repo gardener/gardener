@@ -99,14 +99,16 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 			if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
 				chosenZones.Insert(strings.Split(zones, ",")...)
-			} else {
-				// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
-				// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
-				// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
-				// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
-				// use their zones from now on.
-				// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
-				// TODO(rfranzke): Clean up this else-block in a future release.
+			}
+
+			// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
+			// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
+			// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
+			// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
+			// use their zones from now on.
+			// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
+			// TODO(rfranzke): Clean up this block in a future release.
+			{
 				pvcList := &corev1.PersistentVolumeClaimList{}
 				if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 					return fmt.Errorf("failed listing PVCs: %w", err)
@@ -118,10 +120,16 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 						return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
 					}
 
-					for _, zoneLabel := range []string{corev1.LabelFailureDomainBetaZone, corev1.LabelTopologyZone} {
-						if zone, ok := pv.Labels[zoneLabel]; ok {
-							b.Logger.Info("Found existing zone due to volume", "zone", zone, "persistentVolume", client.ObjectKeyFromObject(pv))
-							chosenZones.Insert(zone)
+					pvNodeAffinity := pv.Spec.NodeAffinity
+					if pvNodeAffinity == nil || pvNodeAffinity.Required == nil {
+						continue
+					}
+
+					for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
+						zonesFromTerm := extractZonesFromNodeSelectorTerm(term)
+						if len(zonesFromTerm) > 0 {
+							chosenZones.Insert(zonesFromTerm...)
+							b.Logger.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
 						}
 					}
 				}
@@ -144,6 +152,23 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 	b.SeedNamespaceObject = namespace
 	return nil
+}
+
+func extractZonesFromNodeSelectorTerm(term corev1.NodeSelectorTerm) []string {
+	zones := sets.NewString()
+	for _, matchExpression := range term.MatchExpressions {
+		key := matchExpression.Key
+		// Only consider labels with 'topology.{provider-specific-string}/zone' which should match most of the cases.
+		if (!strings.HasPrefix(key, "topology.") && !strings.HasSuffix(key, "/zone")) ||
+			key != corev1.LabelFailureDomainBetaZone {
+			continue
+		}
+		if matchExpression.Operator != corev1.NodeSelectorOpIn {
+			continue
+		}
+		zones.Insert(matchExpression.Values...)
+	}
+	return zones.UnsortedList()
 }
 
 // DeleteSeedNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in
