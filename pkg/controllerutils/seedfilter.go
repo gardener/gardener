@@ -82,31 +82,6 @@ func ShootIsBeingMigratedToSeed(ctx context.Context, c client.Reader, shoot *gar
 	return false
 }
 
-// BackupEntryMigrationFilterFunc returns a filtering func for backup entries that are being migrated to a different seed.
-func BackupEntryMigrationFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
-		if !ok {
-			return false
-		}
-
-		return BackupEntryIsBeingMigratedToSeed(ctx, c, backupEntry, seedName)
-	}
-}
-
-// BackupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name,
-// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
-func BackupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
-	if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName && *backupEntry.Spec.SeedName == seedName {
-		seed := &gardencorev1beta1.Seed{}
-		if err := c.Get(ctx, kutil.Key(*backupEntry.Status.SeedName), seed); err != nil {
-			return false
-		}
-		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
-	}
-	return false
-}
-
 // ManagedSeedFilterFunc returns a filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible..
 func ManagedSeedFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {

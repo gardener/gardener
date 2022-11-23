@@ -28,9 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	contextutil "github.com/gardener/gardener/pkg/utils/context"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -102,12 +100,6 @@ func (p *isBeingMigratedPredicate) isBeingMigratedToSeed(obj client.Object) bool
 	if !ok {
 		return false
 	}
-	if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName && *backupEntry.Spec.SeedName == p.seedName {
-		seed := &gardencorev1beta1.Seed{}
-		if err := p.reader.Get(p.ctx, kutil.Key(*backupEntry.Status.SeedName), seed); err != nil {
-			return false
-		}
-		return v1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
-	}
-	return false
+
+	return backupEntryIsBeingMigratedToSeed(p.ctx, p.reader, backupEntry, p.seedName)
 }

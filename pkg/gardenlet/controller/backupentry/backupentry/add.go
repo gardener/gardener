@@ -36,6 +36,7 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -116,6 +117,11 @@ func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Contex
 
 	shoot, err := extensions.GetShoot(ctx, r.SeedClient, shootTechnicalID)
 	if err != nil {
+		log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", shootTechnicalID)
+		return nil
+	}
+	if shoot == nil {
+		log.Info("shoot is missing in cluster resource", "cluster", kutil.Key(shootTechnicalID))
 		return nil
 	}
 

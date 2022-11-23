@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 
 	// If the backup entry is being deleted or no longer being migrated to this seed, clear the migration start time
-	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToSeed(ctx, r.GardenClient, backupEntry, confighelper.SeedNameFromSeedConfig(r.Config.SeedConfig)) {
+	if backupEntry.DeletionTimestamp != nil || !backupEntryIsBeingMigratedToSeed(ctx, r.GardenClient, backupEntry, confighelper.SeedNameFromSeedConfig(r.Config.SeedConfig)) {
 		log.V(1).Info("Clearing migration start time")
 		if err := setMigrationStartTime(ctx, r.GardenClient, backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
@@ -145,4 +145,17 @@ func removeForceRestoreAnnotation(ctx context.Context, c client.Client, backupEn
 	patch := client.MergeFrom(backupEntry.DeepCopy())
 	delete(backupEntry.GetAnnotations(), v1beta1constants.AnnotationShootForceRestore)
 	return c.Patch(ctx, backupEntry, patch)
+}
+
+// backupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name,
+// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
+func backupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
+	if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName && *backupEntry.Spec.SeedName == seedName {
+		seed := &gardencorev1beta1.Seed{}
+		if err := c.Get(ctx, kutil.Key(*backupEntry.Status.SeedName), seed); err != nil {
+			return false
+		}
+		return v1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
+	}
+	return false
 }

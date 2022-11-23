@@ -212,8 +212,8 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
-
 	mgrClient = mgr.GetClient()
+
 	By("setting up field indexes")
 	Expect(indexer.AddBackupEntryBucketName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 

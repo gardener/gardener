@@ -223,9 +223,9 @@ Hence, if the `Shoot` is deleted, also the `BackupEntry` resource gets deleted.
 In this case, the controller deletes the `extensions.gardener.cloud/v1alpha1.BackupEntry` resource in the seed cluster and waits until the responsible extension controller has deleted it.
 Afterwards, the finalizer of the `core.gardener.cloud/v1beta1.BackupEntry` resource is released so that it finally disappears from the system.
 
-If the `spec.seedName` and `.status.seedName` of the `core.gardener.cloud/v1beta1.BackupEntry` are different, the controller will migrate it by annotating the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the source `Seed` with `gardener.cloud/operation: migrate`, waiting for it to be migrated successfully and eventually deleting it from the `Seed` cluster. Afterwards, the controller will recreate the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the destination `Seed`, annotate it with `gardener.cloud/operation: restore` and wait for the restore operation to finish.
+If the `spec.seedName` and `.status.seedName` of the `core.gardener.cloud/v1beta1.BackupEntry` are different, the controller will migrate it by annotating the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the `Source Seed` with `gardener.cloud/operation: migrate`, waiting for it to be migrated successfully and eventually deleting it from the `Source Seed` cluster. Afterwards, the controller will recreate the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the `Destination Seed`, annotate it with `gardener.cloud/operation: restore` and wait for the restore operation to finish. For more details about control plane migration, please read [Shoot Control Plane Migration](../usage/control_plane_migration.md#shoot-control-plane-migration).
 
-#### Keep Backup for Deleted Shoots
+##### Keep Backup for Deleted Shoots
 
 In some scenarios it might be beneficial to not immediately delete the `BackupEntry`s (and with them, the etcd backup) for deleted `Shoot`s.
 

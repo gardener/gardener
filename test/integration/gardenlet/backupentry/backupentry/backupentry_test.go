@@ -67,6 +67,8 @@ var _ = Describe("BackupEntry controller tests", func() {
 			&backupentry.RequeueDurationWhenResourceDeletionStillPresent, 15*time.Millisecond,
 		))
 
+		fakeClock.SetTime(time.Now().Round(time.Second))
+
 		reconcileExtensionBackupEntry = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
 			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
@@ -156,7 +158,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 		By("Ensure manager cache observes BackupBucket creation")
 		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), &gardencorev1alpha1.BackupBucket{})
 		}).Should(Succeed())
 
 		DeferCleanup(func() {

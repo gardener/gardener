@@ -94,7 +94,7 @@ var _ = Describe("Add", func() {
 		}
 	})
 
-	Describe("#SeedNamePredicate", func() {
+	Describe("#IsBeingMigratedPredicate", func() {
 		var (
 			p predicate.Predicate
 		)
