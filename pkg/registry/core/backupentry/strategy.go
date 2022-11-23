@@ -19,10 +19,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -31,11 +27,22 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 type backupEntryStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
+}
+
+// NewStrategy returns a new storage strategy for BackupEntries.
+func NewStrategy() backupEntryStrategy {
+	return backupEntryStrategy{api.Scheme, names.SimpleNameGenerator}
 }
 
 // Strategy defines the storage strategy for BackupEntries.
@@ -76,6 +83,21 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 	oldPresent, _ := strconv.ParseBool(oldBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
 	newPresent, _ := strconv.ParseBool(newBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
 	if oldPresent != newPresent && newPresent {
+		return true
+	}
+
+	if v1beta1helper.HasOperationAnnotation(newBackupEntry.Annotations) {
+		// Remove the operation annotation if its value is not "restore"
+		// If it's "restore", it will be removed at the end of the reconciliation since it's needed
+		// to properly determine that the operation is "restore, and not "reconcile"
+		if newBackupEntry.Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRestore {
+			delete(newBackupEntry.Annotations, v1beta1constants.GardenerOperation)
+		} else {
+			// we don't want to cause duplicate reconciliations because this annotation is removed only at the end of operation
+			if oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
+				return false
+			}
+		}
 		return true
 	}
 

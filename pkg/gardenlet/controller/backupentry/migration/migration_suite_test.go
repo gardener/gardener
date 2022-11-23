@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupentry_test
+package migration_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestBackupEntry(t *testing.T) {
+func TestMigration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupEntry Controller Suite")
+	RunSpecs(t, "Gardenlet Controller BackupEntry Migration Suite")
 }

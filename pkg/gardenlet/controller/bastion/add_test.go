@@ -108,5 +108,12 @@ var _ = Describe("Add", func() {
 		It("should return nil if the cluster is not found", func() {
 			Expect(reconciler.MapExtensionsBastionToOperationsBastion(ctx, log, fakeClient, extensionsBastion)).To(BeNil())
 		})
+
+		It("should return nil when shoot is not present in the cluster", func() {
+			cluster.Spec.Shoot.Object = nil
+			Expect(fakeClient.Create(ctx, cluster)).To(Succeed())
+
+			Expect(reconciler.MapExtensionsBastionToOperationsBastion(ctx, log, nil, extensionsBastion)).To(BeNil())
+		})
 	})
 })

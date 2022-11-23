@@ -26,7 +26,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -37,7 +36,6 @@ const (
 	name      = "test"
 	namespace = "garden"
 	seedName  = "test-seed"
-	otherSeed = "new-test-seed"
 )
 
 var _ = Describe("seedfilter", func() {
@@ -214,42 +212,6 @@ var _ = Describe("seedfilter", func() {
 			expectGetShoot()
 			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, "foo")
 			Expect(f(seedOfManagedSeed)).To(BeFalse())
-		})
-	})
-
-	Describe("BackupEntry", func() {
-		var backupEntry *gardencorev1beta1.BackupEntry
-
-		BeforeEach(func() {
-			backupEntry = &gardencorev1beta1.BackupEntry{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-			}
-		})
-
-		Describe("#BackupEntryFilterFunc", func() {
-			It("should return false if the specified object is not a BackupEntry", func() {
-				f := controllerutils.BackupEntryFilterFunc(seedName)
-				Expect(f(shoot)).To(BeFalse())
-			})
-
-			DescribeTable("filter BackupEntry by seedName",
-				func(specSeedName, statusSeedName *string, filterSeedName string, match gomegatypes.GomegaMatcher) {
-					f := controllerutils.BackupEntryFilterFunc(filterSeedName)
-					backupEntry.Spec.SeedName = specSeedName
-					backupEntry.Status.SeedName = statusSeedName
-					Expect(f(backupEntry)).To(match)
-				},
-
-				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName are nil", nil, nil, seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.String(otherSeed), nil, seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.String(otherSeed), pointer.String(otherSeed), seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName is nil but BackupEntry.Status.SeedName matches", nil, pointer.String(seedName), seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.String(seedName), nil, seedName, BeTrue()),
-				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.String(otherSeed), pointer.String(seedName), seedName, BeTrue()),
-			)
 		})
 	})
 })

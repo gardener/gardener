@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -41,9 +42,6 @@ const (
 	// for a successful reconciliation of a BackupEntry resource.
 	DefaultTimeout = 10 * time.Minute
 )
-
-// TimeNow returns the current time. Exposed for testing.
-var TimeNow = time.Now
 
 // Interface is an interface for managing BackupEntries.
 type Interface interface {
@@ -76,6 +74,7 @@ type Values struct {
 func New(
 	log logr.Logger,
 	client client.Client,
+	clock clock.Clock,
 	values *Values,
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
@@ -84,6 +83,7 @@ func New(
 	return &backupEntry{
 		log:                 log,
 		client:              client,
+		clock:               clock,
 		values:              values,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
@@ -101,6 +101,7 @@ type backupEntry struct {
 	values              *Values
 	log                 logr.Logger
 	client              client.Client
+	clock               clock.Clock
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
@@ -117,7 +118,7 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 func (b *backupEntry) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.client, b.backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, b.clock.Now().UTC().String())
 
 		b.backupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

@@ -54,6 +54,8 @@ var _ = Describe("BackupBucket controller tests", func() {
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 30*time.Millisecond))
 
+		fakeClock.SetTime(time.Now())
+
 		reconcileExtensionBackupBucket = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
 			EventuallyWithOffset(1, func(g Gomega) {

@@ -245,11 +245,6 @@ func (r *Reconciler) deleteBackupBucket(
 		return reconcile.Result{}, nil
 	}
 
-	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
-	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
-		return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
-	}
-
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
 	if err := r.GardenClient.List(ctx, backupEntryList, client.MatchingFields{core.BackupEntryBucketName: backupBucket.Name}); err != nil {
 		return reconcile.Result{}, err
@@ -267,6 +262,11 @@ func (r *Reconciler) deleteBackupBucket(
 	}
 
 	log.Info("No BackupEntries are referencing this BackupBucket, accepting deletion")
+
+	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
+	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
+		return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
+	}
 
 	if err := r.deleteGeneratedBackupBucketSecretInGarden(ctx, log, backupBucket); err != nil {
 		return reconcile.Result{}, err

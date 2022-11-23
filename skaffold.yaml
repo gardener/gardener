@@ -820,6 +820,8 @@ build:
         - pkg/gardenlet/controller
         - pkg/gardenlet/controller/backupbucket
         - pkg/gardenlet/controller/backupentry
+        - pkg/gardenlet/controller/backupentry/backupentry
+        - pkg/gardenlet/controller/backupentry/migration
         - pkg/gardenlet/controller/bastion
         - pkg/gardenlet/controller/controllerinstallation
         - pkg/gardenlet/controller/controllerinstallation/care

@@ -19,6 +19,8 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var backupEntryDelimiter = "--"
@@ -39,7 +41,8 @@ func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (shootTechni
 	tokens := strings.Split(backupEntryName, backupEntryDelimiter)
 	uid := tokens[len(tokens)-1]
 
-	shootTechnicalID = strings.TrimSuffix(backupEntryName, uid)
+	shootTechnicalID = strings.TrimPrefix(backupEntryName, v1beta1constants.BackupSourcePrefix+"-")
+	shootTechnicalID = strings.TrimSuffix(shootTechnicalID, uid)
 	shootTechnicalID = strings.TrimSuffix(shootTechnicalID, backupEntryDelimiter)
 	shootUID = types.UID(uid)
 	return

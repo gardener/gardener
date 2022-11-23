@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -83,6 +84,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
 	shoot, err := extensions.GetShoot(ctx, r.SeedClient, obj.GetNamespace())
 	if err != nil {
+		log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", obj.GetNamespace())
+		return nil
+	}
+
+	if shoot == nil {
+		log.Info("Shoot is missing in cluster resource", "cluster", kutil.Key(obj.GetNamespace()))
 		return nil
 	}
 

@@ -21,10 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
 )
 
 var _ = Describe("#IsBackupEntryManagedByThisGardenlet", func() {
@@ -47,18 +45,9 @@ var _ = Describe("#IsBackupEntryManagedByThisGardenlet", func() {
 	})
 
 	DescribeTable("check BackupEntry by seedName",
-		func(bucketSeedName string, match gomegatypes.GomegaMatcher) {
-			backupEntry.Spec.SeedName = pointer.String(bucketSeedName)
-			gc := &config.GardenletConfiguration{
-				SeedConfig: &config.SeedConfig{
-					SeedTemplate: gardencore.SeedTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: seedName,
-						},
-					},
-				},
-			}
-			Expect(backupentry.IsBackupEntryManagedByThisGardenlet(backupEntry, gc)).To(match)
+		func(backupEntrySeedName string, match gomegatypes.GomegaMatcher) {
+			backupEntry.Spec.SeedName = pointer.String(backupEntrySeedName)
+			Expect(IsBackupEntryManagedByThisGardenlet(backupEntry, seedName)).To(match)
 		},
 		Entry("BackupEntry is not managed by this seed", otherSeed, BeFalse()),
 		Entry("BackupEntry is managed by this seed", seedName, BeTrue()),

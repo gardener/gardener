@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupbucket_test
+package backupentry_test
 
 import (
 	"context"
@@ -20,24 +20,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -50,14 +37,25 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestBackupBucketController(t *testing.T) {
+func TestBackupEntryController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupBucket Controller Integration Test Suite")
+	RunSpecs(t, "BackupEntry Controller Integration Test Suite")
 }
 
-const testID = "backupbucket-controller-test"
+const testID = "backupentry-controller-test"
 
 var (
 	ctx       = context.Background()
@@ -71,9 +69,12 @@ var (
 	testRunID  string
 
 	seed                *gardencorev1beta1.Seed
+	projectName         string
 	testNamespace       *corev1.Namespace
 	gardenNamespace     *corev1.Namespace
 	seedGardenNamespace *corev1.Namespace
+
+	deletionGracePeriodHours = 24
 )
 
 var _ = BeforeSuite(func() {
@@ -84,8 +85,10 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml")},
+				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
+				},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
@@ -113,18 +116,19 @@ var _ = BeforeSuite(func() {
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("creating project namespace")
+	By("creating test namespace")
+	projectName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:5]
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: "garden-",
+			Name: "garden-" + projectName,
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
+	log.Info("Created test Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting project namespace")
+		By("deleting test namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
@@ -136,7 +140,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
 
 	DeferCleanup(func() {
@@ -194,19 +198,16 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
-
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.BackupBucket{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-					Field: fields.SelectorFromSet(fields.Set{gardencore.BackupBucketSeedName: seed.Name}),
 				},
 				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.BackupEntry{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-					Field: fields.SelectorFromSet(fields.Set{gardencore.BackupEntrySeedName: seed.Name}),
 				},
 			},
 		}),
@@ -214,18 +215,18 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("setting up field indexes")
-	Expect(indexer.AddBackupEntryBucketName(ctx, mgr.GetFieldIndexer())).To(Succeed())
-
-	fakeClock = testclock.NewFakeClock(time.Now())
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 	By("registering controller")
-	Expect((&backupbucketcontroller.Reconciler{
+	Expect((&backupentry.Reconciler{
 		Clock: fakeClock,
-		Config: config.BackupBucketControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
+		Config: config.BackupEntryControllerConfiguration{
+			ConcurrentSyncs:                  pointer.Int(5),
+			DeletionGracePeriodHours:         pointer.Int(deletionGracePeriodHours),
+			DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
 		},
-		GardenNamespace: gardenNamespace.Name,
 		SeedName:        seed.Name,
+		GardenNamespace: seedGardenNamespace.Name,
+
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

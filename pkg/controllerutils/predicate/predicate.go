@@ -23,7 +23,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
@@ -126,8 +127,8 @@ func RelevantConditionsChanged(
 
 			for _, condition := range relevantConditionTypes {
 				if wasConditionStatusReasonOrMessageUpdated(
-					gardencorev1beta1helper.GetCondition(oldConditions, condition),
-					gardencorev1beta1helper.GetCondition(newConditions, condition),
+					v1beta1helper.GetCondition(oldConditions, condition),
+					v1beta1helper.GetCondition(newConditions, condition),
 				) {
 					return true
 				}
@@ -159,32 +160,35 @@ func ManagedResourceConditionsChanged() predicate.Predicate {
 func ExtensionStatusChanged() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			// If the object has the operation annotation, this means it's not picked up by the extension controller.
-			if gardencorev1beta1helper.HasOperationAnnotation(e.Object.GetAnnotations()) {
+			// If the object has the operation annotation reconcile, this means it's not picked up by the extension controller.
+			// For restore and migrate operations, we remove the annotation only at the end, so we don't stop enqueueing it.
+			if e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile {
 				return false
 			}
 
 			// If lastOperation State is failed then we admit reconciliation.
 			// This is not possible during create but possible during a controller restart.
-			if lastOperationStateFailed(e.Object) {
-				return true
-			}
-
-			return false
+			return lastOperationStateFailed(e.Object)
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the object has the operation annotation, this means it's not picked up by the extension controller.
-			if gardencorev1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
-				return false
+			// migrate and restore annotations are removed for the extensions only at the end of the operation,
+			// so if the oldObject doesn't have the same annotation, don't enqueue it.
+			if v1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
+				operation := e.ObjectNew.GetAnnotations()[v1beta1constants.GardenerOperation]
+				if operation == v1beta1constants.GardenerOperationMigrate || operation == v1beta1constants.GardenerOperationRestore {
+					// if the oldObject doesn't have the same annotation skip
+					if e.ObjectOld.GetAnnotations()[v1beta1constants.GardenerOperation] != operation {
+						return false
+					}
+				} else {
+					return false
+				}
 			}
 
 			// If lastOperation State has changed to Succeeded or Error then we admit reconciliation.
-			if lastOperationStateChanged(e.ObjectOld, e.ObjectNew) {
-				return true
-			}
-
-			return false
+			return lastOperationStateChanged(e.ObjectOld, e.ObjectNew)
 		},
 
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
