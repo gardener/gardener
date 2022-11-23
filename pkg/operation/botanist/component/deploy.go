@@ -26,29 +26,29 @@ func OpDestroy(d ...Deployer) Deployer {
 }
 
 // OpWait creates a DeployWaiter which calls Wait .
-func OpWait(dw ...DeployWaiter) DeployWaiter {
+func OpWait(dw ...Deployer) DeployWaiter {
 	return &deploy{
-		deployWaiters: dw,
-		invert:        false,
-		wait:          true,
+		deployers: dw,
+		invert:    false,
+		wait:      true,
 	}
 }
 
 // OpDestroyAndWait creates a DeployWaiter which calls Destroy instead of Deploy, and WaitCleanup.
-func OpDestroyAndWait(dw ...DeployWaiter) DeployWaiter {
+func OpDestroyAndWait(dw ...Deployer) DeployWaiter {
 	return &deploy{
-		deployWaiters: dw,
-		invert:        true,
-		wait:          true,
+		deployers: dw,
+		invert:    true,
+		wait:      true,
 	}
 }
 
 // OpDestroyWithoutWait creates a DeployWaiter which calls Destroy instead of Deploy.
-func OpDestroyWithoutWait(dw ...DeployWaiter) DeployWaiter {
+func OpDestroyWithoutWait(dw ...Deployer) DeployWaiter {
 	return &deploy{
-		deployWaiters: dw,
-		invert:        true,
-		wait:          false,
+		deployers: dw,
+		invert:    true,
+		wait:      false,
 	}
 }
 
@@ -56,10 +56,9 @@ func OpDestroyWithoutWait(dw ...DeployWaiter) DeployWaiter {
 func NoOp() DeployWaiter { return &deploy{} }
 
 type deploy struct {
-	deployers     []Deployer
-	deployWaiters []DeployWaiter
-	invert        bool
-	wait          bool
+	deployers []Deployer
+	invert    bool
+	wait      bool
 }
 
 func (d *deploy) Deploy(ctx context.Context) error {
@@ -75,19 +74,9 @@ func (d *deploy) Deploy(ctx context.Context) error {
 		if err := deployer.Deploy(ctx); err != nil {
 			return err
 		}
-	}
 
-	for _, deployWaiter := range d.deployWaiters {
-		if deployWaiter == nil {
-			continue
-		}
-
-		if err := deployWaiter.Deploy(ctx); err != nil {
-			return err
-		}
-
-		if d.wait {
-			if err := deployWaiter.Wait(ctx); err != nil {
+		if waiter, ok := deployer.(Waiter); ok && d.wait {
+			if err := waiter.Wait(ctx); err != nil {
 				return err
 			}
 		}
@@ -105,19 +94,9 @@ func (d *deploy) Destroy(ctx context.Context) error {
 		if err := deployer.Destroy(ctx); err != nil {
 			return err
 		}
-	}
 
-	for _, deployWaiter := range d.deployWaiters {
-		if deployWaiter == nil {
-			continue
-		}
-
-		if err := deployWaiter.Destroy(ctx); err != nil {
-			return err
-		}
-
-		if d.wait {
-			if err := deployWaiter.WaitCleanup(ctx); err != nil {
+		if waiter, ok := deployer.(Waiter); ok && d.wait {
+			if err := waiter.WaitCleanup(ctx); err != nil {
 				return err
 			}
 		}
@@ -131,13 +110,13 @@ func (d *deploy) Wait(ctx context.Context) error {
 		return d.WaitCleanup(ctx)
 	}
 
-	for _, deployWaiter := range d.deployWaiters {
-		if deployWaiter == nil {
+	for _, deployer := range d.deployers {
+		if deployer == nil {
 			continue
 		}
 
-		if d.wait {
-			if err := deployWaiter.Wait(ctx); err != nil {
+		if waiter, ok := deployer.(Waiter); ok && d.wait {
+			if err := waiter.Wait(ctx); err != nil {
 				return err
 			}
 		}
@@ -147,13 +126,13 @@ func (d *deploy) Wait(ctx context.Context) error {
 }
 
 func (d *deploy) WaitCleanup(ctx context.Context) error {
-	for _, deployWaiter := range d.deployWaiters {
-		if deployWaiter == nil {
+	for _, deployer := range d.deployers {
+		if deployer == nil {
 			continue
 		}
 
-		if d.wait {
-			if err := deployWaiter.WaitCleanup(ctx); err != nil {
+		if waiter, ok := deployer.(Waiter); ok && d.wait {
+			if err := waiter.WaitCleanup(ctx); err != nil {
 				return err
 			}
 		}
