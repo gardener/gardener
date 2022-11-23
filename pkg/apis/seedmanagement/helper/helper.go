@@ -42,7 +42,7 @@ func ExtractSeedSpec(managedSeed *seedmanagement.ManagedSeed) (*gardencore.SeedS
 		return nil, fmt.Errorf("failed to convert gardenlet config for managedseed %s: %w", managedSeed.Name, err)
 	}
 	if gardenletConfig.SeedConfig == nil {
-		return nil, fmt.Errorf("no seed spec found for managedseed %s", managedSeed.Name)
+		return nil, fmt.Errorf("no seed config found for managedseed %s", managedSeed.Name)
 	}
 
 	return &gardenletConfig.SeedConfig.Spec, nil

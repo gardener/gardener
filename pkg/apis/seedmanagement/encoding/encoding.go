@@ -94,7 +94,6 @@ func getDecoder(withDefaulter bool) runtime.Decoder {
 	}
 	return versioning.NewCodec(nil, serializer.NewCodecFactory(scheme).UniversalDeserializer(), runtime.UnsafeObjectConvertor(scheme),
 		scheme, scheme, nil, runtime.DisabledGroupVersioner, runtime.InternalGroupVersioner, scheme.Name())
-
 }
 
 func getEncoder(gv runtime.GroupVersioner, mediaType string) (runtime.Encoder, error) {

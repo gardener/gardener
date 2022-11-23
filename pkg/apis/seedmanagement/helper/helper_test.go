@@ -17,6 +17,7 @@ package helper_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -57,7 +58,7 @@ var _ = Describe("Helper", func() {
 		})
 
 		Context("#ExtractSeedSpec", func() {
-			It("gardenlet is defined", func() {
+			It("should extract the seed spec when gardenlet is defined", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config: &configv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
@@ -80,19 +81,27 @@ var _ = Describe("Helper", func() {
 				}))
 			})
 
-			It("gardenlet is not defined", func() {
+			It("should fail when unsupported gardenlet config is given", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+					Config: &corev1.ConfigMap{},
+				}
 				_, err := ExtractSeedSpec(managedSeed)
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("gardenlet config is not defined", func() {
+			It("should fail when gardenlet is not defined", func() {
+				_, err := ExtractSeedSpec(managedSeed)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail when gardenlet config is not defined", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
 
 				_, err := ExtractSeedSpec(managedSeed)
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("seedConfig is not defined in gardenlet config", func() {
+			It("should fail when seedConfig is not defined in gardenlet config", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config: &configv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
