@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -161,14 +160,7 @@ func (a *actuator) Reconcile(
 		return status, false, fmt.Errorf("could not create or update seed %s secrets: %w", ms.Name, err)
 	}
 
-	if ms.Spec.SeedTemplate != nil {
-		// Create or update seed
-		log.Info("Reconciling seed object", "seedName", ms.Name)
-		a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed object %q", ms.Name)
-		if err := a.createOrUpdateSeed(ctx, ms); err != nil {
-			return status, false, fmt.Errorf("could not create or update seed %s: %w", ms.Name, err)
-		}
-	} else if ms.Spec.Gardenlet != nil {
+	if ms.Spec.Gardenlet != nil {
 		seed, err := a.getSeed(ctx, ms)
 		if err != nil {
 			return status, false, fmt.Errorf("could not read seed %s: %w", ms.Name, err)
@@ -359,26 +351,6 @@ func (a *actuator) getGardenNamespace(ctx context.Context, shootClient kubernete
 		return nil, err
 	}
 	return ns, nil
-}
-
-func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
-	seed := &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: managedSeed.Name,
-		},
-	}
-	_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient, seed, func() error {
-		seed.OwnerReferences = []metav1.OwnerReference{
-			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-		}
-		seed.Labels = utils.MergeStringMaps(managedSeed.Spec.SeedTemplate.Labels, map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
-		})
-		seed.Annotations = managedSeed.Spec.SeedTemplate.Annotations
-		seed.Spec = managedSeed.Spec.SeedTemplate.Spec
-		return nil
-	})
-	return err
 }
 
 func (a *actuator) deleteSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {

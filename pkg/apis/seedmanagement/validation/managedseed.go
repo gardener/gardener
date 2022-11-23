@@ -17,21 +17,19 @@ package validation
 import (
 	"fmt"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	corev1 "k8s.io/api/core/v1"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/utils"
-
-	corev1 "k8s.io/api/core/v1"
-	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 )
 
 // ValidateManagedSeed validates a ManagedSeed object.
@@ -103,18 +101,9 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 		allErrs = append(allErrs, validateShoot(spec.Shoot, fldPath.Child("shoot"), inTemplate)...)
 	}
 
-	if spec.SeedTemplate != nil && spec.Gardenlet != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedTemplate"), "seed template must not be defined when gardenlet is specified"))
-	}
-
-	if spec.SeedTemplate == nil && spec.Gardenlet == nil {
+	if spec.Gardenlet == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("gardenlet"), "gardenlet is required"))
-	}
-
-	switch {
-	case spec.SeedTemplate != nil:
-		allErrs = append(allErrs, validateSeedTemplate(spec.SeedTemplate, fldPath.Child("seedTemplate"))...)
-	case spec.Gardenlet != nil:
+	} else {
 		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"), inTemplate)...)
 	}
 
@@ -128,15 +117,7 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 	// Ensure shoot is not changed
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Shoot, oldSpec.Shoot, fldPath.Child("shoot"))...)
 
-	// Ensure no changing from gardenlet to seed template takes place.
-	if oldSpec.Gardenlet != nil && newSpec.SeedTemplate != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, newSpec, "changing from gardenlet to seed template is not allowed"))
-	}
-
-	switch {
-	case newSpec.SeedTemplate != nil && oldSpec.SeedTemplate != nil:
-		allErrs = append(allErrs, validateSeedTemplateUpdate(newSpec.SeedTemplate, oldSpec.SeedTemplate, fldPath.Child("seedTemplate"))...)
-	case newSpec.Gardenlet != nil && oldSpec.Gardenlet != nil:
+	if newSpec.Gardenlet != nil && oldSpec.Gardenlet != nil {
 		allErrs = append(allErrs, validateGardenletUpdate(newSpec.Gardenlet, oldSpec.Gardenlet, fldPath.Child("gardenlet"))...)
 	}
 
@@ -160,27 +141,6 @@ func validateShoot(shoot *seedmanagement.Shoot, fldPath *field.Path, inTemplate 
 	if !inTemplate && shoot.Name == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "shoot name is required"))
 	}
-
-	return allErrs
-}
-
-func validateSeedTemplate(seedTemplate *gardencore.SeedTemplate, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	// Ensure name is not specified since it will be set by the controller
-	if seedTemplate.Name != "" {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("metadata", "name"), "seed name is forbidden"))
-	}
-
-	allErrs = append(allErrs, corevalidation.ValidateSeedTemplate(seedTemplate, fldPath)...)
-
-	return allErrs
-}
-
-func validateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *gardencore.SeedTemplate, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, corevalidation.ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate, fldPath)...)
 
 	return allErrs
 }

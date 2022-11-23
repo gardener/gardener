@@ -60,11 +60,6 @@ type ManagedSeedSpec struct {
 	// Shoot references a Shoot that should be registered as Seed.
 	// This field is immutable.
 	Shoot *Shoot
-	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
-	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
-	// and an existing gardenlet reconciling the new Seed is required.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Define seed via `.spec.gardenlet.config` instead.
-	SeedTemplate *gardencore.SeedTemplate
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
 	Gardenlet *Gardenlet

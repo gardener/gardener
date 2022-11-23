@@ -15,13 +15,6 @@
 package validation_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	. "github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -31,6 +24,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	. "github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
+	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 const (
@@ -95,10 +95,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				Shoot: &seedmanagement.Shoot{
 					Name: name,
 				},
-				SeedTemplate: &core.SeedTemplate{
-					ObjectMeta: seed.ObjectMeta,
-					Spec:       seed.Spec,
-				},
+				Gardenlet: &seedmanagement.Gardenlet{},
 			},
 			Status: seedmanagement.ManagedSeedStatus{
 				ObservedGeneration: 1,
@@ -189,45 +186,17 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			))
 		})
 
-		It("should forbid both seed template and gardenlet", func() {
-			managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
+		It("should forbid nil gardenlet", func() {
+			managedSeed.Spec.Gardenlet = nil
 
 			errorList := ValidateManagedSeed(managedSeed)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.seedTemplate"),
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.gardenlet"),
 				})),
 			))
-		})
-
-		Context("seed template", func() {
-			It("should allow valid resources", func() {
-				errorList := ValidateManagedSeed(managedSeed)
-
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should forbid empty or invalid fields in seed template", func() {
-				managedSeed.Spec.SeedTemplate.Name = "foo"
-				seedCopy := seed.DeepCopy()
-				seedCopy.Spec.Networks.Nodes = pointer.String("")
-				managedSeed.Spec.SeedTemplate.Spec = seedCopy.Spec
-
-				errorList := ValidateManagedSeed(managedSeed)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.seedTemplate.metadata.name"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.seedTemplate.spec.networks.nodes"),
-					})),
-				))
-			})
 		})
 
 		Context("gardenlet", func() {
@@ -240,7 +209,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
 
-				managedSeed.Spec.SeedTemplate = nil
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Deployment: &seedmanagement.GardenletDeployment{
 						Image: &seedmanagement.Image{
@@ -419,54 +387,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			))
 		})
 
-		It("should forbid changing from gardenlet to seed template", func() {
-			managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
-			newManagedSeed.Spec.SeedTemplate = &core.SeedTemplate{}
-
-			errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
-
-			Expect(errorList).To(ContainElement(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec"),
-					"Detail": Equal("changing from gardenlet to seed template is not allowed"),
-				})),
-			))
-		})
-
-		It("should allow changing from seed template to gardenlet", func() {
-			newManagedSeed.Spec.SeedTemplate = nil
-			newManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
-
-			errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		Context("seed template", func() {
-			It("should allow valid updates", func() {
-				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
-
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should forbid changes to immutable fields in seed template", func() {
-				seedCopy := seed.DeepCopy()
-				seedCopy.Spec.Backup.Provider = "bar"
-				newManagedSeed.Spec.SeedTemplate.Spec = seedCopy.Spec
-
-				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.seedTemplate.spec.backup.provider"),
-						"Detail": Equal("field is immutable"),
-					})),
-				))
-			})
-		})
-
 		Context("gardenlet", func() {
 			var (
 				seedx *gardencorev1beta1.Seed
@@ -477,7 +397,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
 
-				managedSeed.Spec.SeedTemplate = nil
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       bootstrapPtr(seedmanagement.BootstrapToken),

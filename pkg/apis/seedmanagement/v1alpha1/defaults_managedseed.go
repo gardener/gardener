@@ -34,10 +34,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_ManagedSeed sets default values for ManagedSeed objects.
 func SetDefaults_ManagedSeed(obj *ManagedSeed) {
-	switch {
-	case obj.Spec.SeedTemplate != nil:
-		setDefaultsSeedSpec(&obj.Spec.SeedTemplate.Spec, obj.Name, obj.Namespace, true)
-	case obj.Spec.Gardenlet != nil:
+	if obj.Spec.Gardenlet != nil {
 		setDefaultsGardenlet(obj.Spec.Gardenlet, obj.Name, obj.Namespace)
 	}
 }

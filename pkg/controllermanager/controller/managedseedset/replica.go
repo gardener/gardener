@@ -386,16 +386,12 @@ func newManagedSeed(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordin
 			Shoot: &seedmanagementv1alpha1.Shoot{
 				Name: name,
 			},
-			SeedTemplate: managedSeedSet.Spec.Template.Spec.SeedTemplate,
-			Gardenlet:    managedSeedSet.Spec.Template.Spec.Gardenlet,
+			Gardenlet: managedSeedSet.Spec.Template.Spec.Gardenlet,
 		},
 	}
 
 	// Replace placeholders in seed spec with the actual replica name
-	switch {
-	case managedSeed.Spec.SeedTemplate != nil:
-		replacePlaceholdersInSeedSpec(&managedSeed.Spec.SeedTemplate.Spec, name)
-	case managedSeed.Spec.Gardenlet != nil:
+	if managedSeed.Spec.Gardenlet != nil {
 		// Decode gardenlet configuration
 		gardenletConfig, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
 		if err != nil {

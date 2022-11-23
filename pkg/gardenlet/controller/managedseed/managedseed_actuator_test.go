@@ -431,15 +431,6 @@ var _ = Describe("Actuator", func() {
 			)
 		}
 
-		expectCreateSeed = func() {
-			gardenClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Seed, _ ...client.CreateOption) error {
-					Expect(s).To(Equal(seed))
-					return nil
-				},
-			)
-		}
-
 		expectDeleteSeed = func() {
 			gardenClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Seed, _ ...client.DeleteOption) error {
@@ -590,39 +581,6 @@ var _ = Describe("Actuator", func() {
 				}),
 			))
 			Expect(wait).To(Equal(true))
-		})
-
-		Context("seed template", func() {
-			BeforeEach(func() {
-				managedSeed.Spec.SeedTemplate = seedTemplate
-			})
-
-			It("should create the garden namespace, seed secrets, and seed", func() {
-				expectGetShoot()
-				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
-				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed object %q", name)
-				expectCreateSeed()
-
-				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
-				))
-				Expect(wait).To(Equal(false))
-			})
 		})
 
 		Context("gardenlet", func() {
@@ -807,91 +765,6 @@ var _ = Describe("Actuator", func() {
 	Describe("#Delete", func() {
 		BeforeEach(func() {
 			shootClientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClientSet, nil)
-		})
-
-		Context("seed template", func() {
-			BeforeEach(func() {
-				managedSeed.Spec.SeedTemplate = seedTemplate
-			})
-
-			It("should delete the seed if it still exists", func() {
-				expectGetShoot()
-				expectGetSeed(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", name)
-				expectDeleteSeed()
-
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleting),
-					}),
-				))
-				Expect(wait).To(Equal(false))
-				Expect(removeFinalizer).To(Equal(false))
-			})
-
-			It("should delete the seed secrets if they still exist", func() {
-				expectGetShoot()
-				expectGetSeed(false)
-				expectGetSeedSecrets(true)
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
-				expectDeleteSeedSecrets()
-
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleting),
-					}),
-				))
-				Expect(wait).To(Equal(true))
-				Expect(removeFinalizer).To(Equal(false))
-			})
-
-			It("should delete the garden namespace if it still exists, and set wait to true", func() {
-				expectGetShoot()
-				expectGetSeed(false)
-				expectGetSeedSecrets(false)
-				expectGetGardenNamespace(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %q", client.ObjectKeyFromObject(shoot).String())
-				expectDeleteGardenNamespace()
-
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleting),
-					}),
-				))
-				Expect(wait).To(Equal(true))
-				Expect(removeFinalizer).To(Equal(false))
-			})
-
-			It("should do nothing if neither the seed, nor the seed secrets, nor the garden namespace exist, and set removeFinalizer to true", func() {
-				expectGetShoot()
-				expectGetSeed(false)
-				expectGetSeedSecrets(false)
-				expectGetGardenNamespace(false)
-
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleted),
-					}),
-				))
-				Expect(wait).To(Equal(false))
-				Expect(removeFinalizer).To(Equal(true))
-			})
 		})
 
 		Context("gardenlet", func() {

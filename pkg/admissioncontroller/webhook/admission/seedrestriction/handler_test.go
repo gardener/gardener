@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"time"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -155,7 +157,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -249,7 +250,6 @@ var _ = Describe("handler", func() {
 				},
 
 				Entry("update", admissionv1.Update),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -393,7 +393,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -646,7 +645,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -714,7 +712,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -769,24 +766,6 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			DescribeTable("should not allow the request because no allowed verb",
-				func(operation admissionv1.Operation) {
-					request.Operation = operation
-
-					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed: false,
-							Result: &metav1.Status{
-								Code:    int32(http.StatusBadRequest),
-								Message: fmt.Sprintf("unexpected operation: %q", operation),
-							},
-						},
-					}))
-				},
-
-				Entry("connect", admissionv1.Connect),
-			)
-
 			generateTestsForOperation := func(operation admissionv1.Operation) func() {
 				return func() {
 					BeforeEach(func() {
@@ -811,7 +790,9 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should forbid the request because seed does not belong to a managedseed", func() {
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+							if request.Operation == admissionv1.Delete {
+								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+							}
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -824,40 +805,21 @@ var _ = Describe("handler", func() {
 							}))
 						})
 
-						It("should forbid the request because an error occurred while fetching the managedseed", func() {
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
-
-							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-								AdmissionResponse: admissionv1.AdmissionResponse{
-									Allowed: false,
-									Result: &metav1.Status{
-										Code:    int32(http.StatusInternalServerError),
-										Message: fakeErr.Error(),
-									},
-								},
-							}))
-						})
-
-						if operation == admissionv1.Create || operation == admissionv1.Update {
-							It("should forbid the request because managedseed's `.spec.seedTemplate` is nil", func() {
-								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
-									(&seedmanagementv1alpha1.ManagedSeed{}).DeepCopyInto(obj)
-									return nil
-								})
+						if operation == admissionv1.Delete {
+							It("should forbid the request because an error occurred while fetching the managedseed", func() {
+								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
 										Allowed: false,
 										Result: &metav1.Status{
-											Code:    int32(http.StatusForbidden),
-											Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+											Code:    int32(http.StatusInternalServerError),
+											Message: fakeErr.Error(),
 										},
 									},
 								}))
 							})
-						}
 
-						if operation == admissionv1.Delete {
 							It("should forbid the request because managedseed's `.metadata.deletionTimestamp` is nil", func() {
 								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									(&seedmanagementv1alpha1.ManagedSeed{}).DeepCopyInto(obj)
@@ -876,79 +838,20 @@ var _ = Describe("handler", func() {
 							})
 						}
 
-						Context("requiring information from shoot", func() {
-							var deletionTimestamp *metav1.Time
+						if operation == admissionv1.Delete {
+							Context("requiring information from shoot", func() {
+								var deletionTimestamp *metav1.Time
 
-							if operation == admissionv1.Delete {
-								deletionTimestamp = &metav1.Time{}
-							}
-
-							It("should forbid the request because managedseed's `.spec.shoot` is nil", func() {
-								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
-									(&seedmanagementv1alpha1.ManagedSeed{
-										ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: deletionTimestamp},
-										Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-											SeedTemplate: &gardencorev1beta1.SeedTemplate{},
-										},
-									}).DeepCopyInto(obj)
-									return nil
+								BeforeEach(func() {
+									deletionTimestamp = &metav1.Time{}
 								})
 
-								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-									AdmissionResponse: admissionv1.AdmissionResponse{
-										Allowed: false,
-										Result: &metav1.Status{
-											Code:    int32(http.StatusForbidden),
-											Message: fmt.Sprintf("object does not belong to seed %q", seedName),
-										},
-									},
-								}))
-							})
-
-							It("should forbid the request because reading the shoot referenced by the managedseed failed", func() {
-								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
-									(&seedmanagementv1alpha1.ManagedSeed{
-										ObjectMeta: metav1.ObjectMeta{
-											Namespace:         managedSeedNamespace,
-											DeletionTimestamp: deletionTimestamp,
-										},
-										Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-											SeedTemplate: &gardencorev1beta1.SeedTemplate{},
-											Shoot:        &seedmanagementv1alpha1.Shoot{Name: shootName},
-										},
-									}).DeepCopyInto(obj)
-									return nil
-								})
-								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
-
-								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-									AdmissionResponse: admissionv1.AdmissionResponse{
-										Allowed: false,
-										Result: &metav1.Status{
-											Code:    int32(http.StatusInternalServerError),
-											Message: fakeErr.Error(),
-										},
-									},
-								}))
-							})
-
-							DescribeTable("should forbid the request because the seed name of the shoot referenced by the managedseed does not match",
-								func(seedNameInShoot *string) {
+								It("should forbid the request because managedseed's `.spec.shoot` is nil", func() {
 									mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 										(&seedmanagementv1alpha1.ManagedSeed{
-											ObjectMeta: metav1.ObjectMeta{
-												Namespace:         managedSeedNamespace,
-												DeletionTimestamp: deletionTimestamp,
-											},
-											Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-												SeedTemplate: &gardencorev1beta1.SeedTemplate{},
-												Shoot:        &seedmanagementv1alpha1.Shoot{Name: shootName},
-											},
+											ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: deletionTimestamp},
+											Spec:       seedmanagementv1alpha1.ManagedSeedSpec{},
 										}).DeepCopyInto(obj)
-										return nil
-									})
-									mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-										(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: seedNameInShoot}}).DeepCopyInto(obj)
 										return nil
 									})
 
@@ -961,34 +864,90 @@ var _ = Describe("handler", func() {
 											},
 										},
 									}))
-								},
-
-								Entry("seed name is nil", nil),
-								Entry("seed name is different", pointer.String("some-different-seed")),
-							)
-
-							It("should allow the request because the seed name of the shoot referenced by the managedseed matches", func() {
-								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
-									(&seedmanagementv1alpha1.ManagedSeed{
-										ObjectMeta: metav1.ObjectMeta{
-											Namespace:         managedSeedNamespace,
-											DeletionTimestamp: deletionTimestamp,
-										},
-										Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-											SeedTemplate: &gardencorev1beta1.SeedTemplate{},
-											Shoot:        &seedmanagementv1alpha1.Shoot{Name: shootName},
-										},
-									}).DeepCopyInto(obj)
-									return nil
-								})
-								mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
-									return nil
 								})
 
-								Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+								It("should forbid the request because reading the shoot referenced by the managedseed failed", func() {
+									mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+										(&seedmanagementv1alpha1.ManagedSeed{
+											ObjectMeta: metav1.ObjectMeta{
+												Namespace:         managedSeedNamespace,
+												DeletionTimestamp: deletionTimestamp,
+											},
+											Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+												Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName},
+											},
+										}).DeepCopyInto(obj)
+										return nil
+									})
+									mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+
+									Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+										AdmissionResponse: admissionv1.AdmissionResponse{
+											Allowed: false,
+											Result: &metav1.Status{
+												Code:    int32(http.StatusInternalServerError),
+												Message: fakeErr.Error(),
+											},
+										},
+									}))
+								})
+
+								DescribeTable("should forbid the request because the seed name of the shoot referenced by the managedseed does not match",
+									func(seedNameInShoot *string) {
+										mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+											(&seedmanagementv1alpha1.ManagedSeed{
+												ObjectMeta: metav1.ObjectMeta{
+													Namespace:         managedSeedNamespace,
+													DeletionTimestamp: deletionTimestamp,
+												},
+												Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+													Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName},
+												},
+											}).DeepCopyInto(obj)
+											return nil
+										})
+										mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+											(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: seedNameInShoot}}).DeepCopyInto(obj)
+											return nil
+										})
+
+										Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+											AdmissionResponse: admissionv1.AdmissionResponse{
+												Allowed: false,
+												Result: &metav1.Status{
+													Code:    int32(http.StatusForbidden),
+													Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+												},
+											},
+										}))
+									},
+
+									Entry("seed name is nil", nil),
+									Entry("seed name is different", pointer.String("some-different-seed")),
+								)
+
+								It("should allow the request because the seed name of the shoot referenced by the managedseed matches", func() {
+									mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+										(&seedmanagementv1alpha1.ManagedSeed{
+											ObjectMeta: metav1.ObjectMeta{
+												Namespace:         managedSeedNamespace,
+												DeletionTimestamp: deletionTimestamp,
+											},
+											Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+												Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName},
+											},
+										}).DeepCopyInto(obj)
+										return nil
+									})
+									mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+										(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
+										return nil
+									})
+
+									Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+								})
 							})
-						})
+						}
 					})
 				}
 			}
@@ -1030,7 +989,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -1205,7 +1163,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -1642,9 +1599,10 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 				Context("managed seed secret", func() {
 					var (
-						managedSeed1Namespace string
-						shoot1, shoot2        *gardencorev1beta1.Shoot
-						managedSeeds          []seedmanagementv1alpha1.ManagedSeed
+						managedSeed1Namespace    string
+						shoot1, shoot2           *gardencorev1beta1.Shoot
+						seedConfig1, seedConfig2 *gardenletconfigv1alpha1.SeedConfig
+						managedSeeds             []seedmanagementv1alpha1.ManagedSeed
 					)
 
 					BeforeEach(func() {
@@ -1663,19 +1621,37 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							},
 							Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName},
 						}
+						seedConfig1 = &gardenletconfigv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{},
+						}
+						seedConfig2 = &gardenletconfigv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{},
+						}
 						managedSeeds = []seedmanagementv1alpha1.ManagedSeed{
 							{
 								ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed1Namespace},
 								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot:        &seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
-									SeedTemplate: &gardencorev1beta1.SeedTemplate{},
+									Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
+									Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+										Config: runtime.RawExtension{
+											Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+												SeedConfig: seedConfig1,
+											},
+										},
+									},
 								},
 							},
 							{
 								ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed1Namespace},
 								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot:        &seedmanagementv1alpha1.Shoot{Name: shoot2.Name},
-									SeedTemplate: &gardencorev1beta1.SeedTemplate{},
+									Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot2.Name},
+									Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+										Config: runtime.RawExtension{
+											Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+												SeedConfig: seedConfig2,
+											},
+										},
+									},
 								},
 							},
 						}
@@ -1714,7 +1690,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 					})
 
 					It("should return an error because extracting the seed template failed", func() {
-						managedSeeds[1].Spec.SeedTemplate = nil
+						managedSeeds[1].Spec.Gardenlet = nil
 
 						mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
 							(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
@@ -1734,13 +1710,13 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 								Allowed: false,
 								Result: &metav1.Status{
 									Code:    int32(http.StatusInternalServerError),
-									Message: "could not determine seed template",
+									Message: "no gardenlet specified in managedseed: \"\"",
 								},
 							},
 						}))
 					})
 
-					It("should forbid because the secret is referenced in a managedseed's `.seedTemplate.spec.secretRef` but belongs to another seed", func() {
+					It("should forbid because the secret is referenced in a managedseed's gardenlet config but belongs to another seed", func() {
 						var (
 							secretName      = "secret-foo"
 							secretNamespace = "secret-bar"
@@ -1748,7 +1724,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 						request.Namespace = secretNamespace
 						request.Name = secretName
-						managedSeeds[0].Spec.SeedTemplate.Spec.SecretRef = &corev1.SecretReference{
+						seedConfig1.Spec.SecretRef = &corev1.SecretReference{
 							Name:      secretName,
 							Namespace: secretNamespace,
 						}
@@ -1777,7 +1753,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						}))
 					})
 
-					It("should forbid because the secret is referenced in a managedseed's `.seedTemplate.spec.backup.secretRef` but belongs to another seed", func() {
+					It("should forbid because the secret is referenced in a managedseed's gardenlet config but belongs to another seed", func() {
 						var (
 							secretName      = "secret-bar"
 							secretNamespace = "secret-foo"
@@ -1785,7 +1761,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 						request.Namespace = secretNamespace
 						request.Name = secretName
-						managedSeeds[0].Spec.SeedTemplate.Spec.Backup = &gardencorev1beta1.SeedBackup{
+						seedConfig1.Spec.Backup = &gardencorev1beta1.SeedBackup{
 							SecretRef: corev1.SecretReference{
 								Name:      secretName,
 								Namespace: secretNamespace,
@@ -1816,7 +1792,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						}))
 					})
 
-					It("should allow because the secret is referenced in a managedseed's `.seedTemplate.spec.secretRef`", func() {
+					It("should allow because the secret is referenced in a managedseed's gardenlet config", func() {
 						var (
 							secretName      = "secret-foo"
 							secretNamespace = "secret-bar"
@@ -1824,7 +1800,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 						request.Namespace = secretNamespace
 						request.Name = secretName
-						managedSeeds[1].Spec.SeedTemplate.Spec.SecretRef = &corev1.SecretReference{
+						seedConfig2.Spec.SecretRef = &corev1.SecretReference{
 							Name:      secretName,
 							Namespace: secretNamespace,
 						}
@@ -1845,7 +1821,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
-					It("should allow because the secret is referenced in a managedseed's `.seedTemplate.spec.backup.secretRef`", func() {
+					It("should allow because the secret is referenced in a managedseed's gardenlet config", func() {
 						var (
 							secretName      = "secret-bar"
 							secretNamespace = "secret-foo"
@@ -1853,7 +1829,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 						request.Namespace = secretNamespace
 						request.Name = secretName
-						managedSeeds[1].Spec.SeedTemplate.Spec.Backup = &gardencorev1beta1.SeedBackup{
+						seedConfig2.Spec.Backup = &gardencorev1beta1.SeedBackup{
 							SecretRef: corev1.SecretReference{
 								Name:      secretName,
 								Namespace: secretNamespace,
@@ -1910,7 +1886,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -2188,7 +2163,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {

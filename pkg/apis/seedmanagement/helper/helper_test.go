@@ -17,6 +17,7 @@ package helper_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -40,7 +41,6 @@ var _ = Describe("Helper", func() {
 		var (
 			seedName  = "test-seed"
 			namespace = "garden"
-			provider  = "test-provider"
 
 			managedSeed *seedmanagement.ManagedSeed
 		)
@@ -58,23 +58,7 @@ var _ = Describe("Helper", func() {
 		})
 
 		Context("#ExtractSeedSpec", func() {
-			It("seedTemplate is defined", func() {
-				managedSeed.Spec.SeedTemplate = &gardencore.SeedTemplate{
-					Spec: gardencore.SeedSpec{
-						Backup: &gardencore.SeedBackup{
-							Provider: provider,
-						},
-						DNS:      gardencore.SeedDNS{},
-						Networks: gardencore.SeedNetworks{},
-						Provider: gardencore.SeedProvider{},
-					},
-				}
-				spec, err := ExtractSeedSpec(managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(spec).To(Equal(&managedSeed.Spec.SeedTemplate.Spec))
-			})
-
-			It("gardenlet is defined", func() {
+			It("should extract the seed spec when gardenlet is defined", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config: &configv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
@@ -97,7 +81,36 @@ var _ = Describe("Helper", func() {
 				}))
 			})
 
-			It("neither seedTemplate nor gardenlet is defined", func() {
+			It("should fail when unsupported gardenlet config is given", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+					Config: &corev1.ConfigMap{},
+				}
+				_, err := ExtractSeedSpec(managedSeed)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail when gardenlet is not defined", func() {
+				_, err := ExtractSeedSpec(managedSeed)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail when gardenlet config is not defined", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
+
+				_, err := ExtractSeedSpec(managedSeed)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail when seedConfig is not defined in gardenlet config", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+					Config: &configv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+					},
+				}
+
 				_, err := ExtractSeedSpec(managedSeed)
 				Expect(err).To(HaveOccurred())
 			})
