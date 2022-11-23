@@ -114,7 +114,7 @@ images:
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.39.1
+  tag: v2.40.2
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: ghcr.io/prometheus-operator/prometheus-config-reloader
