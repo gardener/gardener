@@ -18,18 +18,18 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles the BackupEntry by forcing the backup entry's restoration to this seed during control plane
@@ -58,9 +58,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 
 	// If the backup entry is being deleted or no longer being migrated to this seed, clear the migration start time
-	if backupEntry.DeletionTimestamp != nil || !backupEntryIsBeingMigratedToSeed(ctx, r.GardenClient, backupEntry, r.SeedName) {
+	if backupEntry.DeletionTimestamp != nil || !gutil.IsObjectBeingMigrated(ctx, r.GardenClient, backupEntry, r.SeedName, getBackupEntrySeedNames) {
 		log.V(1).Info("Clearing migration start time")
-		if err := setMigrationStartTime(ctx, r.GardenClient, backupEntry, nil); err != nil {
+		if err := r.setMigrationStartTime(ctx, backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
 		}
 
@@ -71,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	// Set the migration start time if needed
 	if backupEntry.Status.MigrationStartTime == nil {
 		log.V(1).Info("Setting migration start time to current time")
-		if err := setMigrationStartTime(ctx, r.GardenClient, backupEntry, &metav1.Time{Time: r.Clock.Now().UTC()}); err != nil {
+		if err := r.setMigrationStartTime(ctx, backupEntry, &metav1.Time{Time: r.Clock.Now().UTC()}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not set migration start time: %w", err)
 		}
 	}
@@ -81,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	log.V(1).Info("Checking whether restoration should be forceful")
 	if hasForceRestoreAnnotation(backupEntry) || r.isGracePeriodElapsed(backupEntry) && !r.isMigrationInProgress(backupEntry) {
 		log.Info("Updating status to force restoration")
-		if err := updateStatusForRestore(ctx, r.GardenClient, backupEntry, r.Clock); err != nil {
+		if err := r.updateStatusForRestore(ctx, backupEntry); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update backup entry status to force restoration: %w", err)
 		}
 
@@ -114,27 +114,27 @@ func (r *Reconciler) isMigrationInProgress(backupEntry *gardencorev1beta1.Backup
 		!lastOperation.LastUpdateTime.Before(&staleCutoffTime)
 }
 
-func setMigrationStartTime(ctx context.Context, c client.Client, backupEntry *gardencorev1beta1.BackupEntry, migrationStartTime *metav1.Time) error {
+func (r *Reconciler) setMigrationStartTime(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry, migrationStartTime *metav1.Time) error {
 	patch := client.MergeFrom(backupEntry.DeepCopy())
 	backupEntry.Status.MigrationStartTime = migrationStartTime
-	return c.Status().Patch(ctx, backupEntry, patch)
+	return r.GardenClient.Status().Patch(ctx, backupEntry, patch)
 }
 
-func updateStatusForRestore(ctx context.Context, c client.Client, backupEntry *gardencorev1beta1.BackupEntry, clock clock.Clock) error {
+func (r *Reconciler) updateStatusForRestore(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry) error {
 	patch := client.StrategicMergeFrom(backupEntry.DeepCopy())
 
 	backupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           gardencorev1beta1.LastOperationTypeMigrate,
 		State:          gardencorev1beta1.LastOperationStateAborted,
 		Description:    "BackupEntry preparation for migration has been aborted.",
-		LastUpdateTime: metav1.NewTime(clock.Now().UTC()),
+		LastUpdateTime: metav1.NewTime(r.Clock.Now().UTC()),
 	}
 	backupEntry.Status.LastError = nil
 	backupEntry.Status.ObservedGeneration = backupEntry.Generation
 	backupEntry.Status.SeedName = nil
 	backupEntry.Status.MigrationStartTime = nil
 
-	return c.Status().Patch(ctx, backupEntry, patch)
+	return r.GardenClient.Status().Patch(ctx, backupEntry, patch)
 }
 
 func hasForceRestoreAnnotation(backupEntry *gardencorev1beta1.BackupEntry) bool {
@@ -145,17 +145,4 @@ func removeForceRestoreAnnotation(ctx context.Context, c client.Client, backupEn
 	patch := client.MergeFrom(backupEntry.DeepCopy())
 	delete(backupEntry.GetAnnotations(), v1beta1constants.AnnotationShootForceRestore)
 	return c.Patch(ctx, backupEntry, patch)
-}
-
-// backupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name,
-// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
-func backupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
-	if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName && *backupEntry.Spec.SeedName == seedName {
-		seed := &gardencorev1beta1.Seed{}
-		if err := c.Get(ctx, kutil.Key(*backupEntry.Status.SeedName), seed); err != nil {
-			return false
-		}
-		return v1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
-	}
-	return false
 }

@@ -15,6 +15,7 @@
 package predicate
 
 import (
+	"context"
 	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // IsDeleting is a predicate for objects having a deletion timestamp.
@@ -235,4 +238,42 @@ func lastOperationStateChanged(oldObj, newObj client.Object) bool {
 	}
 
 	return false
+}
+
+// IsBeingMigratedPredicate returns a predicate which returns true for objects that are being migrated to a different
+// seed cluster.
+func IsBeingMigratedPredicate(reader client.Reader, seedName string, getSeedNamesFromObject func(client.Object) (*string, *string)) predicate.Predicate {
+	return &isBeingMigratedPredicate{
+		reader:                 reader,
+		seedName:               seedName,
+		getSeedNamesFromObject: getSeedNamesFromObject,
+	}
+}
+
+type isBeingMigratedPredicate struct {
+	ctx                    context.Context
+	reader                 client.Reader
+	seedName               string
+	getSeedNamesFromObject func(client.Object) (*string, *string)
+}
+
+func (p *isBeingMigratedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
+	p.ctx = contextutil.FromStopChannel(stopChan)
+	return nil
+}
+
+func (p *isBeingMigratedPredicate) Create(e event.CreateEvent) bool {
+	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
+}
+
+func (p *isBeingMigratedPredicate) Update(e event.UpdateEvent) bool {
+	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.ObjectNew, p.seedName, p.getSeedNamesFromObject)
+
+}
+func (p *isBeingMigratedPredicate) Delete(e event.DeleteEvent) bool {
+	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
+}
+
+func (p *isBeingMigratedPredicate) Generic(e event.GenericEvent) bool {
+	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
 }

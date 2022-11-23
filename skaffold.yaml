@@ -417,6 +417,7 @@ build:
         - pkg/client/core/clientset/versioned/typed/core/v1beta1
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
+        - pkg/controllerutils
         - pkg/controllerutils/predicate
         - pkg/controllerutils/routes
         - pkg/gardenlet/apis/config
@@ -435,7 +436,9 @@ build:
         - pkg/utils/errors
         - pkg/utils/flow
         - pkg/utils/kubernetes
+        - pkg/utils/gardener
         - pkg/utils/retry
+        - pkg/utils/secrets
         - pkg/utils/timewindow
         - pkg/utils/validation/cidr
         - pkg/utils/version
