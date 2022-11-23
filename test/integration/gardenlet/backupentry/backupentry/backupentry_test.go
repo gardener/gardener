@@ -213,6 +213,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		Expect(testClient.Create(ctx, cluster)).To(Succeed())
 		log.Info("Created cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
 
+		By("Ensure manager cache observes cluster creation")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(cluster), &extensionsv1alpha1.Cluster{})
+		}).Should(Succeed())
+
 		DeferCleanup(func() {
 			By("deleting cluster")
 			Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
@@ -414,16 +419,16 @@ var _ = Describe("BackupEntry controller tests", func() {
 			// These should be done by the extension controller, we are faking it here for the tests.
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			patch = client.MergeFrom(extensionBackupEntry.DeepCopy())
-			delete(extensionBackupEntry.Annotations, v1beta1constants.GardenerOperation)
-			Expect(testClient.Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
-
-			patch = client.MergeFrom(extensionBackupEntry.DeepCopy())
 			extensionBackupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				Type:           gardencorev1beta1.LastOperationTypeMigrate,
 				LastUpdateTime: metav1.NewTime(fakeClock.Now()),
 			}
 			Expect(testClient.Status().Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
+
+			patch = client.MergeFrom(extensionBackupEntry.DeepCopy())
+			delete(extensionBackupEntry.Annotations, v1beta1constants.GardenerOperation)
+			Expect(client.IgnoreNotFound(testClient.Patch(ctx, extensionBackupEntry, patch))).To(Succeed())
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(BeNotFoundError())
@@ -476,7 +481,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			}).Should(Succeed())
 
 			By("stepping the clock to pass the grace period")
-			fakeClock.Step(25 * time.Hour)
+			fakeClock.Step((time.Duration(deletionGracePeriodHours)*time.Hour + time.Second))
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			patch := client.MergeFrom(backupEntry.DeepCopy())
 			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)

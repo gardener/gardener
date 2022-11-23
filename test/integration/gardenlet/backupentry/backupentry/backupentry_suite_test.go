@@ -73,6 +73,8 @@ var (
 	testNamespace       *corev1.Namespace
 	gardenNamespace     *corev1.Namespace
 	seedGardenNamespace *corev1.Namespace
+
+	deletionGracePeriodHours int = 24
 )
 
 var _ = BeforeSuite(func() {
@@ -219,7 +221,7 @@ var _ = BeforeSuite(func() {
 		Clock: fakeClock,
 		Config: config.BackupEntryControllerConfiguration{
 			ConcurrentSyncs:                  pointer.Int(5),
-			DeletionGracePeriodHours:         pointer.Int(24),
+			DeletionGracePeriodHours:         pointer.Int(deletionGracePeriodHours),
 			DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
 		},
 		SeedName:        seed.Name,

@@ -89,7 +89,7 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 
 		By("Ensure manager cache observes BackupBucket creation")
 		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), &gardencorev1beta1.BackupBucket{})
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
@@ -195,7 +195,7 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 			g.Expect(backupEntry.Status.MigrationStartTime).To(PointTo(Equal(metav1.Time{Time: fakeClock.Now()})))
 		}).Should(Succeed())
 
-		fakeClock.Step(2 * gracePeriod)
+		fakeClock.Step(gracePeriod + time.Second)
 
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())

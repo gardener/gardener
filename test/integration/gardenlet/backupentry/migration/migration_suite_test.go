@@ -183,8 +183,8 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
-
 	mgrClient = mgr.GetClient()
+
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 	By("registering controller")
 	Expect((&migration.Reconciler{
