@@ -118,10 +118,16 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 						return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
 					}
 
-					for _, zoneLabel := range []string{corev1.LabelFailureDomainBetaZone, corev1.LabelTopologyZone} {
-						if zone, ok := pv.Labels[zoneLabel]; ok {
-							b.Logger.Info("Found existing zone due to volume", "zone", zone, "persistentVolume", client.ObjectKeyFromObject(pv))
-							chosenZones.Insert(zone)
+					pvNodeAffinity := pv.Spec.NodeAffinity
+					if pvNodeAffinity == nil || pvNodeAffinity.Required == nil {
+						continue
+					}
+
+					for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
+						zonesFromTerm := extractZonesFromNodeSelectorTerm(term)
+						if len(zonesFromTerm) > 0 {
+							chosenZones.Insert(zonesFromTerm...)
+							b.Logger.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
 						}
 					}
 				}
@@ -144,6 +150,23 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 	b.SeedNamespaceObject = namespace
 	return nil
+}
+
+func extractZonesFromNodeSelectorTerm(term corev1.NodeSelectorTerm) []string {
+	zones := sets.NewString()
+	for _, matchExpression := range term.MatchExpressions {
+		key := matchExpression.Key
+		// Only consider labels with 'topology.{provider-specific-string}/zone' which should match most of the cases.
+		if (!strings.HasPrefix(key, "topology.") && !strings.HasSuffix(key, "/zone")) ||
+			key != corev1.LabelFailureDomainBetaZone {
+			continue
+		}
+		if matchExpression.Operator != corev1.NodeSelectorOpIn {
+			continue
+		}
+		zones.Insert(matchExpression.Values...)
+	}
+	return zones.UnsortedList()
 }
 
 // DeleteSeedNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in

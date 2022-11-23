@@ -319,14 +319,35 @@ var _ = Describe("Namespaces", func() {
 
 		Context("zone pinning backwards compatibility", func() {
 			BeforeEach(func() {
-				for label, existingZone := range map[string]string{
-					"failure-domain.beta.kubernetes.io/zone": "1",
-					"topology.kubernetes.io/zone":            "2",
+				for key, existingZones := range map[string][]string{
+					"failure-domain.beta.kubernetes.io/zone": {"1", "2"},
+					"topology.foo.bar/zone":                  {"2", "1"},
 				} {
 					pv := &corev1.PersistentVolume{
 						ObjectMeta: metav1.ObjectMeta{
 							GenerateName: "pv-",
-							Labels:       map[string]string{label: existingZone},
+						},
+						Spec: corev1.PersistentVolumeSpec{
+							NodeAffinity: &corev1.VolumeNodeAffinity{
+								Required: &corev1.NodeSelector{
+									NodeSelectorTerms: []corev1.NodeSelectorTerm{
+										{
+											MatchExpressions: []corev1.NodeSelectorRequirement{
+												{
+													Key:      "foo",
+													Operator: "In",
+													Values:   []string{"11", "12", "13"},
+												},
+												{
+													Key:      key,
+													Operator: "In",
+													Values:   existingZones,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					}
 					Expect(seedClient.Create(ctx, pv)).To(Succeed())
