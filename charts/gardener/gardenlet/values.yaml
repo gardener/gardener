@@ -72,11 +72,11 @@ config:
       concurrentSyncs: 20
     backupEntry:
       concurrentSyncs: 20
-    bastion:
-      concurrentSyncs: 20
     # deletionGracePeriodHours: 24
     # deletionGracePeriodShootPurposes:
     # - production
+    bastion:
+      concurrentSyncs: 20
     seed:
       syncPeriod: 1h
     # leaseResyncSeconds: 2

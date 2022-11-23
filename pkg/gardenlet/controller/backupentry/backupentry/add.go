@@ -110,6 +110,10 @@ func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 // MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning
 // core.gardener.cloud/v1beta1.BackupEntry.
 func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	if obj.GetDeletionTimestamp() != nil {
+		return nil
+	}
+
 	shootTechnicalID, _ := gutil.ExtractShootDetailsFromBackupEntryName(obj.GetName())
 	if shootTechnicalID == "" {
 		return nil

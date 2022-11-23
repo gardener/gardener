@@ -17,6 +17,7 @@ package backupentry_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -154,6 +155,12 @@ var _ = Describe("Add", func() {
 			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry.Name, Namespace: backupEntry.Namespace}},
 			))
+		})
+
+		It("should return nil if the object has a deletion timestamp", func() {
+			extensionBackupEntry.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(BeNil())
 		})
 
 		It("should return nil when cluster is not found", func() {
