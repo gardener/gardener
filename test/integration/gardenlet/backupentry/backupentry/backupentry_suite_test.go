@@ -74,7 +74,7 @@ var (
 	gardenNamespace     *corev1.Namespace
 	seedGardenNamespace *corev1.Namespace
 
-	deletionGracePeriodHours int = 24
+	deletionGracePeriodHours = 24
 )
 
 var _ = BeforeSuite(func() {

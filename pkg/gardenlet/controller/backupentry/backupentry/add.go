@@ -121,7 +121,7 @@ func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Contex
 		return nil
 	}
 	if shoot == nil {
-		log.Info("shoot is missing in cluster resource", "cluster", kutil.Key(shootTechnicalID))
+		log.Info("Shoot is missing in cluster resource", "cluster", kutil.Key(shootTechnicalID))
 		return nil
 	}
 

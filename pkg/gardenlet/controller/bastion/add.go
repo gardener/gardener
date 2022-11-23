@@ -89,7 +89,7 @@ func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context
 	}
 
 	if shoot == nil {
-		log.Info("shoot is missing in cluster resource", "cluster", kutil.Key(obj.GetNamespace()))
+		log.Info("Shoot is missing in cluster resource", "cluster", kutil.Key(obj.GetNamespace()))
 		return nil
 	}
 
