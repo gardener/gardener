@@ -324,7 +324,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		})
 
 		It("should forbid Seed with overlap to default vpn range (subset)", func() {
-			shootDefaultPodCIDR := "192.168.124.0/23"       // 192.168.124.0-> 192.168.125.0
+			shootDefaultPodCIDR := "192.168.124.0/23"       // 192.168.124.0-> 192.168.125.255
 			shootDefaultServiceCIDR := "192.168.123.200/32" // 192.168.123.200 -> 192.168.123.200
 
 			nodesCIDR := "192.168.122.0/27" // 192.168.122.0 -> 192.168.122.31
@@ -338,7 +338,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				Pods:     "192.168.122.32/30", // 192.168.122.32 -> 192.168.122.35
 				Services: "192.168.123.64/26", // 192.168.123.64 -> 192.168.123.127
 				ShootDefaults: &core.ShootNetworks{
-					Pods:     &shootDefaultPodCIDR,     // 192.168.124.0-> 192.168.125.0
+					Pods:     &shootDefaultPodCIDR,     // 192.168.124.0-> 192.168.125.255
 					Services: &shootDefaultServiceCIDR, // 192.168.123.200 -> 192.168.123.200
 				},
 			}
