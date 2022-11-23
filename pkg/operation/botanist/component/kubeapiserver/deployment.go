@@ -570,7 +570,15 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey))
 	out = append(out, "--tls-cipher-suites="+strings.Join(kutil.TLSCipherSuites(k.values.Version), ","))
-	out = append(out, "--v=2")
+
+	if k.values.Logging != nil {
+		if k.values.Logging.HTTPAccessVerbosity != nil {
+			out = append(out, fmt.Sprintf("--vmodule=httplog=%d", *k.values.Logging.HTTPAccessVerbosity))
+		}
+		if k.values.Logging.Verbosity != nil {
+			out = append(out, fmt.Sprintf("--v=%d", *k.values.Logging.Verbosity))
+		}
+	}
 
 	if k.values.WatchCacheSizes != nil {
 		if k.values.WatchCacheSizes.Default != nil {

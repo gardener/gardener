@@ -4364,6 +4364,64 @@ Kubernetes meta/v1.Duration
 Defaults to 1h.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>logging</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerLogging">
+KubeAPIServerLogging
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Logging contains configuration for the log level and HTTP access logs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerLogging">KubeAPIServerLogging
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>KubeAPIServerLogging contains configuration for the logs level and http access logs</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>verbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Verbosity is the kube-apiserver log verbosity level
+Defaults to 2.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>httpAccessVerbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HTTPAccessVerbosity is the kube-apiserver access logs level</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeAPIServerRequests">KubeAPIServerRequests

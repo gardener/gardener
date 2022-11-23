@@ -761,6 +761,8 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 
 		allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("kubeAPIServer", "watchCacheSizes"))...)
 
+		allErrs = append(allErrs, ValidateKubeAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("kubeAPIServer", "logging"))...)
+
 		if kubeAPIServer.Requests != nil {
 			const maxMaxNonMutatingRequestsInflight = 800
 			if v := kubeAPIServer.Requests.MaxNonMutatingInflight; v != nil {
@@ -892,6 +894,20 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 				allErrs = append(allErrs, field.Required(idxPath.Child("resource"), "must not be empty"))
 			}
 			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(resourceWatchCacheSize.CacheSize), idxPath.Child("size"))...)
+		}
+	}
+	return allErrs
+}
+
+// ValidateKubeAPIServerLogging validates the given KubeAPIServer Logging fields.
+func ValidateKubeAPIServerLogging(loggingConfig *core.KubeAPIServerLogging, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if loggingConfig != nil {
+		if verbosity := loggingConfig.Verbosity; verbosity != nil {
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*verbosity), fldPath.Child("verbosity"))...)
+		}
+		if httpAccessVerbosity := loggingConfig.HTTPAccessVerbosity; httpAccessVerbosity != nil {
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*httpAccessVerbosity), fldPath.Child("httpAccessVerbosity"))...)
 		}
 	}
 	return allErrs

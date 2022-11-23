@@ -638,6 +638,22 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeTrue()))
 		})
 
+		It("should default the log verbosity level", func() {
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity).To(PointTo(Equal(int32(2))))
+		})
+
+		It("should not overwrite the log verbosity level", func() {
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &KubeAPIServerLogging{Verbosity: pointer.Int32(3)}}
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity).To(PointTo(Equal(int32(3))))
+		})
+
+		It("should not default the access log level", func() {
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.HTTPAccessVerbosity).To(BeNil())
+		})
+
 		It("should default architecture of worker's machine to amd64", func() {
 			obj.Spec.Provider.Workers = []Worker{
 				{Name: "Default Worker"},

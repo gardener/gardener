@@ -96,6 +96,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress":                                schema_pkg_apis_core_v1alpha1_Ingress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.IngressController":                      schema_pkg_apis_core_v1alpha1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerConfig":                    schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerLogging":                   schema_pkg_apis_core_v1alpha1_KubeAPIServerLogging(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerRequests":                  schema_pkg_apis_core_v1alpha1_KubeAPIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeControllerManagerConfig":            schema_pkg_apis_core_v1alpha1_KubeControllerManagerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeProxyConfig":                        schema_pkg_apis_core_v1alpha1_KubeProxyConfig(ref),
@@ -249,6 +250,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                 schema_pkg_apis_core_v1beta1_Ingress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController":                       schema_pkg_apis_core_v1beta1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig":                     schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerLogging":                    schema_pkg_apis_core_v1beta1_KubeAPIServerLogging(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests":                   schema_pkg_apis_core_v1beta1_KubeAPIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig":             schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig":                         schema_pkg_apis_core_v1beta1_KubeProxyConfig(ref),
@@ -3418,11 +3420,44 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"logging": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Logging contains configuration for the log level and HTTP access logs.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerLogging"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_KubeAPIServerLogging(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeAPIServerLogging contains configuration for the logs level and http access logs",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"verbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Verbosity is the kube-apiserver log verbosity level Defaults to 2.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"httpAccessVerbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HTTPAccessVerbosity is the kube-apiserver access logs level",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -10578,11 +10613,44 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"logging": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Logging contains configuration for the log level and HTTP access logs.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerLogging"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_KubeAPIServerLogging(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeAPIServerLogging contains configuration for the logs level and http access logs",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"verbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Verbosity is the kube-apiserver log verbosity level Defaults to 2.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"httpAccessVerbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HTTPAccessVerbosity is the kube-apiserver access logs level",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

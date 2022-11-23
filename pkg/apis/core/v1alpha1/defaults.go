@@ -288,6 +288,14 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.Bool(false)
 	}
 
+	if obj.Spec.Kubernetes.KubeAPIServer.Logging == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Logging = &KubeAPIServerLogging{}
+	}
+
+	if obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity = pointer.Int32(2)
+	}
+
 	for i, worker := range obj.Spec.Provider.Workers {
 		kubernetesVersion := obj.Spec.Kubernetes.Version
 		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
