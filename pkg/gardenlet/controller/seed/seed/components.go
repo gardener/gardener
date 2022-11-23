@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -46,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -54,7 +52,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -102,38 +99,6 @@ func defaultKubeStateMetrics(
 		Image:       image.String(),
 		Replicas:    1,
 	}), nil
-}
-
-func defaultGardenerSeedAdmissionController(
-	c client.Client,
-	imageVector imagevector.ImageVector,
-	secretsManager secretsmanager.Interface,
-	seedVersion *semver.Version,
-	conf config.GardenletConfiguration,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
-	if err != nil {
-		return nil, err
-	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevector.Image{Repository: repository, Tag: &tag}
-
-	values := seedadmissioncontroller.Values{
-		Image:             image.String(),
-		KubernetesVersion: seedVersion,
-		LogLevel:          conf.LogLevel,
-		LogFormat:         conf.LogFormat,
-	}
-
-	return seedadmissioncontroller.New(c, gardenNamespaceName, secretsManager, values), nil
 }
 
 func defaultIstio(

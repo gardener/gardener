@@ -12,28 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook
+package crddeletionprotection
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// AddToManager adds all webhook handlers to the given manager.
-func AddToManager(mgr manager.Manager) error {
-	var (
-		log    = mgr.GetLogger().WithName("webhook")
-		server = mgr.GetWebhookServer()
-	)
+const (
+	// HandlerName is the name of this webhook handler.
+	HandlerName = "crd-deletion-protection"
+	// WebhookPath is the HTTP handler path for this webhook handler.
+	WebhookPath = "/webhooks/validate-crd-deletion"
+)
 
-	if err := extensionresources.AddWebhooks(mgr); err != nil {
-		return err
+// AddToManager adds Handler to the given manager.
+func (h *Handler) AddToManager(mgr manager.Manager) error {
+	webhook := &admission.Webhook{
+		Handler:      h,
+		RecoverPanic: true,
 	}
 
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(log.WithName(extensioncrds.HandlerName)), RecoverPanic: true})
-
+	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil
 }

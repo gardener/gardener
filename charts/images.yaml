@@ -8,9 +8,6 @@ images:
 - name: gardenlet
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/gardenlet
-- name: gardener-seed-admission-controller
-  sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/resource-manager

@@ -12,78 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extensionresources
+package extensionvalidation
 
 import (
 	"context"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	druidvalidation "github.com/gardener/etcd-druid/api/validation"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
-
-const (
-	// BackupBucketWebhookPath is the HTTP handler path for this admission webhook handler for BackupBucket.
-	BackupBucketWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-backupbucket"
-	// BackupEntryWebhookPath is the HTTP handler path for this admission webhook handler for BackupEntry.
-	BackupEntryWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-backupentry"
-	// BastionWebhookPath is the HTTP handler path for this admission webhook handler for Bastion.
-	BastionWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-bastion"
-	// ContainerRuntimeWebhookPath is the HTTP handler path for this admission webhook handler for ContainerRuntime.
-	ContainerRuntimeWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-containerruntime"
-	// ControlPlaneWebhookPath is the HTTP handler path for this admission webhook handler for ControlPlane.
-	ControlPlaneWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-controlplane"
-	// DNSRecordWebhookPath is the HTTP handler path for this admission webhook handler DNSRecord.
-	DNSRecordWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-dnsrecord"
-	// EtcdWebhookPath is the HTTP handler path for this admission webhook handler for Etcd.
-	EtcdWebhookPath = "/validate-druid-gardener-cloud-v1alpha1-etcd"
-	// ExtensionWebhookPath is the HTTP handler path for this admission webhook handler for Extension.
-	ExtensionWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-extension"
-	// InfrastructureWebhookPath is the HTTP handler path for this admission webhook handler Infrastructure.
-	InfrastructureWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-infrastructure"
-	// NetworkWebhookPath is the HTTP handler path for this admission webhook handler for Network.
-	NetworkWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-network"
-	// OperatingSystemConfigWebhookPath is the HTTP handler path for this admission webhook handler for OperatingSystemConfig.
-	OperatingSystemConfigWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"
-	// WorkerWebhookPath is the HTTP handler path for this admission webhook handler for Worker.
-	WorkerWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-worker"
-)
-
-// AddWebhooks add extension's validation webhook to manager
-func AddWebhooks(mgr manager.Manager) error {
-	for obj, validator := range validators {
-		if err := builder.WebhookManagedBy(mgr).WithValidator(validator).For(obj).RecoverPanic().Complete(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-var (
-	validators = map[client.Object]admission.CustomValidator{
-		&extensionsv1alpha1.BackupBucket{}:          &backupBucketValidator{},
-		&extensionsv1alpha1.BackupEntry{}:           &backupEntryValidator{},
-		&extensionsv1alpha1.Bastion{}:               &bastionValidator{},
-		&extensionsv1alpha1.ContainerRuntime{}:      &containerRuntimeValidator{},
-		&extensionsv1alpha1.ControlPlane{}:          &controlPlaneValidator{},
-		&extensionsv1alpha1.DNSRecord{}:             &dnsRecordValidator{},
-		&druidv1alpha1.Etcd{}:                       &etcdValidator{},
-		&extensionsv1alpha1.Extension{}:             &extensionValidator{},
-		&extensionsv1alpha1.Infrastructure{}:        &infrastructureValidator{},
-		&extensionsv1alpha1.Network{}:               &networkValidator{},
-		&extensionsv1alpha1.OperatingSystemConfig{}: &operatingSystemConfigValidator{},
-		&extensionsv1alpha1.Worker{}:                &workerValidator{},
-	}
 )
 
 type (

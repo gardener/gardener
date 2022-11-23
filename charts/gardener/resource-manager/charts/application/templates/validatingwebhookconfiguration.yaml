@@ -1,0 +1,438 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: gardener-resource-manager
+  labels:
+    app: gardener
+    role: resource-manager
+webhooks:
+{{- if .Values.global.config.webhooks.crdDeletionProtection.enabled }}
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /webhooks/validate-crd-deletion
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: crd-deletion-protection.resources.gardener.cloud
+  objectSelector:
+    matchLabels:
+      gardener.cloud/deletion-protected: "true"
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - apiextensions.k8s.io
+    apiVersions:
+    - v1beta1
+    - v1
+    operations:
+    - DELETE
+    resources:
+    - customresourcedefinitions
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /webhooks/validate-crd-deletion
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: cr-deletion-protection.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - druid.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - DELETE
+    resources:
+    - etcds
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - DELETE
+    resources:
+    - backupbuckets
+    - backupentries
+    - bastions
+    - containerruntimes
+    - controlplanes
+    - dnsrecords
+    - extensions
+    - infrastructures
+    - networks
+    - operatingsystemconfigs
+    - workers
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+{{- end }}
+{{- if .Values.global.config.webhooks.extensionValidation.enabled }}
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-backupbucket
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.backupbuckets.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - backupbuckets
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-backupentry
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.backupentries.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - backupentries
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-bastion
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.bastions.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - bastions
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-containerruntime
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.containerruntimes.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - containerruntimes
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-controlplane
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.controlplanes.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - controlplanes
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-dnsrecord
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.dnsrecords.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dnsrecords
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-etcd
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.etcds.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - druid.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - etcds
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-extension
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.extensions.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - extensions
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-infrastructure
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.infrastructures.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - infrastructures
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-network
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.networks.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - networks
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.operatingsystemconfigs.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - operatingsystemconfigs
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-worker
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.workers.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - workers
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+{{- end }}

@@ -71,7 +71,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -546,7 +545,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		componentsFunctions := []component.CentralLoggingConfiguration{
 			// seed system components
 			dependencywatchdog.CentralLoggingConfiguration,
-			seedadmissioncontroller.CentralLoggingConfiguration,
 			resourcemanager.CentralLoggingConfiguration,
 			// shoot control plane components
 			etcd.CentralLoggingConfiguration,
@@ -861,10 +859,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, r.ImageVector, secretsManager, kubernetesVersion, r.Config, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -884,6 +878,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
 	if err != nil {
 		return err
+	}
+
+	// TODO(rfranzke): Delete this in a future version.
+	{
+		if err := kutil.DeleteObjects(ctx, seedClient,
+			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
+		); err != nil {
+			return err
+		}
 	}
 
 	var (
@@ -924,10 +928,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying etcd-druid",
 			Fn:   etcdDruid.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying gardener-seed-admission-controller",
-			Fn:   gardenerSeedAdmissionController.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying kube-state-metrics",

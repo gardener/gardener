@@ -22,6 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
@@ -32,7 +34,7 @@ import (
 )
 
 // AddToManager adds all webhook handlers to the given manager.
-func AddToManager(mgr manager.Manager, _, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
 	kubernetesClient, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
@@ -46,6 +48,21 @@ func AddToManager(mgr manager.Manager, _, targetCluster cluster.Cluster, cfg *co
 	targetVersionGreaterEqual123, err := version.CompareVersions(targetServerVersion.GitVersion, ">=", "1.23")
 	if err != nil {
 		return err
+	}
+
+	if cfg.Webhooks.CRDDeletionProtection.Enabled {
+		if err := (&crddeletionprotection.Handler{
+			Logger:       mgr.GetLogger().WithName("webhook").WithName(crddeletionprotection.HandlerName),
+			SourceReader: sourceCluster.GetAPIReader(),
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", crddeletionprotection.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.ExtensionValidation.Enabled {
+		if err := extensionvalidation.AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handlers: %w", extensionvalidation.HandlerName, err)
+		}
 	}
 
 	if cfg.Webhooks.HighAvailabilityConfig.Enabled {

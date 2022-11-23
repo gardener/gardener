@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -32,6 +33,7 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +49,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -54,6 +57,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
@@ -319,6 +324,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		fns = append(fns, r.ensureNetworkPolicy)
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
+		fns = append(fns, r.ensureValidatingWebhookConfiguration)
 	}
 
 	if err := flow.Sequential(fns...)(ctx); err != nil {
@@ -365,19 +371,20 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			return err
 		}
 
-		objectsToDelete = append(objectsToDelete,
+		if err := gutil.ConfirmDeletion(ctx, r.client, crd); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+
+		objectsToDelete = append([]client.Object{
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crd.Name}},
 			r.emptyMutatingWebhookConfiguration(),
+			r.emptyValidatingWebhookConfiguration(),
 			r.emptyClusterRole(),
 			r.emptyClusterRoleBinding(),
-		)
+		}, objectsToDelete...)
 	}
 
-	return kutil.DeleteObjects(
-		ctx,
-		r.client,
-		objectsToDelete...,
-	)
+	return kutil.DeleteObjects(ctx, r.client, objectsToDelete...)
 }
 
 func (r *resourceManager) emptyCustomResourceDefinition() (*apiextensionsv1.CustomResourceDefinition, error) {
@@ -542,6 +549,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			DisableCachedClient: r.values.TargetDisableCache,
 		}
+	} else {
+		config.Webhooks.CRDDeletionProtection.Enabled = true
+		config.Webhooks.ExtensionValidation.Enabled = true
 	}
 
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
@@ -1051,6 +1061,28 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager" + suffix, Namespace: r.namespace}}
 }
 
+func (r *resourceManager) ensureValidatingWebhookConfiguration(ctx context.Context) error {
+	validatingWebhookConfiguration := r.emptyValidatingWebhookConfiguration()
+
+	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, validatingWebhookConfiguration, func() error {
+		validatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
+			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
+		})
+		validatingWebhookConfiguration.Webhooks = r.getValidatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
+		return nil
+	})
+	return err
+}
+
+func (r *resourceManager) emptyValidatingWebhookConfiguration() *admissionregistrationv1.ValidatingWebhookConfiguration {
+	return &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+}
+
 func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
 	if !found {
@@ -1179,6 +1211,16 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	return webhooks
 }
 
+func (r *resourceManager) getValidatingWebhookConfigurationWebhooks(
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+) []admissionregistrationv1.ValidatingWebhook {
+	return append(
+		GetCRDDeletionProtectionValidatingWebhooks(secretServerCA, buildClientConfigFn),
+		GetExtensionValidationValidatingWebhooks(secretServerCA, buildClientConfigFn)...,
+	)
+}
+
 // GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
@@ -1212,6 +1254,225 @@ func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		SideEffects:             &sideEffect,
 		TimeoutSeconds:          pointer.Int32(10),
 	}
+}
+
+// GetCRDDeletionProtectionValidatingWebhooks returns the ValidatingWebhooks for the crd-deletion-protection webhook for
+// reuse between the component and integration tests.
+func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.ValidatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return []admissionregistrationv1.ValidatingWebhook{
+		{
+			Name: "crd-deletion-protection.resources.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{apiextensionsv1.GroupName},
+					APIVersions: []string{apiextensionsv1beta1.SchemeGroupVersion.Version, apiextensionsv1.SchemeGroupVersion.Version},
+					Resources:   []string{"customresourcedefinitions"},
+				},
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
+			}},
+			FailurePolicy:           &failurePolicy,
+			NamespaceSelector:       &metav1.LabelSelector{},
+			ObjectSelector:          &metav1.LabelSelector{MatchLabels: crddeletionprotection.ObjectSelector},
+			ClientConfig:            buildClientConfigFn(secretServerCA, crddeletionprotection.WebhookPath),
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		},
+		{
+			Name: "cr-deletion-protection.resources.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
+						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+						Resources: []string{
+							"etcds",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
+				},
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"backupbuckets",
+							"backupentries",
+							"bastions",
+							"containerruntimes",
+							"controlplanes",
+							"dnsrecords",
+							"extensions",
+							"infrastructures",
+							"networks",
+							"operatingsystemconfigs",
+							"workers",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
+				},
+			},
+			FailurePolicy:           &failurePolicy,
+			NamespaceSelector:       &metav1.LabelSelector{},
+			ClientConfig:            buildClientConfigFn(secretServerCA, crddeletionprotection.WebhookPath),
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		},
+	}
+}
+
+// GetExtensionValidationValidatingWebhooks returns the ValidatingWebhooks for the crd-deletion-protection webhook for
+// reuse between the component and integration tests.
+func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.ValidatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+		webhooks      []admissionregistrationv1.ValidatingWebhook
+	)
+
+	for _, webhook := range []struct {
+		resource string
+		path     string
+		rule     admissionregistrationv1.Rule
+	}{
+		{
+			resource: "backupbuckets",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"backupbuckets"},
+			},
+			path: extensionvalidation.WebhookPathBackupBucket,
+		},
+		{
+			resource: "backupentries",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"backupentries"},
+			},
+			path: extensionvalidation.WebhookPathBackupEntry,
+		},
+		{
+			resource: "bastions",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"bastions"},
+			},
+			path: extensionvalidation.WebhookPathBastion,
+		},
+		{
+			resource: "containerruntimes",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"containerruntimes"},
+			},
+			path: extensionvalidation.WebhookPathContainerRuntime,
+		},
+		{
+			resource: "controlplanes",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"controlplanes"},
+			},
+			path: extensionvalidation.WebhookPathControlPlane,
+		},
+		{
+			resource: "dnsrecords",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"dnsrecords"},
+			},
+			path: extensionvalidation.WebhookPathDNSRecord,
+		},
+		{
+			resource: "etcds",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
+				APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+				Resources:   []string{"etcds"},
+			},
+			path: extensionvalidation.WebhookPathEtcd,
+		},
+		{
+			resource: "extensions",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"extensions"},
+			},
+			path: extensionvalidation.WebhookPathExtension,
+		},
+		{
+			resource: "infrastructures",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"infrastructures"},
+			},
+			path: extensionvalidation.WebhookPathInfrastructure,
+		},
+		{
+			resource: "networks",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"networks"},
+			},
+			path: extensionvalidation.WebhookPathNetwork,
+		},
+		{
+			resource: "operatingsystemconfigs",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"operatingsystemconfigs"},
+			},
+			path: extensionvalidation.WebhookPathOperatingSystemConfig,
+		},
+		{
+			resource: "workers",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"workers"},
+			},
+			path: extensionvalidation.WebhookPathWorker,
+		},
+	} {
+		webhooks = append(webhooks, admissionregistrationv1.ValidatingWebhook{
+			Name: "validation.extensions." + webhook.resource + ".resources.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule:       webhook.rule,
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:           &failurePolicy,
+			NamespaceSelector:       &metav1.LabelSelector{},
+			ClientConfig:            buildClientConfigFn(secretServerCA, webhook.path),
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		})
+	}
+
+	return webhooks
 }
 
 func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package admission_test
+package crddeletionprotection_test
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission"
+	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 )
 
 var _ = Describe("admission", func() {
