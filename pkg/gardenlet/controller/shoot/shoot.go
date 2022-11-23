@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -76,6 +77,7 @@ func NewShootController(
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	imageVector imagevector.ImageVector,
+	clock clock.Clock,
 ) (
 	*Controller,
 	error,
@@ -99,7 +101,7 @@ func NewShootController(
 
 		shootReconciler:     NewShootReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, identity, gardenClusterIdentity, config),
 		careReconciler:      NewCareReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, imageVector, identity, gardenClusterIdentity, config),
-		migrationReconciler: NewMigrationReconciler(gardenCluster.GetClient(), config),
+		migrationReconciler: NewMigrationReconciler(gardenCluster.GetClient(), config, clock),
 
 		shootCareQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
 		shootQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),

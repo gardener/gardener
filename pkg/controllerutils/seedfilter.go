@@ -26,18 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// SeedFilterFunc returns a filtering func for seeds.
-func SeedFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		seed, ok := obj.(*gardencorev1beta1.Seed)
-		if !ok {
-			return false
-		}
-
-		return seed.Name == seedName
-	}
-}
-
 // ShootFilterFunc returns a filtering func for shoots.
 func ShootFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
