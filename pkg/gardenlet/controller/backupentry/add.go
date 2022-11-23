@@ -17,7 +17,6 @@ package backupentry
 import (
 	"fmt"
 
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -37,7 +36,6 @@ func AddToManager(
 	cfg config.GardenletConfiguration,
 ) error {
 	if err := (&backupentry.Reconciler{
-		Clock:    clock.RealClock{},
 		Config:   *cfg.Controllers.BackupEntry,
 		SeedName: cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
@@ -46,7 +44,6 @@ func AddToManager(
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
 		if err := (&migration.Reconciler{
-			Clock:  clock.RealClock{},
 			Config: cfg,
 		}).AddToManager(mgr, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding migration reconciler: %w", err)

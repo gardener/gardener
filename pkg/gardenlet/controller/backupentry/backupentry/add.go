@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -49,6 +50,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	}
 	if r.SeedClient == nil {
 		r.SeedClient = seedCluster.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 	if r.Recorder == nil {
 		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")

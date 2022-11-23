@@ -16,8 +16,8 @@ package event
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
-
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -32,6 +32,9 @@ const ControllerName = "event"
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 
 	return builder.

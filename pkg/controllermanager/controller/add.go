@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -46,7 +45,6 @@ func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguratio
 
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
-		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
@@ -77,7 +75,6 @@ func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguratio
 	if config := cfg.Controllers.Event; config != nil {
 		if err := (&event.Reconciler{
 			Config: *config,
-			Clock:  clock.RealClock{},
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding Event controller: %w", err)
 		}

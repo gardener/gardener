@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -65,7 +64,6 @@ func AddToManager(
 	}
 
 	if err := (&backupbucket.Reconciler{
-		Clock:    clock.RealClock{},
 		Config:   *cfg.Controllers.BackupBucket,
 		SeedName: cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
@@ -78,7 +76,6 @@ func AddToManager(
 
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
-		Clock:  clock.RealClock{},
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
