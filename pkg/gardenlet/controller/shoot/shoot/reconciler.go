@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -108,7 +107,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 	log = log.WithValues("operation", "reconcile")
 
 	var (
-		key           = shootKey(shoot)
+		key           = client.ObjectKeyFromObject(shoot)
 		operationType = computeOperationType(shoot)
 		isRestoring   = operationType == gardencorev1beta1.LastOperationTypeRestore
 	)
@@ -156,7 +155,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 func (r *Reconciler) migrateShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (reconcile.Result, error) {
 	log = log.WithValues("operation", "migrate")
 
-	r.ReconciliationDueTracker.off(shootKey(shoot))
+	r.ReconciliationDueTracker.off(client.ObjectKeyFromObject(shoot))
 
 	destinationSeed := &gardencorev1beta1.Seed{}
 	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: *shoot.Spec.SeedName}, destinationSeed); err != nil {
@@ -202,7 +201,7 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 
 	log = log.WithValues("operation", "delete")
 
-	r.ReconciliationDueTracker.off(shootKey(shoot))
+	r.ReconciliationDueTracker.off(client.ObjectKeyFromObject(shoot))
 
 	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
 	// cluster. This implies that there can not be any resource which we have to delete.
@@ -291,7 +290,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 
 	if operationType == gardencorev1beta1.LastOperationTypeCreate || operationType == gardencorev1beta1.LastOperationTypeReconcile {
 		var (
-			key                                        = shootKey(shoot)
+			key                                        = client.ObjectKeyFromObject(shoot)
 			failedOrIgnored                            = failed || ignored
 			reconcileInMaintenanceOnly                 = r.reconcileInMaintenanceOnly()
 			isUpToDate                                 = gutil.IsObservedAtLatestGenerationAndSucceeded(shoot)
@@ -937,39 +936,6 @@ func checkIfSeedNamespaceExists(ctx context.Context, o *operation.Operation, bot
 		return err
 	}
 	return nil
-}
-
-func shootKey(shoot *gardencorev1beta1.Shoot) string {
-	return shoot.Namespace + "/" + shoot.Name
-}
-
-// ReconciliationDueTracker tracks due reconciliations.
-type ReconciliationDueTracker struct {
-	lock    sync.Mutex
-	tracker map[string]bool
-}
-
-func newReconciliationDueTracker() *ReconciliationDueTracker {
-	return &ReconciliationDueTracker{tracker: make(map[string]bool)}
-}
-
-func (t *ReconciliationDueTracker) on(key string) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	t.tracker[key] = true
-}
-
-func (t *ReconciliationDueTracker) off(key string) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	delete(t.tracker, key)
-}
-
-func (t *ReconciliationDueTracker) tracked(key string) bool {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	v, ok := t.tracker[key]
-	return ok && v
 }
 
 func startRotationCA(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
