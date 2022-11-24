@@ -82,15 +82,6 @@ func (r *Reconciler) delete(
 
 	if seed.Spec.Backup != nil {
 		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(seed.UID)}}
-		associatedBackupEntries, err := controllerutils.DetermineBackupEntryAssociations(ctx, r.GardenClient, backupBucket.Name)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		if len(associatedBackupEntries) > 0 {
-			log.Info("Cannot delete Seed's BackupBucket because BackupEntries are still referencing it", "backupEntryNames", associatedBackupEntries)
-			r.Recorder.Eventf(backupBucket, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, "cannot delete BackupBucket because the following BackupEntries are still referencing it: %+v", associatedBackupEntries)
-			return reconcile.Result{}, fmt.Errorf("BackupBucket %s still has references", backupBucket.Name)
-		}
 
 		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, err

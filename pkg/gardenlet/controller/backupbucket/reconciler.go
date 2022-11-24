@@ -244,19 +244,6 @@ func (r *Reconciler) deleteBackupBucket(
 		return reconcile.Result{}, nil
 	}
 
-	associatedBackupEntries, err := controllerutils.DetermineBackupEntryAssociations(ctx, r.GardenClient, backupBucket.Name)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if len(associatedBackupEntries) > 0 {
-		log.Info("Cannot delete BackupBucket because BackupEntries are still referencing it", "backupEntryNames", associatedBackupEntries)
-		r.Recorder.Eventf(backupBucket, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, "cannot delete BackupBucket because the following BackupEntries are still referencing it: %+v", associatedBackupEntries)
-		return reconcile.Result{}, fmt.Errorf("BackupBucket %s still has references", backupBucket.Name)
-	}
-
-	log.Info("No BackupEntries are referencing this BackupBucket, accepting deletion")
-
 	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
 	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
