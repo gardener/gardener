@@ -79,7 +79,11 @@ func GetTopologySpreadConstraints(
 		LabelSelector:     &labelSelector,
 	}}
 
-	if numberOfZones > 1 {
+	// We only want to enforce a spread over zones when there are:
+	// - multiple zones
+	// - AND
+	// - the failure tolerance type is 'nil' (seed/shoot system component case) or 'zone' (shoot control-plane case)
+	if numberOfZones > 1 && (failureToleranceType == nil || *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone) {
 		maxSkew := int32(1)
 		// Increase maxSkew if there are >= 2*numberOfZones maxReplicas, see https://github.com/kubernetes/kubernetes/issues/109364.
 		if maxReplicas >= 2*numberOfZones {

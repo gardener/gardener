@@ -571,12 +571,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 										WhenUnsatisfiable: corev1.DoNotSchedule,
 										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 									},
-									corev1.TopologySpreadConstraint{
-										TopologyKey:       corev1.LabelTopologyZone,
-										MaxSkew:           1,
-										WhenUnsatisfiable: corev1.DoNotSchedule,
-										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
-									},
 								))
 							})
 						})
