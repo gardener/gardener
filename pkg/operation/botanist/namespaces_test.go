@@ -509,4 +509,66 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 		})
 	})
+
+	DescribeTable("#ExtractZonesFromNodeSelectorTerm",
+		func(term corev1.NodeSelectorTerm, expectedZones []string) {
+			actualZones := ExtractZonesFromNodeSelectorTerm(term)
+			Expect(actualZones).To(ConsistOf(expectedZones))
+		},
+
+		Entry("without any matchExpressions",
+			corev1.NodeSelectorTerm{
+				MatchExpressions: []corev1.NodeSelectorRequirement{},
+			},
+			[]string{},
+		),
+		Entry("with operator != In",
+			corev1.NodeSelectorTerm{
+				MatchExpressions: []corev1.NodeSelectorRequirement{
+					{
+						Key:      "topology.foo.bar/zone",
+						Operator: "NotIn",
+						Values:   []string{"1", "2", "3"},
+					},
+				},
+			},
+			[]string{},
+		),
+		Entry("with GA topology label (topology.kubernetes.io/zone)",
+			corev1.NodeSelectorTerm{
+				MatchExpressions: []corev1.NodeSelectorRequirement{
+					{
+						Key:      corev1.LabelTopologyZone,
+						Operator: "In",
+						Values:   []string{"1", "2", "3"},
+					},
+				},
+			},
+			[]string{"1", "2", "3"},
+		),
+		Entry("with provider specific topology label (topology.foo.bar/zone)",
+			corev1.NodeSelectorTerm{
+				MatchExpressions: []corev1.NodeSelectorRequirement{
+					{
+						Key:      "topology.foo.bar/zone",
+						Operator: "In",
+						Values:   []string{"1", "2", "3"},
+					},
+				},
+			},
+			[]string{"1", "2", "3"},
+		),
+		Entry("with deprecated topology label (failure-domain.beta.kubernetes.io/zone)",
+			corev1.NodeSelectorTerm{
+				MatchExpressions: []corev1.NodeSelectorRequirement{
+					{
+						Key:      corev1.LabelFailureDomainBetaZone,
+						Operator: "In",
+						Values:   []string{"1", "2", "3"},
+					},
+				},
+			},
+			[]string{"1", "2", "3"},
+		),
+	)
 })
