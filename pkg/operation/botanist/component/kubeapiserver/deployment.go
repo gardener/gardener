@@ -140,8 +140,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretKubeletClient *corev1.Secret,
 	secretKubeAggregator *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
-	secretLegacyVPNSeed *corev1.Secret,
-	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
 ) error {
@@ -484,7 +482,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretCAClient, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretCAClient, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -724,179 +722,15 @@ func (k *kubeAPIServer) handleVPNSettings(
 	secretCAVPN *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretLegacyVPNCAClient *corev1.Secret,
-	secretLegacyVPNSeed *corev1.Secret,
-	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
 ) {
-	if !k.values.VPN.ReversedVPNEnabled {
-		k.handleVPNSettingsLegacy(deployment, secretLegacyVPNCAClient, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
-	} else if k.values.VPN.HighAvailabilityEnabled {
+
+	if k.values.VPN.HighAvailabilityEnabled {
 		k.handleVPNSettingsHAReversedVPN(deployment, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
 	} else {
 		k.handleVPNSettingsReversedVPN(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy)
 	}
-}
-
-func (k *kubeAPIServer) handleVPNSettingsLegacy(
-	deployment *appsv1.Deployment,
-	secretLegacyVPNCAClient *corev1.Secret,
-	secretLegacyVPNSeed *corev1.Secret,
-	secretLegacyVPNSeedTLSAuth *corev1.Secret,
-) {
-	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToShootNetworks] = v1beta1constants.LabelNetworkPolicyAllowed
-	deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
-		Name:  "set-iptable-rules",
-		Image: k.values.Images.AlpineIPTables,
-		Command: []string{
-			"/bin/sh",
-			"-c",
-			"iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP",
-		},
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"NET_ADMIN"},
-			},
-			Privileged: pointer.Bool(true),
-		},
-		VolumeMounts: []corev1.VolumeMount{{
-			Name:      volumeNameLibModules,
-			MountPath: volumeMountPathLibModules,
-		}},
-	}}
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: volumeNameLibModules,
-		VolumeSource: corev1.VolumeSource{
-			HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
-		},
-	})
-
-	vpnSeedContainer := corev1.Container{
-		Name:            containerNameVPNSeed,
-		Image:           k.values.Images.VPNSeed,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Env: []corev1.EnvVar{
-			{
-				Name:  "MAIN_VPN_SEED",
-				Value: "true",
-			},
-			{
-				Name:  "OPENVPN_PORT",
-				Value: "4314",
-			},
-			{
-				Name:  "APISERVER_AUTH_MODE",
-				Value: "client-cert",
-			},
-			{
-				Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
-				Value: volumeMountPathCA + "/" + secrets.DataKeyCertificateBundle,
-			},
-			{
-				Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
-				Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificate,
-			},
-			{
-				Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_KEY",
-				Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyPrivateKey,
-			},
-			{
-				Name:  "SERVICE_NETWORK",
-				Value: k.values.VPN.ServiceNetworkCIDR,
-			},
-			{
-				Name:  "POD_NETWORK",
-				Value: k.values.VPN.PodNetworkCIDR,
-			},
-		},
-		Resources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("100m"),
-				corev1.ResourceMemory: resource.MustParse("128Mi"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("128Mi"),
-			},
-		},
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"NET_ADMIN"},
-			},
-			Privileged: pointer.Bool(true),
-		},
-		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      volumeNameVPNSeed,
-				MountPath: volumeMountPathVPNSeed,
-			},
-			{
-				Name:      volumeNameVPNSeedTLSAuth,
-				MountPath: volumeMountPathVPNSeedTLSAuth,
-			},
-			{
-				Name:      volumeNameCA,
-				MountPath: volumeMountPathCA,
-			},
-		},
-	}
-
-	if k.values.VPN.NodeNetworkCIDR != nil {
-		vpnSeedContainer.Env = append(vpnSeedContainer.Env, corev1.EnvVar{
-			Name:  "NODE_NETWORK",
-			Value: *k.values.VPN.NodeNetworkCIDR,
-		})
-	}
-
-	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, vpnSeedContainer)
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-		{
-			Name: volumeNameVPNSeed,
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(400),
-					Sources: []corev1.VolumeProjection{
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: secretLegacyVPNCAClient.Name,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  secrets.DataKeyCertificateBundle,
-									Path: secrets.DataKeyCertificateCA,
-								}},
-							},
-						},
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: secretLegacyVPNSeed.Name,
-								},
-								Items: []corev1.KeyToPath{
-									{
-										Key:  secrets.DataKeyCertificate,
-										Path: secrets.DataKeyCertificate,
-									},
-									{
-										Key:  secrets.DataKeyPrivateKey,
-										Path: secrets.DataKeyPrivateKey,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			Name: volumeNameVPNSeedTLSAuth,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{SecretName: secretLegacyVPNSeedTLSAuth.Name},
-			},
-		},
-	}...)
-
 }
 
 func (k *kubeAPIServer) handleVPNSettingsReversedVPN(

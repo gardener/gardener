@@ -170,23 +170,21 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 		}
 
-		if k.values.VPN.ReversedVPNEnabled {
-			port := &portVPNSeedServerNonHA
-			if k.values.VPN.HighAvailabilityEnabled {
-				port = &portVPNSeedServerHA
-			}
-			networkPolicy.Spec.Egress = append(networkPolicy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
-				To: []networkingv1.NetworkPolicyPeer{{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: vpnseedserver.GetLabels(),
-					},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{{
-					Protocol: &protocol,
-					Port:     port,
-				}},
-			})
+		port := &portVPNSeedServerNonHA
+		if k.values.VPN.HighAvailabilityEnabled {
+			port = &portVPNSeedServerHA
 		}
+		networkPolicy.Spec.Egress = append(networkPolicy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
+			To: []networkingv1.NetworkPolicyPeer{{
+				PodSelector: &metav1.LabelSelector{
+					MatchLabels: vpnseedserver.GetLabels(),
+				},
+			}},
+			Ports: []networkingv1.NetworkPolicyPort{{
+				Protocol: &protocol,
+				Port:     port,
+			}},
+		})
 
 		return nil
 	})

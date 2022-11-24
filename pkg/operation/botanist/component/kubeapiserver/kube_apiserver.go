@@ -222,8 +222,6 @@ type Images struct {
 
 // VPNConfig contains information for configuring the VPN settings for the kube-apiserver.
 type VPNConfig struct {
-	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
-	ReversedVPNEnabled bool
 	// PodNetworkCIDR is the CIDR of the pod network.
 	PodNetworkCIDR string
 	// ServiceNetworkCIDR is the CIDR of the service network.
@@ -394,16 +392,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	secretLegacyVPNSeed, err := k.reconcileSecretLegacyVPNSeed(ctx)
-	if err != nil {
-		return err
-	}
-
-	secretLegacyVPNSeedTLSAuth, err := k.reconcileSecretLegacyVPNSeedTLSAuth(ctx)
-	if err != nil {
-		return err
-	}
-
 	secretHAVPNSeedClient, err := k.reconcileSecretHAVPNSeedClient(ctx)
 	if err != nil {
 		return err
@@ -450,8 +438,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretKubeletClient,
 		secretKubeAggregator,
 		secretHTTPProxy,
-		secretLegacyVPNSeed,
-		secretLegacyVPNSeedTLSAuth,
 		secretHAVPNSeedClient,
 		secretHAVPNClientSeedTLSAuth,
 	); err != nil {
