@@ -433,6 +433,23 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 	if obj.Primary == nil {
 		obj.Primary = pointer.Bool(true)
 	}
+	if obj.Kind == "Extension" {
+		if obj.Lifecycle == nil {
+			obj.Lifecycle = &ControllerResourceLifecycle{}
+		}
+		if obj.Lifecycle.Reconcile == nil {
+			afterKubeAPIServer := AfterKubeAPIServer
+			obj.Lifecycle.Reconcile = &afterKubeAPIServer
+		}
+		if obj.Lifecycle.Delete == nil {
+			beforeKubeAPIServer := BeforeKubeAPIServer
+			obj.Lifecycle.Delete = &beforeKubeAPIServer
+		}
+		if obj.Lifecycle.Migrate == nil {
+			beforeKubeAPIServer := BeforeKubeAPIServer
+			obj.Lifecycle.Migrate = &beforeKubeAPIServer
+		}
+	}
 }
 
 // SetDefaults_ControllerRegistrationDeployment sets default values for ControllerDeployment objects.

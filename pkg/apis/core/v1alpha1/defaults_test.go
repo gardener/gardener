@@ -191,6 +191,40 @@ var _ = Describe("Defaults", func() {
 
 			Expect(resource.Primary).To(Equal(resourceCopy.Primary))
 		})
+
+		const kindExtension = "Extension"
+		It("should default the lifecycle strategy field when kind is Extension", func() {
+			resource := ControllerResource{Kind: kindExtension}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.Lifecycle).ToNot(BeNil())
+			Expect(*resource.Lifecycle.Reconcile).To(Equal(AfterKubeAPIServer))
+			Expect(*resource.Lifecycle.Delete).To(Equal(BeforeKubeAPIServer))
+			Expect(*resource.Lifecycle.Migrate).To(Equal(BeforeKubeAPIServer))
+		})
+
+		It("should default the lifecycle strategy field when kind is not Extension", func() {
+			resource := ControllerResource{Kind: "not an extension"}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.Lifecycle).To(BeNil())
+		})
+
+		It("should default only the missing lifecycle strategy fields when kind is Extension", func() {
+			before := BeforeKubeAPIServer
+			resource := ControllerResource{
+				Kind: kindExtension,
+				Lifecycle: &ControllerResourceLifecycle{
+					Reconcile: &before,
+				},
+			}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.Lifecycle).ToNot(BeNil())
+			Expect(*resource.Lifecycle.Reconcile).To(Equal(BeforeKubeAPIServer))
+			Expect(*resource.Lifecycle.Delete).To(Equal(BeforeKubeAPIServer))
+			Expect(*resource.Lifecycle.Migrate).To(Equal(BeforeKubeAPIServer))
+		})
 	})
 
 	Describe("#SetDefaults_ControllerDeployment", func() {
