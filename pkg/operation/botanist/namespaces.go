@@ -126,7 +126,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 					}
 
 					for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
-						zonesFromTerm := extractZonesFromNodeSelectorTerm(term)
+						zonesFromTerm := ExtractZonesFromNodeSelectorTerm(term)
 						if len(zonesFromTerm) > 0 {
 							chosenZones.Insert(zonesFromTerm...)
 							b.Logger.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
@@ -154,19 +154,20 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 	return nil
 }
 
-func extractZonesFromNodeSelectorTerm(term corev1.NodeSelectorTerm) []string {
+// ExtractZonesFromNodeSelectorTerm extracts the zones from given term.
+func ExtractZonesFromNodeSelectorTerm(term corev1.NodeSelectorTerm) []string {
 	zones := sets.NewString()
 	for _, matchExpression := range term.MatchExpressions {
-		key := matchExpression.Key
-		// Only consider labels with 'topology.{provider-specific-string}/zone' which should match most of the cases.
-		if (!strings.HasPrefix(key, "topology.") && !strings.HasSuffix(key, "/zone")) ||
-			key != corev1.LabelFailureDomainBetaZone {
-			continue
-		}
 		if matchExpression.Operator != corev1.NodeSelectorOpIn {
 			continue
 		}
-		zones.Insert(matchExpression.Values...)
+
+		key := matchExpression.Key
+		// Only consider labels with 'topology.{provider-specific-string}/zone' or "failure-domain.beta.kubernetes.io/zone" which should match most of the cases.
+		if (strings.HasPrefix(key, "topology.") && strings.HasSuffix(key, "/zone")) ||
+			key == corev1.LabelFailureDomainBetaZone {
+			zones.Insert(matchExpression.Values...)
+		}
 	}
 	return zones.UnsortedList()
 }
