@@ -33,16 +33,14 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		}
 	)
 
-	if b.Shoot.ReversedVPNEnabled {
-		imageName = images.ImageNameVpnShootClient
+	imageName = images.ImageNameVpnShootClient
 
-		reversedVPNValues = vpnshoot.ReversedVPNValues{
-			Enabled:     true,
-			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
-			Endpoint:    b.outOfClusterAPIServerFQDN(),
-			OpenVPNPort: 8132,
+	reversedVPNValues = vpnshoot.ReversedVPNValues{
+		Enabled:     true,
+		Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
+		Endpoint:    b.outOfClusterAPIServerFQDN(),
+		OpenVPNPort: 8132,
 		}
-	}
 
 	image, err := b.ImageVector.FindImage(imageName, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
@@ -76,11 +74,6 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 // DeployVPNShoot deploys the VPNShoot system component.
 func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 	secrets := vpnshoot.Secrets{}
-
-	if !b.Shoot.ReversedVPNEnabled {
-		dhSecret := b.getDiffieHellmanSecret()
-		secrets.DH = &dhSecret
-	}
 
 	b.Shoot.Components.SystemComponents.VPNShoot.SetSecrets(secrets)
 

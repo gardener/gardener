@@ -107,9 +107,6 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 
 // DeployVPNServer deploys the vpn-seed-server.
 func (b *Botanist) DeployVPNServer(ctx context.Context) error {
-	if !b.Shoot.ReversedVPNEnabled {
-		return b.Shoot.Components.ControlPlane.VPNSeedServer.Destroy(ctx)
-	}
 
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSecrets(vpnseedserver.Secrets{DiffieHellmanKey: b.getDiffieHellmanSecret()})
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSeedNamespaceObjectUID(b.SeedNamespaceObject.UID)

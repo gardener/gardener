@@ -103,9 +103,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
 	}
 
-	if b.Shoot.ReversedVPNEnabled {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.VPNSeedServer)
-	}
+	//if b.Shoot.ReversedVPNEnabled {
+	monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.VPNSeedServer)
+	//}
 
 	if b.Shoot.WantsClusterAutoscaler {
 		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
@@ -213,7 +213,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
 			"reversedVPN": map[string]interface{}{
-				"enabled": b.Shoot.ReversedVPNEnabled,
+				"enabled": true,
 			},
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,

@@ -29,10 +29,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -212,20 +210,12 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.GardenerVersion = gardenerVersion
 
-	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN)
-	if reversedVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil {
-		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-			shoot.ReversedVPNEnabled = reversedVPNEnabled
-		}
+	shoot.VPNHighAvailabilityEnabled = shoot.GetInfo().Spec.ControlPlane != nil && shoot.GetInfo().Spec.ControlPlane.HighAvailability != nil
+	if haVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneHAVPN]); err == nil {
+		shoot.VPNHighAvailabilityEnabled = haVPNEnabled
 	}
-	if shoot.ReversedVPNEnabled {
-		shoot.VPNHighAvailabilityEnabled = shoot.GetInfo().Spec.ControlPlane != nil && shoot.GetInfo().Spec.ControlPlane.HighAvailability != nil
-		if haVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneHAVPN]); err == nil {
-			shoot.VPNHighAvailabilityEnabled = haVPNEnabled
-		}
-		shoot.VPNHighAvailabilityNumberOfSeedServers = 2
-		shoot.VPNHighAvailabilityNumberOfShootClients = 2
-	}
+	shoot.VPNHighAvailabilityNumberOfSeedServers = 2
+	shoot.VPNHighAvailabilityNumberOfShootClients = 2
 
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {

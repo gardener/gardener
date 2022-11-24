@@ -190,7 +190,7 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
 						CIDR:   "10.0.0.0/8",
-						Except: append(append([]string{podCIDRSeed, nodeCIDRSeed}, blockCIDRs...), nodeCIDRShoot),
+						Except: append([]string{podCIDRSeed, nodeCIDRSeed}, blockCIDRs...),
 					}},
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
 						CIDR:   "172.16.0.0/12",
@@ -202,7 +202,7 @@ var _ = Describe("Networkpolicies", func() {
 					}},
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
 						CIDR:   "100.64.0.0/10",
-						Except: []string{podCIDRShoot},
+						Except: nil,
 					}},
 				))
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))

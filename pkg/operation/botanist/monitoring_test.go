@@ -166,7 +166,7 @@ var _ = Describe("Monitoring", func() {
 						},
 						HVPA: mockHVPA,
 					},
-					ReversedVPNEnabled: true,
+					//ReversedVPNEnabled: true,
 				},
 				ImageVector: imagevector.ImageVector{
 					{Name: "grafana"},

@@ -85,7 +85,6 @@ type Shoot struct {
 	WantsAlertmanager                       bool
 	IgnoreAlerts                            bool
 	HibernationEnabled                      bool
-	ReversedVPNEnabled                      bool
 	VPNHighAvailabilityEnabled              bool
 	VPNHighAvailabilityNumberOfSeedServers  int
 	VPNHighAvailabilityNumberOfShootClients int

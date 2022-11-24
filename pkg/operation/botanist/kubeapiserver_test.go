@@ -1110,19 +1110,8 @@ usernames: ["admin"]
 					Expect(kubeAPIServer.GetValues().VPN).To(Equal(expectedConfig))
 				},
 
-				Entry("ReversedVPN disabled",
-					nil,
-					kubeapiserver.VPNConfig{
-						ReversedVPNEnabled: false,
-						PodNetworkCIDR:     podNetworkCIDR,
-						ServiceNetworkCIDR: serviceNetworkCIDR,
-						NodeNetworkCIDR:    &nodeNetworkCIDR,
-					},
-				),
 				Entry("ReversedVPN enabled",
-					func() {
-						botanist.Shoot.ReversedVPNEnabled = true
-					},
+					nil,
 					kubeapiserver.VPNConfig{
 						ReversedVPNEnabled: true,
 						PodNetworkCIDR:     podNetworkCIDR,
@@ -1137,7 +1126,7 @@ usernames: ["admin"]
 						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.VPNConfig{
-						ReversedVPNEnabled: false,
+						ReversedVPNEnabled: true,
 						PodNetworkCIDR:     podNetworkCIDR,
 						ServiceNetworkCIDR: serviceNetworkCIDR,
 					},

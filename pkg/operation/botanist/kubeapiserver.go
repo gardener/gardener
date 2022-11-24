@@ -157,7 +157,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			StaticTokenKubeconfigEnabled:   b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 			Version:                        b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
-				ReversedVPNEnabled:                   b.Shoot.ReversedVPNEnabled,
+				ReversedVPNEnabled:                   true,
 				PodNetworkCIDR:                       b.Shoot.Networks.Pods.String(),
 				ServiceNetworkCIDR:                   b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:                      b.Shoot.GetInfo().Spec.Networking.Nodes,
