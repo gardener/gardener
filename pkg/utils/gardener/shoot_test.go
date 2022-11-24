@@ -681,4 +681,25 @@ var _ = Describe("Shoot", func() {
 			Entry("batchv1beta1.CronJob, only container 2", cronJobV1beta1, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.Spec, false, true, containerName2),
 		)
 	})
+
+	Describe("#GetShootSeedNames", func() {
+		It("returns nil for other objects than Shoot", func() {
+			specSeedName, statusSeedName := GetShootSeedNames(&corev1.Secret{})
+			Expect(specSeedName).To(BeNil())
+			Expect(statusSeedName).To(BeNil())
+		})
+
+		It("returns the correct seed names of a Shoot", func() {
+			specSeedName, statusSeedName := GetShootSeedNames(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: pointer.String("spec"),
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					SeedName: pointer.String("status"),
+				},
+			})
+			Expect(specSeedName).To(Equal(pointer.String("spec")))
+			Expect(statusSeedName).To(Equal(pointer.String("status")))
+		})
+	})
 })

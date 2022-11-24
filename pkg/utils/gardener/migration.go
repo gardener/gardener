@@ -24,7 +24,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// IsObjectBeingMigrated checks whether the objec is being migrated.
+// IsObjectBeingMigrated checks whether the object is being migrated.
 func IsObjectBeingMigrated(
 	ctx context.Context,
 	reader client.Reader,

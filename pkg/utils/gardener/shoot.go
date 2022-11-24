@@ -35,7 +35,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -45,12 +45,12 @@ import (
 )
 
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
-func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *v1beta1.Shoot) bool {
+func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
 	return respectSyncPeriodOverwrite || shoot.Namespace == v1beta1constants.GardenNamespace
 }
 
 // ShouldIgnoreShoot determines whether a Shoot should be ignored or not.
-func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *v1beta1.Shoot) bool {
+func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
 	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
 		return false
 	}
@@ -65,24 +65,24 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *v1beta1.Shoot) bo
 }
 
 // IsShootFailed checks if a Shoot is failed.
-func IsShootFailed(shoot *v1beta1.Shoot) bool {
+func IsShootFailed(shoot *gardencorev1beta1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 
-	return lastOperation != nil && lastOperation.State == v1beta1.LastOperationStateFailed &&
+	return lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed &&
 		shoot.Generation == shoot.Status.ObservedGeneration &&
 		shoot.Status.Gardener.Version == version.Get().GitVersion
 }
 
 // IsNowInEffectiveShootMaintenanceTimeWindow checks if the current time is in the effective
 // maintenance time window of the Shoot.
-func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *v1beta1.Shoot) bool {
+func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
 	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
 }
 
 // LastReconciliationDuringThisTimeWindow returns true if <now> is contained in the given effective maintenance time
 // window of the shoot and if the <lastReconciliation> did not happen longer than the longest possible duration of a
 // maintenance time window.
-func LastReconciliationDuringThisTimeWindow(shoot *v1beta1.Shoot) bool {
+func LastReconciliationDuringThisTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
 	if shoot.Status.LastOperation == nil {
 		return false
 	}
@@ -93,15 +93,15 @@ func LastReconciliationDuringThisTimeWindow(shoot *v1beta1.Shoot) bool {
 		lastReconciliation = shoot.Status.LastOperation.LastUpdateTime.Time
 	)
 
-	return timeWindow.Contains(lastReconciliation) && now.UTC().Sub(lastReconciliation.UTC()) <= v1beta1.MaintenanceTimeWindowDurationMaximum
+	return timeWindow.Contains(lastReconciliation) && now.UTC().Sub(lastReconciliation.UTC()) <= gardencorev1beta1.MaintenanceTimeWindowDurationMaximum
 }
 
 // IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
 // is Succeeded.
-func IsObservedAtLatestGenerationAndSucceeded(shoot *v1beta1.Shoot) bool {
+func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1beta1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 	return shoot.Generation == shoot.Status.ObservedGeneration &&
-		(lastOperation != nil && lastOperation.State == v1beta1.LastOperationStateSucceeded)
+		(lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded)
 }
 
 // SyncPeriodOfShoot determines the sync period of the given shoot.
@@ -109,7 +109,7 @@ func IsObservedAtLatestGenerationAndSucceeded(shoot *v1beta1.Shoot) bool {
 // If no overwrite is allowed, the defaultMinSyncPeriod is returned.
 // Otherwise, the overwrite is parsed. If an error occurs or it is smaller than the defaultMinSyncPeriod,
 // the defaultMinSyncPeriod is returned. Otherwise, the overwrite is returned.
-func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *v1beta1.Shoot) time.Duration {
+func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1beta1.Shoot) time.Duration {
 	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
 		return defaultMinSyncPeriod
 	}
@@ -139,7 +139,7 @@ func EffectiveMaintenanceTimeWindow(timeWindow *timewindow.MaintenanceTimeWindow
 }
 
 // EffectiveShootMaintenanceTimeWindow returns the effective MaintenanceTimeWindow of the given Shoot.
-func EffectiveShootMaintenanceTimeWindow(shoot *v1beta1.Shoot) *timewindow.MaintenanceTimeWindow {
+func EffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) *timewindow.MaintenanceTimeWindow {
 	maintenance := shoot.Spec.Maintenance
 	if maintenance == nil || maintenance.TimeWindow == nil {
 		return timewindow.AlwaysTimeWindow
@@ -442,4 +442,13 @@ func injectGenericKubeconfig(podSpec *corev1.PodSpec, genericKubeconfigName, acc
 			podSpec.Containers[i].VolumeMounts = append(podSpec.Containers[i].VolumeMounts, volumeMount)
 		}
 	}
+}
+
+// GetShootSeedNames returns the spec.seedName and the status.seedName field in case the provided object is a Shoot.
+func GetShootSeedNames(obj client.Object) (*string, *string) {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return nil, nil
+	}
+	return shoot.Spec.SeedName, shoot.Status.SeedName
 }

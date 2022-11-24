@@ -17,7 +17,6 @@ package migration
 import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -27,6 +26,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -60,14 +60,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		&predicate.GenerationChangedPredicate{},
-		predicateutils.IsBeingMigratedPredicate(r.GardenClient, r.SeedName, getShootSeedNames),
+		predicateutils.IsBeingMigratedPredicate(r.GardenClient, r.SeedName, gutil.GetShootSeedNames),
 	)
-}
-
-func getShootSeedNames(obj client.Object) (*string, *string) {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return nil, nil
-	}
-	return shoot.Spec.SeedName, shoot.Status.SeedName
 }

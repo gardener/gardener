@@ -15,6 +15,10 @@
 package gardener_test
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -59,6 +63,27 @@ var _ = Describe("BackupEntry", func() {
 			technicalID, uid := ExtractShootDetailsFromBackupEntryName(sourceBackupEntryName)
 			Expect(technicalID).To(Equal(shootTechnicalID))
 			Expect(uid).To(Equal(shootUID))
+		})
+	})
+
+	Describe("#GetBackupEntrySeedNames", func() {
+		It("returns nil for other objects than BackupEntry", func() {
+			specSeedName, statusSeedName := GetBackupEntrySeedNames(&corev1.Secret{})
+			Expect(specSeedName).To(BeNil())
+			Expect(statusSeedName).To(BeNil())
+		})
+
+		It("returns the correct seed names of a BackupEntry", func() {
+			specSeedName, statusSeedName := GetBackupEntrySeedNames(&gardencorev1beta1.BackupEntry{
+				Spec: gardencorev1beta1.BackupEntrySpec{
+					SeedName: pointer.String("spec"),
+				},
+				Status: gardencorev1beta1.BackupEntryStatus{
+					SeedName: pointer.String("status"),
+				},
+			})
+			Expect(specSeedName).To(Equal(pointer.String("spec")))
+			Expect(statusSeedName).To(Equal(pointer.String("status")))
 		})
 	})
 })
