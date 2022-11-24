@@ -81,7 +81,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
 		controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
 		&predicate.GenerationChangedPredicate{},
-		r.SeedNamePredicate(),
+		predicateutils.SeedNamePredicate(r.SeedName, gutil.GetBackupEntrySeedNames),
 	); err != nil {
 		return err
 	}
@@ -91,24 +91,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.ExtensionStatusChanged(),
 	)
-}
-
-// SeedNamePredicate returns a predicate which returns true when the object belongs to this seed.
-func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
-		if !ok {
-			return false
-		}
-		if backupEntry.Spec.SeedName == nil {
-			return false
-		}
-		if backupEntry.Status.SeedName == nil || *backupEntry.Spec.SeedName == *backupEntry.Status.SeedName {
-			return *backupEntry.Spec.SeedName == r.SeedName
-		}
-
-		return *backupEntry.Status.SeedName == r.SeedName
-	})
 }
 
 // MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning

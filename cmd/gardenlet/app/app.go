@@ -443,6 +443,7 @@ func (g *garden) Start(ctx context.Context) error {
 		gardenCluster,
 		g.mgr,
 		seedClientSet,
+		shootClientMap,
 		g.config,
 		gardenNamespace,
 		gardenClusterIdentity,

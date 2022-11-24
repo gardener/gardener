@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
@@ -45,6 +46,7 @@ func AddToManager(
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	seedClientSet kubernetes.Interface,
+	shootClientMap clientmap.ClientMap,
 	cfg *config.GardenletConfiguration,
 	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
@@ -96,7 +98,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
-	if err := shoot.AddToManager(mgr, gardenCluster, *cfg); err != nil {
+	if err := shoot.AddToManager(mgr, gardenCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, imageVector); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 
