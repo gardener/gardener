@@ -262,18 +262,21 @@ func (p *isBeingMigratedPredicate) InjectStopChannel(stopChan <-chan struct{}) e
 	return nil
 }
 
+// IsObjectBeingMigrated is an alias for gutil.IsObjectBeingMigrated.
+var IsObjectBeingMigrated = gutil.IsObjectBeingMigrated
+
 func (p *isBeingMigratedPredicate) Create(e event.CreateEvent) bool {
-	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
+	return IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
 }
 
 func (p *isBeingMigratedPredicate) Update(e event.UpdateEvent) bool {
-	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.ObjectNew, p.seedName, p.getSeedNamesFromObject)
+	return IsObjectBeingMigrated(p.ctx, p.reader, e.ObjectNew, p.seedName, p.getSeedNamesFromObject)
 
 }
 func (p *isBeingMigratedPredicate) Delete(e event.DeleteEvent) bool {
-	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
+	return IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
 }
 
 func (p *isBeingMigratedPredicate) Generic(e event.GenericEvent) bool {
-	return gutil.IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
+	return IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
 }

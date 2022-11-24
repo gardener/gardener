@@ -21,7 +21,6 @@ import (
 	"github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -33,6 +32,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Predicate", func() {
@@ -508,88 +508,28 @@ var _ = Describe("Predicate", func() {
 			fakeClient client.Client
 			p          predicate.Predicate
 
-			obj        *gardencorev1beta1.BackupEntry
-			sourceSeed *gardencorev1beta1.Seed
-			seedName   = "seed"
-
-			getSeedNamesFromObject = func(obj client.Object) (*string, *string) {
-				backupEntry := obj.(*gardencorev1beta1.BackupEntry)
-				return backupEntry.Spec.SeedName, backupEntry.Status.SeedName
-			}
+			obj      *gardencorev1beta1.BackupEntry
+			seedName = "seed"
 		)
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
-			p = IsBeingMigratedPredicate(fakeClient, seedName, getSeedNamesFromObject)
+			p = IsBeingMigratedPredicate(fakeClient, seedName, nil)
 			gomega.Expect(inject.StopChannelInto(ctx.Done(), p)).To(gomega.BeTrue())
 
-			sourceSeed = &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "source-seed",
-				},
-				Spec: gardencorev1beta1.SeedSpec{
-					Settings: &gardencorev1beta1.SeedSettings{
-						OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
-							Enabled: true,
-						},
-					},
-				},
-			}
+			DeferCleanup(test.WithVar(&IsObjectBeingMigrated, func(_ context.Context, _ client.Reader, obj client.Object, _ string, _ func(client.Object) (*string, *string)) bool {
+				return false
+			}))
 
-			obj = &gardencorev1beta1.BackupEntry{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "entry",
-				},
-				Spec: gardencorev1beta1.BackupEntrySpec{
-					SeedName: &seedName,
-				},
-				Status: gardencorev1beta1.BackupEntryStatus{
-					SeedName: &sourceSeed.Name,
-				},
-			}
+			obj = &gardencorev1beta1.BackupEntry{}
 		})
 
-		It("should return false if status.SeedName is nil", func() {
-			obj.Status.SeedName = nil
-
-			verifyPredicate(p, obj, gomega.BeFalse())
-		})
-
-		It("should return false if spec.Status.SeedName status.SeedName are equal", func() {
-			obj.Status.SeedName = pointer.String("seed")
-
-			verifyPredicate(p, obj, gomega.BeFalse())
-		})
-
-		It("should return false if the obj does not belong to this seed", func() {
-			obj.Spec.SeedName = pointer.String("another-seed")
-
-			verifyPredicate(p, obj, gomega.BeFalse())
-		})
-
-		It("should return false if the get call on source seed fails", func() {
-			verifyPredicate(p, obj, gomega.BeFalse())
-		})
-
-		It("should return true if the source seed has owner checks enabled", func() {
-			gomega.Expect(fakeClient.Create(ctx, sourceSeed)).To(gomega.Succeed())
-
-			verifyPredicate(p, obj, gomega.BeTrue())
-		})
-
-		It("should return true if the source seed has owner checks disabled", func() {
-			sourceSeed.Spec.Settings.OwnerChecks.Enabled = false
-			gomega.Expect(fakeClient.Create(ctx, sourceSeed)).To(gomega.Succeed())
-
-			verifyPredicate(p, obj, gomega.BeFalse())
+		It("should call the IsObjectBeingMigrated helper functions", func() {
+			gomega.Expect(p.Create(event.CreateEvent{Object: obj})).To(gomega.BeFalse())
+			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: obj})).To(gomega.BeFalse())
+			gomega.Expect(p.Delete(event.DeleteEvent{Object: obj})).To(gomega.BeFalse())
+			gomega.Expect(p.Generic(event.GenericEvent{Object: obj})).To(gomega.BeFalse())
 		})
 	})
 })
-
-func verifyPredicate(p predicate.Predicate, obj client.Object, match gomegatypes.GomegaMatcher) {
-	gomega.ExpectWithOffset(1, p.Create(event.CreateEvent{Object: obj})).To(match)
-	gomega.ExpectWithOffset(1, p.Update(event.UpdateEvent{ObjectNew: obj})).To(match)
-	gomega.ExpectWithOffset(1, p.Delete(event.DeleteEvent{Object: obj})).To(match)
-	gomega.ExpectWithOffset(1, p.Generic(event.GenericEvent{Object: obj})).To(match)
-}

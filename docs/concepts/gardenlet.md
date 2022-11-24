@@ -367,7 +367,7 @@ The `Shoot` controller in the `gardenlet` reconciles `Shoot` objects with the he
 
 This reconciler is only active if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the `gardenlet` and if the `Seed` has owner checks enabled (i.e., `spec.setttings.ownerChecks.enabled=true`).
 It checks if the source `Seed` also has owner checks enabled.
-If not or if the `BackupEntry` is being deleted, it sets the `status.migrationStartTime` to `nil`.
+If not or if the `Shoot` is being deleted, it sets the `status.migrationStartTime` to `nil`.
 The controller updates the status to force restoration in the following cases:
 
 1. If the `Shoot` is annotated with `shoot.gardener.cloud/force-restore=true`.

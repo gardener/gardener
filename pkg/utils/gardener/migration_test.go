@@ -76,13 +76,13 @@ var _ = Describe("Migration", func() {
 			}
 		})
 
-		It("should return false if status.SeedName is nil", func() {
+		It("should return false if status.seedName is nil", func() {
 			obj.Status.SeedName = nil
 
 			Expect(IsObjectBeingMigrated(ctx, fakeClient, obj, seedName, getSeedNamesFromObject)).To(BeFalse())
 		})
 
-		It("should return false if spec.Status.SeedName status.SeedName are equal", func() {
+		It("should return false if spec.seedName and status.seedName are equal", func() {
 			obj.Status.SeedName = pointer.String("seed")
 
 			Expect(IsObjectBeingMigrated(ctx, fakeClient, obj, seedName, getSeedNamesFromObject)).To(BeFalse())
@@ -104,7 +104,7 @@ var _ = Describe("Migration", func() {
 			Expect(IsObjectBeingMigrated(ctx, fakeClient, obj, seedName, getSeedNamesFromObject)).To(BeTrue())
 		})
 
-		It("should return true if the source seed has owner checks disabled", func() {
+		It("should return false if the source seed has owner checks disabled", func() {
 			sourceSeed.Spec.Settings.OwnerChecks.Enabled = false
 			Expect(fakeClient.Create(ctx, sourceSeed)).To(Succeed())
 
