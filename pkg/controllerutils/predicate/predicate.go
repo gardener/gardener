@@ -286,15 +286,6 @@ func (p *isBeingMigratedPredicate) Generic(e event.GenericEvent) bool {
 func SeedNamePredicate(seedName string, getSeedNamesFromObject func(client.Object) (*string, *string)) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		specSeedName, statusSeedName := getSeedNamesFromObject(obj)
-
-		if specSeedName == nil {
-			return false
-		}
-
-		if statusSeedName == nil || *specSeedName == *statusSeedName {
-			return *specSeedName == seedName
-		}
-
-		return *statusSeedName == seedName
+		return gutil.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
 	})
 }

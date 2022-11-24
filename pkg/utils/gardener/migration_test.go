@@ -31,8 +31,6 @@ import (
 
 var _ = Describe("Migration", func() {
 	Describe("#IsObjectBeingMigrated", func() {
-		var ()
-
 		var (
 			ctx        = context.TODO()
 			fakeClient client.Client
@@ -109,6 +107,25 @@ var _ = Describe("Migration", func() {
 			Expect(fakeClient.Create(ctx, sourceSeed)).To(Succeed())
 
 			Expect(IsObjectBeingMigrated(ctx, fakeClient, obj, seedName, getSeedNamesFromObject)).To(BeFalse())
+		})
+	})
+
+	Describe("#GetResponsibleSeedName", func() {
+		It("returns nothing if spec.seedName is not set", func() {
+			Expect(GetResponsibleSeedName(nil, nil)).To(BeEmpty())
+			Expect(GetResponsibleSeedName(nil, pointer.String("status"))).To(BeEmpty())
+		})
+
+		It("returns spec.seedName if status.seedName is not set", func() {
+			Expect(GetResponsibleSeedName(pointer.String("spec"), nil)).To(Equal("spec"))
+		})
+
+		It("returns status.seedName if the seedNames differ", func() {
+			Expect(GetResponsibleSeedName(pointer.String("spec"), pointer.String("status"))).To(Equal("status"))
+		})
+
+		It("returns the seedName if both are equal", func() {
+			Expect(GetResponsibleSeedName(pointer.String("spec"), pointer.String("spec"))).To(Equal("spec"))
 		})
 	})
 })
