@@ -313,7 +313,6 @@ kind-extensions-down: $(KIND)
 	docker stop gardener-extensions-control-plane
 kind-extensions-clean:
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
-	$(KIND) delete cluster --name gardener-extensions
 
 kind-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM)
 	./hack/kind-up.sh --cluster-name gardener-local-ha-single-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/values.yaml

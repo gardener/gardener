@@ -13,21 +13,21 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 
 ## Prerequisites
 
-- Make sure that you have followed the [Local Setup guide](../development/local_setup.md) up until the [Get the sources](../development/local_setup.md#get-the-sources) step.
+- Make sure that you have prepared your setup and checked out Gardener sources as described by the [Local Setup guide](../development/local_setup.md).
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
   > Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
-- Make sure that you have access to a Gardener shoot cluster you can use as a seed cluster in this setup.
-  - The cluster requires at least 16 CPUs in total to run one shoot cluster
-  - When bootstrapping `gardenlet` to the cluster your new seed will have the same provider type as the shoot cluster you use...an AWS shoot will become an AWS seed, an GCP shoot will become an GCP seed etc.
-  - Hibernating seeds could cause problems, so please don't hibernate (and deactivate hibernation schedule) while using it as seed
-  - The setup brings its own installation of ingress-nginx, so please don't use the Gardener add-on.
+- Make sure that you have access to a Kubernetes cluster you can use as a seed cluster in this setup.
+  - The seed cluster requires at least 16 CPUs in total to run one shoot cluster
+  - You could use any Kubernetes cluster for your seed cluster. However, using a Gardener shoot cluster for your seed simplifies some configuration steps.
+  - When bootstrapping `gardenlet` to the cluster your new seed will have the same provider type as the shoot cluster you use...an AWS shoot will become an AWS seed, an GCP shoot will become an GCP seed etc. (only relevant when using a Gardener shoot as seed).
+  - Hibernating seeds could cause problems, so please don't hibernate (and deactivate hibernation schedule) while using it as seed (only relevant when using a Gardener shoot as seed).
 
 ## Provide infrastructure credentials and configuration
 
 As this setup is running on a real infrastructure, you have to provide credentials for DNS, the infrastructure and the kubeconfig for Gardener cluster you want to use as seed.
 
-There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please take care of what you commit when you finished these steps..
+> There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please double check and make sure that credentials are not commited.
 
 ### DNS
 Gardener control plane requires DNS for default and internal domains. Thus, you have to configure a valid DNS provider for your setup.
@@ -43,11 +43,16 @@ Infrastructure secrets and the corresponding secret bindings should be maintaine
 
 There are templates with `.tmpl` suffixes for the files in the same folder.
 
-### Gardener cluster access
-The `kubeconfig` of your Gardener cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.
+### Seed cluster preparation
+The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.
+Additionally, please maintain the configuration of your seed in `./example/provider-extensions/seed/seed-config.yaml`. You can use `seed-config.yaml.tmpl` in the same directory as a template. This file also includes explanations of the settings.
+
+Using a Gardener cluster as seed simplifies the process, because some configuration options can be taken from `shoot-info` and creating DNS entries and TLS certificates is automated.
+
+However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `seed-config.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up` , which is explained later, will pause and tell you what to do.
 
 ### Cloud-profiles
-There are no demo cloud-profiles yet. Thus, please copy cloud-profiles from another landscape to `./example/provider-extensions/garden/cloud-profiles/profiles`. 
+There are no demo cloud-profiles yet. Thus, please copy cloud-profiles from another landscape to `./example/provider-extensions/garden/cloud-profiles/profiles` or create your own cloud-profiles based on the [gardener examples](../../example/30-cloudprofile.yaml).  
 
 ## Setting up the KinD cluster
 
@@ -55,7 +60,7 @@ There are no demo cloud-profiles yet. Thus, please copy cloud-profiles from anot
 make kind-extensions-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind-extensions/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/provider-extensions/garden/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config` since you will need to target this KinD cluster multiple times.
 Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind-extensions/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind-extensions/kubeconfig`.
