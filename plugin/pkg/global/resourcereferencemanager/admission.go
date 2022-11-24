@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,18 +30,21 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	externalcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	corev1alphalisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/hashicorp/go-multierror"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -69,11 +73,13 @@ func Register(plugins *admission.Plugins) {
 type ReferenceManager struct {
 	*admission.Handler
 	gardenCoreClient           internalversion.Interface
+	gardenExternalCoreClient   externalcoreclientset.Interface
 	kubeClient                 kubernetes.Interface
 	dynamicClient              dynamic.Interface
 	authorizer                 authorizer.Authorizer
 	secretLister               kubecorev1listers.SecretLister
 	configMapLister            kubecorev1listers.ConfigMapLister
+	backupBucketLister         corelisters.BackupBucketLister
 	cloudProfileLister         corelisters.CloudProfileLister
 	seedLister                 corelisters.SeedLister
 	shootLister                corelisters.ShootLister
@@ -93,6 +99,7 @@ var (
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
 	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsExternalCoreClientset(&ReferenceManager{})
 
 	readyFuncs = []admission.ReadyFunc{}
 
@@ -104,7 +111,7 @@ var (
 // New creates a new ReferenceManager admission plugin.
 func New() (*ReferenceManager, error) {
 	return &ReferenceManager{
-		Handler: admission.NewHandler(admission.Create, admission.Update),
+		Handler: admission.NewHandler(admission.Create, admission.Update, admission.Delete),
 	}, nil
 }
 
@@ -127,6 +134,9 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f coreinformers.Shared
 	shootInformer := f.Core().InternalVersion().Shoots()
 	r.shootLister = shootInformer.Lister()
 
+	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
+	r.backupBucketLister = backupBucketInformer.Lister()
+
 	cloudProfileInformer := f.Core().InternalVersion().CloudProfiles()
 	r.cloudProfileLister = cloudProfileInformer.Lister()
 
@@ -142,7 +152,15 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f coreinformers.Shared
 	controllerDeploymentInformer := f.Core().InternalVersion().ControllerDeployments()
 	r.controllerDeploymentLister = controllerDeploymentInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced, controllerDeploymentInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs,
+		seedInformer.Informer().HasSynced,
+		shootInformer.Informer().HasSynced,
+		backupBucketInformer.Informer().HasSynced,
+		cloudProfileInformer.Informer().HasSynced,
+		secretBindingInformer.Informer().HasSynced,
+		quotaInformer.Informer().HasSynced,
+		projectInformer.Informer().HasSynced,
+		controllerDeploymentInformer.Informer().HasSynced)
 }
 
 // SetExternalCoreInformerFactory sets the external garden core informer factory.
@@ -169,6 +187,11 @@ func (r *ReferenceManager) SetInternalCoreClientset(c internalversion.Interface)
 	r.gardenCoreClient = c
 }
 
+// SetExternalCoreClientset sets the versioned Gardener client.
+func (r *ReferenceManager) SetExternalCoreClientset(c externalcoreclientset.Interface) {
+	r.gardenExternalCoreClient = c
+}
+
 // SetKubeClientset sets the Kubernetes client.
 func (r *ReferenceManager) SetKubeClientset(c kubernetes.Interface) {
 	r.kubeClient = c
@@ -190,6 +213,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	if r.configMapLister == nil {
 		return errors.New("missing configMap lister")
 	}
+	if r.backupBucketLister == nil {
+		return errors.New("missing BackupBucket lister")
+	}
 	if r.cloudProfileLister == nil {
 		return errors.New("missing cloud profile lister")
 	}
@@ -210,6 +236,12 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.exposureClassLister == nil {
 		return errors.New("missing exposure class lister")
+	}
+	if r.gardenCoreClient == nil {
+		return errors.New("missing gardener internal core client")
+	}
+	if r.gardenExternalCoreClient == nil {
+		return errors.New("missing gardener external core client")
 	}
 	return nil
 }
@@ -235,6 +267,10 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		err       error
 		operation = a.GetOperation()
 	)
+
+	if operation == admission.Delete && a.GetKind().GroupKind() != core.Kind("BackupBucket") {
+		return nil
+	}
 
 	switch a.GetKind().GroupKind() {
 	case core.Kind("SecretBinding"):
@@ -378,6 +414,41 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				})
 			}
 		}
+	case core.Kind("BackupBucket"):
+		if operation == admission.Delete {
+			// The "delete endpoint" handler of the k8s.io/apiserver library calls the admission controllers
+			// handling DELETE requests with empty objects:
+			// https://github.com/kubernetes/apiserver/blob/release-1.25/pkg/endpoints/handlers/delete.go#L126
+			// Consequently, a.GetObject() will be nil.
+			err = r.validateBackupBucketDeletion(ctx, a.GetName())
+		} else {
+			backupBucket, ok := a.GetObject().(*core.BackupBucket)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert resource into BackupBucket object")
+			}
+			oldBackupBucket := &core.BackupBucket{}
+			if operation == admission.Update {
+				oldBackupBucket, ok = a.GetOldObject().(*core.BackupBucket)
+				if !ok {
+					return apierrors.NewBadRequest("could not convert old resource into BackupBucket object")
+				}
+			}
+
+			err = r.ensureBackupBucketReferences(ctx, oldBackupBucket, backupBucket, operation)
+		}
+	case core.Kind("BackupEntry"):
+		backupEntry, ok := a.GetObject().(*core.BackupEntry)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into BackupEntry object")
+		}
+		oldBackupEntry := &core.BackupEntry{}
+		if operation == admission.Update {
+			oldBackupEntry, ok = a.GetOldObject().(*core.BackupEntry)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into BackupEntry object")
+			}
+		}
+		err = r.ensureBackupEntryReferences(ctx, oldBackupEntry, backupEntry)
 	case core.Kind("CloudProfile"):
 		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
 		if !ok {
@@ -670,6 +741,58 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
+	return nil
+}
+
+func (r *ReferenceManager) ensureBackupEntryReferences(ctx context.Context, oldBackupEntry, backupEntry *core.BackupEntry) error {
+	if !equality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, backupEntry.Spec.SeedName) {
+		if backupEntry.Spec.SeedName != nil {
+			if _, err := r.seedLister.Get(*backupEntry.Spec.SeedName); err != nil {
+				return err
+			}
+		}
+	}
+
+	if !equality.Semantic.DeepEqual(oldBackupEntry.Spec.BucketName, backupEntry.Spec.BucketName) {
+		if _, err := r.backupBucketLister.Get(backupEntry.Spec.BucketName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, oldBackupBucket, backupBucket *core.BackupBucket, operation admission.Operation) error {
+	if !equality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, backupBucket.Spec.SeedName) {
+		if backupBucket.Spec.SeedName != nil {
+			if _, err := r.seedLister.Get(*backupBucket.Spec.SeedName); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := r.lookupSecret(ctx, backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, backupBucketName string) error {
+	backupEntryList, err := r.gardenExternalCoreClient.CoreV1beta1().BackupEntries("").List(ctx, metav1.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{core.BackupEntryBucketName: backupBucketName}).String(),
+	})
+	if err != nil {
+		return err
+	}
+	associatedBackupEntries := make([]string, 0)
+	for _, entry := range backupEntryList.Items {
+		associatedBackupEntries = append(associatedBackupEntries, client.ObjectKeyFromObject(&entry).String())
+	}
+
+	if len(associatedBackupEntries) != 0 {
+		return fmt.Errorf("cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s", strings.Join(associatedBackupEntries, ","))
+	}
 	return nil
 }
 
