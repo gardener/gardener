@@ -187,7 +187,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 	}
 
 	var secrets []vpnSecret
-	if !v.values.ReversedVPN.Enabled || !v.values.VPNHighAvailabilityEnabled {
+	if !v.values.VPNHighAvailabilityEnabled {
 		secret, err := v.secretsManager.Generate(ctx, config, secretsmanager.SignedByCA(signingCA), secretsmanager.Rotate(secretsmanager.InPlace))
 		if err != nil {
 			return err
