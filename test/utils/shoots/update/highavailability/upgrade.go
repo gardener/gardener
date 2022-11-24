@@ -125,7 +125,7 @@ func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, sh
 }
 
 // DeployZeroDownTimeValidatorJob deploys a Job into the cluster which ensures
-// zero down time by continuously checking the kube-apiserver's health.
+// zero downtime by continuously checking the kube-apiserver's health.
 // This job fails once a health check fails. Its associated pod results in error status.
 func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testName, namespace, token string) (*batchv1.Job, error) {
 	job := batchv1.Job{

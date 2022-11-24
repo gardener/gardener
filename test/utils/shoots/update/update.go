@@ -170,15 +170,14 @@ func RunTest(
 
 	if gardencorev1beta1helper.IsHAControlPlaneConfigured(f.Shoot) {
 		By("ensuring there was no downtime while upgrading shoot")
-		ExpectWithOffset(1, f.SeedClient.Client().Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
-		ExpectWithOffset(1, job.Status.Failed).Should(BeZero())
-		ExpectWithOffset(1,
-			client.IgnoreNotFound(
-				f.SeedClient.Client().Delete(ctx,
-					job,
-					client.PropagationPolicy(metav1.DeletePropagationForeground),
-				),
+		Expect(f.SeedClient.Client().Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
+		Expect(job.Status.Failed).Should(BeZero())
+		Expect(client.IgnoreNotFound(
+			f.SeedClient.Client().Delete(ctx,
+				job,
+				client.PropagationPolicy(metav1.DeletePropagationForeground),
 			),
+		),
 		).To(Succeed())
 	}
 }
