@@ -33,8 +33,8 @@ func TestEtcd(t *testing.T) {
 
 const (
 	testNamespace = "shoot--test--test"
-	testRole      = "test"
-	testROLE      = "Test"
+	testRole      = "main"
+	testROLE      = "Main"
 )
 
 var _ = BeforeSuite(func() {

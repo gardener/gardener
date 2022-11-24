@@ -1,27 +1,27 @@
 rule_files:
-- kube-etcd3-test.rules.yaml
+- kube-etcd3-main.rules.yaml
 
 evaluation_interval: 30s
 
 tests:
 - interval: 30s
   input_series:
-  # KubeEtcdTestDown
-  - series: 'up{job="kube-etcd3-test"}'
+  # KubeEtcdMainDown
+  - series: 'up{job="kube-etcd3-main"}'
     values: '1+0x20'
-  # KubeEtcd3TestNoLeader
-  - series: 'etcd_server_has_leader{job="kube-etcd3-test"}'
+  # KubeEtcd3MainNoLeader
+  - series: 'etcd_server_has_leader{job="kube-etcd3-main"}'
     values: '0+0x20'
   # KubeEtcd3HighNumberOfFailedProposals
-  - series: 'etcd_server_proposals_failed_total{job="kube-etcd3-test", pod="etcd"}'
+  - series: 'etcd_server_proposals_failed_total{job="kube-etcd3-main", pod="etcd"}'
     values: '0+1x6 6+0x115'
   # KubeEtcd3DbSizeLimitApproaching
   # KubeEtcd3DbSizeLimitCrossed
-  - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-test"}'
+  - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main"}'
     values: '7194070000+107374182x20' # 6.7GB 6.8GB 6.9GB .. 7.7GB
   alert_rule_test:
   - eval_time: 5m
-    alertname: KubeEtcdTestDown
+    alertname: KubeEtcdMainDown
     exp_alerts:
     - exp_labels:
         service: etcd
@@ -29,10 +29,10 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: Etcd3 cluster test is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 test is down, the cluster is unreachable.
-        summary: Etcd3 test cluster down.
+        description: Etcd3 cluster main is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 main is down, the cluster is unreachable.
+        summary: Etcd3 main cluster down.
   - eval_time: 15m
-    alertname: KubeEtcd3TestNoLeader
+    alertname: KubeEtcd3MainNoLeader
     exp_alerts:
     - exp_labels:
         service: etcd
@@ -40,8 +40,8 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: Etcd3 test has no leader. Possible network partition in the etcd cluster.
-        summary: Etcd3 test has no leader.
+        description: Etcd3 main has no leader. Possible network partition in the etcd cluster.
+        summary: Etcd3 main has no leader.
   - eval_time: 1h
     alertname: KubeEtcd3HighNumberOfFailedProposals
     exp_alerts:
@@ -51,31 +51,31 @@ tests:
         type: seed
         visibility: operator
         pod: etcd
-        job: kube-etcd3-test
+        job: kube-etcd3-main
       exp_annotations:
-        description: Etcd3 test pod etcd has seen 6 proposal failures within the last hour.
+        description: Etcd3 main pod etcd has seen 6 proposal failures within the last hour.
         summary: High number of failed etcd proposals
   - eval_time: 5m
     alertname: KubeEtcd3DbSizeLimitApproaching
     exp_alerts:
     - exp_labels:
-        job: kube-etcd3-test
+        job: kube-etcd3-main
         service: etcd
         severity: warning
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 test DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
-        summary: Etcd3 test DB size is approaching its current practical limit.
+        description: Etcd3 main DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
+        summary: Etcd3 main DB size is approaching its current practical limit.
   - eval_time: 10m
     alertname: KubeEtcd3DbSizeLimitCrossed
     exp_alerts:
     - exp_labels:
-        job: kube-etcd3-test
+        job: kube-etcd3-main
         service: etcd
         severity: critical
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 test DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
-        summary: Etcd3 test DB size has crossed its current practical limit.
+        description: Etcd3 main DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
+        summary: Etcd3 main DB size has crossed its current practical limit.
