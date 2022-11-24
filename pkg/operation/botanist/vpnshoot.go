@@ -26,17 +26,10 @@ import (
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
-	var (
-		imageName         = images.ImageNameVpnShoot
-		reversedVPNValues = vpnshoot.ReversedVPNValues{
-			Enabled: false,
-		}
-	)
 
-	imageName = images.ImageNameVpnShootClient
+	imageName := images.ImageNameVpnShootClient
 
-	reversedVPNValues = vpnshoot.ReversedVPNValues{
-		Enabled:     true,
+	reversedVPNValues := vpnshoot.ReversedVPNValues{
 		Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 		Endpoint:    b.outOfClusterAPIServerFQDN(),
 		OpenVPNPort: 8132,
