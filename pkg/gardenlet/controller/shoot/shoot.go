@@ -24,10 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -35,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -49,14 +48,12 @@ type Controller struct {
 	log          logr.Logger
 	config       *config.GardenletConfiguration
 
-	shootReconciler     reconcile.Reconciler
-	careReconciler      reconcile.Reconciler
-	migrationReconciler reconcile.Reconciler
+	shootReconciler reconcile.Reconciler
+	careReconciler  reconcile.Reconciler
 
-	shootQueue          workqueue.RateLimitingInterface
-	shootSeedQueue      workqueue.RateLimitingInterface
-	shootCareQueue      workqueue.RateLimitingInterface
-	shootMigrationQueue workqueue.RateLimitingInterface
+	shootQueue     workqueue.RateLimitingInterface
+	shootSeedQueue workqueue.RateLimitingInterface
+	shootCareQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	numberOfRunningWorkers int
@@ -76,6 +73,7 @@ func NewShootController(
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	imageVector imagevector.ImageVector,
+	clock clock.Clock,
 ) (
 	*Controller,
 	error,
@@ -97,14 +95,12 @@ func NewShootController(
 		log:          log,
 		config:       config,
 
-		shootReconciler:     NewShootReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, identity, gardenClusterIdentity, config),
-		careReconciler:      NewCareReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, imageVector, identity, gardenClusterIdentity, config),
-		migrationReconciler: NewMigrationReconciler(gardenCluster.GetClient(), config),
+		shootReconciler: NewShootReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, identity, gardenClusterIdentity, config),
+		careReconciler:  NewCareReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, imageVector, identity, gardenClusterIdentity, config),
 
-		shootCareQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
-		shootQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
-		shootSeedQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
-		shootMigrationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-migration"),
+		shootCareQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
+		shootQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
+		shootSeedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
 
 		workerCh: make(chan int),
 	}
@@ -126,17 +122,6 @@ func NewShootController(
 		},
 	})
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(config.SeedConfig) {
-		shootInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controllerutils.ShootMigrationFilterFunc(ctx, gardenCluster.GetCache(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-			Handler: cache.ResourceEventHandlerFuncs{
-				AddFunc:    shootController.shootMigrationAdd,
-				UpdateFunc: shootController.shootMigrationUpdate,
-				DeleteFunc: shootController.shootMigrationDelete,
-			},
-		})
-	}
-
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
 		shootInformer.HasSynced,
 		seedInformer.HasSynced,
@@ -146,7 +131,7 @@ func NewShootController(
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, shootMigrationWorkers int) {
+func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
@@ -195,26 +180,19 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", c.shootReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
 	}
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(c.config.SeedConfig) {
-		for i := 0; i < shootMigrationWorkers; i++ {
-			controllerutils.CreateWorker(ctx, c.shootMigrationQueue, "Shoot Migration", c.migrationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(migrationReconcilerName)))
-		}
-	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.shootCareQueue.ShutDown()
 	c.shootQueue.ShutDown()
 	c.shootSeedQueue.ShutDown()
-	c.shootMigrationQueue.ShutDown()
 
 	for {
 		var (
-			shootQueueLength          = c.shootQueue.Len()
-			shootCareQueueLength      = c.shootCareQueue.Len()
-			shootSeedQueueLength      = c.shootSeedQueue.Len()
-			shootMigrationQueueLength = c.shootMigrationQueue.Len()
-			queueLengths              = shootQueueLength + shootCareQueueLength + shootSeedQueueLength + shootMigrationQueueLength
+			shootQueueLength     = c.shootQueue.Len()
+			shootCareQueueLength = c.shootCareQueue.Len()
+			shootSeedQueueLength = c.shootSeedQueue.Len()
+			queueLengths         = shootQueueLength + shootCareQueueLength + shootSeedQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminated Shoot controller")

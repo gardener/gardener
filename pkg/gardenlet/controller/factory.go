@@ -19,6 +19,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/go-logr/logr"
+	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,9 +31,6 @@ import (
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-
-	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
 // LegacyControllerFactory starts gardenlet's legacy controllers under leader election of the given manager for
@@ -62,7 +63,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
 	}
 
-	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, f.SeedClientSet, f.ShootClientMap, f.Config, f.Identity, f.GardenClusterIdentity, imageVector)
+	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, f.SeedClientSet, f.ShootClientMap, f.Config, f.Identity, f.GardenClusterIdentity, imageVector, clock.RealClock{})
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
@@ -71,7 +72,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 
 	// run controllers
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
-	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs, *f.Config.Controllers.ShootMigration.ConcurrentSyncs)
+	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs)
 
 	log.Info("gardenlet initialized")
 

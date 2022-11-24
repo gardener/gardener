@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupentry
+package shoot
 
 import (
 	"fmt"
@@ -23,28 +23,19 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/migration"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-// AddToManager adds all BackupEntry controllers to the given manager.
+// AddToManager adds all Shoot controllers to the given manager.
 func AddToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
-	seedCluster cluster.Cluster,
 	cfg config.GardenletConfiguration,
 ) error {
-	if err := (&backupentry.Reconciler{
-		Config:   *cfg.Controllers.BackupEntry,
-		SeedName: cfg.SeedConfig.Name,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-		return fmt.Errorf("failed adding main reconciler: %w", err)
-	}
-
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
 		if err := (&migration.Reconciler{
-			Config:   *cfg.Controllers.BackupEntryMigration,
+			Config:   *cfg.Controllers.ShootMigration,
 			SeedName: cfg.SeedConfig.Name,
 		}).AddToManager(mgr, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding migration reconciler: %w", err)

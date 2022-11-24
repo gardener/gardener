@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -65,7 +65,6 @@ func AddToManager(
 	}
 
 	if err := (&backupbucket.Reconciler{
-		Clock:    clock.RealClock{},
 		Config:   *cfg.Controllers.BackupBucket,
 		SeedName: cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
@@ -78,7 +77,6 @@ func AddToManager(
 
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
-		Clock:  clock.RealClock{},
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
@@ -96,6 +94,10 @@ func AddToManager(
 
 	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
+	}
+
+	if err := shoot.AddToManager(mgr, gardenCluster, *cfg); err != nil {
+		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 
 	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {

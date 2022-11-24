@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupentry_test
+package shoot_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -38,37 +37,39 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/migration"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestBackupEntryMigrationController(t *testing.T) {
+func TestShootMigrationController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupEntry Migration Controller Integration Test Suite")
+	RunSpecs(t, "Shoot Migration Controller Integration Test Suite")
 }
 
-const testID = "backupentry-migration-controller-test"
+const testID = "shoot-migration-controller-test"
 
 var (
 	ctx       = context.Background()
 	log       logr.Logger
 	fakeClock *testclock.FakeClock
 
-	restConfig *rest.Config
-	testEnv    *gardenerenvtest.GardenerTestEnvironment
-	testClient client.Client
-	mgrClient  client.Client
-	testRunID  string
+	restConfig     *rest.Config
+	testEnv        *gardenerenvtest.GardenerTestEnvironment
+	testClient     client.Client
+	testCoreClient *gardenversionedcoreclientset.Clientset
+	testRunID      string
 
-	seed            *gardencorev1beta1.Seed
-	testNamespace   *corev1.Namespace
-	gardenNamespace *corev1.Namespace
+	seed          *gardencorev1beta1.Seed
+	testNamespace *corev1.Namespace
 
 	gracePeriod                = 2 * time.Second
 	lastOperationStaleDuration = time.Second
@@ -78,17 +79,14 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
+	gardenletfeatures.RegisterFeatureGates()
+	DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.ForceRestore, true))
+
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
-		Environment: &envtest.Environment{
-			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml")},
-			},
-			ErrorIfCRDPathMissing: true,
-		},
+		Environment: &envtest.Environment{},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ExtensionLabels,ExtensionValidator,ResourceReferenceManager"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,SeedValidator"},
 		},
 	}
 
@@ -103,9 +101,9 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testScheme := kubernetes.GardenScheme
-	Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
-	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	Expect(err).NotTo(HaveOccurred())
+	testCoreClient, err = gardenversionedcoreclientset.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
@@ -124,22 +122,6 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("deleting test namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	By("creating garden namespace")
-	gardenNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: "garden-",
-		},
-	}
-
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
-
-	DeferCleanup(func() {
-		By("deleting garden namespace")
-		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("creating seed")
@@ -182,13 +164,12 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
-	mgrClient = mgr.GetClient()
 
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 	By("registering controller")
 	Expect((&migration.Reconciler{
 		Clock: fakeClock,
-		Config: config.BackupEntryMigrationControllerConfiguration{
+		Config: config.ShootMigrationControllerConfiguration{
 			ConcurrentSyncs:            pointer.Int(5),
 			SyncPeriod:                 &metav1.Duration{Duration: 500 * time.Millisecond},
 			GracePeriod:                &metav1.Duration{Duration: gracePeriod},

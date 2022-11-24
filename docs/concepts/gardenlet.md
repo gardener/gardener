@@ -359,6 +359,21 @@ If the connection to the `/healthz` endpoint or the update of the `Lease` fails 
 Also, this internal health status is set to `false` automatically after some time in case the controller gets stuck for whatever reason.
 This internal health status is available via the `gardenlet`'s `/healthz` endpoint and is used for the `livenessProbe` in the `gardenlet` pod.
 
+### [`Shoot` Controller](../../pkg/gardenlet/controller/shoot)
+
+The `Shoot` controller in the `gardenlet` reconciles `Shoot` objects with the help of the following reconcilers.
+
+#### "Migration" Reconciler
+
+This reconciler is only active if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the `gardenlet` and if the `Seed` has owner checks enabled (i.e., `spec.setttings.ownerChecks.enabled=true`).
+It checks if the source `Seed` also has owner checks enabled.
+If not or if the `Shoot` is being deleted, it sets the `status.migrationStartTime` to `nil`.
+The controller updates the status to force restoration in the following cases:
+
+1. If the `Shoot` is annotated with `shoot.gardener.cloud/force-restore=true`.
+2. If the grace period for migration has elapsed (which is set in the `ShootMigrationControllerConfiguration` in the gardenlet's component configuration).
+3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `ShootMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the  `lastUpdateTime` of the operation.
+
 ### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
 
 The `ShootState` controller in the `gardenlet` reconciles resources containing information that have to be synced to the `ShootState`.

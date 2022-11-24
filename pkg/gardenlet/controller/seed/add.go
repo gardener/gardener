@@ -17,7 +17,6 @@ package seed
 import (
 	"fmt"
 
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -53,7 +52,6 @@ func AddToManager(
 	if err := (&lease.Reconciler{
 		SeedRESTClient: seedClientSet.RESTClient(),
 		Config:         *cfg.Controllers.Seed,
-		Clock:          clock.RealClock{},
 		HealthManager:  healthManager,
 		SeedName:       cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster); err != nil {

@@ -17,7 +17,6 @@ package project
 import (
 	"fmt"
 
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -30,7 +29,6 @@ import (
 func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
 	if err := (&activity.Reconciler{
 		Config: *cfg.Controllers.Project,
-		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding activity reconciler: %w", err)
 	}
@@ -43,7 +41,6 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 
 	if err := (&stale.Reconciler{
 		Config: *cfg.Controllers.Project,
-		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding stale reconciler: %w", err)
 	}

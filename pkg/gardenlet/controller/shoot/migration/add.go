@@ -12,34 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extensionscheck
+package migration
 
 import (
-	"context"
-
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "seed-extensions-check"
+const ControllerName = "shoot-migration"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	if r.Client == nil {
-		r.Client = mgr.GetClient()
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
+	if r.GardenClient == nil {
+		r.GardenClient = gardenCluster.GetClient()
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
@@ -54,8 +50,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
-			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		},
 	)
 	if err != nil {
@@ -63,27 +57,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.RelevantConditionsChanged(
-			func(obj client.Object) []gardencorev1beta1.Condition {
-				controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-				if !ok {
-					return nil
-				}
-				return controllerInstallation.Status.Conditions
-			},
-			conditionsToCheck...,
-		),
+		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+		&handler.EnqueueRequestForObject{},
+		&predicate.GenerationChangedPredicate{},
+		predicateutils.IsBeingMigratedPredicate(r.GardenClient, r.SeedName, getShootSeedNames),
 	)
 }
 
-// MapControllerInstallationToSeed is a mapper.MapFunc for mapping a ControllerInstallation to the referenced Seed.
-func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+func getShootSeedNames(obj client.Object) (*string, *string) {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if !ok {
-		return nil
+		return nil, nil
 	}
-
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.SeedRef.Name}}}
+	return shoot.Spec.SeedName, shoot.Status.SeedName
 }

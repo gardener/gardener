@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,83 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package migration
 
 import (
 	"context"
 	"fmt"
-	"time"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const migrationReconcilerName = "migration"
-
-func (c *Controller) shootMigrationAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.shootMigrationQueue.Add(key)
+// Reconciler reconciles Shoot resources and updates the status for a forceful restoration in case the grace period for
+// the smooth migration has been elapsed.
+type Reconciler struct {
+	GardenClient client.Client
+	Config       config.ShootMigrationControllerConfiguration
+	Clock        clock.Clock
+	SeedName     string
 }
 
-func (c *Controller) shootMigrationUpdate(oldObj, newObj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(newObj)
-	if err != nil {
-		return
-	}
-
-	shoot, ok := newObj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return
-	}
-	if shoot.Generation == shoot.Status.ObservedGeneration {
-		return
-	}
-
-	c.shootMigrationQueue.Add(key)
-}
-
-func (c *Controller) shootMigrationDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.shootMigrationQueue.Add(key)
-}
-
-// NewMigrationReconciler returns an implementation of reconcile.Reconciler that forces the shoot's restoration
-// to this seed during control plane migration if the preparation for migration in the source seed is not finished
-// after a certain grace period and is considered unlikely to succeed ("bad case" scenario).
-func NewMigrationReconciler(gardenClient client.Client, config *config.GardenletConfiguration) reconcile.Reconciler {
-	return &migrationReconciler{
-		gardenClient: gardenClient,
-		config:       config,
-	}
-}
-
-type migrationReconciler struct {
-	gardenClient client.Client
-	config       *config.GardenletConfiguration
-}
-
-func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
+// Reconcile reconciles Shoot resources.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, req.NamespacedName, shoot); err != nil {
+	if err := r.GardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -97,9 +55,9 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	// If the shoot is being deleted or no longer being migrated to this seed, clear the migration start time
-	if shoot.DeletionTimestamp != nil || !controllerutils.ShootIsBeingMigratedToSeed(ctx, r.gardenClient, shoot, confighelper.SeedNameFromSeedConfig(r.config.SeedConfig)) {
+	if shoot.DeletionTimestamp != nil || !gutil.IsObjectBeingMigrated(ctx, r.GardenClient, shoot, r.SeedName, getShootSeedNames) {
 		log.V(1).Info("Clearing migration start time")
-		if err := setMigrationStartTime(ctx, r.gardenClient, shoot, nil); err != nil {
+		if err := r.setMigrationStartTime(ctx, shoot, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
 		}
 
@@ -110,7 +68,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// Set the migration start time if needed
 	if shoot.Status.MigrationStartTime == nil {
 		log.V(1).Info("Setting migration start time")
-		if err := setMigrationStartTime(ctx, r.gardenClient, shoot, &metav1.Time{Time: time.Now().UTC()}); err != nil {
+		if err := r.setMigrationStartTime(ctx, shoot, &metav1.Time{Time: r.Clock.Now().UTC()}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not set migration start time: %w", err)
 		}
 	}
@@ -119,15 +77,14 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// update the shoot status to force the restoration (fallback to the "bad case" scenario)
 	log.V(1).Info("Checking if the shoot should be forcefully restored")
 	if hasForceRestoreAnnotation(shoot) || r.isGracePeriodElapsed(shoot) && !r.isMigrationInProgress(shoot) {
-
 		log.Info("Updating status to force restoration")
-		if err := updateStatusForRestore(ctx, r.gardenClient, shoot); err != nil {
+		if err := r.updateStatusForRestore(ctx, shoot); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update shoot status to force restoration: %w", err)
 		}
 
 		if hasForceRestoreAnnotation(shoot) {
 			log.V(1).Info("Removing force-restore annotation")
-			if err := removeForceRestoreAnnotation(ctx, r.gardenClient, shoot); err != nil {
+			if err := removeForceRestoreAnnotation(ctx, r.GardenClient, shoot); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not remove force-restore annotation: %w", err)
 			}
 		}
@@ -138,15 +95,15 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	// Requeue after the configured sync period as the shoot is still being migrated,
 	// so we might need to force the restoration
-	return reconcile.Result{RequeueAfter: r.config.Controllers.ShootMigration.SyncPeriod.Duration}, nil
+	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 }
 
-func (r *migrationReconciler) isGracePeriodElapsed(shoot *gardencorev1beta1.Shoot) bool {
-	return time.Now().UTC().After(shoot.Status.MigrationStartTime.Add(r.config.Controllers.ShootMigration.GracePeriod.Duration))
+func (r *Reconciler) isGracePeriodElapsed(shoot *gardencorev1beta1.Shoot) bool {
+	return r.Clock.Now().UTC().After(shoot.Status.MigrationStartTime.Add(r.Config.GracePeriod.Duration))
 }
 
-func (r *migrationReconciler) isMigrationInProgress(shoot *gardencorev1beta1.Shoot) bool {
-	staleCutoffTime := metav1.NewTime(time.Now().UTC().Add(-r.config.Controllers.ShootMigration.LastOperationStaleDuration.Duration))
+func (r *Reconciler) isMigrationInProgress(shoot *gardencorev1beta1.Shoot) bool {
+	staleCutoffTime := metav1.NewTime(r.Clock.Now().UTC().Add(-r.Config.LastOperationStaleDuration.Duration))
 	lastOperation := shoot.Status.LastOperation
 	return lastOperation != nil &&
 		lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate &&
@@ -154,20 +111,20 @@ func (r *migrationReconciler) isMigrationInProgress(shoot *gardencorev1beta1.Sho
 		!lastOperation.LastUpdateTime.Before(&staleCutoffTime)
 }
 
-func setMigrationStartTime(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot, migrationStartTime *metav1.Time) error {
+func (r *Reconciler) setMigrationStartTime(ctx context.Context, shoot *gardencorev1beta1.Shoot, migrationStartTime *metav1.Time) error {
 	patch := client.MergeFrom(shoot.DeepCopy())
 	shoot.Status.MigrationStartTime = migrationStartTime
-	return c.Status().Patch(ctx, shoot, patch)
+	return r.GardenClient.Status().Patch(ctx, shoot, patch)
 }
 
-func updateStatusForRestore(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) error {
+func (r *Reconciler) updateStatusForRestore(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
 
 	shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           gardencorev1beta1.LastOperationTypeMigrate,
 		State:          gardencorev1beta1.LastOperationStateAborted,
 		Description:    "Shoot cluster preparation for migration has been aborted.",
-		LastUpdateTime: metav1.NewTime(time.Now().UTC()),
+		LastUpdateTime: metav1.NewTime(r.Clock.Now().UTC()),
 	}
 	shoot.Status.LastErrors = nil
 	shoot.Status.ObservedGeneration = shoot.Generation
@@ -175,7 +132,7 @@ func updateStatusForRestore(ctx context.Context, c client.Client, shoot *gardenc
 	shoot.Status.SeedName = nil
 	shoot.Status.MigrationStartTime = nil
 
-	return c.Status().Patch(ctx, shoot, patch)
+	return r.GardenClient.Status().Patch(ctx, shoot, patch)
 }
 
 func hasForceRestoreAnnotation(shoot *gardencorev1beta1.Shoot) bool {

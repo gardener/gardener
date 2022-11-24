@@ -15,20 +15,18 @@
 package migration
 
 import (
-	"context"
-
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -39,6 +37,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
 	// the controller manually.
@@ -47,7 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		mgr,
 		controller.Options{
 			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.BackupEntryMigration.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
 		},
 	)
@@ -59,47 +60,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		&predicate.GenerationChangedPredicate{},
-		r.IsBeingMigratedPredicate(),
+		predicateutils.IsBeingMigratedPredicate(r.GardenClient, r.SeedName, getBackupEntrySeedNames),
 	)
 }
 
-// IsBeingMigratedPredicate returns a predicate which returns true for backup entries that are being migrated to a different seed.
-func (r *Reconciler) IsBeingMigratedPredicate() predicate.Predicate {
-	return &isBeingMigratedPredicate{
-		reader:   r.GardenClient,
-		seedName: r.Config.SeedConfig.Name,
-	}
-}
-
-type isBeingMigratedPredicate struct {
-	ctx      context.Context
-	reader   client.Reader
-	seedName string
-}
-
-func (p *isBeingMigratedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
-	return nil
-}
-
-func (p *isBeingMigratedPredicate) Create(e event.CreateEvent) bool {
-	return p.isBeingMigratedToSeed(e.Object)
-}
-func (p *isBeingMigratedPredicate) Update(e event.UpdateEvent) bool {
-	return p.isBeingMigratedToSeed(e.ObjectNew)
-}
-func (p *isBeingMigratedPredicate) Delete(e event.DeleteEvent) bool {
-	return p.isBeingMigratedToSeed(e.Object)
-}
-func (p *isBeingMigratedPredicate) Generic(e event.GenericEvent) bool {
-	return p.isBeingMigratedToSeed(e.Object)
-}
-
-func (p *isBeingMigratedPredicate) isBeingMigratedToSeed(obj client.Object) bool {
+func getBackupEntrySeedNames(obj client.Object) (*string, *string) {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 	if !ok {
-		return false
+		return nil, nil
 	}
-
-	return backupEntryIsBeingMigratedToSeed(p.ctx, p.reader, backupEntry, p.seedName)
+	return backupEntry.Spec.SeedName, backupEntry.Status.SeedName
 }

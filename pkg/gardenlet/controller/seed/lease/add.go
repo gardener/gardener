@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -35,6 +36,9 @@ const ControllerName = "seed-lease"
 func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 	if r.LeaseNamespace == "" {
 		r.LeaseNamespace = gardencorev1beta1.GardenerSeedLeaseNamespace
