@@ -42,15 +42,16 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
-	k8s.io/api v0.25.0
+	k8s.io/api v0.25.4
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.25.0
+	k8s.io/apimachinery v0.25.4
 	k8s.io/apiserver v0.25.0
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.12.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/cluster-bootstrap v0.25.0
 	k8s.io/code-generator v0.25.0
 	k8s.io/component-base v0.25.0
+	k8s.io/component-helpers v0.25.0
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/klog/v2 v2.70.1
