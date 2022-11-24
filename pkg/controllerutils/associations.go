@@ -92,6 +92,12 @@ func DetermineBackupBucketAssociations(ctx context.Context, c client.Client, see
 	return determineAssociations(ctx, c, &gardencorev1beta1.BackupBucketList{}, client.MatchingFields{core.BackupBucketSeedName: seedName})
 }
 
+// DetermineBackupEntryAssociations determine the BackupEntry resources which are associated
+// to BackupBucket with name <bucketName>
+func DetermineBackupEntryAssociations(ctx context.Context, c client.Client, bucketName string) ([]string, error) {
+	return determineAssociations(ctx, c, &gardencorev1beta1.BackupEntryList{}, client.MatchingFields{core.BackupEntryBucketName: bucketName})
+}
+
 // DetermineControllerInstallationAssociations determine the ControllerInstallation resources which are associated
 // to seed with name <seedName>
 func DetermineControllerInstallationAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
