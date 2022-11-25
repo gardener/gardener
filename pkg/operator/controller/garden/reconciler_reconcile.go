@@ -121,6 +121,7 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	kubeAPIServerService := r.newKubeAPIServerService(log)
 
 	var (
 		g            = flow.NewGraph("Garden reconciliation")
@@ -163,6 +164,7 @@ func (r *Reconciler) reconcile(
 			deployHVPA,
 			deployEtcdDruid,
 		)
+
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
 			Fn:           r.deployEtcdsFunc(garden, etcdMain, etcdEvents),
@@ -172,6 +174,11 @@ func (r *Reconciler) reconcile(
 			Name:         "Waiting until main and event ETCDs report readiness",
 			Fn:           flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
 			Dependencies: flow.NewTaskIDs(deployEtcds),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying and waiting for kube-apiserver service in the runtime cluster",
+			Fn:           component.OpWait(kubeAPIServerService).Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
 	)
 

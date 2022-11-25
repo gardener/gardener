@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -73,6 +74,12 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			healthyEtcd("virtual-garden-etcd-main"),
 			healthyEtcd("virtual-garden-etcd-events"),
 		))
+
+		CEventually(ctx, func(g Gomega) {
+			virtualGardenKubeAPIServerService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: "garden"}}
+			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenKubeAPIServerService), virtualGardenKubeAPIServerService)).To(Succeed())
+			g.Expect(virtualGardenKubeAPIServerService.Status.LoadBalancer.Ingress).To(HaveLen(1))
+		}).Should(Succeed())
 
 		By("Delete Garden")
 		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)

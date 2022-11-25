@@ -108,6 +108,9 @@ The virtual garden control plane components are:
 - `virtual-garden-etcd-main`
 - `virtual-garden-etcd-events`
 
+The `virtual-garden-kube-apiserver` `Deployment` (not yet managed by the operator) is exposed via a `Service` of type `LoadBalancer` with the same name.
+In the future, we might switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
+
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
 
 ### Webhooks
