@@ -111,7 +111,7 @@ type ETCD struct {
 	Main *ETCDMain `json:"main,omitempty"`
 	// Events contains configuration for the events etcd.
 	// +optional
-	Events *ETCDMain `json:"events,omitempty"`
+	Events *ETCDEvents `json:"events,omitempty"`
 }
 
 // ETCDMain contains configuration for the main etcd.

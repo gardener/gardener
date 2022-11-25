@@ -96,46 +96,6 @@ spec:
                         description: Events contains configuration for the events
                           etcd.
                         properties:
-                          backup:
-                            description: Backup contains the object store configuration
-                              for backups for the virtual garden etcd.
-                            properties:
-                              bucketName:
-                                description: BucketName is the name of the backup
-                                  bucket.
-                                type: string
-                                x-kubernetes-validations:
-                                - message: Value is immutable
-                                  rule: self == oldSelf
-                              provider:
-                                description: Provider is a provider name. This field
-                                  is immutable.
-                                type: string
-                                x-kubernetes-validations:
-                                - message: Value is immutable
-                                  rule: self == oldSelf
-                              secretRef:
-                                description: SecretRef is a reference to a Secret
-                                  object containing the cloud provider credentials
-                                  for the object store where backups should be stored.
-                                  It should have enough privileges to manipulate the
-                                  objects as well as buckets.
-                                properties:
-                                  name:
-                                    description: name is unique within a namespace
-                                      to reference a secret resource.
-                                    type: string
-                                  namespace:
-                                    description: namespace defines the space within
-                                      which the secret name must be unique.
-                                    type: string
-                                type: object
-                                x-kubernetes-map-type: atomic
-                            required:
-                            - bucketName
-                            - provider
-                            - secretRef
-                            type: object
                           storage:
                             description: Storage contains storage configuration.
                             properties:

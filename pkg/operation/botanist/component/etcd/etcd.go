@@ -752,12 +752,12 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 func (e *etcd) clientServiceDNSNames() []string {
 	var domainNames []string
 	domainNames = append(domainNames, fmt.Sprintf("%s-local", e.etcd.Name))
-	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.values.Role), e.namespace)...)
+	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("%s-client", e.etcd.Name), e.namespace)...)
 
 	// The peer service needs to be considered here since the etcd-backup-restore side-car
 	// connects to member pods via pod domain names (e.g. for defragmentation).
 	// See https://github.com/gardener/etcd-backup-restore/issues/494
-	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("*.etcd-%s-peer", e.values.Role), e.namespace)...)
+	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...)
 
 	return domainNames
 }

@@ -53,7 +53,7 @@ func (in *ETCD) DeepCopyInto(out *ETCD) {
 	}
 	if in.Events != nil {
 		in, out := &in.Events, &out.Events
-		*out = new(ETCDMain)
+		*out = new(ETCDEvents)
 		(*in).DeepCopyInto(*out)
 	}
 	return

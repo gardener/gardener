@@ -100,8 +100,8 @@ ETCDMain
 <td>
 <code>events</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.ETCDMain">
-ETCDMain
+<a href="#operator.gardener.cloud/v1alpha1.ETCDEvents">
+ETCDEvents
 </a>
 </em>
 </td>
@@ -114,6 +114,10 @@ ETCDMain
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.ETCDEvents">ETCDEvents
 </h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCD">ETCD</a>)
+</p>
 <p>
 <p>ETCDEvents contains configuration for the events etcd.</p>
 </p>
