@@ -168,7 +168,7 @@ var _ = Describe("Garden controller tests", func() {
 						Domain: "virtual-garden.local.gardener.cloud",
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
-						Version: "1.2.3",
+						Version: "1.26.3",
 					},
 					Maintenance: operatorv1alpha1.Maintenance{
 						TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{

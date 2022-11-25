@@ -166,6 +166,7 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - plugin/pkg/bastion/validator
         - plugin/pkg/controllerregistration/resources
@@ -302,6 +303,7 @@ build:
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
         - pkg/utils/timewindow
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
         - VERSION
@@ -364,6 +366,7 @@ build:
         - pkg/utils/secrets
         - pkg/utils/timewindow
         - pkg/utils/validation/cidr
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
         - VERSION
@@ -437,6 +440,7 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/timewindow
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - third_party/apiserver/pkg/apis/audit/v1alpha1
         - third_party/apiserver/pkg/apis/audit/v1beta1
@@ -642,6 +646,7 @@ build:
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
         - pkg/utils/timewindow
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
         - VERSION
@@ -932,6 +937,7 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
         - VERSION
@@ -1031,6 +1037,7 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
         - VERSION

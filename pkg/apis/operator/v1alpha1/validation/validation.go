@@ -28,6 +28,7 @@ import (
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
 var gardenCoreScheme *runtime.Scheme
@@ -43,17 +44,7 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
-
-	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.KubeAPIServerConfig != nil {
-		fldPath := field.NewPath("spec", "virtualCluster", "kubernetes", "kubeAPIServer")
-
-		coreKubeAPIServerConfig := &gardencore.KubeAPIServerConfig{}
-		if err := gardenCoreScheme.Convert(kubeAPIServer.KubeAPIServerConfig, coreKubeAPIServerConfig, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(fldPath, err))
-		}
-
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, garden.Spec.VirtualCluster.Kubernetes.Version, true, fldPath)...)
-	}
+	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.VirtualCluster, field.NewPath("spec", "virtualCluster"))...)
 
 	return allErrs
 }
@@ -70,6 +61,27 @@ func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.E
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newGarden.Spec.VirtualCluster.Kubernetes.Version, newGarden.Spec.VirtualCluster.Kubernetes.Version, field.NewPath("spec", "virtualCluster", "kubernetes", "version"))...)
 	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+
+	return allErrs
+}
+
+func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if err := kubernetesversion.CheckIfSupported(virtualCluster.Kubernetes.Version); err != nil {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes", "version"), virtualCluster.Kubernetes.Version, kubernetesversion.SupportedVersions))
+	}
+
+	if kubeAPIServer := virtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.KubeAPIServerConfig != nil {
+		path := fldPath.Child("kubernetes", "kubeAPIServer")
+
+		coreKubeAPIServerConfig := &gardencore.KubeAPIServerConfig{}
+		if err := gardenCoreScheme.Convert(kubeAPIServer.KubeAPIServerConfig, coreKubeAPIServerConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(path, err))
+		}
+
+		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, path)...)
+	}
 
 	return allErrs
 }

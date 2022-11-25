@@ -35,6 +35,13 @@ var _ = Describe("Validation Tests", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "garden",
 				},
+				Spec: operatorv1alpha1.GardenSpec{
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						Kubernetes: operatorv1alpha1.Kubernetes{
+							Version: "1.26.3",
+						},
+					},
+				},
 			}
 		})
 
