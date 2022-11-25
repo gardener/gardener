@@ -39,8 +39,11 @@ if [[ $(k8s_env) == "$KIND" ]]; then
   serviceaccount_based_kubeconfig "gardener-operator" > "$kubeconfig"
 fi
 
-KUBECONFIG="$kubeconfig" GO111MODULE=on \
-WEBHOOK_MODE=url WEBHOOK_URL="$(get_host_address):$(cat "$(dirname "$0")/../../example/operator/10-componentconfig.yaml" | yq eval '.server.webhooks.port' -)" \
+KUBECONFIG="$kubeconfig" \
+GO111MODULE=on \
+GARDENER_OPERATOR_LOCAL=true \
+WEBHOOK_MODE=url \
+WEBHOOK_URL="$(get_host_address):$(cat "$(dirname "$0")/../../example/operator/10-componentconfig.yaml" | yq eval '.server.webhooks.port' -)" \
     go run \
       -mod=vendor \
       -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
