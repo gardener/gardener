@@ -102,12 +102,13 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameServer                  = "kube-apiserver"
 		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
 		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
+		secretNameVPNSeed                 = "vpn-seed"
+		secretNameVPNSeedTLSAuth          = "vpn-seed-tlsauth-de1d12a3"
 		secretNameVPNSeedClient           = "vpn-seed-client"
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
-		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscalerV2beta1       *autoscalingv2beta1.HorizontalPodAutoscaler
@@ -1511,9 +1512,8 @@ rules:
 					"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 					"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 					"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
-					"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
-					"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
-					"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
+					"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
+					"reference.resources.gardener.cloud/secret-2fb65543":    secretNameVPNSeedTLSAuth,
 					"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
 					"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 				}))
@@ -1561,11 +1561,10 @@ rules:
 					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 					"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
+					"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
+					"reference.resources.gardener.cloud/secret-2fb65543":    secretNameVPNSeedTLSAuth,
 					"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 					"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
-					"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
-					"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
-					"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
 					"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
 					"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 				}))
@@ -2244,21 +2243,6 @@ rules:
 							MountPath: "/usr/share/ca-certificates",
 							ReadOnly:  true,
 						},
-						corev1.VolumeMount{
-							Name:      "ca-vpn",
-							MountPath: "/srv/kubernetes/ca-vpn",
-							ReadOnly:  false,
-						},
-						corev1.VolumeMount{
-							Name:      "http-proxy",
-							MountPath: "/etc/srv/kubernetes/envoy",
-							ReadOnly:  false,
-						},
-						corev1.VolumeMount{
-							Name:      "egress-selection-config",
-							MountPath: "/etc/kubernetes/egress",
-							ReadOnly:  false,
-						},
 					))
 					Expect(deployment.Spec.Template.Spec.Volumes).To(ConsistOf(
 						corev1.Volume{
@@ -2422,9 +2406,9 @@ rules:
 							},
 						},
 						//VPN-related secrets (will be asserted in detail later)
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("ca-vpn")}),
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")}),
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-selection-config")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("modules")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed-tlsauth")}),
 					))
 
 					secret := &corev1.Secret{}
@@ -2956,7 +2940,6 @@ rules:
 					values := Values{
 						Images: Images{VPNClient: "vpn-client-image:really-latest"},
 						VPN: VPNConfig{
-
 							HighAvailabilityEnabled:              false,
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,

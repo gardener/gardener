@@ -228,7 +228,7 @@ type VPNConfig struct {
 	ServiceNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
 	NodeNetworkCIDR *string
-	// HighAvailabilityEnabled states if VPN uses HA configuration (only works together with ReversedVPNEnabled=true)
+	// HighAvailabilityEnabled states if VPN uses HA configuration.
 	HighAvailabilityEnabled bool
 	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
 	HighAvailabilityNumberOfSeedServers int
