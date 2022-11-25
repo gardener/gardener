@@ -30,7 +30,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	externalcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
@@ -73,7 +72,6 @@ func Register(plugins *admission.Plugins) {
 type ReferenceManager struct {
 	*admission.Handler
 	gardenCoreClient           internalversion.Interface
-	gardenExternalCoreClient   externalcoreclientset.Interface
 	kubeClient                 kubernetes.Interface
 	dynamicClient              dynamic.Interface
 	authorizer                 authorizer.Authorizer
@@ -99,7 +97,6 @@ var (
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
 	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ReferenceManager{})
-	_ = admissioninitializer.WantsExternalCoreClientset(&ReferenceManager{})
 
 	readyFuncs = []admission.ReadyFunc{}
 
@@ -187,11 +184,6 @@ func (r *ReferenceManager) SetInternalCoreClientset(c internalversion.Interface)
 	r.gardenCoreClient = c
 }
 
-// SetExternalCoreClientset sets the versioned Gardener client.
-func (r *ReferenceManager) SetExternalCoreClientset(c externalcoreclientset.Interface) {
-	r.gardenExternalCoreClient = c
-}
-
 // SetKubeClientset sets the Kubernetes client.
 func (r *ReferenceManager) SetKubeClientset(c kubernetes.Interface) {
 	r.kubeClient = c
@@ -239,9 +231,6 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.gardenCoreClient == nil {
 		return errors.New("missing gardener internal core client")
-	}
-	if r.gardenExternalCoreClient == nil {
-		return errors.New("missing gardener external core client")
 	}
 	return nil
 }
@@ -779,7 +768,7 @@ func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, old
 }
 
 func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, backupBucketName string) error {
-	backupEntryList, err := r.gardenExternalCoreClient.CoreV1beta1().BackupEntries("").List(ctx, metav1.ListOptions{
+	backupEntryList, err := r.gardenCoreClient.Core().BackupEntries("").List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{core.BackupEntryBucketName: backupBucketName}).String(),
 	})
 	if err != nil {
@@ -790,7 +779,7 @@ func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, bac
 		associatedBackupEntries = append(associatedBackupEntries, client.ObjectKeyFromObject(&entry).String())
 	}
 
-	if len(associatedBackupEntries) != 0 {
+	if len(associatedBackupEntries) > 0 {
 		return fmt.Errorf("cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s", strings.Join(associatedBackupEntries, ","))
 	}
 	return nil
