@@ -1,12 +1,12 @@
 # Gardener Controller Manager
 
 The `gardener-controller-manager` (often refered to as "GCM") is a component that runs next to the Gardener API server, similar to the Kubernetes Controller Manager.
-It runs several control loops that do not require talking to any seed or shoot cluster.
+It runs several controllers that do not require talking to any seed or shoot cluster.
 Also, as of today it exposes an HTTP server that is serving several health check endpoints and metrics.
 
 This document explains the various functionalities of the `gardener-controller-manager` and their purpose.
 
-## Control Loops
+## Controllers
 
 ### [`Bastion` Controller](../../pkg/controllermanager/controller/bastion)
 
