@@ -403,6 +403,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				})
 			}
 		}
+
 	case core.Kind("BackupBucket"):
 		if operation == admission.Delete {
 			// The "delete endpoint" handler of the k8s.io/apiserver library calls the admission controllers
@@ -425,6 +426,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 
 			err = r.ensureBackupBucketReferences(ctx, oldBackupBucket, backupBucket, operation)
 		}
+
 	case core.Kind("BackupEntry"):
 		backupEntry, ok := a.GetObject().(*core.BackupEntry)
 		if !ok {
@@ -438,6 +440,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			}
 		}
 		err = r.ensureBackupEntryReferences(ctx, oldBackupEntry, backupEntry)
+
 	case core.Kind("CloudProfile"):
 		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
 		if !ok {
@@ -531,6 +534,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				}
 			}
 		}
+
 	case core.Kind("ControllerRegistration"):
 		controllerRegistration, ok := a.GetObject().(*core.ControllerRegistration)
 		if !ok {
