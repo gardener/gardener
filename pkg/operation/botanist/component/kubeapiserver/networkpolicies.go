@@ -105,11 +105,12 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowToShootAPIServer(ctx context.
 
 func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy) error {
 	var (
-		protocol             = corev1.ProtocolTCP
-		portAPIServer        = intstr.FromInt(Port)
-		portEtcd             = intstr.FromInt(int(etcd.PortEtcdClient))
-		portBlackboxExporter = intstr.FromInt(monitoring.BlackboxExporterPort)
-		portVPNSeedServer    = intstr.FromInt(vpnseedserver.EnvoyPort)
+		protocol               = corev1.ProtocolTCP
+		portAPIServer          = intstr.FromInt(Port)
+		portEtcd               = intstr.FromInt(int(etcd.PortEtcdClient))
+		portBlackboxExporter   = intstr.FromInt(monitoring.BlackboxExporterPort)
+		portVPNSeedServerNonHA = intstr.FromInt(vpnseedserver.EnvoyPort)
+		portVPNSeedServerHA    = intstr.FromInt(vpnseedserver.OpenVPNPort)
 	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
@@ -170,6 +171,10 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 		}
 
 		if k.values.VPN.ReversedVPNEnabled {
+			port := &portVPNSeedServerNonHA
+			if k.values.VPN.HighAvailabilityEnabled {
+				port = &portVPNSeedServerHA
+			}
 			networkPolicy.Spec.Egress = append(networkPolicy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
 				To: []networkingv1.NetworkPolicyPeer{{
 					PodSelector: &metav1.LabelSelector{
@@ -178,7 +183,7 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 				}},
 				Ports: []networkingv1.NetworkPolicyPort{{
 					Protocol: &protocol,
-					Port:     &portVPNSeedServer,
+					Port:     port,
 				}},
 			})
 		}
