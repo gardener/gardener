@@ -320,7 +320,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -345,7 +345,7 @@
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Full\",succeeded=\"true\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Succeeded",
+          "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_snapshot_duration_seconds_count",
           "refId": "A",
           "step": 2
@@ -354,7 +354,7 @@
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Full\",succeeded=\"false\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Failed",
+          "legendFormat": "{{pod}} Failed",
           "metric": "etcdbr_snapshot_duration_seconds_count",
           "refId": "B",
           "step": 2
@@ -431,7 +431,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -456,7 +456,7 @@
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Incr\",succeeded=\"true\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Succeeded",
+          "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_snapshot_duration_seconds_count",
           "refId": "A",
           "step": 2
@@ -465,7 +465,7 @@
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Incr\",succeeded=\"false\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Failed",
+          "legendFormat": "{{pod}} Failed",
           "metric": "etcdbr_snapshot_duration_seconds_count",
           "refId": "B",
           "step": 2
@@ -542,7 +542,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -648,7 +648,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -673,7 +673,7 @@
           "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"main\",succeeded=\"true\"}",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "Succeeded",
+          "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_defragmentation_duration_seconds_count",
           "refId": "A",
           "step": 4
@@ -681,7 +681,7 @@
         {
           "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"main\",succeeded=\"false\"}",
           "instant": false,
-          "legendFormat": "Failed",
+          "legendFormat": "{{pod}} Failed",
           "refId": "B"
         }
       ],
@@ -863,7 +863,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -888,7 +888,7 @@
           "expr": "etcdbr_validation_duration_seconds_count{role=\"main\",succeeded=\"true\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Succeeded",
+          "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_validation_duration_seconds_count",
           "refId": "A",
           "step": 2
@@ -898,7 +898,7 @@
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "Failed",
+          "legendFormat": "{{pod}} Failed",
           "metric": "etcdbr_validation_duration_seconds_count",
           "refId": "B",
           "step": 2
@@ -975,7 +975,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -1000,7 +1000,7 @@
           "expr": "etcdbr_restoration_duration_seconds_count{role=\"main\",succeeded=\"true\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Succeeded",
+          "legendFormat": "{{pod}} {{restore}} Succeeded",
           "metric": "etcdbr_restoration_duration_seconds_count",
           "refId": "A",
           "step": 2
@@ -1010,7 +1010,7 @@
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "Failed",
+          "legendFormat": "{{pod}} {{restore}} Failed",
           "metric": "etcdbr_restoration_duration_seconds_count",
           "refId": "B",
           "step": 2
@@ -1098,7 +1098,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -1123,7 +1123,7 @@
           "expr": "process_resident_memory_bytes{job=\"kube-etcd3-backup-restore-main\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Memory",
+          "legendFormat": "{{pod}} Memory",
           "metric": "process_resident_memory_bytes",
           "refId": "A",
           "step": 2
@@ -1197,7 +1197,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -1222,7 +1222,7 @@
           "expr": "rate(process_cpu_seconds_total{job=\"kube-etcd3-backup-restore-main\"}[$__rate_interval]) * 100",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "CPU",
+          "legendFormat": "{{pod}} CPU",
           "metric": "process_cpu_seconds_total",
           "refId": "A",
           "step": 2
