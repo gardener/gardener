@@ -24,20 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	corev1alphalisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/plugin/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/hashicorp/go-multierror"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -54,6 +40,20 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	corev1alphalisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/plugin/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -407,10 +407,17 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 	case core.Kind("BackupBucket"):
 		if operation == admission.Delete {
 			// The "delete endpoint" handler of the k8s.io/apiserver library calls the admission controllers
-			// handling DELETE requests with empty objects:
+			// handling DELETECOLLECTION requests with empty resource names:
+			// https://github.com/kubernetes/apiserver/blob/release-1.25/pkg/endpoints/handlers/delete.go#L271
+			// Consequently, a.GetName() equals "". This is for the admission controllers to know that all
+			// resources of this kind shall be deleted.
+			// And for all DELETE requests, a.GetObject() will be nil:
 			// https://github.com/kubernetes/apiserver/blob/release-1.25/pkg/endpoints/handlers/delete.go#L126
-			// Consequently, a.GetObject() will be nil.
-			err = r.validateBackupBucketDeletion(ctx, a.GetName())
+			if a.GetName() == "" {
+				return r.validateBackupBucketDeleteCollection(ctx, a)
+			} else {
+				return r.validateBackupBucketDelete(ctx, a)
+			}
 		} else {
 			backupBucket, ok := a.GetObject().(*core.BackupBucket)
 			if !ok {
@@ -771,21 +778,38 @@ func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, old
 	return nil
 }
 
-func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, backupBucketName string) error {
+func (r *ReferenceManager) validateBackupBucketDeleteCollection(ctx context.Context, a admission.Attributes) error {
+	backupBucketList, err := r.gardenCoreClient.Core().BackupBuckets().List(ctx, metav1.ListOptions{LabelSelector: labels.Everything().String()})
+	if err != nil {
+		return err
+	}
+
+	for _, backupBucket := range backupBucketList.Items {
+		if err := r.validateBackupBucketDelete(ctx, utils.NewAttributesWithName(a, backupBucket.Name)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *ReferenceManager) validateBackupBucketDelete(ctx context.Context, a admission.Attributes) error {
 	backupEntryList, err := r.gardenCoreClient.Core().BackupEntries("").List(ctx, metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{core.BackupEntryBucketName: backupBucketName}).String(),
+		FieldSelector: fields.SelectorFromSet(fields.Set{core.BackupEntryBucketName: a.GetName()}).String(),
 	})
 	if err != nil {
 		return err
 	}
-	associatedBackupEntries := make([]string, 0)
+
+	associatedBackupEntries := make([]string, 0, len(backupEntryList.Items))
 	for _, entry := range backupEntryList.Items {
 		associatedBackupEntries = append(associatedBackupEntries, client.ObjectKeyFromObject(&entry).String())
 	}
 
 	if len(associatedBackupEntries) > 0 {
-		return fmt.Errorf("cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s", strings.Join(associatedBackupEntries, ","))
+		return admission.NewForbidden(a, fmt.Errorf("cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s", strings.Join(associatedBackupEntries, ",")))
 	}
+
 	return nil
 }
 

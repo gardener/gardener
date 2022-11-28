@@ -969,7 +969,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for BackupBucket objects", func() {
 			It("should reject if the referred Seed is not found", func() {
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -983,7 +983,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1002,7 +1002,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1013,7 +1013,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1028,7 +1028,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, &core.BackupEntryList{Items: []core.BackupEntry{}}, nil
 				})
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1047,7 +1047,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, &core.BackupEntryList{Items: []core.BackupEntry{backupEntry, *backupEntry2}}, nil
 				})
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1063,11 +1063,68 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, nil, errors.New("error")
 				})
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
+			})
+
+			It("should forbid multiple BackupBuckets deletion if a BackupEntry referencing any of the BackupBuckets exists", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				backupBucket2 := backupBucketBase.DeepCopy()
+				backupBucket2.Name = "different-backupBucket"
+
+				backupEntry.Spec.BucketName = backupBucket2.Name
+				backupEntry2 := backupEntryBase.DeepCopy()
+				backupEntry2.Name = "another-name"
+				backupEntry2.Namespace = "another-namespace"
+				backupEntry2.Spec.BucketName = backupBucket2.Name
+
+				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupEntryList{Items: []core.BackupEntry{backupEntry, *backupEntry2}}, nil
+				})
+
+				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupBucketList{Items: []core.BackupBucket{*backupBucket2, backupBucket}}, nil
+				})
+
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s/%s,%s/%s", backupBucket2.Name, backupEntry.Namespace, backupEntry.Name, backupEntry2.Namespace, backupEntry2.Name)))
+			})
+
+			It("should allow multiple BackupBuckets deletion if no BackupEntry exists referencing any of the BackupBuckets", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				backupBucket2 := backupBucketBase.DeepCopy()
+				backupBucket2.Name = "different-backupBucket"
+
+				backupEntry.Spec.BucketName = "some-other-bucket"
+				backupEntry2 := backupEntryBase.DeepCopy()
+				backupEntry2.Name = "another-name"
+				backupEntry2.Namespace = "another-namespace"
+				backupEntry2.Spec.BucketName = "some-other-bucket"
+
+				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupEntryList{Items: []core.BackupEntry{}}, nil
+				})
+
+				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupBucketList{Items: []core.BackupBucket{*backupBucket2, backupBucket}}, nil
+				})
+
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 

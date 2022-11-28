@@ -173,7 +173,7 @@ func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.
 		return err
 	}
 	for _, shoot := range shoots {
-		if err := v.validateDelete(ctx, newAttributesWithName(a, shoot.Name)); err != nil {
+		if err := v.validateDelete(ctx, utils.NewAttributesWithName(a, shoot.Name)); err != nil {
 			return err
 		}
 	}
@@ -191,20 +191,6 @@ func (v *ManagedSeed) validateDelete(ctx context.Context, a admission.Attributes
 	}
 
 	return admission.NewForbidden(a, fmt.Errorf("cannot delete shoot %s/%s since it is still referenced by a managed seed", a.GetNamespace(), a.GetName()))
-}
-
-func newAttributesWithName(a admission.Attributes, name string) admission.Attributes {
-	return admission.NewAttributesRecord(a.GetObject(),
-		a.GetOldObject(),
-		a.GetKind(),
-		a.GetNamespace(),
-		name,
-		a.GetResource(),
-		a.GetSubresource(),
-		a.GetOperation(),
-		a.GetOperationOptions(),
-		a.IsDryRun(),
-		a.GetUserInfo())
 }
 
 func (v *ManagedSeed) getShoots(ctx context.Context, selector labels.Selector) ([]core.Shoot, error) {

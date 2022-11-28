@@ -58,3 +58,18 @@ func GetFilteredShootList(shootLister corelisters.ShootLister, predicateFn func(
 	}
 	return matchingShoots, nil
 }
+
+// NewAttributesWithName returns admission.Attributes with the given name and all other attributes kept same.
+func NewAttributesWithName(a admission.Attributes, name string) admission.Attributes {
+	return admission.NewAttributesRecord(a.GetObject(),
+		a.GetOldObject(),
+		a.GetKind(),
+		a.GetNamespace(),
+		name,
+		a.GetResource(),
+		a.GetSubresource(),
+		a.GetOperation(),
+		a.GetOperationOptions(),
+		a.IsDryRun(),
+		a.GetUserInfo())
+}
