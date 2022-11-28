@@ -40,6 +40,7 @@ func (component) Name() string {
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var newData = data
+	// checking if ProtectKernelDefaults is set to true or if it is not set, but should be set by default to true since the default settings are applied after this function.
 	if (ctx.KubeletConfigParameters.ProtectKernelDefaults != nil && *ctx.KubeletConfigParameters.ProtectKernelDefaults) ||
 		(ctx.KubeletConfigParameters.ProtectKernelDefaults == nil && ctx.KubernetesVersion != nil && version.ConstraintK8sGreaterEqual126.Check(ctx.KubernetesVersion)) {
 		newData += "#Needed configuration by kubelet\n" +
