@@ -40,6 +40,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -53,7 +54,6 @@ import (
 	corev1alphalisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -416,7 +416,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			if a.GetName() == "" {
 				return r.validateBackupBucketDeleteCollection(ctx, a)
 			} else {
-				return r.validateBackupBucketDelete(ctx, a)
+				return r.validateBackupBucketDeletion(ctx, a)
 			}
 		} else {
 			backupBucket, ok := a.GetObject().(*core.BackupBucket)
@@ -785,7 +785,7 @@ func (r *ReferenceManager) validateBackupBucketDeleteCollection(ctx context.Cont
 	}
 
 	for _, backupBucket := range backupBucketList.Items {
-		if err := r.validateBackupBucketDelete(ctx, utils.NewAttributesWithName(a, backupBucket.Name)); err != nil {
+		if err := r.validateBackupBucketDeletion(ctx, utils.NewAttributesWithName(a, backupBucket.Name)); err != nil {
 			return err
 		}
 	}
@@ -793,7 +793,7 @@ func (r *ReferenceManager) validateBackupBucketDeleteCollection(ctx context.Cont
 	return nil
 }
 
-func (r *ReferenceManager) validateBackupBucketDelete(ctx context.Context, a admission.Attributes) error {
+func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, a admission.Attributes) error {
 	backupEntryList, err := r.gardenCoreClient.Core().BackupEntries("").List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{core.BackupEntryBucketName: a.GetName()}).String(),
 	})
