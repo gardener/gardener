@@ -38,12 +38,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	// This version is pinned here, because we have removed support for this field for shoots with k8s v1.25+
 	f.Shoot.Spec.Kubernetes.Version = "1.24.8"
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
-	f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-		AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
-			{
-				Name: "PodSecurity",
-				Config: &runtime.RawExtension{
-					Raw: []byte(`{
+	f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+		{
+			Name: "PodSecurity",
+			Config: &runtime.RawExtension{
+				Raw: []byte(`{
 						"apiVersion": "pod-security.admission.config.k8s.io/v1beta1",
 						"kind": "PodSecurityConfiguration",
 						"defaults": {
@@ -51,7 +50,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						  "enforce-version": "latest"
 						}
 					  }`),
-				},
 			},
 		},
 	}
