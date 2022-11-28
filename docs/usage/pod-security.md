@@ -50,7 +50,7 @@ admissionPlugins:
       namespaces: []
 ```
 
-⚠️ Note that `pod-security.admission.config.k8s.io/v1` configuration requires v1.25+. For v1.23 and v1.24, use `pod-security.admission.config.k8s.io/v1beta1`. For v1.22, use `pod-security.admission.config.k8s.io/v1alpha1`.
+⚠️ Note that `pod-security.admission.config.k8s.io/v1` configuration requires `v1.25`+. For `v1.23` and `v1.24`, use `pod-security.admission.config.k8s.io/v1beta1`. For `v1.22`, use `pod-security.admission.config.k8s.io/v1alpha1`.
 
 Also note that in `v1.22` the feature gate `PodSecurity` is not enabled by default. You have to add:
 
