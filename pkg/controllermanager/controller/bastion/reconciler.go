@@ -113,7 +113,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if requeueAfter < 0 {
-		requeueAfter = 0
+		return reconcile.Result{}, fmt.Errorf("the bastion should already have been deleted")
 	}
 
 	log.V(1).Info("Requeuing Bastion", "requeueAfter", requeueAfter)
