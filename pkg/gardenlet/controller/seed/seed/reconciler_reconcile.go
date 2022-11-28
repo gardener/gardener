@@ -58,6 +58,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/fluentoperator"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -274,8 +275,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		hvpaGK   = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
 		issuerGK = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 
-		vpaEnabled  = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
+		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
+		hvpaEnabled    = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 		loggingConfig   = r.Config.Logging
 		gardenNamespace = &corev1.Namespace{
@@ -393,6 +395,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
+	if err := fluentoperator.NewFluentOperatorCRD(applier).Deploy(ctx); err != nil {
+		return err
+	}
+
 	if err := crds.NewExtensionsCRD(applier).Deploy(ctx); err != nil {
 		return err
 	}
@@ -468,7 +474,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// Logging feature gate
 	var (
-		loggingEnabled                    bool
 		additionalEgressIPBlocks          []string
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
 		lokiValues                        = map[string]interface{}{}
@@ -477,8 +482,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		parsers               = strings.Builder{}
 		userAllowedComponents []string
 	)
-
-	loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
 	lokiValues["enabled"] = loggingEnabled
 
 	if loggingEnabled {

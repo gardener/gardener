@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"time"
 )
 
@@ -70,6 +71,9 @@ type AsyncAssertion interface {
 	WithOffset(offset int) AsyncAssertion
 	WithTimeout(interval time.Duration) AsyncAssertion
 	WithPolling(interval time.Duration) AsyncAssertion
+	Within(timeout time.Duration) AsyncAssertion
+	ProbeEvery(interval time.Duration) AsyncAssertion
+	WithContext(ctx context.Context) AsyncAssertion
 }
 
 // Assertions are returned by Ω and Expect and enable assertions against Gomega matchers

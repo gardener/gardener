@@ -142,6 +142,12 @@ rules:
   - wasmplugins.extensions.istio.io
   - proxyconfigs.networking.istio.io
   - managedresources.resources.gardener.cloud
+  - clusterfilters.fluentbit.fluent.io
+  - clusterfluentbitconfigs.fluentbit.fluent.io
+  - clusterinputs.fluentbit.fluent.io
+  - clusteroutputs.fluentbit.fluent.io
+  - clusterparsers.fluentbit.fluent.io
+  - fluentbits.fluentbit.fluent.io
   verbs:
   - delete
 - apiGroups:

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,35 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// +build go1.13
+package atomic
 
-package multierr
+import (
+	"sync/atomic"
+	"unsafe"
+)
 
-import "errors"
+// UnsafePointer is an atomic wrapper around unsafe.Pointer.
+type UnsafePointer struct {
+	_ nocmp // disallow non-atomic comparison
 
-// As attempts to find the first error in the error list that matches the type
-// of the value that target points to.
-//
-// This function allows errors.As to traverse the values stored on the
-// multierr error.
-func (merr *multiError) As(target interface{}) bool {
-	for _, err := range merr.Errors() {
-		if errors.As(err, target) {
-			return true
-		}
-	}
-	return false
+	v unsafe.Pointer
 }
 
-// Is attempts to match the provided error against errors in the error list.
-//
-// This function allows errors.Is to traverse the values stored on the
-// multierr error.
-func (merr *multiError) Is(target error) bool {
-	for _, err := range merr.Errors() {
-		if errors.Is(err, target) {
-			return true
-		}
-	}
-	return false
+// NewUnsafePointer creates a new UnsafePointer.
+func NewUnsafePointer(val unsafe.Pointer) *UnsafePointer {
+	return &UnsafePointer{v: val}
+}
+
+// Load atomically loads the wrapped value.
+func (p *UnsafePointer) Load() unsafe.Pointer {
+	return atomic.LoadPointer(&p.v)
+}
+
+// Store atomically stores the passed value.
+func (p *UnsafePointer) Store(val unsafe.Pointer) {
+	atomic.StorePointer(&p.v, val)
+}
+
+// Swap atomically swaps the wrapped unsafe.Pointer and returns the old value.
+func (p *UnsafePointer) Swap(val unsafe.Pointer) (old unsafe.Pointer) {
+	return atomic.SwapPointer(&p.v, val)
+}
+
+// CAS is an atomic compare-and-swap.
+func (p *UnsafePointer) CAS(old, new unsafe.Pointer) (swapped bool) {
+	return atomic.CompareAndSwapPointer(&p.v, old, new)
 }

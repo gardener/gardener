@@ -24,6 +24,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -320,6 +321,22 @@ var _ = Describe("Seed controller tests", func() {
 						// prevent flakes we have to increase the timeout here manually
 						WithTimeout(10 * time.Second).
 						Should(ConsistOf(expectedManagedResources))
+
+					By("Verify that the fluent operator CRDs have been deployed")
+					expectedFluentOperatorCRDs := []gomegatypes.GomegaMatcher{
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
+					}
+
+					Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
+						crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
+						return crdList.Items
+					}).Should(ContainElements(expectedFluentOperatorCRDs))
 
 					By("Wait for Bootstrapped condition to be set to True")
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
