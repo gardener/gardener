@@ -17,6 +17,7 @@ package backupbucket
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -26,6 +27,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -35,8 +37,12 @@ import (
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func addTestControllerToManagerWithOptions(mgr manager.Manager, ignoreOperationAnnotation bool) error {
 	return backupbucket.Add(mgr, backupbucket.AddArgs{
-		Actuator:                  &actuator{},
-		ControllerOptions:         controller.Options{},
+		Actuator: &actuator{},
+		ControllerOptions: controller.Options{
+			// Use custom rate limiter to slow down re-enqueuing in case of errors.
+			// Some tests rely on reading an error state which is removed too quickly by subsequent reconciliations.
+			RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(50*time.Millisecond, 1000*time.Second),
+		},
 		Predicates:                backupbucket.DefaultPredicates(ignoreOperationAnnotation),
 		Type:                      extensionsintegrationtest.Type,
 		IgnoreOperationAnnotation: ignoreOperationAnnotation,
