@@ -193,6 +193,27 @@ var _ = Describe("Defaults", func() {
 		})
 
 		const kindExtension = "Extension"
+		It("should default the globallyEnabled field when kind is Extension", func() {
+			resource := ControllerResource{Kind: kindExtension}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.GloballyEnabled).To(Equal(pointer.Bool(false)))
+		})
+
+		It("should not default the globallyEnabled field when kind is Extension and globallyEnabled is already set", func() {
+			resource := ControllerResource{Kind: kindExtension, GloballyEnabled: pointer.Bool(true)}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.GloballyEnabled).To(Equal(pointer.Bool(true)))
+		})
+
+		It("should not default the globallyEnabled field when kind is not Extension", func() {
+			resource := ControllerResource{Kind: "not extension"}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.GloballyEnabled).To(BeNil())
+		})
+
 		It("should default the reconcile timeout when kind is Extension", func() {
 			resource := ControllerResource{Kind: kindExtension}
 			SetDefaults_ControllerResource(&resource)

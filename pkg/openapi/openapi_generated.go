@@ -2361,7 +2361,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 					},
 					"globallyEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.",
+							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. This field is defaulted to false when kind is \"Extension\".",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -9777,7 +9777,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"globallyEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.",
+							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. This field is defaulted to false when kind is \"Extension\".",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

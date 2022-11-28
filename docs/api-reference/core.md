@@ -3115,7 +3115,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.</p>
+<p>GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
+This field is defaulted to false when kind is &ldquo;Extension&rdquo;.</p>
 </td>
 </tr>
 <tr>

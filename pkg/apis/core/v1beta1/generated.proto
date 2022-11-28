@@ -528,6 +528,7 @@ message ControllerResource {
   optional string type = 2;
 
   // GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
+  // This field is defaulted to false when kind is "Extension".
   // +optional
   optional bool globallyEnabled = 3;
 
