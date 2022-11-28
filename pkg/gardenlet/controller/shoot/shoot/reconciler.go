@@ -283,8 +283,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 			return nil, reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
 		}
 
-		log.Info("Shoot is failed or ignored, do not start operation")
-		return nil, reconcile.Result{}, nil
+		return nil, r.scheduleNextSync(log, shoot, false, "Shoot is failed or ignored, reconciliation is not allowed"), nil
 	}
 
 	if operationType == gardencorev1beta1.LastOperationTypeCreate || operationType == gardencorev1beta1.LastOperationTypeReconcile {
