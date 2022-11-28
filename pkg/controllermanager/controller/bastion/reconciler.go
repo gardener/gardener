@@ -112,6 +112,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
+	if requeueAfter < 0 {
+		requeueAfter = 0
+	}
+
 	log.V(1).Info("Requeuing Bastion", "requeueAfter", requeueAfter)
 	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
