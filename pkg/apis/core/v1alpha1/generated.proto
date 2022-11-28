@@ -870,6 +870,8 @@ message KubeAPIServerConfig {
 
   // EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
   // +optional
+  // Defaults to false.
+  // Deprecated: basic authentication has been removed in Kubernetes v1.19+. This field will be removed in a future version.
   optional bool enableBasicAuthentication = 5;
 
   // OIDCConfig contains configuration settings for the OIDC provider.

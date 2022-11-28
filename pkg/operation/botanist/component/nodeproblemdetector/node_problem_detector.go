@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
@@ -214,6 +213,11 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						HostNetwork:                   false,
 						TerminationGracePeriodSeconds: pointer.Int64(daemonSetTerminationGracePeriodSeconds),
 						PriorityClassName:             "system-cluster-critical",
+						SecurityContext: &corev1.PodSecurityContext{
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+						},
 						Containers: []corev1.Container{
 							{
 								Name:            daemonSetName,
@@ -398,15 +402,6 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Name:      serviceAccount.Name,
 				Namespace: serviceAccount.Namespace,
 			}},
-		}
-	}
-
-	if version.ConstraintK8sGreaterEqual119.Check(c.values.KubernetesVersion) {
-		if daemonSet.Spec.Template.Spec.SecurityContext == nil {
-			daemonSet.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-		}
-		daemonSet.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 	}
 

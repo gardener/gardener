@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -238,9 +237,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.GardenerVersion = gardenerVersion
 
-	kubernetesVersionGeq118 := version.ConstraintK8sGreaterEqual118.Check(kubernetesVersion)
-	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && kubernetesVersionGeq118
-	if reversedVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq118 {
+	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN)
+	if reversedVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil {
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 			shoot.ReversedVPNEnabled = reversedVPNEnabled
 		}

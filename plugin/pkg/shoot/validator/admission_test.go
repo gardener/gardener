@@ -1888,8 +1888,8 @@ var _ = Describe("validator", func() {
 
 				It("should reject to create a cluster with an expired kubernetes version", func() {
 					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.18.1"
-					validKubernetesVersion := "1.18.3"
+					expiredKubernetesVersion := "1.24.1"
+					validKubernetesVersion := "1.24.3"
 					shoot.Spec.Kubernetes.Version = expiredKubernetesVersion
 					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
 
@@ -1906,8 +1906,8 @@ var _ = Describe("validator", func() {
 
 				It("should allow to delete a cluster with an expired kubernetes version", func() {
 					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.18.1"
-					validKubernetesVersion := "1.18.3"
+					expiredKubernetesVersion := "1.24.1"
+					validKubernetesVersion := "1.24.3"
 					shoot.Spec.Kubernetes.Version = expiredKubernetesVersion
 					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
 
@@ -1922,9 +1922,9 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.18")}
-					highestPatchVersion := core.ExpirableVersion{Version: "1.18.5"}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.18.0"}, highestPatchVersion)
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24")}
+					highestPatchVersion := core.ExpirableVersion{Version: "1.24.5"}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.24.0"}, highestPatchVersion)
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1939,9 +1939,9 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should work to create a cluster without a worker group kubernetes version set", func() {
-					shoot.Spec.Kubernetes.Version = "1.18.5"
-					highestPatchVersion := core.ExpirableVersion{Version: "1.18.5"}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.18.0"}, highestPatchVersion)
+					shoot.Spec.Kubernetes.Version = "1.24.5"
+					highestPatchVersion := core.ExpirableVersion{Version: "1.24.5"}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.24.0"}, highestPatchVersion)
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1956,9 +1956,9 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should work to create a cluster with a worker group kubernetes version set smaller than control plane version", func() {
-					shoot.Spec.Kubernetes.Version = "1.18.5"
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.17.0")}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.17.0"}, core.ExpirableVersion{Version: "1.18.5"})
+					shoot.Spec.Kubernetes.Version = "1.24.5"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.0")}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.23.0"}, core.ExpirableVersion{Version: "1.24.5"})
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1969,13 +1969,13 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.17.0")))
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.23.0")))
 				})
 
 				It("should work to create a cluster with a worker group kubernetes version set equal to control plane version", func() {
-					shoot.Spec.Kubernetes.Version = "1.18.5"
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.18.5")}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.17.0"}, core.ExpirableVersion{Version: "1.18.5"})
+					shoot.Spec.Kubernetes.Version = "1.24.5"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24.5")}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.23.0"}, core.ExpirableVersion{Version: "1.24.5"})
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1986,13 +1986,13 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.18.5")))
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.24.5")))
 				})
 
 				It("should reject to create a cluster with an expired worker group kubernetes version", func() {
 					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.18.1"
-					validKubernetesVersion := "1.18.3"
+					expiredKubernetesVersion := "1.24.1"
+					validKubernetesVersion := "1.24.3"
 					shoot.Spec.Kubernetes.Version = validKubernetesVersion
 					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredKubernetesVersion}
 					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
@@ -2010,8 +2010,8 @@ var _ = Describe("validator", func() {
 
 				It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
 					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.18.1"
-					validKubernetesVersion := "1.18.3"
+					expiredKubernetesVersion := "1.24.1"
+					validKubernetesVersion := "1.24.3"
 					shoot.Spec.Kubernetes.Version = validKubernetesVersion
 					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredKubernetesVersion}
 					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})

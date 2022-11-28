@@ -1041,10 +1041,45 @@ func ComputeExpectedGardenletDeploymentSpec(
 						},
 						TerminationMessagePath:   "/dev/termination-log",
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-						VolumeMounts:             []corev1.VolumeMount{},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      "kube-api-access-gardener",
+							MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+							ReadOnly:  true,
+						}},
 					},
 				},
-				Volumes: []corev1.Volume{},
+				Volumes: []corev1.Volume{{
+					Name: "kube-api-access-gardener",
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+									Path:              "token",
+									ExpirationSeconds: pointer.Int64(43200),
+								}},
+								{ConfigMap: &corev1.ConfigMapProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "kube-root-ca.crt",
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  "ca.crt",
+										Path: "ca.crt",
+									}},
+								}},
+								{DownwardAPI: &corev1.DownwardAPIProjection{
+									Items: []corev1.DownwardAPIVolumeFile{{
+										Path: "namespace",
+										FieldRef: &corev1.ObjectFieldSelector{
+											APIVersion: "v1",
+											FieldPath:  "metadata.namespace",
+										},
+									}},
+								}},
+							},
+						},
+					},
+				}},
 			},
 		},
 	}

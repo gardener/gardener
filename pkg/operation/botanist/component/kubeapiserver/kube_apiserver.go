@@ -131,8 +131,6 @@ type Values struct {
 	Audit *AuditConfig
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
-	// BasicAuthenticationEnabled states whether basic authentication is enabled.
-	BasicAuthenticationEnabled bool
 	// ETCDEncryption contains configuration for the encryption of resources in etcd.
 	ETCDEncryption ETCDEncryptionConfig
 	// EventTTL is the amount of time to retain events.
@@ -355,11 +353,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	secretBasicAuth, err := k.reconcileSecretBasicAuth(ctx)
-	if err != nil {
-		return err
-	}
-
 	secretHTTPProxy, err := k.reconcileSecretHTTPProxy(ctx)
 	if err != nil {
 		return err
@@ -418,7 +411,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretUserProvidedServiceAccountSigningKey,
 		secretServiceAccountKey,
 		secretStaticToken,
-		secretBasicAuth,
 		secretServer,
 		secretKubeletClient,
 		secretKubeAggregator,
@@ -430,7 +422,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if pointer.BoolDeref(k.values.StaticTokenKubeconfigEnabled, true) {
-		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
+		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken); err != nil {
 			return err
 		}
 	}
@@ -499,10 +491,6 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 		}
 		if newestPod == nil {
 			return err
-		}
-
-		if version.ConstraintK8sLess119.Check(k.values.Version) {
-			headBytes = pointer.Int64(1024)
 		}
 
 		logs, err2 := kutil.MostRecentCompleteLogs(ctx, k.client.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, ContainerNameKubeAPIServer, tailLines, headBytes)

@@ -22,8 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -110,9 +108,6 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 	}
 
 	egressSelectionControlPlaneName := "controlplane"
-	if versionutils.ConstraintK8sLess120.Check(k.values.Version) {
-		egressSelectionControlPlaneName = "master"
-	}
 
 	egressSelectorConfig := &apiserverv1alpha1.EgressSelectorConfiguration{
 		EgressSelections: []apiserverv1alpha1.EgressSelection{

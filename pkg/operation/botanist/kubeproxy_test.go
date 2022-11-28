@@ -62,8 +62,8 @@ var _ = Describe("KubeProxy", func() {
 		poolName1                     = "pool1"
 		poolName2                     = "pool2"
 		poolName3                     = "pool3"
-		kubernetesVersionControlPlane = "1.20.3"
-		kubernetesVersionPool2        = "1.19.4"
+		kubernetesVersionControlPlane = "1.24.3"
+		kubernetesVersionPool2        = "1.23.4"
 		kubernetesVersionPool3        = kubernetesVersionControlPlane
 	)
 
@@ -88,17 +88,17 @@ var _ = Describe("KubeProxy", func() {
 					{
 						Name:          "kube-proxy",
 						Repository:    repositoryKubeProxyImage,
-						TargetVersion: pointer.String("1.20.x"),
+						TargetVersion: pointer.String("1.24.x"),
 					},
 					{
 						Name:          "kube-proxy",
 						Repository:    repositoryKubeProxyImage,
-						TargetVersion: pointer.String("1.19.x"),
+						TargetVersion: pointer.String("1.23.x"),
 					},
 					{
 						Name:          "kube-proxy",
 						Repository:    repositoryKubeProxyImage,
-						TargetVersion: pointer.String("1.18.x"),
+						TargetVersion: pointer.String("1.22.x"),
 					},
 				},
 				SeedClientSet:  fakeSeedKubernetesInterface,
@@ -251,7 +251,7 @@ users:
 							Name: "node2",
 							Labels: map[string]string{
 								"worker.gardener.cloud/pool":               poolName2,
-								"worker.gardener.cloud/kubernetes-version": "1.20.3",
+								"worker.gardener.cloud/kubernetes-version": "1.24.3",
 							},
 						},
 					},
@@ -269,7 +269,7 @@ users:
 							Name: "node4",
 							Labels: map[string]string{
 								"worker.gardener.cloud/pool":               "pool4",
-								"worker.gardener.cloud/kubernetes-version": "1.20.3",
+								"worker.gardener.cloud/kubernetes-version": "1.24.3",
 							},
 						},
 					},
@@ -296,13 +296,13 @@ users:
 						},
 						{
 							Name:              poolName2,
-							KubernetesVersion: "1.20.3",
-							Image:             repositoryKubeProxyImage + ":v1.20.3",
+							KubernetesVersion: "1.24.3",
+							Image:             repositoryKubeProxyImage + ":v1.24.3",
 						},
 						{
 							Name:              "pool4",
-							KubernetesVersion: "1.20.3",
-							Image:             repositoryKubeProxyImage + ":v1.20.3",
+							KubernetesVersion: "1.24.3",
+							Image:             repositoryKubeProxyImage + ":v1.24.3",
 						},
 					})
 				})

@@ -57,7 +57,6 @@ const (
 
 	volumeNameAdmissionConfiguration               = "admission-config"
 	volumeNameAuditPolicy                          = "audit-policy-config"
-	volumeNameBasicAuthentication                  = "basic-auth"
 	volumeNameCA                                   = "ca"
 	volumeNameCAClient                             = "ca-client"
 	volumeNameCAEtcd                               = "ca-etcd"
@@ -86,7 +85,6 @@ const (
 
 	volumeMountPathAdmissionConfiguration               = "/etc/kubernetes/admission"
 	volumeMountPathAuditPolicy                          = "/etc/kubernetes/audit"
-	volumeMountPathBasicAuthentication                  = "/srv/kubernetes/auth"
 	volumeMountPathCA                                   = "/srv/kubernetes/ca"
 	volumeMountPathCAClient                             = "/srv/kubernetes/ca-client"
 	volumeMountPathCAEtcd                               = "/srv/kubernetes/etcd/ca"
@@ -129,7 +127,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretUserProvidedServiceAccountSigningKey *corev1.Secret,
 	secretServiceAccountKey *corev1.Secret,
 	secretStaticToken *corev1.Secret,
-	secretBasicAuth *corev1.Secret,
 	secretServer *corev1.Secret,
 	secretKubeletClient *corev1.Secret,
 	secretKubeAggregator *corev1.Secret,
@@ -472,7 +469,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 			},
 		}
 
-		k.handleBasicAuthenticationSettings(deployment, secretBasicAuth)
 		k.handleLifecycleSettings(deployment)
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
@@ -683,30 +679,6 @@ func (k *kubeAPIServer) handleHostCertVolumes(deployment *appsv1.Deployment) {
 				HostPath: &corev1.HostPathVolumeSource{
 					Path: volumeMountPathUsrShareCaCerts,
 					Type: &directoryOrCreate,
-				},
-			},
-		},
-	}...)
-}
-
-func (k *kubeAPIServer) handleBasicAuthenticationSettings(deployment *appsv1.Deployment, secret *corev1.Secret) {
-	if !k.values.BasicAuthenticationEnabled {
-		return
-	}
-
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--basic-auth-file=%s/%s", volumeMountPathBasicAuthentication, secrets.DataKeyCSV))
-	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-		{
-			Name:      volumeNameBasicAuthentication,
-			MountPath: volumeMountPathBasicAuthentication,
-		},
-	}...)
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-		{
-			Name: volumeNameBasicAuthentication,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secret.Name,
 				},
 			},
 		},

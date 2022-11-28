@@ -85,7 +85,6 @@ var _ = Describe("KubeAPIServer", func() {
 		seedVersion         *semver.Version
 		autoscalingConfig   AutoscalingConfig
 
-		secretNameBasicAuthentication     = "kube-apiserver-basic-auth-426b1845"
 		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
 		secretNameCA                      = "ca"
 		secretNameCAClient                = "ca-client"
@@ -508,12 +507,12 @@ var _ = Describe("KubeAPIServer", func() {
 								Deploy: true,
 								ScaleUp: hvpav1alpha1.ScaleType{
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.StringPtr("Auto"),
+										UpdateMode: pointer.String("Auto"),
 									},
 								},
 								ScaleDown: hvpav1alpha1.ScaleType{
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.StringPtr("Auto"),
+										UpdateMode: pointer.String("Auto"),
 									},
 								},
 								Template: hvpav1alpha1.HpaTemplate{
@@ -534,17 +533,17 @@ var _ = Describe("KubeAPIServer", func() {
 								Deploy: true,
 								ScaleUp: hvpav1alpha1.ScaleType{
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.StringPtr("Auto"),
+										UpdateMode: pointer.String("Auto"),
 									},
-									StabilizationDuration: pointer.StringPtr("3m"),
+									StabilizationDuration: pointer.String("3m"),
 									MinChange: hvpav1alpha1.ScaleParams{
 										CPU: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("300m"),
-											Percentage: pointer.Int32Ptr(80),
+											Value:      pointer.String("300m"),
+											Percentage: pointer.Int32(80),
 										},
 										Memory: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("200M"),
-											Percentage: pointer.Int32Ptr(80),
+											Value:      pointer.String("200M"),
+											Percentage: pointer.Int32(80),
 										},
 									},
 								},
@@ -552,26 +551,26 @@ var _ = Describe("KubeAPIServer", func() {
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 										UpdateMode: &expectedScaleDownUpdateMode,
 									},
-									StabilizationDuration: pointer.StringPtr("15m"),
+									StabilizationDuration: pointer.String("15m"),
 									MinChange: hvpav1alpha1.ScaleParams{
 										CPU: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("300m"),
-											Percentage: pointer.Int32Ptr(80),
+											Value:      pointer.String("300m"),
+											Percentage: pointer.Int32(80),
 										},
 										Memory: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("200M"),
-											Percentage: pointer.Int32Ptr(80),
+											Value:      pointer.String("200M"),
+											Percentage: pointer.Int32(80),
 										},
 									},
 								},
 								LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 									CPU: hvpav1alpha1.ChangeParams{
-										Value:      pointer.StringPtr("1"),
-										Percentage: pointer.Int32Ptr(70),
+										Value:      pointer.String("1"),
+										Percentage: pointer.Int32(70),
 									},
 									Memory: hvpav1alpha1.ChangeParams{
-										Value:      pointer.StringPtr("1G"),
-										Percentage: pointer.Int32Ptr(70),
+										Value:      pointer.String("1G"),
+										Percentage: pointer.Int32(70),
 									},
 								},
 								Template: hvpav1alpha1.VpaTemplate{
@@ -1508,33 +1507,6 @@ rules:
 			})
 
 			Context("egress selector", func() {
-				It("should successfully deploy the configmap resource for K8s < 1.20", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: semver.MustParse("1.19.0")})
-
-					configMapEgressSelector = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
-						Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("master")},
-					}
-					Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
-					Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapEgressSelector.Name,
-							Namespace:       configMapEgressSelector.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapEgressSelector.Data,
-					}))
-				})
 
 				It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
@@ -2321,7 +2293,6 @@ rules:
 
 					Expect(secretList.Items).To(HaveLen(1))
 					Expect(secretList.Items[0].Data).To(HaveKey("kubeconfig"))
-					Expect(secretList.Items[0].Data).To(HaveKey("token"))
 
 					kubeconfig := &clientcmdv1.Config{}
 					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
@@ -2597,40 +2568,6 @@ rules:
 							},
 						},
 					))
-				})
-
-				It("should properly configure the settings related to the basic auth secret if enabled", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, BasicAuthenticationEnabled: true})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
-						"--basic-auth-file=/srv/kubernetes/auth/basic_auth.csv",
-					))
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
-						Name:      "basic-auth",
-						MountPath: "/srv/kubernetes/auth",
-					}))
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
-						Name: "basic-auth",
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: secretNameBasicAuthentication,
-							},
-						},
-					}))
-
-					secret := &corev1.Secret{}
-					Expect(c.Get(ctx, kutil.Key(namespace, secretNameBasicAuthentication), secret)).To(Succeed())
-					Expect(secret.Data).To(HaveKey("basic_auth.csv"))
-				})
-
-				It("should not configure the settings related to the basic auth secret if disabled", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, BasicAuthenticationEnabled: false})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--basic-auth-file=")))
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("basic-auth")})))
-					Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("basic-auth")})))
 				})
 
 				It("should properly configure the settings related to reversed vpn if enabled", func() {

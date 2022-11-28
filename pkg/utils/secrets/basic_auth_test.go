@@ -105,16 +105,5 @@ var _ = Describe("Basic Auth Secrets", func() {
 				Expect(data).To(Equal(expectedCSVFormatData))
 			})
 		})
-
-		Describe("#LoadBasicAuthFromCSV", func() {
-			It("should properly load BasicAuth object from CSV data", func() {
-				obj, err := LoadBasicAuthFromCSV("basicauth", expectedCSVFormatData[DataKeyCSV])
-				Expect(err).NotTo(HaveOccurred())
-				Expect(obj.Username).To(Equal("admin"))
-				Expect(obj.Password).To(Equal("foo"))
-				Expect(obj.Name).To(Equal("basicauth"))
-				Expect(obj.Format).To(Equal(BasicAuthFormatCSV))
-			})
-		})
 	})
 })

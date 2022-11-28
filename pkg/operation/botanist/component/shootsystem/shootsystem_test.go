@@ -56,7 +56,7 @@ var _ = Describe("ShootSystem", func() {
 		shootName         = "bar"
 		region            = "test-region"
 		providerType      = "test-provider"
-		kubernetesVersion = "1.17.1"
+		kubernetesVersion = "1.20.1"
 		maintenanceBegin  = "123456+0100"
 		maintenanceEnd    = "134502+0100"
 		domain            = "my-shoot.example.com"
@@ -230,28 +230,7 @@ metadata:
 				}
 			)
 
-			Context("k8s < 1.19", func() {
-				It("should successfully deploy all resources", func() {
-					for _, name := range append(defaultKCMControllerSANames, "default") {
-						Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)), name)
-					}
-				})
-			})
-
-			Context("1.19 <= k8s < 1.20", func() {
-				BeforeEach(func() {
-					values.Shoot.KubernetesVersion = semver.MustParse("1.19.4")
-					component = New(c, namespace, values)
-				})
-
-				It("should successfully deploy all resources", func() {
-					for _, name := range append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller") {
-						Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)), name)
-					}
-				})
-			})
-
-			Context("k8s >= 1.20", func() {
+			Context("k8s = 1.20", func() {
 				BeforeEach(func() {
 					values.Shoot.KubernetesVersion = semver.MustParse("1.20.4")
 					component = New(c, namespace, values)

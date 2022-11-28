@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
@@ -398,6 +397,11 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 						PriorityClassName:            "system-cluster-critical",
 						DNSPolicy:                    corev1.DNSDefault,
 						NodeSelector:                 map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
+						SecurityContext: &corev1.PodSecurityContext{
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+						},
 						Tolerations: []corev1.Toleration{{
 							Key:      "CriticalAddonsOnly",
 							Operator: corev1.TolerationOpExists,
@@ -509,15 +513,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 				Name:      serviceAccount.Name,
 				Namespace: serviceAccount.Namespace,
 			}},
-		}
-	}
-
-	if version.ConstraintK8sGreaterEqual119.Check(v.values.KubernetesVersion) {
-		if deployment.Spec.Template.Spec.SecurityContext == nil {
-			deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-		}
-		deployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 	}
 

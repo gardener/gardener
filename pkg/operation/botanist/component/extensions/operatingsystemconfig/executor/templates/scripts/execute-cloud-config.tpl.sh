@@ -94,17 +94,11 @@ if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "{{ .hyperkubeImage }}" ]]; then
   hyperkubeImageSHA="{{ .hyperkubeImage | sha256sum }}"
 
   echo "Starting temporary hyperkube container to copy binaries to host"
-
-{{- if semverCompare "< 1.19" .kubernetesVersion }}
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
-{{- else }}
   HYPERKUBE_CONTAINER_ID="$({{ .pathDockerBinary }} run -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}")"
   {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
   {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
   {{ .pathDockerBinary }} stop "$HYPERKUBE_CONTAINER_ID"
   {{ .pathDockerBinary }} rm "$HYPERKUBE_CONTAINER_ID"
-{{- end }}
   chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
   chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
 

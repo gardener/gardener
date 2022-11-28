@@ -222,7 +222,7 @@ var _ = Describe("health check", func() {
 		}
 
 		seedNamespace      = "shoot--foo--bar"
-		kubernetesVersion  = semver.MustParse("1.19.3")
+		kubernetesVersion  = semver.MustParse("1.23.3")
 		gardenerVersion    = semver.MustParse("1.30.0")
 		gardenerVersion153 = semver.MustParse("1.53.0")
 
@@ -671,7 +671,7 @@ var _ = Describe("health check", func() {
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1)))),
 			Entry("too old Kubernetes patch version",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.19.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.23.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -681,10 +681,10 @@ var _ = Describe("health check", func() {
 					},
 				},
 				cloudConfigSecretMeta,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.19.2) does not match the desired Kubernetes version (v%s)", nodeName, kubernetesVersion.Original())))),
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.23.2) does not match the desired Kubernetes version (v%s)", nodeName, kubernetesVersion.Original())))),
 			Entry("same Kubernetes patch version",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.19.3"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.23.3"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -697,7 +697,7 @@ var _ = Describe("health check", func() {
 				BeNil()),
 			Entry("too old Kubernetes patch version with pool version overwrite",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.22.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -705,15 +705,15 @@ var _ = Describe("health check", func() {
 						Maximum: 10,
 						Minimum: 1,
 						Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-							Version: pointer.String("1.18.3"),
+							Version: pointer.String("1.22.3"),
 						},
 					},
 				},
 				cloudConfigSecretMeta,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.18.2) does not match the desired Kubernetes version (v1.18.3)", nodeName)))),
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.22.2) does not match the desired Kubernetes version (v1.22.3)", nodeName)))),
 			Entry("different Kubernetes minor version (all healthy)",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.22.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -726,7 +726,7 @@ var _ = Describe("health check", func() {
 				BeNil()),
 			Entry("missing cloud-config secret checksum for a worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.22.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -739,7 +739,7 @@ var _ = Describe("health check", func() {
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "CloudConfigOutdated", fmt.Sprintf("missing cloud config secret metadata for worker pool %q", workerPoolName1)))),
 			Entry("no cloud-config node checksum for a worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.22.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -752,7 +752,7 @@ var _ = Describe("health check", func() {
 				BeNil()),
 			Entry("outdated cloud-config secret checksum for a worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, map[string]string{executor.AnnotationKeyChecksum: "outdated"}, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, map[string]string{executor.AnnotationKeyChecksum: "outdated"}, "v1.22.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{

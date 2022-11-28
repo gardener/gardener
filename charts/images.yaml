@@ -50,13 +50,8 @@ images:
 # Seed controlplane
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
 - name: hyperkube
-  sourceRepository: github.com/kubernetes/kubernetes
-  repository: registry.k8s.io/hyperkube
-  targetVersion: "< 1.19"
-- name: hyperkube
   sourceRepository: github.com/gardener/hyperkube
   repository: eu.gcr.io/gardener-project/hyperkube
-  targetVersion: ">= 1.19"
 - name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
   repository: registry.k8s.io/kube-apiserver
@@ -119,13 +114,7 @@ images:
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
-  tag: v2.1.1
-  targetVersion: "< 1.20"
-- name: kube-state-metrics
-  sourceRepository: github.com/kubernetes/kube-state-metrics
-  repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
   tag: v2.5.0
-  targetVersion: ">= 1.20"
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
@@ -141,13 +130,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: registry.k8s.io/metrics-server/metrics-server
-  tag: v0.5.2
-  targetVersion: "< 1.19"
-- name: metrics-server
-  sourceRepository: github.com/kubernetes-sigs/metrics-server
-  repository: registry.k8s.io/metrics-server/metrics-server
   tag: v0.6.2
-  targetVersion: ">= 1.19"
 
 # Shoot core addons
 - name: vpn-shoot
@@ -203,15 +186,9 @@ images:
   labels: *optionalAddonLabels
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.22.0"
-  targetVersion: "< 1.20"
-  labels: *optionalAddonLabels
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller
   tag: "v0.49.3"
-  targetVersion: ">= 1.20, < 1.22"
+  targetVersion: "< 1.22"
   labels: *optionalAddonLabels
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx

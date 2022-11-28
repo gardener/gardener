@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -47,7 +46,6 @@ func (v *KubeconfigVerifier) Before(ctx context.Context) {
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("ca.crt", Not(BeEmpty())),
 			HaveKeyWithValue("kubeconfig", Not(BeEmpty())),
-			HaveKeyWithValue("token", Not(BeEmpty())),
 		))
 		v.oldKubeconfigData = secret.Data
 
@@ -58,9 +56,7 @@ func (v *KubeconfigVerifier) Before(ctx context.Context) {
 		Expect(kubeconfig.Clusters).To(HaveLen(1))
 		Expect(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData).To(Equal(secret.Data["ca.crt"]))
 		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
-		Expect(kubeconfig.AuthInfos[0].AuthInfo).To(DeepEqual(clientcmdv1.AuthInfo{
-			Token: string(secret.Data["token"]),
-		}))
+		Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
 	}).Should(Succeed(), "old kubeconfig secret should be present")
 }
 
@@ -81,7 +77,6 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("ca.crt", Not(Equal(v.oldKubeconfigData["ca.crt"]))),
 			HaveKeyWithValue("kubeconfig", Not(Equal(v.oldKubeconfigData["kubeconfig"]))),
-			HaveKeyWithValue("token", Not(Equal(v.oldKubeconfigData["token"]))),
 		))
 		v.newKubeconfigData = secret.Data
 
@@ -92,9 +87,7 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 		Expect(kubeconfig.Clusters).To(HaveLen(1))
 		Expect(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData).To(Equal(secret.Data["ca.crt"]))
 		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
-		Expect(kubeconfig.AuthInfos[0].AuthInfo).To(DeepEqual(clientcmdv1.AuthInfo{
-			Token: string(secret.Data["token"]),
-		}))
+		Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
 	}).Should(Succeed(), "kubeconfig secret should have been rotated")
 }
 
@@ -115,7 +108,6 @@ func (v *KubeconfigVerifier) AfterCompleted(ctx context.Context) {
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("ca.crt", Not(Equal(v.newKubeconfigData["ca.crt"]))),
 			HaveKeyWithValue("kubeconfig", Not(Equal(v.newKubeconfigData["kubeconfig"]))),
-			HaveKeyWithValue("token", Equal(v.newKubeconfigData["token"])),
 		))
 
 		kubeconfig := &clientcmdv1.Config{}
@@ -125,8 +117,6 @@ func (v *KubeconfigVerifier) AfterCompleted(ctx context.Context) {
 		Expect(kubeconfig.Clusters).To(HaveLen(1))
 		Expect(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData).To(Equal(secret.Data["ca.crt"]))
 		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
-		Expect(kubeconfig.AuthInfos[0].AuthInfo).To(DeepEqual(clientcmdv1.AuthInfo{
-			Token: string(secret.Data["token"]),
-		}))
+		Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
 	}).Should(Succeed(), "kubeconfig secret should have been rotated")
 }

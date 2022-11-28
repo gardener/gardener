@@ -116,7 +116,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should correctly set version attribute", func() {
-		version := "1.18.0"
+		version := "1.24.0"
 		cs := builder.WithVersion(version).Build()
 
 		Expect(cs.Version()).To(Equal(version))
@@ -124,7 +124,7 @@ var _ = Describe("Fake ClientSet", func() {
 
 	Context("#DiscoverVersion", func() {
 		It("should correctly refresh server version", func() {
-			oldVersion, newVersion := "1.18.1", "1.18.2"
+			oldVersion, newVersion := "1.24.1", "1.24.2"
 			cs := builder.
 				WithVersion(oldVersion).
 				WithKubernetes(test.NewClientSetWithFakedServerVersion(nil, &version.Info{GitVersion: newVersion})).

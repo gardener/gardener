@@ -26,6 +26,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -48,8 +49,6 @@ const (
 
 	// SecretStaticTokenName is a constant for the name of the static-token secret.
 	SecretStaticTokenName = "kube-apiserver-static-token"
-	// SecretBasicAuthName is a constant for the name of the basic-auth secret.
-	SecretBasicAuthName = "kube-apiserver-basic-auth"
 
 	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
 
@@ -109,27 +108,6 @@ func (k *kubeAPIServer) reconcileSecretServiceAccountKey(ctx context.Context) (*
 	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key", Namespace: k.namespace}})
 }
 
-func (k *kubeAPIServer) reconcileSecretBasicAuth(ctx context.Context) (*corev1.Secret, error) {
-	var (
-		secret *corev1.Secret
-		err    error
-	)
-
-	if k.values.BasicAuthenticationEnabled {
-		secret, err = k.secretsManager.Generate(ctx, &secretutils.BasicAuthSecretConfig{
-			Name:           SecretBasicAuthName,
-			Format:         secretutils.BasicAuthFormatCSV,
-			Username:       "admin",
-			PasswordLength: 32,
-		}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return secret, nil
-}
-
 func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1.Secret, error) {
 	staticTokenSecretConfig := &secretutils.StaticTokenSecretConfig{
 		Name: SecretStaticTokenName,
@@ -157,21 +135,13 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 	return secret, nil
 }
 
-func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken, secretBasicAuth *corev1.Secret) error {
+func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken *corev1.Secret) error {
 	caBundleSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
 	var err error
-	var basicAuth *secretutils.BasicAuth
-	if secretBasicAuth != nil {
-		basicAuth, err = secretutils.LoadBasicAuthFromCSV(SecretBasicAuthName, secretBasicAuth.Data[secretutils.DataKeyCSV])
-		if err != nil {
-			return err
-		}
-	}
-
 	var token *secretutils.Token
 	if secretStaticToken != nil {
 		staticToken, err := secretutils.LoadStaticTokenFromCSV(SecretStaticTokenName, secretStaticToken.Data[secretutils.DataKeyStaticTokenCSV])
@@ -185,17 +155,16 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 		}
 	}
 
-	// TODO: In the future when we no longer support basic auth (dropped support for Kubernetes < 1.18) then we can
-	//  switch from ControlPlaneSecretConfig to KubeconfigSecretConfig.
-	_, err = k.secretsManager.Generate(ctx, &secretutils.ControlPlaneSecretConfig{
-		Name:      SecretNameUserKubeconfig,
-		BasicAuth: basicAuth,
-		Token:     token,
-		KubeConfigRequests: []secretutils.KubeConfigRequest{{
-			ClusterName:   k.namespace,
-			APIServerHost: k.values.ExternalServer,
-			CAData:        caBundleSecret.Data[secretutils.DataKeyCertificateBundle],
-		}},
+	_, err = k.secretsManager.Generate(ctx, &secretutils.KubeconfigSecretConfig{
+		Name:        SecretNameUserKubeconfig,
+		ContextName: k.namespace,
+		Cluster: clientcmdv1.Cluster{
+			Server:                   k.values.ExternalServer,
+			CertificateAuthorityData: caBundleSecret.Data[secretutils.DataKeyCertificateBundle],
+		},
+		AuthInfo: clientcmdv1.AuthInfo{
+			Token: token.Token,
+		},
 	}, secretsmanager.Rotate(secretsmanager.InPlace))
 	return err
 }

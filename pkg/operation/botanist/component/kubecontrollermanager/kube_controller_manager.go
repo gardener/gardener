@@ -571,13 +571,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 	)
 
-	if versionutils.ConstraintK8sGreaterEqual119.Check(k.version) {
-		command = append(command, "--cluster-signing-duration=720h")
-	} else {
-		command = append(command, "--experimental-cluster-signing-duration=720h")
-	}
-
 	command = append(command,
+		"--cluster-signing-duration=720h",
 		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
@@ -619,11 +614,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command, "--port=0")
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual119.Check(k.version) {
-		command = append(command, "--profiling=false")
-	}
-
 	command = append(command,
+		"--profiling=false",
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),

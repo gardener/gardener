@@ -9,7 +9,7 @@
     "externalPackages": [
         {
             "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
-            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
+            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
         }
     ],
     "typeDisplayNamePrefixOverrides": {

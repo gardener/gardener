@@ -23,8 +23,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/pkg/utils/version"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -90,10 +88,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 		}
 
 		// Check if the controller is active by reading its leader election record.
-		lock := "endpoints"
-		if version.ConstraintK8sGreaterEqual120.Check(k.version) {
-			lock = resourcelock.LeasesResourceLock
-		}
+		lock := resourcelock.LeasesResourceLock
 
 		leaderElectionRecord, err := kutil.ReadLeaderElectionRecord(ctx, k.shootClient, lock, metav1.NamespaceSystem, v1beta1constants.DeploymentNameKubeControllerManager)
 		if err != nil {

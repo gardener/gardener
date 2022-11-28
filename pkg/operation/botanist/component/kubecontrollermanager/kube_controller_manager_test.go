@@ -73,10 +73,10 @@ var _ = Describe("KubeControllerManager", func() {
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
 		fakeErr                       = fmt.Errorf("fake error")
 		namespace                     = "shoot--foo--bar"
-		version                       = "1.17.2"
+		version                       = "1.22.2"
 		semverVersion, _              = semver.NewVersion(version)
 		runtimeKubernetesVersion      = semver.MustParse("1.25.0")
-		image                         = "registry.k8s.io/kube-controller-manager:v1.17.2"
+		image                         = "registry.k8s.io/kube-controller-manager:v1.22.2"
 		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
 		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeOff)}
@@ -774,33 +774,6 @@ subjects:
 				Entry("kubernetes 1.20 with NodeCIDRMaskSize", "1.20.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
 				Entry("kubernetes 1.20 with PodEvictionTimeout", "1.20.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
 				Entry("kubernetes 1.20 with NodeMonitorGradePeriod", "1.20.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
-
-				Entry("kubernetes 1.19 w/o config", "1.19.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.19 with HVPA", "1.19.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.19 with HVPA and custom scale-down update mode", "1.19.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.19 with non-default autoscaler config", "1.19.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.19 with feature flags", "1.19.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.19 with NodeCIDRMaskSize", "1.19.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.19 with PodEvictionTimeout", "1.19.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.19.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
-
-				Entry("kubernetes 1.18 w/o config", "1.18.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.18 with HVPA", "1.18.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.18 with HVPA and custom scale-down update mode", "1.18.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.18 with non-default autoscaler config", "1.18.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.18 with feature flags", "1.18.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.18 with NodeCIDRMaskSize", "1.18.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.18 with PodEvictionTimeout", "1.18.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.18 with NodeMonitorGradePeriod", "1.18.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
-
-				Entry("kubernetes 1.17 w/o config", "1.17.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.17 with HVPA", "1.17.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.17 with HVPA and custom scale-down update mode", "1.17.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.17 with non-default autoscaler config", "1.17.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.17 with feature flags", "1.17.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.17 with NodeCIDRMaskSize", "1.17.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.17 with PodEvictionTimeout", "1.17.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.17 with NodeMonitorGradePeriod", "1.17.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
 			)
 		})
 	})
@@ -932,13 +905,8 @@ func commandForKubernetesVersion(
 		"--cluster-signing-legacy-unknown-key-file=/srv/kubernetes/ca-client/ca.key",
 	)
 
-	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
-		command = append(command, "--cluster-signing-duration=720h")
-	} else {
-		command = append(command, "--experimental-cluster-signing-duration=720h")
-	}
-
 	command = append(command,
+		"--cluster-signing-duration=720h",
 		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
@@ -980,11 +948,8 @@ func commandForKubernetesVersion(
 		command = append(command, "--port=0")
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual119.Check(semver.MustParse(version)) {
-		command = append(command, "--profiling=false")
-	}
-
 	command = append(command,
+		"--profiling=false",
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),

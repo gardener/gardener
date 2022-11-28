@@ -693,10 +693,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 	}
 
 	if kubeAPIServer := kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		geqKubernetes119, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.19")
-		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
-
-		if geqKubernetes119 && helper.ShootWantsBasicAuthentication(kubeAPIServer) {
+		if helper.ShootWantsBasicAuthentication(kubeAPIServer) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "enableBasicAuthentication"), "basic authentication has been removed in Kubernetes v1.19+"))
 		}
 
@@ -787,10 +784,6 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 		}
 
 		if kubeAPIServer.ServiceAccountConfig != nil {
-			if kubeAPIServer.ServiceAccountConfig.ExtendTokenExpiration != nil && !geqKubernetes119 {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "extendTokenExpiration"), "this field is only available in Kubernetes v1.19+"))
-			}
-
 			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
 				if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
@@ -1036,11 +1029,6 @@ func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath
 		if profile != nil {
 			if !availableSchedulingProfiles.Has(string(*profile)) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("profile"), *profile, availableSchedulingProfiles.List()))
-			}
-
-			k8sVersionLessThan120, _ := versionutils.CompareVersions(version, "<", "1.20")
-			if k8sVersionLessThan120 && *profile == core.SchedulingProfileBinPacking {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("profile"), "'bin-packing' profile is only allowed for kubernetes versions >= 1.20"))
 			}
 		}
 

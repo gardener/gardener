@@ -10,22 +10,22 @@ Obviously, the image versions defined there must fit together with the deploymen
 images:
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: gcr.io/google_containers/pause-amd64
-  tag: "3.0"
-  version: 1.17.x
+  repository: registry.k8s.io/pause
+  tag: "3.4"
+  version: "1.20.x"
   architectures:
   - amd64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: gcr.io/google_containers/pause-amd64
-  tag: "3.1"
-  version: ">= 1.18"
+  repository: registry.k8s.io/pause
+  tag: "3.5"
+  version: ">= 1.21"
   architectures:
   - amd64
 ...
 ```
 
-That means that the Gardenlet will use the `pause-container` in with tag `3.0` for all seed/shoot clusters with Kubernetes version `1.17.x`, and tag `3.1` for all clusters with Kubernetes `>= 1.18`.
+That means that the Gardenlet will use the `pause-container` in with tag `3.4` for all seed/shoot clusters with Kubernetes version `1.20.x`, and tag `3.5` for all clusters with Kubernetes `>= 1.21`.
 
 ## Image Vector Architecture
 
@@ -34,30 +34,30 @@ images:
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: registry.k8s.io/pause
-  tag: "3.0"
+  tag: "3.5"
   architectures:
   - amd64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: registry.k8s.io/pause
-  tag: "3.0"
+  tag: "3.5"
   architectures:
   - arm64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: registry.k8s.io/pause
-  tag: "3.0"
+  tag: "3.5"
   architectures:
   - amd64
   - arm64
 ...
 ```
 
-Architectures is an optional field of image. It is a list of strings specifying CPU architecture of machines on which this image can be used. The valid options for architectures field are as follow:
-- `amd64` : This sepecifies image can run only on machines having CPU architecture `amd64`.
-- `arm64` : This sepecifies image can run only on machines having CPU architecture `arm64`.
+Architectures is an optional field of image. It is a list of strings specifying CPU architecture of machines on which this image can be used. The valid options for architectures field are as follows:
+- `amd64` : This specifies image can run only on machines having CPU architecture `amd64`.
+- `arm64` : This specifies image can run only on machines having CPU architecture `arm64`.
 
-If image doesn't specifies any architectures then by default it is considered to support both `amd64` and `arm64` architectures.
+If image doesn't specify any architectures then by default it is considered to support both `amd64` and `arm64` architectures.
 
 ## Overwrite image vector
 
@@ -73,14 +73,14 @@ In order to overwrite the images you must provide a similar file to Gardenlet:
 images:
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: my-custom-image-registry/pause-amd64
-  tag: "3.0"
-  version: 1.17.x
+  repository: my-custom-image-registry/pause
+  tag: "3.4"
+  version: "1.20.x"
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: my-custom-image-registry/pause-amd64
-  tag: "3.1"
-  version: ">= 1.18"
+  repository: my-custom-image-registry/pause
+  tag: "3.5"
+  version: ">= 1.21"
 ...
 ```
 

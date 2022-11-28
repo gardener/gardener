@@ -119,7 +119,7 @@ data:
       # get system services
       metric_relabel_configs:
       - source_labels: [ __name__ ]
-        regex: ^({{ if semverCompare "< 1.18-0" .Capabilities.KubeVersion.GitVersion }}kubelet_pod_start_latency_microseconds|{{ end }}|{{ if semverCompare "< 1.19-0" .Capabilities.KubeVersion.GitVersion }}kubelet_running_pod_count{{ else }}kubelet_running_pods{{ end }}|process_max_fds|process_open_fds)$
+        regex: ^(kubelet_running_pods|process_max_fds|process_open_fds)$
         action: keep
 
     - job_name: cadvisor

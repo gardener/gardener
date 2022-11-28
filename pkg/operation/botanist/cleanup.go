@@ -33,7 +33,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -254,9 +253,6 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		cronJobList client.ObjectList = &batchv1beta1.CronJobList{}
 	)
 
-	if version.ConstraintK8sLess119.Check(b.Shoot.KubernetesVersion) {
-		ingressList = &extensionsv1beta1.IngressList{}
-	}
 	if version.ConstraintK8sGreaterEqual121.Check(b.Shoot.KubernetesVersion) {
 		cronJobList = &batchv1.CronJobList{}
 	}

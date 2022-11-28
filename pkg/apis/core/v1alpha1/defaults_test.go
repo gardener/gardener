@@ -587,7 +587,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default cri.name to containerd when worker Kubernetes version >= 1.22", func() {
-			obj.Spec.Kubernetes.Version = "1.18"
+			obj.Spec.Kubernetes.Version = "1.20"
 			obj.Spec.Provider.Workers = []Worker{
 				{Name: "DefaultWorker",
 					Kubernetes: &WorkerKubernetes{Version: pointer.String("1.22")}},
@@ -616,7 +616,7 @@ var _ = Describe("Defaults", func() {
 			obj.Spec.Kubernetes.Version = "1.22"
 			obj.Spec.Provider.Workers = []Worker{
 				{Name: "DefaultWorker",
-					Kubernetes: &WorkerKubernetes{Version: pointer.String("1.18")}},
+					Kubernetes: &WorkerKubernetes{Version: pointer.String("1.21")}},
 				{Name: "Worker with CRI configuration",
 					CRI: &CRI{Name: "some configured value"}},
 			}

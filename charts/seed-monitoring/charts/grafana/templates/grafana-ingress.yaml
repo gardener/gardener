@@ -34,15 +34,10 @@ spec:
     http:
       paths:
       - backend:
-          {{- if semverCompare ">= 1.19-0" $.Capabilities.KubeVersion.GitVersion }}
           service:
             name: grafana-{{ $.Values.role }}
             port:
               number: {{ required ".ports.grafana is required" $.Values.ports.grafana }}
-          {{- else }}
-          serviceName: grafana-{{ $.Values.role }}
-          servicePort: {{ required ".ports.grafana is required" $.Values.ports.grafana }}
-          {{- end }}
         path: /
         pathType: Prefix
   {{- end }}
