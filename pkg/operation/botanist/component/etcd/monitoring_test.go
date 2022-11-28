@@ -20,6 +20,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
+	"k8s.io/utils/pointer"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -28,61 +29,107 @@ import (
 var _ = Describe("Monitoring", func() {
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
-			etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.20.1")
+			etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
 		})
 	})
 
 	Describe("#AlertingRules", func() {
-		Context("w/o backup", func() {
-			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.20.1")
-				test.AlertingRulesWithPromtool(
-					etcd,
-					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalWithoutBackup},
-					filepath.Join("testdata", "monitoring_alertingrules_normal_without_backup.yaml"),
-				)
+		Context("for single-node etcd", func() {
+			Context("w/o backup", func() {
+				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalSingleNodeWithoutBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_normal_singlenode_without_backup.yaml"),
+					)
+				})
+
+				It("should successfully test the alerting rules (important) for single-node etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantSingleNodeWithoutBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_important_singlenode_without_backup.yaml"),
+					)
+				})
+
+				It("should successfully test the alerting rules for k8s >= 1.21 (normal) for single-node etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.21.1")
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalK8SGTE121},
+						filepath.Join("testdata", "monitoring_alertingrules_normal_singlenode_without_backup.yaml"),
+					)
+				})
 			})
 
-			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil, "", "1.20.1")
-				test.AlertingRulesWithPromtool(
-					etcd,
-					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantWithoutBackup},
-					filepath.Join("testdata", "monitoring_alertingrules_important_without_backup.yaml"),
-				)
-			})
+			Context("w/ backup", func() {
+				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					etcd.SetBackupConfig(&BackupConfig{})
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalSingleNodeWithBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_normal_singlenode_with_backup.yaml"),
+					)
+				})
 
-			It("should successfully test the alerting rules for k8s >= 1.21 (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.21.1")
-				test.AlertingRulesWithPromtool(
-					etcd,
-					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalK8SGTE121},
-					filepath.Join("testdata", "monitoring_alertingrules_normal_without_backup.yaml"),
-				)
+				It("should successfully test the alerting rules (important) for single-node etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					etcd.SetBackupConfig(&BackupConfig{})
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantSingleNodeWithBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_important_singlenode_with_backup.yaml"),
+					)
+				})
 			})
 		})
+		Context("for multinode etcd", func() {
+			Context("w/o backup", func() {
+				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalMultiNodeWithoutBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_normal_multinode_without_backup.yaml"),
+					)
+				})
 
-		Context("w/ backup", func() {
-			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.20.1")
-				etcd.SetBackupConfig(&BackupConfig{})
-				test.AlertingRulesWithPromtool(
-					etcd,
-					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalWithBackup},
-					filepath.Join("testdata", "monitoring_alertingrules_normal_with_backup.yaml"),
-				)
+				It("should successfully test the alerting rules (important) for multinode etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantMultiNodeWithoutBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_important_multinode_without_backup.yaml"),
+					)
+				})
 			})
 
-			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil, "", "1.20.1")
-				etcd.SetBackupConfig(&BackupConfig{})
-				test.AlertingRulesWithPromtool(
-					etcd,
-					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantWithBackup},
-					filepath.Join("testdata", "monitoring_alertingrules_important_with_backup.yaml"),
-				)
+			Context("w/ backup", func() {
+				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					etcd.SetBackupConfig(&BackupConfig{})
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalMultiNodeWithBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_normal_multinode_with_backup.yaml"),
+					)
+				})
+
+				It("should successfully test the alerting rules (important) for multinode etcd", func() {
+					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					etcd.SetBackupConfig(&BackupConfig{})
+					test.AlertingRulesWithPromtool(
+						etcd,
+						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantMultiNodeWithBackup},
+						filepath.Join("testdata", "monitoring_alertingrules_important_multinode_with_backup.yaml"),
+					)
+				})
 			})
+
 		})
 	})
 })
@@ -147,7 +194,7 @@ metric_relabel_configs:
   action: keep
   regex: ^(etcdbr_defragmentation_duration_seconds_bucket|etcdbr_defragmentation_duration_seconds_count|etcdbr_defragmentation_duration_seconds_sum|etcdbr_network_received_bytes|etcdbr_network_transmitted_bytes|etcdbr_restoration_duration_seconds_bucket|etcdbr_restoration_duration_seconds_count|etcdbr_restoration_duration_seconds_sum|etcdbr_snapshot_duration_seconds_bucket|etcdbr_snapshot_duration_seconds_count|etcdbr_snapshot_duration_seconds_sum|etcdbr_snapshot_gc_total|etcdbr_snapshot_latest_revision|etcdbr_snapshot_latest_timestamp|etcdbr_snapshot_required|etcdbr_validation_duration_seconds_bucket|etcdbr_validation_duration_seconds_count|etcdbr_validation_duration_seconds_sum|etcdbr_snapshotter_failure|etcdbr_cluster_size|etcdbr_is_learner|etcdbr_is_learner_count_total|etcdbr_add_learner_duration_seconds_bucket|etcdbr_add_learner_duration_seconds_sum|etcdbr_member_remove_duration_seconds_bucket|etcdbr_member_remove_duration_seconds_sum|etcdbr_member_promote_duration_seconds_bucket|etcdbr_member_promote_duration_seconds_sum|process_resident_memory_bytes|process_cpu_seconds_total)$`
 
-	alertingRulesNormal = `groups:
+	alertingRulesNormalSingleNode = `groups:
 - name: kube-etcd3-` + testRole + `.rules
   rules:
   # alert if etcd is down
@@ -160,7 +207,7 @@ metric_relabel_configs:
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 cluster ` + testRole + ` is unavailable or cannot be scraped. As long as etcd3 ` + testRole + ` is down the cluster is unreachable.
+      description: Etcd3 cluster ` + testRole + ` is unavailable or cannot be scraped. As long as etcd3 ` + testRole + ` is down, the cluster is unreachable.
       summary: Etcd3 ` + testRole + ` cluster down.
   # etcd leader alerts
   - alert: KubeEtcd3` + testROLE + `NoLeader
@@ -172,12 +219,42 @@ metric_relabel_configs:
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 ` + testRole + ` has no leader. No communication with etcd ` + testRole + ` possible. Apiserver is read only.
+      description: Etcd3 ` + testRole + ` has no leader.
       summary: Etcd3 ` + testRole + ` has no leader.
 
 `
 
-	alertingRulesImportant = `groups:
+	alertingRulesNormalMultiNode = `groups:
+- name: kube-etcd3-` + testRole + `.rules
+  rules:
+  # alert if etcd is down
+  - alert: KubeEtcd` + testROLE + `Down
+    expr: sum(up{job="kube-etcd3-` + testRole + `"}) < 2
+    for: 15m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 cluster ` + testRole + ` is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 ` + testRole + ` is down, the cluster is unreachable.
+      summary: Etcd3 ` + testRole + ` cluster down.
+  # etcd leader alerts
+  - alert: KubeEtcd3` + testROLE + `NoLeader
+    expr: sum(etcd_server_has_leader{job="kube-etcd3-` + testRole + `"}) < count(etcd_server_has_leader{job="kube-etcd3-` + testRole + `"})
+    for: 15m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 ` + testRole + ` has no leader. Possible network partition in the etcd cluster.
+      summary: Etcd3 ` + testRole + ` has no leader.
+
+`
+
+	alertingRulesImportantSingleNode = `groups:
 - name: kube-etcd3-` + testRole + `.rules
   rules:
   # alert if etcd is down
@@ -190,7 +267,7 @@ metric_relabel_configs:
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 cluster ` + testRole + ` is unavailable or cannot be scraped. As long as etcd3 ` + testRole + ` is down the cluster is unreachable.
+      description: Etcd3 cluster ` + testRole + ` is unavailable or cannot be scraped. As long as etcd3 ` + testRole + ` is down, the cluster is unreachable.
       summary: Etcd3 ` + testRole + ` cluster down.
   # etcd leader alerts
   - alert: KubeEtcd3` + testROLE + `NoLeader
@@ -202,27 +279,52 @@ metric_relabel_configs:
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 ` + testRole + ` has no leader. No communication with etcd ` + testRole + ` possible. Apiserver is read only.
+      description: Etcd3 ` + testRole + ` has no leader.
+      summary: Etcd3 ` + testRole + ` has no leader.
+
+`
+
+	alertingRulesImportantMultiNode = `groups:
+- name: kube-etcd3-` + testRole + `.rules
+  rules:
+  # alert if etcd is down
+  - alert: KubeEtcd` + testROLE + `Down
+    expr: sum(up{job="kube-etcd3-` + testRole + `"}) < 2
+    for: 5m
+    labels:
+      service: etcd
+      severity: blocker
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 cluster ` + testRole + ` is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 ` + testRole + ` is down, the cluster is unreachable.
+      summary: Etcd3 ` + testRole + ` cluster down.
+  # etcd leader alerts
+  - alert: KubeEtcd3` + testROLE + `NoLeader
+    expr: sum(etcd_server_has_leader{job="kube-etcd3-` + testRole + `"}) < count(etcd_server_has_leader{job="kube-etcd3-` + testRole + `"})
+    for: 10m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 ` + testRole + ` has no leader. Possible network partition in the etcd cluster.
       summary: Etcd3 ` + testRole + ` has no leader.
 
 `
 
 	alertingRulesDefault = `  ### etcd proposal alerts ###
   # alert if there are several failed proposals within an hour
-  # Note: Increasing the failedProposals count to 80, known issue in etcd, fix in progress
-  # https://github.com/kubernetes/kubernetes/pull/64539 - fix in Kubernetes to be released with v1.15
-  # https://github.com/etcd-io/etcd/issues/9360 - ongoing discussion in etcd
-  # TODO (shreyas-s-rao): change value from 120 to 5 after upgrading to etcd 3.4
   - alert: KubeEtcd3HighNumberOfFailedProposals
-    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3-` + testRole + `"}[1h]) > 120
+    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3-` + testRole + `"}[1h]) > 5
     labels:
       service: etcd
       severity: warning
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 ` + testRole + ` pod {{ $labels.pod }} has seen {{ $value }} proposal failures
-        within the last hour.
+      description: Etcd3 ` + testRole + ` pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.
       summary: High number of failed etcd proposals
 
   - alert: KubeEtcd3HighMemoryConsumption
@@ -319,9 +421,13 @@ metric_relabel_configs:
       summary: Etcd backup restore ` + testRole + ` process down or snapshotter failed with error
 `
 
-	expectedAlertingRulesNormalWithoutBackup    = alertingRulesNormal + alertingRulesDefault + alertingRulesEtcdObject
-	expectedAlertingRulesImportantWithoutBackup = alertingRulesImportant + alertingRulesDefault + alertingRulesEtcdObject
-	expectedAlertingRulesNormalK8SGTE121        = alertingRulesNormal + alertingRulesDefault + alertingRulesApiserverObjects
-	expectedAlertingRulesNormalWithBackup       = alertingRulesNormal + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
-	expectedAlertingRulesImportantWithBackup    = alertingRulesImportant + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
+	expectedAlertingRulesNormalSingleNodeWithoutBackup    = alertingRulesNormalSingleNode + alertingRulesDefault + alertingRulesEtcdObject
+	expectedAlertingRulesImportantSingleNodeWithoutBackup = alertingRulesImportantSingleNode + alertingRulesDefault + alertingRulesEtcdObject
+	expectedAlertingRulesNormalMultiNodeWithoutBackup     = alertingRulesNormalMultiNode + alertingRulesDefault + alertingRulesEtcdObject
+	expectedAlertingRulesImportantMultiNodeWithoutBackup  = alertingRulesImportantMultiNode + alertingRulesDefault + alertingRulesEtcdObject
+	expectedAlertingRulesNormalK8SGTE121                  = alertingRulesNormalSingleNode + alertingRulesDefault + alertingRulesApiserverObjects
+	expectedAlertingRulesNormalSingleNodeWithBackup       = alertingRulesNormalSingleNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
+	expectedAlertingRulesImportantSingleNodeWithBackup    = alertingRulesImportantSingleNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
+	expectedAlertingRulesNormalMultiNodeWithBackup        = alertingRulesNormalMultiNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
+	expectedAlertingRulesImportantMultiNodeWithBackup     = alertingRulesImportantMultiNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
 )

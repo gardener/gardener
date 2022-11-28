@@ -130,7 +130,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -230,7 +230,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -330,7 +330,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -351,7 +351,7 @@
         {
           "expr": "process_resident_memory_bytes{job=\"kube-etcd3-$cluster\"}",
           "intervalFactor": 2,
-          "legendFormat": "{{instance}} Resident Memory",
+          "legendFormat": "{{pod}} Resident Memory",
           "metric": "process_resident_memory_bytes",
           "refId": "A",
           "step": 4
@@ -421,7 +421,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -444,7 +444,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{instance}} DB Size",
+          "legendFormat": "{{pod}} DB Size",
           "metric": "",
           "refId": "A",
           "step": 4
@@ -511,7 +511,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -533,7 +533,7 @@
           "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"$cluster\"}[$__rate_interval])) by (instance, le))",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{instance}} WAL fsync",
+          "legendFormat": "{{pod}} WAL fsync",
           "metric": "etcd_disk_wal_fsync_duration_seconds_bucket",
           "refId": "A",
           "step": 4
@@ -541,7 +541,7 @@
         {
           "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~\"$cluster\"}[$__rate_interval])) by (instance, le))",
           "intervalFactor": 2,
-          "legendFormat": "{{instance}} DB fsync",
+          "legendFormat": "{{pod}} DB fsync",
           "metric": "etcd_disk_backend_commit_duration_seconds_bucket",
           "refId": "B",
           "step": 4
@@ -608,7 +608,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -629,7 +629,7 @@
         {
           "expr": "rate(etcd_network_client_grpc_received_bytes_total{role=~\"$cluster\"}[$__rate_interval])",
           "intervalFactor": 2,
-          "legendFormat": "{{instance}} Client Traffic In",
+          "legendFormat": "{{pod}} Client Traffic In",
           "metric": "etcd_network_client_grpc_received_bytes_total",
           "refId": "A",
           "step": 4
@@ -698,7 +698,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -719,7 +719,7 @@
         {
           "expr": "rate(etcd_network_client_grpc_sent_bytes_total{role=~\"$cluster\"}[$__rate_interval])",
           "intervalFactor": 2,
-          "legendFormat": "{{instance}} Client Traffic Out",
+          "legendFormat": "{{pod}} Client Traffic Out",
           "metric": "etcd_network_client_grpc_sent_bytes_total",
           "refId": "A",
           "step": 4
@@ -799,7 +799,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -883,7 +883,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -946,408 +946,6 @@
         "align": false,
         "alignLevel": null
       }
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      },
-      "id": 28,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "decimals": 0,
-          "editable": true,
-          "error": false,
-          "fill": 0,
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 0,
-            "y": 18
-          },
-          "id": 24,
-          "isNew": true,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 6,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "changes(etcd_server_leader_changes_seen_total{role=~\"$cluster\"}[1d])",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "{{instance}} Total Leader Elections Per Day",
-              "metric": "etcd_server_leader_changes_seen_total",
-              "refId": "A",
-              "step": 2
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Total Leader Elections Per Day",
-          "tooltip": {
-            "msResolution": false,
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "editable": true,
-          "error": false,
-          "fill": 0,
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 6,
-            "y": 18
-          },
-          "id": 18,
-          "isNew": true,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 3,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(etcd_network_peer_received_bytes_total{role=~\"$cluster\"}[$__rate_interval])) by (instance)",
-              "intervalFactor": 2,
-              "legendFormat": "{{instance}} Peer Traffic In",
-              "metric": "etcd_network_peer_received_bytes_total",
-              "refId": "A",
-              "step": 4
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Peer Traffic In",
-          "tooltip": {
-            "msResolution": false,
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "Bps",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "decimals": null,
-          "editable": true,
-          "error": false,
-          "fill": 0,
-          "grid": {},
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 12,
-            "y": 18
-          },
-          "id": 20,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 3,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(etcd_network_peer_sent_bytes_total{role=~\"$cluster\"}[$__rate_interval])) by (instance)",
-              "hide": false,
-              "interval": "",
-              "intervalFactor": 2,
-              "legendFormat": "{{instance}} Peer Traffic Out",
-              "metric": "etcd_network_peer_sent_bytes_total",
-              "refId": "A",
-              "step": 4
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Peer Traffic Out",
-          "tooltip": {
-            "msResolution": false,
-            "shared": true,
-            "sort": 0,
-            "value_type": "cumulative"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "Bps",
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "editable": true,
-          "error": false,
-          "fill": 0,
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 18,
-            "y": 18
-          },
-          "id": 22,
-          "isNew": true,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 6,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(etcd_server_proposals_failed_total{role=~\"$cluster\"}[$__rate_interval]))",
-              "intervalFactor": 2,
-              "legendFormat": "Proposal Failure Rate",
-              "metric": "etcd_server_proposals_failed_total",
-              "refId": "A",
-              "step": 2
-            },
-            {
-              "expr": "sum(etcd_server_proposals_pending{role=~\"$cluster\"})",
-              "intervalFactor": 2,
-              "legendFormat": "Proposal Pending Total",
-              "metric": "etcd_server_proposals_pending",
-              "refId": "B",
-              "step": 2
-            },
-            {
-              "expr": "sum(rate(etcd_server_proposals_committed_total{role=~\"$cluster\"}[$__rate_interval]))",
-              "intervalFactor": 2,
-              "legendFormat": "Proposal Commit Rate",
-              "metric": "etcd_server_proposals_committed_total",
-              "refId": "C",
-              "step": 2
-            },
-            {
-              "expr": "sum(rate(etcd_server_proposals_applied_total{role=~\"$cluster\"}[$__rate_interval]))",
-              "intervalFactor": 2,
-              "legendFormat": "Proposal Apply Rate",
-              "refId": "D",
-              "step": 2
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Raft Proposals",
-          "tooltip": {
-            "msResolution": false,
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "",
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
-      "title": "Cluster",
-      "type": "row"
     }
   ],
   "schemaVersion": 16,

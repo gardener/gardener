@@ -94,7 +94,7 @@ const (
   rules:
   # alert if etcd is down
   - alert: KubeEtcd{{ .Role }}Down
-    expr: sum(up{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"}) < 1
+    expr: sum(up{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"}) < {{ .etcdQuorumReplicas }}
     for: {{ if eq .class .classImportant }}5m{{ else }}15m{{ end }}
     labels:
       service: etcd
@@ -102,7 +102,7 @@ const (
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 cluster {{ .role }} is unavailable or cannot be scraped. As long as etcd3 {{ .role }} is down the cluster is unreachable.
+      description: Etcd3 cluster {{ .role }} is unavailable{{ if .isHA }} (due to possible quorum loss){{ end }} or cannot be scraped. As long as etcd3 {{ .role }} is down, the cluster is unreachable.
       summary: Etcd3 {{ .role }} cluster down.
   # etcd leader alerts
   - alert: KubeEtcd3{{ .Role }}NoLeader
@@ -114,25 +114,20 @@ const (
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 {{ .role }} has no leader. No communication with etcd {{ .role }} possible. Apiserver is read only.
+      description: Etcd3 {{ .role }} has no leader.{{ if .isHA }} Possible network partition in the etcd cluster.{{ end }}
       summary: Etcd3 {{ .role }} has no leader.
 
   ### etcd proposal alerts ###
   # alert if there are several failed proposals within an hour
-  # Note: Increasing the failedProposals count to 80, known issue in etcd, fix in progress
-  # https://github.com/kubernetes/kubernetes/pull/64539 - fix in Kubernetes to be released with v1.15
-  # https://github.com/etcd-io/etcd/issues/9360 - ongoing discussion in etcd
-  # TODO (shreyas-s-rao): change value from 120 to 5 after upgrading to etcd 3.4
   - alert: KubeEtcd3HighNumberOfFailedProposals
-    expr: increase(` + monitoringMetricEtcdServerProposalsFailedTotal + `{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"}[1h]) > 120
+    expr: increase(` + monitoringMetricEtcdServerProposalsFailedTotal + `{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"}[1h]) > 5
     labels:
       service: etcd
       severity: warning
       type: seed
       visibility: operator
     annotations:
-      description: Etcd3 {{ .role }} pod {{"{{ $labels.pod }}"}} has seen {{"{{ $value }}"}} proposal failures
-        within the last hour.
+      description: Etcd3 {{ .role }} pod {{"{{ $labels.pod }}"}} has seen {{"{{ $value }}"}} proposal failures within the last hour.
       summary: High number of failed etcd proposals
 
   - alert: KubeEtcd3HighMemoryConsumption
@@ -406,13 +401,20 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 		return nil, err
 	}
 
+	etcdReplicas := int32(1)
+	if e.replicas != nil {
+		etcdReplicas = *e.replicas
+	}
+
 	if err := monitoringAlertingRulesTemplate.Execute(&alertingRules, map[string]interface{}{
-		"role":           e.role,
-		"Role":           strings.Title(e.role),
-		"class":          e.class,
-		"classImportant": ClassImportant,
-		"backupEnabled":  e.backupConfig != nil,
-		"k8sGTE121":      k8sGTE121,
+		"role":               e.role,
+		"Role":               strings.Title(e.role),
+		"class":              e.class,
+		"classImportant":     ClassImportant,
+		"backupEnabled":      e.backupConfig != nil,
+		"k8sGTE121":          k8sGTE121,
+		"etcdQuorumReplicas": int(etcdReplicas/2) + 1,
+		"isHA":               etcdReplicas > 1,
 	}); err != nil {
 		return nil, err
 	}
