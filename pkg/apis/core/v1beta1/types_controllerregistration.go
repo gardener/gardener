@@ -66,6 +66,7 @@ type ControllerResource struct {
 	// +optional
 	GloballyEnabled *bool `json:"globallyEnabled,omitempty" protobuf:"varint,3,opt,name=globallyEnabled"`
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+	// This field is defaulted to 3m0s when kind is "Extension".
 	// +optional
 	ReconcileTimeout *metav1.Duration `json:"reconcileTimeout,omitempty" protobuf:"bytes,4,opt,name=reconcileTimeout"`
 	// Primary determines if the controller backed by this ControllerRegistration is responsible for the extension

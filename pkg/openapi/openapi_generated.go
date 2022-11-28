@@ -2368,7 +2368,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 					},
 					"reconcileTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.",
+							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation. This field is defaulted to 3m0s when kind is \"Extension\".",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -9784,7 +9784,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"reconcileTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.",
+							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation. This field is defaulted to 3m0s when kind is \"Extension\".",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

@@ -533,6 +533,7 @@ message ControllerResource {
   optional bool globallyEnabled = 3;
 
   // ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+  // This field is defaulted to 3m0s when kind is "Extension".
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration reconcileTimeout = 4;
 

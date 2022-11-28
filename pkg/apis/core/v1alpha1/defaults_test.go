@@ -193,6 +193,27 @@ var _ = Describe("Defaults", func() {
 		})
 
 		const kindExtension = "Extension"
+		It("should default the reconcile timeout when kind is Extension", func() {
+			resource := ControllerResource{Kind: kindExtension}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.ReconcileTimeout).To(Equal(&metav1.Duration{Duration: time.Minute * 3}))
+		})
+
+		It("should not default the reconcile timeout when kind is Extension and timeout is already set", func() {
+			resource := ControllerResource{Kind: kindExtension, ReconcileTimeout: &metav1.Duration{Duration: time.Second * 62}}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.ReconcileTimeout).To(Equal(&metav1.Duration{Duration: time.Second * 62}))
+		})
+
+		It("should not default the reconcile timeout when kind is not Extension", func() {
+			resource := ControllerResource{Kind: "not extension"}
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.ReconcileTimeout).To(BeNil())
+		})
+
 		It("should default the lifecycle strategy field when kind is Extension", func() {
 			resource := ControllerResource{Kind: kindExtension}
 			SetDefaults_ControllerResource(&resource)

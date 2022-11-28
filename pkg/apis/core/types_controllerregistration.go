@@ -62,6 +62,7 @@ type ControllerResource struct {
 	// GloballyEnabled determines if this resource is required by all Shoot clusters.
 	GloballyEnabled *bool
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+	// This field is defaulted to 3m0s when kind is "Extension".
 	ReconcileTimeout *metav1.Duration
 	// Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
 	// resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type

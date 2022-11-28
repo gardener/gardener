@@ -434,6 +434,10 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 		obj.Primary = pointer.Bool(true)
 	}
 	if obj.Kind == "Extension" {
+		if obj.ReconcileTimeout == nil {
+			obj.ReconcileTimeout = &metav1.Duration{Duration: time.Minute * 3}
+		}
+
 		if obj.Lifecycle == nil {
 			obj.Lifecycle = &ControllerResourceLifecycle{}
 		}

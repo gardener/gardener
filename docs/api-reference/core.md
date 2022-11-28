@@ -3129,7 +3129,8 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.</p>
+<p>ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+This field is defaulted to 3m0s when kind is &ldquo;Extension&rdquo;.</p>
 </td>
 </tr>
 <tr>
