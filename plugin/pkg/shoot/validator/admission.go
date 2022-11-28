@@ -301,11 +301,13 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 
-	dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
-	if err != nil {
-		return apierrors.NewInternalError(err)
+	if a.GetOperation() != admission.Delete {
+		dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+		allErrs = append(allErrs, dnsErrors...)
 	}
-	allErrs = append(allErrs, dnsErrors...)
 
 	if len(allErrs) > 0 {
 		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
@@ -1270,7 +1272,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 			return nil, fmt.Errorf("image name %q is not supported", imageName)
 		}
 	} else {
-		//select the first image which support the required architecture type
+		// select the first image which support the required architecture type
 		for _, machineImage := range machineImages {
 			for _, version := range machineImage.Versions {
 				if slices.Contains(version.Architectures, *arch) {
