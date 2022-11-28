@@ -310,7 +310,7 @@ const (
 	// high availability setup for the VPN connection should be enabled.
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
-	ShootAlphaControlPlaneHAVPN = "alpha.control-plane.shoot.gardener.cloud/high-availability-vpn-connections"
+	ShootAlphaControlPlaneHAVPN = "alpha.control-plane.shoot.gardener.cloud/high-availability-vpn"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
