@@ -81,6 +81,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 					RegistryPullQPS:     pointer.Int32(10),
 					RegistryBurst:       pointer.Int32(20),
 				},
+				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Networking: gardencorev1beta1.Networking{
 				Type:           "calico",
