@@ -1,6 +1,6 @@
 # Migrating From `PodSecurityPolicy`s To PodSecurity Admission Controller
 
-Kubernetes has deprecated the `PodSecurityPolicy` API in v1.21 and it will be removed in v1.25. With v1.23, a new feature called [`PodSecurity`](https://kubernetes.io/docs/concepts/security/pod-security-admission/) was promoted to beta. From `v1.25` onwards, there will be no API serving `PodSecurityPolicy`s, so you have to cleanup all the existing PSPs before upgrading your cluster. Detailed migration steps are described [here](https://kubernetes.io/docs/tasks/configure-pod-container/migrate-from-psp/).
+Kubernetes has deprecated the `PodSecurityPolicy` API in `v1.21` and it will be removed in `v1.25`. With `v1.23`, a new feature called [`PodSecurity`](https://kubernetes.io/docs/concepts/security/pod-security-admission/) was promoted to beta. From `v1.25` onwards, there will be no API serving `PodSecurityPolicy`s, so you have to cleanup all the existing PSPs before upgrading your cluster. Detailed migration steps are described [here](https://kubernetes.io/docs/tasks/configure-pod-container/migrate-from-psp/).
 
 After migration, you should disable the `PodSecurityPolicy` admission plugin. To do so, you have to add: 
 ```yaml
@@ -22,7 +22,7 @@ If you wish to add your custom configuration for the `PodSecurity` plugin and yo
 admissionPlugins:
 - name: PodSecurity
   config:
-    apiVersion: pod-security.admission.config.k8s.io/v1beta1
+    apiVersion: pod-security.admission.config.k8s.io/v1
     kind: PodSecurityConfiguration
     # Defaults applied when a mode label is not set.
     #
@@ -33,7 +33,7 @@ admissionPlugins:
     #
     # Version label values must be one of:
     # - "latest" (default) 
-    # - specific version like "v1.24"
+    # - specific version like "v1.25"
     defaults:
       enforce: "privileged"
       enforce-version: "latest"
@@ -50,8 +50,9 @@ admissionPlugins:
       namespaces: []
 ```
 
-If your cluster version is `v1.22`, use `apiVersion: pod-security.admission.config.k8s.io/v1alpha1`.
-Please note that in `v1.22` the feature gate `PodSecurity` is not enabled by default. You have to add:
+⚠️ Note that `pod-security.admission.config.k8s.io/v1` configuration requires v1.25+. For v1.23 and v1.24, use `pod-security.admission.config.k8s.io/v1beta1`. For v1.22, use `pod-security.admission.config.k8s.io/v1alpha1`.
+
+Also note that in `v1.22` the feature gate `PodSecurity` is not enabled by default. You have to add:
 
 ```yaml
 featureGates:
@@ -59,6 +60,7 @@ featureGates:
 ```
 
 under `.spec.kubernetes.kubeAPIServer`.
+
 For proper functioning of Gardener, `kube-system` namespace will also be automatically added to the `exemptions.namespaces` list.
 
 ## `.spec.kubernetes.allowPrivilegedContainers` in the Shoot spec
