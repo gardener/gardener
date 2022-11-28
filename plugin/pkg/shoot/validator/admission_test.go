@@ -1740,25 +1740,6 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 				})
 
-				It("should reject because the specified domain is a subdomain of a domain already used by another shoot", func() {
-					anotherShoot := shoot.DeepCopy()
-					anotherShoot.Name = "another-shoot"
-
-					subdomain := fmt.Sprintf("subdomain.%s", *anotherShoot.Spec.DNS.Domain)
-					shoot.Spec.DNS.Domain = &subdomain
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
-				})
-
 				It("should reject because the specified domain is a subdomain of a domain already used by another shoot (case one)", func() {
 					anotherShoot := shoot.DeepCopy()
 					anotherShoot.Name = "another-shoot"
