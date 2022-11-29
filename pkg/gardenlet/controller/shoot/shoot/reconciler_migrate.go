@@ -308,15 +308,15 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitMigrate,
 			Dependencies: flow.NewTaskIDs(migrateInfrastructure),
 		})
-		destroyInfrastructure = g.Add(flow.Task{
+		deleteInfrastructure = g.Add(flow.Task{
 			Name:         "Deleting shoot infrastructure",
 			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.Destroy,
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureMigrated),
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
-			Name:         "Waiting until shoot infrastructure has been destroyed",
+			Name:         "Waiting until shoot infrastructure has been deleted",
 			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup,
-			Dependencies: flow.NewTaskIDs(destroyInfrastructure),
+			Dependencies: flow.NewTaskIDs(deleteInfrastructure),
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",

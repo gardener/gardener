@@ -566,15 +566,15 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
-		destroyInfrastructure = g.Add(flow.Task{
+		deleteInfrastructure = g.Add(flow.Task{
 			Name:         "Destroying shoot infrastructure",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Infrastructure.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
-			Name:         "Waiting until shoot infrastructure has been destroyed",
+			Name:         "Waiting until shoot infrastructure has been deleted",
 			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup,
-			Dependencies: flow.NewTaskIDs(destroyInfrastructure),
+			Dependencies: flow.NewTaskIDs(deleteInfrastructure),
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
