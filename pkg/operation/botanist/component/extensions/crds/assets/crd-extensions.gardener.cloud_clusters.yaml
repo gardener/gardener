@@ -45,6 +45,11 @@ spec:
                   cloudprofile resource referenced by the shoot that has to be reconciled.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              project:
+                description: Project is a raw extension field that contains the project
+                  resource that has to be reconciled.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               seed:
                 description: Seed is a raw extension field that contains the seed
                   resource referenced by the shoot that has to be reconciled.

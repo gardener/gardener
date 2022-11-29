@@ -516,6 +516,20 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>Shoot is a raw extension field that contains the shoot resource that has to be reconciled.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>project</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Project is a raw extension field that contains the project resource that has to be reconciled.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2132,6 +2146,20 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </td>
 <td>
 <p>Shoot is a raw extension field that contains the shoot resource that has to be reconciled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>project</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Project is a raw extension field that contains the project resource that has to be reconciled.</p>
 </td>
 </tr>
 </tbody>
