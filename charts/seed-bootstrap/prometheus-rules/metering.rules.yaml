@@ -160,7 +160,7 @@ groups:
 
   - record: metering:persistent_volume_usage:sum_by_namespace
     expr: |2
-            sum by (namespace) (kubelet_volume_stats_used_bytes)
+            sum by (namespace) (max by(namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes))
           + on (namespace) group_right
             _namespace_to_shoot_uid_and_date
         or
@@ -255,7 +255,7 @@ groups:
   - record: metering:persistent_volume_usage:sum_by_namespace_owner
     expr: |2
         sum by (namespace, owner) (
-                kubelet_volume_stats_used_bytes
+                max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)
               + on (namespace, persistentvolumeclaim) group_right
                 kube_pod_spec_volumes_persistentvolumeclaims_info * 0
           + on (namespace, pod) group_left (owner)
