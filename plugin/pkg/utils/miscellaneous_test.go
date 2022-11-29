@@ -88,4 +88,15 @@ var _ = Describe("Miscellaneous", func() {
 		Entry("is used by shoot in migration", "seed2", true),
 		Entry("is unused", "seed3", false),
 	)
+
+	Describe("#NewAttributesWithName", func() {
+		It("should return admission.Attributes with the given name", func() {
+			name := "name"
+			attrs := admission.NewAttributesRecord(&shoot1, nil, core.Kind("Shoot").WithVersion("version"), shoot1.Namespace, "", core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			newAttrs := NewAttributesWithName(attrs, name)
+
+			Expect(newAttrs.GetName()).To(Equal(name))
+		})
+	})
 })

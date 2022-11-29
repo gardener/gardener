@@ -16,16 +16,9 @@ package resourcereferencemanager_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,6 +36,15 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 )
 
 type fakeAuthorizerType struct{}
@@ -63,14 +65,16 @@ var _ = Describe("resourcereferencemanager", func() {
 			admissionHandler                  *ReferenceManager
 			kubeInformerFactory               kubeinformers.SharedInformerFactory
 			kubeClient                        *fake.Clientset
-			gardenCoreClient                  *corefake.Clientset
+			gardenCoreClient                  *internalclientset.Clientset
 			gardenCoreInformerFactory         coreinformers.SharedInformerFactory
 			gardenCoreExternalInformerFactory externalcoreinformers.SharedInformerFactory
 			fakeAuthorizer                    fakeAuthorizerType
 			scheme                            *runtime.Scheme
 			dynamicClient                     *dynamicfake.FakeDynamicClient
 
-			shoot core.Shoot
+			backupBucket core.BackupBucket
+			backupEntry  core.BackupEntry
+			shoot        core.Shoot
 
 			namespace                  = "default"
 			cloudProfileName           = "profile-1"
@@ -216,6 +220,30 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 			}
 
+			backupBucketBase = core.BackupBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bucket",
+				},
+				Spec: core.BackupBucketSpec{
+					SeedName: &seedName,
+					SecretRef: corev1.SecretReference{
+						Name:      secretName,
+						Namespace: namespace,
+					},
+				},
+			}
+
+			backupEntryBase = core.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "entry",
+					Namespace: namespace,
+				},
+				Spec: core.BackupEntrySpec{
+					BucketName: backupBucketBase.Name,
+					SeedName:   &seedName,
+				},
+			}
+
 			discoveryClientResources = []*metav1.APIResourceList{
 				{
 					GroupVersion: "v1",
@@ -258,7 +286,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			kubeClient.Fake = testing.Fake{Resources: discoveryClientResources}
 			admissionHandler.SetKubeClientset(kubeClient)
 
-			gardenCoreClient = corefake.NewSimpleClientset()
+			gardenCoreClient = internalclientset.NewSimpleClientset()
 			gardenCoreClient.Fake = testing.Fake{Resources: discoveryGardenClientResources}
 			admissionHandler.SetInternalCoreClientset(gardenCoreClient)
 
@@ -281,6 +309,22 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			project = projectBase
 			shoot = shootBase
+			backupBucket = backupBucketBase
+			backupEntry = backupEntryBase
+		})
+
+		It("should return nil because the resource is not BackupBucket and operation is delete", func() {
+			attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+
+			attrs = admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), "", controllerRegistration.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+
+			err = admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		Context("tests for ControllerRegistration objects", func() {
@@ -923,6 +967,198 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 		})
 
+		Context("tests for BackupBucket objects", func() {
+			It("should reject if the referred Seed is not found", func() {
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", backupBucket.Name, seed.Name)))
+			})
+
+			It("should reject if the referred Secret is not found", func() {
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("secret not found")
+				})
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("secret not found")))
+			})
+
+			It("should accept (direct secret lookup)", func() {
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: secret.Namespace,
+							Name:      secret.Name,
+						},
+					}, nil
+				})
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept (secret found in cache)", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept deletion if no backupEntries are referencing it", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupEntryList{Items: []core.BackupEntry{}}, nil
+				})
+
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject deletion if there are backupEntries referencing it", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				backupEntry2 := backupEntryBase.DeepCopy()
+				backupEntry2.Name = "another-name"
+				backupEntry2.Namespace = "another-namespace"
+
+				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupEntryList{Items: []core.BackupEntry{backupEntry, *backupEntry2}}, nil
+				})
+
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s/%s,%s/%s", backupBucket.Name, backupEntry.Namespace, backupEntry.Name, backupEntry2.Namespace, backupEntry2.Name)))
+			})
+
+			It("should reject deletion if the listing fails", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, errors.New("error")
+				})
+
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should forbid multiple BackupBuckets deletion if a BackupEntry referencing any of the BackupBuckets exists", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				backupBucket2 := backupBucketBase.DeepCopy()
+				backupBucket2.Name = "different-backupBucket"
+
+				backupEntry.Spec.BucketName = backupBucket2.Name
+				backupEntry2 := backupEntryBase.DeepCopy()
+				backupEntry2.Name = "another-name"
+				backupEntry2.Namespace = "another-namespace"
+				backupEntry2.Spec.BucketName = backupBucket2.Name
+
+				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupEntryList{Items: []core.BackupEntry{backupEntry, *backupEntry2}}, nil
+				})
+
+				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupBucketList{Items: []core.BackupBucket{*backupBucket2, backupBucket}}, nil
+				})
+
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s/%s,%s/%s", backupBucket2.Name, backupEntry.Namespace, backupEntry.Name, backupEntry2.Namespace, backupEntry2.Name)))
+			})
+
+			It("should allow multiple BackupBuckets deletion if no BackupEntry exists referencing any of the BackupBuckets", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				backupBucket2 := backupBucketBase.DeepCopy()
+				backupBucket2.Name = "different-backupBucket"
+
+				backupEntry.Spec.BucketName = "some-other-bucket"
+				backupEntry2 := backupEntryBase.DeepCopy()
+				backupEntry2.Name = "another-name"
+				backupEntry2.Namespace = "another-namespace"
+				backupEntry2.Spec.BucketName = "some-other-bucket"
+
+				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupEntryList{Items: []core.BackupEntry{}}, nil
+				})
+
+				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &core.BackupBucketList{Items: []core.BackupBucket{*backupBucket2, backupBucket}}, nil
+				})
+
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("tests for BackupEntry objects", func() {
+			It("should reject if the referred Seed is not found", func() {
+				attrs := admission.NewAttributesRecord(&backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", backupEntry.Name, seed.Name)))
+			})
+
+			It("should reject if the referred BackupBucket is not found", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: backupbucket.core.gardener.cloud %q not found", backupEntry.Name, backupBucket.Name)))
+			})
+
+			It("should accept if the referred resources exist", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("tests for Project objects", func() {
 			It("should set the created-by field", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1545,6 +1781,51 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[0].Name))
 				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[1].Name))
 			})
+		})
+	})
+
+	Describe("#Register", func() {
+		It("should register the plugin", func() {
+			plugins := admission.NewPlugins()
+			Register(plugins)
+
+			registered := plugins.Registered()
+			Expect(registered).To(HaveLen(1))
+			Expect(registered).To(ContainElement(PluginName))
+		})
+	})
+
+	Describe("#New", func() {
+		It("should only handle CREATE, UPDATE and DELETE operations", func() {
+			rm, err := New()
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rm.Handles(admission.Create)).To(BeTrue())
+			Expect(rm.Handles(admission.Update)).To(BeTrue())
+			Expect(rm.Handles(admission.Connect)).NotTo(BeTrue())
+			Expect(rm.Handles(admission.Delete)).To(BeTrue())
+		})
+	})
+
+	Describe("#ValidateInitialization", func() {
+		It("should not return error if everything is set", func() {
+			rm, _ := New()
+
+			internalGardenClient := &internalclientset.Clientset{}
+			rm.SetInternalCoreClientset(internalGardenClient)
+
+			rm.SetInternalCoreInformerFactory(coreinformers.NewSharedInformerFactory(nil, 0))
+			rm.SetExternalCoreInformerFactory(externalcoreinformers.NewSharedInformerFactory(nil, 0))
+
+			fakeAuthorizer := fakeAuthorizerType{}
+			rm.SetAuthorizer(fakeAuthorizer)
+
+			kubeInformerFactory := kubeinformers.NewSharedInformerFactory(nil, 0)
+			rm.SetKubeInformerFactory(kubeInformerFactory)
+
+			err := rm.ValidateInitialization()
+
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

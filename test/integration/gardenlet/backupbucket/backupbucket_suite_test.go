@@ -84,8 +84,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml")},
+				Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml")},
 			},
 			ErrorIfCRDPathMissing: true,
 		},

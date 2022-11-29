@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -261,53 +260,9 @@ var _ = Describe("BackupBucket controller tests", func() {
 	})
 
 	Context("delete", func() {
-		var backupEntry *gardencorev1beta1.BackupEntry
-
-		BeforeEach(func() {
-			By("creating BackupEntry")
-			backupEntry = &gardencorev1beta1.BackupEntry{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "backupentry-",
-					Namespace:    testNamespace.Name,
-					Labels:       map[string]string{testID: testRunID},
-				},
-				Spec: gardencorev1beta1.BackupEntrySpec{
-					BucketName: resourceName,
-					SeedName:   pointer.String(seed.Name),
-				},
-			}
-
-			Expect(testClient.Create(ctx, backupEntry)).To(Succeed())
-			log.Info("Created BackupEntry for test", "backupEntry", client.ObjectKeyFromObject(backupEntry))
-
-			By("Wait until manager cache has observed backupEntry creation")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
-			}).Should(Succeed())
-
-			DeferCleanup(func() {
-				By("deleting BackupEntry")
-				Expect(testClient.Delete(ctx, backupEntry)).To(Or(Succeed(), BeNotFoundError()))
-			})
-
+		It("should remove the finalizer and cleanup the resources when the BackupBucket is deleted", func() {
 			By("Mimicking extension controller and make extensions BackupBucket look successfully reconciled")
 			reconcileExtensionBackupBucket(true)
-		})
-
-		It("should not delete the BackupBucket if there are BackupEntries still referencing it", func() {
-			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
-
-			By("ensuring BackupBucket is not released")
-			Consistently(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
-			}).Should(Succeed())
-		})
-
-		It("should remove the finalizer and cleanup the resources when the BackupBucket is deleted and there are no backupentries referencing it", func() {
-			Expect(testClient.Delete(ctx, backupEntry)).To(Succeed())
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
-			}).Should(BeNotFoundError())
 
 			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
 

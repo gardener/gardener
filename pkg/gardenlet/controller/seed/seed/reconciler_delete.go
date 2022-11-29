@@ -73,18 +73,28 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, nil
 	}
 
-	if seed.Spec.Backup != nil {
-		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(seed.UID)}}
-		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
 	// Before deletion, it has to be ensured that no Shoots nor BackupBuckets depend on the Seed anymore.
 	// When this happens the controller will remove the finalizers from the Seed so that it can be garbage collected.
+	parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
+
 	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.GardenClient, seed)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	if len(associatedShoots) > 0 {
+		log.Info("Cannot delete Seed because the following Shoots are still referencing it", "shoots", associatedShoots)
+		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots))
+
+		return reconcile.Result{}, errors.New("seed still has references")
+	}
+
+	if seed.Spec.Backup != nil {
+		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(seed.UID)}}
+
+		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, r.GardenClient, seed.Name)
@@ -92,18 +102,9 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	if len(associatedShoots) > 0 || len(associatedBackupBuckets) > 0 {
-		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
-
-		if len(associatedShoots) != 0 {
-			log.Info("Cannot delete Seed because the following Shoots are still referencing it", "shoots", associatedShoots)
-			r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots))
-		}
-
-		if len(associatedBackupBuckets) != 0 {
-			log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
-			r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets))
-		}
+	if len(associatedBackupBuckets) > 0 {
+		log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
+		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets))
 
 		return reconcile.Result{}, errors.New("seed still has references")
 	}

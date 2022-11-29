@@ -21,7 +21,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -244,24 +243,6 @@ func (r *Reconciler) deleteBackupBucket(
 	if !sets.NewString(backupBucket.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
 	}
-
-	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := r.GardenClient.List(ctx, backupEntryList, client.MatchingFields{core.BackupEntryBucketName: backupBucket.Name}); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	associatedBackupEntries := make([]string, 0)
-	for _, entry := range backupEntryList.Items {
-		associatedBackupEntries = append(associatedBackupEntries, client.ObjectKeyFromObject(&entry).String())
-	}
-
-	if len(associatedBackupEntries) != 0 {
-		log.Info("Cannot delete BackupBucket because BackupEntries are still referencing it", "backupEntryNames", associatedBackupEntries)
-		r.Recorder.Eventf(backupBucket, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, "cannot delete BackupBucket because the following BackupEntries are still referencing it: %+v", associatedBackupEntries)
-		return reconcile.Result{}, fmt.Errorf("BackupBucket %s still has references", backupBucket.Name)
-	}
-
-	log.Info("No BackupEntries are referencing this BackupBucket, accepting deletion")
 
 	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
 	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
