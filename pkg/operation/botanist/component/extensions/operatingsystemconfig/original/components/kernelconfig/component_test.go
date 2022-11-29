@@ -30,24 +30,27 @@ import (
 )
 
 var _ = Describe("Component", func() {
-	var component components.Component
-	var kubeletSysctlConfigComment = "#Needed configuration by kubelet\n" +
-		"#The kubelet sets these values but it is not able to when protectKernelDefaults=true\n" +
-		"#Ref https://github.com/gardener/gardener/issues/7069\n"
-	var kubeletSysctlConfig = kubeletSysctlConfigComment +
-		fmt.Sprintf("%s = %s\n", sysctl.VMOvercommitMemory, strconv.Itoa(sysctl.VMOvercommitMemoryAlways)) +
-		fmt.Sprintf("%s = %s\n", sysctl.VMPanicOnOOM, strconv.Itoa(sysctl.VMPanicOnOOMInvokeOOMKiller)) +
-		fmt.Sprintf("%s = %s\n", sysctl.KernelPanicOnOops, strconv.Itoa(sysctl.KernelPanicOnOopsAlways)) +
-		fmt.Sprintf("%s = %s\n", sysctl.KernelPanic, strconv.Itoa(sysctl.KernelPanicRebootTimeout)) +
-		fmt.Sprintf("%s = %s\n", sysctl.RootMaxKeys, strconv.Itoa(sysctl.RootMaxKeysSetting)) +
-		fmt.Sprintf("%s = %s\n", sysctl.RootMaxBytes, strconv.Itoa(sysctl.RootMaxBytesSetting))
-	var hardCodedKubeletSysctlConfig = kubeletSysctlConfigComment +
-		"vm/overcommit_memory = 1\n" +
-		"vm/panic_on_oom = 0\n" +
-		"kernel/panic_on_oops = 1\n" +
-		"kernel/panic = 10\n" +
-		"kernel/keys/root_maxkeys = 1000000\n" +
-		"kernel/keys/root_maxbytes = 25000000\n"
+	var (
+		component components.Component
+
+		kubeletSysctlConfigComment = "#Needed configuration by kubelet\n" +
+			"#The kubelet sets these values but it is not able to when protectKernelDefaults=true\n" +
+			"#Ref https://github.com/gardener/gardener/issues/7069\n"
+		kubeletSysctlConfig = kubeletSysctlConfigComment +
+			fmt.Sprintf("%s = %s\n", sysctl.VMOvercommitMemory, strconv.Itoa(sysctl.VMOvercommitMemoryAlways)) +
+			fmt.Sprintf("%s = %s\n", sysctl.VMPanicOnOOM, strconv.Itoa(sysctl.VMPanicOnOOMInvokeOOMKiller)) +
+			fmt.Sprintf("%s = %s\n", sysctl.KernelPanicOnOops, strconv.Itoa(sysctl.KernelPanicOnOopsAlways)) +
+			fmt.Sprintf("%s = %s\n", sysctl.KernelPanic, strconv.Itoa(sysctl.KernelPanicRebootTimeout)) +
+			fmt.Sprintf("%s = %s\n", sysctl.RootMaxKeys, strconv.Itoa(sysctl.RootMaxKeysSetting)) +
+			fmt.Sprintf("%s = %s\n", sysctl.RootMaxBytes, strconv.Itoa(sysctl.RootMaxBytesSetting))
+		hardCodedKubeletSysctlConfig = kubeletSysctlConfigComment +
+			"vm/overcommit_memory = 1\n" +
+			"vm/panic_on_oom = 0\n" +
+			"kernel/panic_on_oops = 1\n" +
+			"kernel/panic = 10\n" +
+			"kernel/keys/root_maxkeys = 1000000\n" +
+			"kernel/keys/root_maxbytes = 25000000\n"
+	)
 
 	BeforeEach(func() {
 		component = New()
