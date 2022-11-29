@@ -708,7 +708,7 @@ var _ = Describe("extensions", func() {
 						Name:      fmt.Sprintf("containerruntime-%d", i),
 					},
 				}
-				Expect(c.Create(ctx, containerRuntimeExtension)).To(Succeed())
+				Expect(c.Create(ctx, containerRuntimeExtension)).To(Succeed(), containerRuntimeExtension.ObjectMeta.Name+" should get created")
 			}
 
 			Expect(
@@ -719,18 +719,15 @@ var _ = Describe("extensions", func() {
 
 			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
 			Expect(c.List(ctx, containerRuntimeList, client.InNamespace(namespace))).To(Succeed())
-			Expect(len(containerRuntimeList.Items)).To(Equal(4))
-			oneAnnotated := 0
+			Expect(containerRuntimeList.Items).To(HaveLen(4))
 			for _, item := range containerRuntimeList.Items {
 				if item.ObjectMeta.Name == "containerruntime-2" {
-					Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
-					oneAnnotated++
+					Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate), item.ObjectMeta.Name+" should have gardener.cloud/operation annotation")
 				} else {
 					_, ok := item.Annotations[v1beta1constants.GardenerOperation]
-					Expect(ok).To(BeFalse())
+					Expect(ok).To(BeFalse(), item.ObjectMeta.Name+" should not have gardener.cloud/operation annotation")
 				}
 			}
-			Expect(oneAnnotated).To(Equal(1))
 		})
 	})
 
