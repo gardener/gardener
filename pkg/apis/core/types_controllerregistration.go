@@ -60,6 +60,7 @@ type ControllerResource struct {
 	// Type is the resource type.
 	Type string
 	// GloballyEnabled determines if this resource is required by all Shoot clusters.
+	// This field is defaulted to false when kind is "Extension".
 	GloballyEnabled *bool
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
 	// This field is defaulted to 3m0s when kind is "Extension".
