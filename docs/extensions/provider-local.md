@@ -139,6 +139,12 @@ If the `--apiserver-sni-enabled` flag is set to `true` (default), `istio-ingress
 #### ETCD Backups
 This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
 
+#### Extension Seed
+This controller reconciles `Extensions` of type `local-ext-seed`. It creates a single `serviceaccount` named `local-ext-seed` in the shoot's namespace in the seed. The extension is reconciled before the `kube-apiserver`. More on extension lifecycle strategies can be read [here](controllerregistration.md#extension-lifecycle)).
+
+#### Extension Shoot
+This controller reconciles `Extensions` of type `local-ext-shoot`. It creates a single `serviceaccount` named `local-ext-shoot` in the `kube-system` namespace of the shoot. The extension is reconciled after the `kube-apiserver`. More on extension lifecycle strategies can be read [here](controllerregistration.md#extension-lifecycle)).
+
 #### Health Checks
 
 The health check controller leverages the [health check library](healthcheck-library.md) in order to

@@ -124,7 +124,7 @@ func getShootResources() (map[string][]byte, error) {
 	return shootRegistry.AddAllAndSerialize(
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      ApplicationName + "-shoot",
+				Name:      ApplicationName,
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
