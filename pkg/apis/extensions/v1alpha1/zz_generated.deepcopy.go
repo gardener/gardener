@@ -457,6 +457,7 @@ func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 	in.CloudProfile.DeepCopyInto(&out.CloudProfile)
 	in.Seed.DeepCopyInto(&out.Seed)
 	in.Shoot.DeepCopyInto(&out.Shoot)
+	in.Project.DeepCopyInto(&out.Project)
 	return
 }
 

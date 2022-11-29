@@ -64,4 +64,9 @@ type ClusterSpec struct {
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Shoot runtime.RawExtension `json:"shoot"`
+	// Project is a raw extension field that contains the project resource that has to be reconciled.
+	// +kubebuilder:validation:XPreserveUnknownFields
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Project runtime.RawExtension `json:"project,omitempty"`
 }
