@@ -19,7 +19,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -195,23 +194,10 @@ var _ = Describe("utils", func() {
 				seedServicesCIDR,
 			)
 
-			Expect(errorList).To(ConsistOfFields(Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("[].nodes"),
-				"Detail": Equal("shoot node network intersects with default vpn network (192.168.122.0/24)"),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("[].nodes"),
-				"Detail": Equal("shoot node network intersects with default vpn network (192.168.123.0/24)"),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("[].nodes"),
-				"Detail": Equal("shoot node network intersects with default vpn network (192.168.124.0/24)"),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("[].nodes"),
-				"Detail": Equal("shoot node network intersects with default vpn network (192.168.125.0/24)"),
-			}))
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].nodes"),
+			}))))
 		})
 
 		It("should fail due to range overlap of seed node netwok and shoot pod and service network", func() {

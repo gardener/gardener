@@ -670,14 +670,8 @@ const (
 	// or the specified namespace was not present.
 	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
-	// DefaultVPNRange is the default network range for the VPN between seed and shoot cluster (and the first VPN tunnel in HA case).
+	// DefaultVPNRange is the default network range for the VPN between seed and shoot cluster.
 	DefaultVPNRange = "192.168.123.0/24"
-	// DefaultHAVPNRangeBonding is the network range for the VPN between seed and shoot cluster if high availability is enabled.
-	DefaultHAVPNRangeBonding = "192.168.122.0/24"
-	// DefaultHAVPNRange1 is the network range for the second VPN tunnel between seed and shoot cluster if high availability is enabled.
-	DefaultHAVPNRange1 = "192.168.124.0/24"
-	// DefaultHAVPNRange2 is the network range reserved for a third VPN tunnel between seed and shoot cluster if high availability is enabled.
-	DefaultHAVPNRange2 = "192.168.125.0/24"
 
 	// BackupSecretName is the name of secret having credentials for etcd backups.
 	BackupSecretName string = "etcd-backup"
@@ -715,9 +709,6 @@ var (
 		ArchitectureAMD64,
 		ArchitectureARM64,
 	}
-
-	// AllDefaultVPNRanges are all possible used network ranges used by VPN in standard or high availability mode
-	AllDefaultVPNRanges = []string{DefaultVPNRange, DefaultHAVPNRange1, DefaultHAVPNRange2, DefaultHAVPNRangeBonding}
 )
 
 // constants for well-known PriorityClass names
