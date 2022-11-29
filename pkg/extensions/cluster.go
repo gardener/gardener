@@ -32,7 +32,7 @@ import (
 )
 
 // SyncClusterResourceToSeed creates or updates the `extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed
-// cluster by adding the shoot, seed, and cloudprofile specification.
+// cluster by adding the shoot, seed, cloudprofile and project specification.
 func SyncClusterResourceToSeed(
 	ctx context.Context,
 	c client.Client,
@@ -40,6 +40,7 @@ func SyncClusterResourceToSeed(
 	shoot *gardencorev1beta1.Shoot,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	seed *gardencorev1beta1.Seed,
+	project *gardencorev1beta1.Project,
 ) error {
 	if shoot.Spec.SeedName == nil {
 		return nil
@@ -55,6 +56,7 @@ func SyncClusterResourceToSeed(
 		cloudProfileObj *gardencorev1beta1.CloudProfile
 		seedObj         *gardencorev1beta1.Seed
 		shootObj        *gardencorev1beta1.Shoot
+		projectObj      *gardencorev1beta1.Project
 	)
 
 	if cloudProfile != nil {
@@ -84,6 +86,15 @@ func SyncClusterResourceToSeed(
 		shootObj.ManagedFields = nil
 	}
 
+	if project != nil {
+		projectObj = project.DeepCopy()
+		projectObj.TypeMeta = metav1.TypeMeta{
+			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+			Kind:       "Project",
+		}
+		shootObj.ManagedFields = nil
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, cluster, func() error {
 		if cloudProfileObj != nil {
 			cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
@@ -93,6 +104,9 @@ func SyncClusterResourceToSeed(
 		}
 		if shootObj != nil {
 			cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
+		}
+		if projectObj != nil {
+			cluster.Spec.Project = runtime.RawExtension{Object: projectObj}
 		}
 		return nil
 	})
@@ -105,6 +119,7 @@ type Cluster struct {
 	CloudProfile *gardencorev1beta1.CloudProfile
 	Seed         *gardencorev1beta1.Seed
 	Shoot        *gardencorev1beta1.Shoot
+	Project      *gardencorev1beta1.Project
 }
 
 // GetCluster tries to read Gardener's Cluster extension resource in the given namespace.
@@ -127,7 +142,12 @@ func GetCluster(ctx context.Context, c client.Reader, namespace string) (*Cluste
 		return nil, err
 	}
 
-	return &Cluster{cluster.ObjectMeta, cloudProfile, seed, shoot}, nil
+	project, err := ProjectFromCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Cluster{cluster.ObjectMeta, cloudProfile, seed, shoot, project}, nil
 }
 
 // CloudProfileFromCluster returns the CloudProfile resource inside the Cluster resource.
@@ -179,6 +199,23 @@ func ShootFromCluster(cluster *extensionsv1alpha1.Cluster) (*gardencorev1beta1.S
 	}
 
 	return shoot, nil
+}
+
+// ProjectFromCluster returns the Project resource inside the Cluster resource.
+func ProjectFromCluster(cluster *extensionsv1alpha1.Cluster) (*gardencorev1beta1.Project, error) {
+	var (
+		decoder = kubernetes.GardenCodec.UniversalDeserializer()
+		project = &gardencorev1beta1.Project{}
+	)
+
+	if cluster.Spec.Project.Raw == nil {
+		return nil, nil
+	}
+	if _, _, err := decoder.Decode(cluster.Spec.Project.Raw, nil, project); err != nil {
+		return nil, err
+	}
+
+	return project, nil
 }
 
 // GenericTokenKubeconfigSecretNameFromCluster reads the generic-token-kubeconfig.secret.gardener.cloud/name annotation

@@ -165,7 +165,7 @@ func (r *shootReconciler) syncClusterResourceToSeed(ctx context.Context, shoot *
 	}
 
 	clusterName := shootpkg.ComputeTechnicalID(project.Name, shoot)
-	return gardenerextensions.SyncClusterResourceToSeed(ctx, r.seedClientSet.Client(), clusterName, shoot, cloudProfile, seed)
+	return gardenerextensions.SyncClusterResourceToSeed(ctx, r.seedClientSet.Client(), clusterName, shoot, cloudProfile, seed, project)
 }
 
 func (r *shootReconciler) checkSeedAndSyncClusterResource(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {

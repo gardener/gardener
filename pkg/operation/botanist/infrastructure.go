@@ -76,7 +76,7 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 			return err
 		}
 
-		if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
+		if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil, nil); err != nil {
 			return err
 		}
 	}
