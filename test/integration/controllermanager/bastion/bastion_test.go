@@ -123,6 +123,11 @@ var _ = Describe("Bastion controller tests", func() {
 		Expect(testClient.Create(ctx, bastion)).To(Succeed())
 		log.Info("Created bastion for test", "bastion", client.ObjectKeyFromObject(bastion))
 
+		if shoot != nil {
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(bastion), bastion)).To(Succeed())
+			fakeClock.SetTime(bastion.CreationTimestamp.Time.Truncate(time.Second))
+		}
+
 		DeferCleanup(func() {
 			By("Delete Bastion")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, bastion))).To(Succeed())
@@ -200,12 +205,13 @@ var _ = Describe("Bastion controller tests", func() {
 				// Increasing maxLifetime would require creating a dedicated manager per case, because we can't test the other
 				// cases anymore with the same manager.
 				patch := client.MergeFrom(bastion.DeepCopy())
-				t := metav1.NewTime(time.Now().Add(-bastionstrategy.TimeToLive))
+				t := metav1.NewTime(fakeClock.Now().Add(-bastionstrategy.TimeToLive))
 				bastion.Status.LastHeartbeatTimestamp = &t // this basically sets status.expirationTimestamp to time.Now()
 				Expect(testClient.Status().Patch(ctx, bastion, patch)).To(Succeed())
 			})
 
 			It("should delete Bastion if its expiration timestamp has passed", func() {
+				By("stepping the clock to pass expirationTimeStamp")
 				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(time.Second))
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
@@ -240,7 +246,8 @@ var _ = Describe("Bastion controller tests", func() {
 
 		Describe("maxLifetime", func() {
 			It("should delete Bastion if it's older than maxLifetime", func() {
-				fakeClock.Step(maxLifeTime + time.Second)
+				By("stepping the clock to pass maxLifeTime")
+				fakeClock.Step(maxLifeTime + 2*time.Second)
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 				Expect(client.IgnoreNotFound(testClient.Patch(ctx, bastion, patch))).To(Succeed())
@@ -252,7 +259,7 @@ var _ = Describe("Bastion controller tests", func() {
 			})
 
 			It("should requeue and delete Bastion if it's about to reach maxLifetime", func() {
-				fakeClock.Step(maxLifeTime - time.Second)
+				fakeClock.Step(maxLifeTime - 2*time.Second)
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 				Expect(testClient.Patch(ctx, bastion, patch)).To(Succeed())
@@ -263,7 +270,8 @@ var _ = Describe("Bastion controller tests", func() {
 				}).Should(Succeed())
 
 				By("Ensuring Bastion is deleted")
-				fakeClock.Step(maxLifeTime + time.Second)
+				// we just need to pass the maxLifeTime
+				fakeClock.Step(4 * time.Second)
 				Eventually(logBuffer).Should(gbytes.Say("Deleting bastion because it reached its maximum lifetime"))
 
 				Eventually(func() error {
