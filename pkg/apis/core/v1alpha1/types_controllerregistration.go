@@ -76,6 +76,10 @@ type ControllerResource struct {
 	// +optional
 	Primary *bool `json:"primary,omitempty" protobuf:"varint,5,opt,name=primary"`
 	// Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+	// This field is defaulted in the following way when kind is "Extension".
+	//  Reconcile: "AfterKubeAPIServer"
+	//  Delete: "BeforeKubeAPIServer"
+	//  Migrate: "BeforeKubeAPIServer"
 	// +optional
 	Lifecycle *ControllerResourceLifecycle `json:"lifecycle,omitempty" protobuf:"bytes,6,opt,name=lifecycle"`
 }

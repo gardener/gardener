@@ -70,6 +70,10 @@ type ControllerResource struct {
 	// combination. This field is immutable.
 	Primary *bool
 	// Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+	// This field is defaulted in the following way when kind is "Extension".
+	//  Reconcile: "AfterKubeAPIServer"
+	//  Delete: "BeforeKubeAPIServer"
+	//  Migrate: "BeforeKubeAPIServer"
 	Lifecycle *ControllerResourceLifecycle
 }
 

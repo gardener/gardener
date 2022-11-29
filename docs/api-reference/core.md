@@ -3159,7 +3159,11 @@ ControllerResourceLifecycle
 </td>
 <td>
 <em>(Optional)</em>
-<p>Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.</p>
+<p>Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+This field is defaulted in the following way when kind is &ldquo;Extension&rdquo;.
+Reconcile: &ldquo;AfterKubeAPIServer&rdquo;
+Delete: &ldquo;BeforeKubeAPIServer&rdquo;
+Migrate: &ldquo;BeforeKubeAPIServer&rdquo;</p>
 </td>
 </tr>
 </tbody>

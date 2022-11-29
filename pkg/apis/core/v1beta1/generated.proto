@@ -544,6 +544,10 @@ message ControllerResource {
   optional bool primary = 5;
 
   // Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+  // This field is defaulted in the following way when kind is "Extension".
+  //  Reconcile: "AfterKubeAPIServer"
+  //  Delete: "BeforeKubeAPIServer"
+  //  Migrate: "BeforeKubeAPIServer"
   // +optional
   optional ControllerResourceLifecycle lifecycle = 6;
 }
