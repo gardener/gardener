@@ -86,7 +86,7 @@ var _ = Describe("Component", func() {
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true)),
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil),
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false)),
-		// This test will fail when kubernetes is upgarded to a newer version with different sysctl parameters.
+		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
 		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil),
 	)
 })
