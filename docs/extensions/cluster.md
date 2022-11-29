@@ -12,7 +12,7 @@ The problem is that Gardener does not know which extension requires which inform
 In order to deal with this problem we have introduced the `Cluster` extension resource.
 This CRD is written into the seeds, however, it does not contain a `status`, so it is not expected that something acts upon it.
 Instead, you can treat it like a `ConfigMap` which contains data that might be interesting for you.
-In the context of Gardener, seeds and shoots, and extensibility the `Cluster` resource contains the `CloudProfile`, `Seed`, and `Shoot` manifest.
+In the context of Gardener, seeds and shoots, and extensibility the `Cluster` resource contains the `CloudProfile`, `Seed`, `Shoot` and `Project` manifest.
 Extension controllers can take whatever information they want out of it that might help completing their individual tasks.
 
 ```yaml
@@ -34,6 +34,10 @@ spec:
   shoot:
     apiVersion: core.gardener.cloud/v1beta1
     kind: Shoot
+    ...
+  project:
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: Project
     ...
 ```
 
