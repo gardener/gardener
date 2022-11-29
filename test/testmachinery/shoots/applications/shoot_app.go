@@ -39,8 +39,11 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 const (
@@ -86,8 +89,14 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 		}
 
 		url := fmt.Sprintf("https://api.%s/api/v1/namespaces/%s/services/https:kubernetes-dashboard:/proxy", *f.Shoot.Spec.DNS.Domain, "kubernetes-dashboard")
-		dashboardToken, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, "token")
+		kubeconfigData, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
+		kubeconfig := &clientcmdv1.Config{}
+		_, _, err = clientcmdlatest.Codec.Decode([]byte(kubeconfigData), nil, kubeconfig)
+		framework.ExpectNoError(err)
+		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
+		Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
+		dashboardToken := kubeconfig.AuthInfos[0].AuthInfo.Token
 
 		err = framework.TestHTTPEndpointWithToken(ctx, url, dashboardToken)
 		framework.ExpectNoError(err)
