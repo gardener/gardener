@@ -292,6 +292,12 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 						Tolerations: []corev1.Toleration{{
 							Key:      "CriticalAddonsOnly",
 							Operator: corev1.TolerationOpExists,
+						}, {
+							Effect:   corev1.TaintEffectNoSchedule,
+							Operator: corev1.TolerationOpExists,
+						}, {
+							Effect:   corev1.TaintEffectNoExecute,
+							Operator: corev1.TolerationOpExists,
 						}},
 						PriorityClassName: "system-cluster-critical",
 						NodeSelector: map[string]string{
