@@ -346,7 +346,11 @@ func (r *Reconciler) deleteBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 	}
 
-	return reconcile.Result{}, nil
+	requeueAfter := backupEntry.DeletionTimestamp.Time.Add(gracePeriod).Sub(r.Clock.Now())
+	if requeueAfter < 0 {
+		return reconcile.Result{}, fmt.Errorf("the backupentry should have been deleted by now")
+	}
+	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *Reconciler) migrateBackupEntry(
