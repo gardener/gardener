@@ -133,6 +133,20 @@ func (mr *MockInterfaceMockRecorder) SetBucketName(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBucketName", reflect.TypeOf((*MockInterface)(nil).SetBucketName), arg0)
 }
 
+// SetForceDeletionAnnotation mocks base method.
+func (m *MockInterface) SetForceDeletionAnnotation(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetForceDeletionAnnotation", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetForceDeletionAnnotation indicates an expected call of SetForceDeletionAnnotation.
+func (mr *MockInterfaceMockRecorder) SetForceDeletionAnnotation(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetForceDeletionAnnotation", reflect.TypeOf((*MockInterface)(nil).SetForceDeletionAnnotation), arg0)
+}
+
 // Wait mocks base method.
 func (m *MockInterface) Wait(arg0 context.Context) error {
 	m.ctrl.T.Helper()
