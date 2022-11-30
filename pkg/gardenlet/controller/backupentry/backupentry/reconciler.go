@@ -52,7 +52,7 @@ import (
 )
 
 var (
-	// DefaultTimeout defines how long the controller should wait until the extension resource is ready or is succesfully deleted. Exposed for tests.
+	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is succesfully deleted. Exposed for tests.
 	DefaultTimeout = 30 * time.Second
 	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
 	DefaultSevereThreshold = 15 * time.Second
