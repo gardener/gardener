@@ -185,6 +185,20 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 			seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, conditions...)
 			Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
+			By("Wait until manager cache has observed seed with updated conditions")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				updatedSeed := &gardencorev1beta1.Seed{}
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
+				return updatedSeed.Status.Conditions
+			}).Should(And(
+				ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped)),
+				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
+			))
+
+			By("Check shoot conditions")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Status.Conditions
