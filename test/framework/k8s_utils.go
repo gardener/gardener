@@ -429,18 +429,18 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 func WaitUntilPodIsRunning(ctx context.Context, log logr.Logger, name, namespace string, c kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
-		log = log.WithValues("pod", client.ObjectKeyFromObject(pod))
+		podLog := log.WithValues("pod", client.ObjectKeyFromObject(pod))
 
 		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, pod); err != nil {
 			return retry.SevereError(err)
 		}
 
 		if !health.IsPodReady(pod) {
-			log.Info("Waiting for Pod to be ready")
+			podLog.Info("Waiting for Pod to be ready")
 			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, namespace, name, err))
 		}
 
-		log.Info("Pod is ready now")
+		podLog.Info("Pod is ready now")
 		return retry.Ok()
 	})
 }
