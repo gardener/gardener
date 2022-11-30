@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -96,6 +97,9 @@ type Interface interface {
 	GetActualBucketName() string
 	// SetBucketName sets the name of the BackupBucket for this BackupEntry.
 	SetBucketName(string)
+	// SetForceDeletionAnnotation sets the `backupentry.core.gardener.cloud/force-deletion` annotation
+	// on the BackupEntry.
+	SetForceDeletionAnnotation(context.Context) error
 }
 
 type backupEntry struct {
@@ -219,4 +223,21 @@ func (b *backupEntry) GetActualBucketName() string {
 // SetBackupBucket sets the name of the BackupBucket for this BackupEntry.
 func (b *backupEntry) SetBucketName(name string) {
 	b.values.BucketName = name
+}
+
+// SetForceDeletionAnnotation sets the `backupentry.core.gardener.cloud/force-deletion` annotation
+// on the BackupEntry.
+func (b *backupEntry) SetForceDeletionAnnotation(ctx context.Context) error {
+	if err := b.client.Get(ctx, client.ObjectKeyFromObject(b.backupEntry), b.backupEntry); err != nil {
+		// BackupEntry has already been deleted so there is no need to set the
+		// `backupentry.core.gardener.cloud/force-deletion` annotation.
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	patch := client.MergeFrom(b.backupEntry.DeepCopy())
+	metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, gardencorev1beta1.BackupEntryForceDeletion, "true")
+	return b.client.Patch(ctx, b.backupEntry, patch)
 }
