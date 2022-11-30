@@ -44,10 +44,12 @@ This GEP proposes changes to support IPv6 single-stack networking for shoots usi
 
 ## Motivation
 
-Depending on the underlying cloud infrastructure, there is a need to provide shoot networking setups different from what Gardener currently provides.
-This might include IPv6 single-stack or IPv4/IPv6 dual-stack setups.
+There is a need to cover additional scenarios to what Gardener currently provides and to configure different shoot networking setups.
+Factors for changing the status quo include but are not limited to: the underlying cloud infrastructure, and the scarcity/cost of IPv4 addresses.
+These different networking setups most prominently include IPv6 single-stack and IPv4/IPv6 dual-stack.
 Kubernetes already supports such setups as described in [this doc](https://kubernetes.io/docs/concepts/services-networking/dual-stack/).
 However, supporting these in Gardener requires changes to the API and many components (networking extensions, VPN tunnel, etc.).
+For example, many components listen on `0.0.0.0` which makes them reachable via IPv4 only.
 
 To bring Gardener closer to supporting these kinds of networking setups, this GEP focuses on supporting IPv6 single-stack networking in the local Gardener environment.
 This keeps things focused on the most important changes to the API and central components while neglecting infrastructure-specific quirks and other difficulties that will arise with dual-stack networking.
@@ -56,10 +58,10 @@ Once this enhancement has been implemented and IPv6 single-stack networking in l
 
 ### Goals
 
-- augment the Gardener API to allow selecting either IPv4 or IPv6 single-stack networking
-  - define a contract that all components (including networking extensions) need to follow to support this configuration
-  - allow extending the API for dual-stack networking later on while keeping backward-/forward-compatibility
+- augment all relevant Gardener API types defined in gardener/gardener to allow selecting either IPv4 or IPv6 single-stack networking (`core.gardener.cloud/v1beta1.{Shoot,Seed}`, `extensions.gardener.cloud/v1alpha1.{Network,DNSRecord}`)
+- define a contract that all components (including networking extensions) need to follow to support this configuration
 - adapt all relevant components in the local Gardener environment to support this configuration
+- document all required steps for getting started with the IPv6 setup for developers (without requiring existing config/knowledge)
 - add e2e tests to prevent regressions and guarantee the stability of the feature (especially because nobody is running it in productive environments)
 
 ### Non-Goals
@@ -67,7 +69,7 @@ Once this enhancement has been implemented and IPv6 single-stack networking in l
 - support IPv4/IPv6 dual-stack networking
 - support IPv6 single-stack networking on cloud infrastructure
 - support changing the networking setup of shoots from IPv4 to IPv6 single-stack or vice-versa
-- propose changes to `NetworkConfig` APIs of networking extensions or their implementation
+- propose changes API types defined outside of gardener/gardener and their implementations, e.g., the `NetworkConfig` APIs (`providerConfig`) of networking extensions
 - support the legacy VPN tunnel (`ReversedVPN` feature gate is disabled)
 
 ## Proposal
@@ -88,14 +90,14 @@ spec:
     # ...
     ipFamilies:
     - IPv6
-    podsV6: dead:.../64
-    nodesV6: dead:.../64
-    servicesV6: dead:.../64
+    podsV6: 2001:db8:1::/48
+    nodesV6: 2001:db8:2::/48
+    servicesV6: 2001:db8:3::/48
 ```
 
 `ipFamilies` is the central setting for specifying the IP families used for shoot networking.
 This field is inspired by the `Service.spec.ipFamilies` field in Kubernetes ([doc](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services)).
-The only valid value and default is `["IPv4"]` (IPv4 single-stack).
+The default value is `["IPv4"]` (IPv4 single-stack).
 If the `IPv6SingleStack` feature gate is enabled, `["IPv6"]` can be specified to switch to IPv6 single-stack.
 Later on, `["IPv4","IPv6"]` or `["IPv6","IPv4"]` can be supported for dual-stack networking (ordering is relevant for Kubernetes configuration like the `--service-cluster-ip-range` flag).
 
@@ -113,14 +115,16 @@ apiVersion: core.gardener.cloud/v1beta1
 kind: Seed
 spec:
   networks:
+    # ...
     ipFamilies:
     - IPv6
-    nodesV6: dead:.../64
-    podsV6: dead:.../64
-    servicesV6: dead:.../64
+    nodesV6: 2001:db8:11::/48
+    podsV6: 2001:db8:12::/48
+    servicesV6: 2001:db8:13::/48
     shootDefaults:
-      podsV6: dead:.../64
-      servicesV6: dead:.../64
+      # ...
+      podsV6: 2001:db8:1::/48
+      servicesV6: 2001:db8:3::/48
 ```
 
 `ipFamilies` has the same semantics as `Shoot.spec.networking.ipFamilies`.
@@ -128,8 +132,24 @@ Again, IPv6-equivalents of all CIDR and mask fields are introduced, e.g. `Seed.s
 Depending on the `ipFamilies` value, either the IPv4 field or the IPv6 field may be specified – or both in a potential dual-stack implementation.
 
 The existing `Seed.spec.networks.blockCIDRs` field is augmented to allow IPv6 CIDR values in addition to IPv4 values.
-Validation for this field is laxer and CIDRs of both IP families are allowed independently of the `ipFamilies` setting.
-Values of the `blockCIDRs` field are only relevant for excluding blocks in `NetworkPolicies` and hence it doesn't hurt to add CIDR blocks that are not reachable anyway.
+
+### `Network` API
+
+The `Network` API is augmented analogously to the `Shoot.spec.networking` section:
+
+```yaml
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Network
+spec:
+  # ...
+  ipFamilies:
+  - IPv6
+  podCIDRv6: 2001:db8:1::/48
+  serviceCIDRv6: 2001:db8:3::/48
+```
+
+Similar to the `Shoot` API, a new `ipFamilies` field is introduced along with IPv6-equivalents of all CIDR fields, i.e.., `Network.spec.{pod,service}CIDRv6`.
+As with the existing `Network` fields, these fields are filled by gardenlet according to the `Shoot` specification on reconciliations.
 
 ### `DNSRecord` API
 
@@ -142,7 +162,7 @@ spec:
   # ...
   recordType: AAAA
   values:
-  - dead::1
+  - 2001:db8:f00::1
 ```
 
 - `spec.recordType` allows specifying `AAAA` in addition to the current set of valid record types
