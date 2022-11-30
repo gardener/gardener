@@ -25,11 +25,9 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -59,11 +57,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed reading image vector override: %w", err)
 	}
 
-	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, log, f.GardenCluster, f.SeedCluster, f.ShootClientMap, f.Config, imageVector, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace)
-	if err != nil {
-		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
-	}
-
 	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, f.SeedClientSet, f.ShootClientMap, f.Config, f.Identity, f.GardenClusterIdentity, imageVector, clock.RealClock{})
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
@@ -72,7 +65,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	controllerCtx, cancel := context.WithCancel(ctx)
 
 	// run controllers
-	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.Config.Controllers.ShootCare.ConcurrentSyncs)
 
 	log.Info("gardenlet initialized")

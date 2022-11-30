@@ -405,7 +405,7 @@ func (a *actuator) deployGardenlet(
 	}
 
 	// Apply gardenlet chart
-	if err := shootClient.ChartApplier().Apply(ctx, filepath.Join(a.chartsPath, "gardener", "gardenlet"), a.gardenNamespace, "gardenlet", kubernetes.Values(values)); err != nil {
+	if err := shootClient.ChartApplier().Apply(ctx, a.chartsPath, a.gardenNamespace, "gardenlet", kubernetes.Values(values)); err != nil {
 		return err
 	}
 
