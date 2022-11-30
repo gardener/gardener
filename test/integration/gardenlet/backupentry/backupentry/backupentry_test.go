@@ -519,7 +519,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			}).Should(Succeed())
 
 			By("stepping the clock to pass the grace period")
-			fakeClock.Step((time.Duration(deletionGracePeriodHours)*time.Hour + time.Second))
+			fakeClock.Step((time.Duration(deletionGracePeriodHours)*time.Hour + time.Minute))
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			patch := client.MergeFrom(backupEntry.DeepCopy())
 			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
