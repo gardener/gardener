@@ -50,6 +50,32 @@ var _ = Describe("ManagedSeed controller test", func() {
 			}
 			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 		}
+
+		deployGardenlet = func() {
+			secret := &corev1.Secret{}
+			EventuallyWithOffset(1, func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-backup-secret", Namespace: gardenNamespace.Name}, secret)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-seed-secret", Namespace: gardenNamespace.Name}, secret)).To(Succeed())
+			}).Should(Succeed())
+
+			EventuallyWithOffset(1, func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet:apiserver-sni"}, &rbacv1.ClusterRole{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet"}, &rbacv1.ClusterRole{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet:managed-istio"}, &rbacv1.ClusterRole{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet:apiserver-sni"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet:managed-istio"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener-system-critical"}, &schedulingv1.PriorityClass{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet", Namespace: gardenNamespace.Name}, &rbacv1.Role{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet", Namespace: gardenNamespace.Name}, &rbacv1.RoleBinding{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-kubeconfig-bootstrap", Namespace: gardenNamespace.Name}, &corev1.Secret{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespace.Name}, &corev1.Service{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespace.Name}, &corev1.ServiceAccount{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespace.Name}, &appsv1.Deployment{})).To(Succeed())
+			}).Should(Succeed())
+		}
 	)
 
 	BeforeEach(func() {
@@ -303,6 +329,24 @@ var _ = Describe("ManagedSeed controller test", func() {
 			})
 		})
 	})
+
+	Context("deletion", func() {
+		JustBeforeEach(func() {
+			reconcileShoot()
+			deployGardenlet()
+		})
+
+		It("should remove the managed seed object and gardenlet deployment", func() {
+			By("Mark ManagedSeed for deletion")
+			Expect(testClient.Delete(ctx, managedSeed)).To(Succeed())
+
+			EventuallyWithOffset(1, func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespace.Name}, &appsv1.Deployment{})).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(BeNotFoundError())
+			}).Should(Succeed())
+		})
+	})
+
 })
 
 func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }
