@@ -54,7 +54,7 @@ const (
 	loggerDeploymentCleanupTimeout = 5 * time.Minute
 
 	fluentBitName                 = "fluent-bit"
-	fluentBitConfingDiskName      = "template-config"
+	fluentBitConfigVolumeName     = "config-dir"
 	lokiName                      = "loki"
 	lokiConfigDiskName            = "config"
 	garden                        = "garden"
@@ -106,7 +106,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}))
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBit))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfingDiskName)}, fluentBitConfMap))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfigVolumeName)}, fluentBitConfMap))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitService))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRole))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRoleBinding))
