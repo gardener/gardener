@@ -92,7 +92,7 @@ func SyncClusterResourceToSeed(
 			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 			Kind:       "Project",
 		}
-		shootObj.ManagedFields = nil
+		projectObj.ManagedFields = nil
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, cluster, func() error {
