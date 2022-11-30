@@ -108,6 +108,7 @@ var _ = Describe("networkpolicies", func() {
 				"192.168.0.0/16",
 				"10.10.0.0/24",
 				"10.0.0.0/8",
+				"10.0.0.0/12",
 				"100.64.0.0/10",
 				"172.16.0.0/12",
 			)
@@ -117,7 +118,7 @@ var _ = Describe("networkpolicies", func() {
 				{
 					IPBlock: &networkingv1.IPBlock{
 						CIDR:   "10.0.0.0/8",
-						Except: []string{"10.10.0.0/24"},
+						Except: []string{"10.10.0.0/24", "10.0.0.0/12"},
 					},
 				},
 				{
