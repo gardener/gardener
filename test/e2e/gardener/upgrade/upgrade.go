@@ -1,0 +1,106 @@
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package upgrade
+
+import (
+	"context"
+	"os"
+	"time"
+
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/framework"
+	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
+	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
+	var (
+		gardenerPreviousRelease = os.Getenv("GARDENER_PREVIOUS_RELEASE")
+		gardenerCurrentRelease  = os.Getenv("GARDENER_NEXT_RELEASE")
+		projectNamespace        = "garden-local"
+	)
+
+	Context("Shoot::e2e-g-upgrade", func() {
+		var (
+			parentCtx  = context.Background()
+			job        *batchv1.Job
+			err        error
+			shootTest2 = e2e.DefaultShoot("e2e-g-upgrade")
+			f          = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
+		)
+
+		shootTest2.Namespace = projectNamespace
+		f.Shoot = shootTest2
+
+		When("Pre-upgrade (version:'"+gardenerPreviousRelease+"')", Ordered, Label("pre-upgrade"), func() {
+			ctx, _ := context.WithTimeout(parentCtx, 30*time.Minute)
+
+			It("should create a shoot", func() {
+				Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
+				f.Verify()
+			})
+
+			It("deploying zero-downtime validator job to ensure no downtime while after upgrading gardener", Label("high-availability"), func() {
+				shootSeedNamespace := f.Shoot.Status.TechnicalID
+				job, err = highavailability.DeployZeroDownTimeValidatorJob(
+					ctx,
+					f.ShootFramework.SeedClient.Client(), "update", shootSeedNamespace,
+					shootupdatesuite.GetKubeAPIServerAuthToken(
+						ctx,
+						f.ShootFramework.SeedClient,
+						shootSeedNamespace,
+					),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				shootupdatesuite.WaitForJobToBeReady(ctx, f.ShootFramework.SeedClient.Client(), job)
+			})
+		})
+
+		When("Post-upgrade (version:'"+gardenerCurrentRelease+"')", Ordered, Label("post-upgrade"), func() {
+			var seedClient client.Client
+			ctx, _ := context.WithTimeout(parentCtx, 20*time.Minute)
+
+			BeforeAll(func() {
+				Expect(f.GetShoot(ctx, shootTest2)).To(Succeed())
+				f.ShootFramework, err = f.NewShootFramework(ctx, shootTest2)
+				Expect(err).NotTo(HaveOccurred())
+				seedClient = f.ShootFramework.SeedClient.Client()
+			})
+
+			It("verifying no downtime while upgrading gardener", Label("high-availability"), func() {
+				job = &batchv1.Job{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "zero-down-time-validator-update",
+						Namespace: shootTest2.Status.TechnicalID,
+					}}
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
+				Expect(job.Status.Failed).Should(BeZero())
+				Expect(seedClient.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationForeground))).To(Succeed())
+			})
+
+			It("should able to delete a shoot which was created in previous release", Label("delete"), func() {
+				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousRelease))
+				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, shootTest2)).To(Succeed())
+			})
+		})
+	})
+})

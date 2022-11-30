@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func getKubeAPIServerAuthToken(ctx context.Context, seedClient kubernetes.Interface, namespace string) string {
+func GetKubeAPIServerAuthToken(ctx context.Context, seedClient kubernetes.Interface, namespace string) string {
 	c := seedClient.Client()
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -82,9 +82,9 @@ func RunTest(
 
 		By("deploying zero-downtime validator job")
 		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx,
-			f.SeedClient.Client(), "update", shootSeedNamespace, getKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
+			f.SeedClient.Client(), "update", shootSeedNamespace, GetKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
 		Expect(err).NotTo(HaveOccurred())
-		waitForJobToBeReady(ctx, f.SeedClient.Client(), job)
+		WaitForJobToBeReady(ctx, f.SeedClient.Client(), job)
 	}
 
 	k8sGreaterEqual123, err := versionutils.CheckVersionMeetsConstraint(f.Shoot.Spec.Kubernetes.Version, ">= 1.23")
@@ -294,7 +294,7 @@ func getNextConsecutiveMinorVersion(cloudProfile *gardencorev1beta1.CloudProfile
 	return newVersion, nil
 }
 
-func waitForJobToBeReady(ctx context.Context, cl client.Client, job *batchv1.Job) {
+func WaitForJobToBeReady(ctx context.Context, cl client.Client, job *batchv1.Job) {
 	r, _ := labels.NewRequirement("job-name", selection.Equals, []string{job.Name})
 	opts := &client.ListOptions{
 		LabelSelector: labels.NewSelector().Add(*r),
