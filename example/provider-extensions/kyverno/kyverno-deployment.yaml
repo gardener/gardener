@@ -5,3 +5,12 @@ metadata:
   namespace: kyverno
 spec:
   replicas: 3
+  template:
+    metadata:
+      labels:
+        projected-token-mount.resources.gardener.cloud/skip: "true"
+        seccompprofile.resources.gardener.cloud/skip: "true"
+        topology-spread-constraints.resources.gardener.cloud/skip: "true"
+    spec:
+      # Kyverno should not be evicted for gardener pods because it needs to add the imagePullSecrets to these pods
+      priorityClassName: system-cluster-critical

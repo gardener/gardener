@@ -30,12 +30,8 @@ parse_flags() {
 
 parse_flags "$@"
 
-# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-echo "Deleting all shoots"
-# Deleting all shoots to ensure that there are no orphan infrastructure elements left
-kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate shoots -A --all confirmation.gardener.cloud/deletion=true --overwrite
-kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete shoots -A --all --wait
-
+# Delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding.
+# Deleting seed will fail as long as there are shoots scheduled on it. This is desired to ensure that there are no orphan infrastructure elements left.
 echo "Deleting $SEED_NAME seed"
 kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete seeds "$SEED_NAME" --wait --ignore-not-found
 skaffold --kubeconfig="$PATH_SEED_KUBECONFIG" delete -m gardenlet -p extensions

@@ -89,7 +89,7 @@ ensure-gardener-dns-annotations() {
 
   kubectl annotate --overwrite --kubeconfig "$seed_kubeconfig" svc -n "$namespace" "$name" \
     dns.gardener.cloud/class=garden \
-    dns.gardener.cloud/ttl="600" \
+    dns.gardener.cloud/ttl="60" \
     dns.gardener.cloud/dnsnames="$domain" \
     cert.gardener.cloud/commonname="$domain" \
     cert.gardener.cloud/dnsnames="$domain" \
@@ -100,14 +100,15 @@ ensure-gardener-dns-annotations() {
 
 echo "Ensuring config files"
 ensure-config-file "$SCRIPT_DIR"/seed-config.yaml
-ensure-config-file "$REPO_ROOT_DIR"/example/gardener-local/controlplane/extensions-config/values.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secret-bindings.yaml
+touch -a "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
 
 echo "Check if essential config options are initialized"
 check-not-initial "$SCRIPT_DIR"/kubeconfig ""
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".ingressDomain"
-check-not-initial "$REPO_ROOT_DIR"/example/gardener-local/controlplane/extensions-config/values.yaml ".global.internalDomain.domain"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.domain"
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootInfo"
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootDNS"
 

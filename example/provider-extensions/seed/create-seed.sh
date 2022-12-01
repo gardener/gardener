@@ -62,8 +62,8 @@ nodes_cidr=$(yq '.nodeNetwork' "$SCRIPT_DIR"/seed-config.yaml)
 services_cidr=$(yq '.serviceNetwork' "$SCRIPT_DIR"/seed-config.yaml)
 region=$(yq '.region' "$SCRIPT_DIR"/seed-config.yaml)
 type=$(yq '.provider' "$SCRIPT_DIR"/seed-config.yaml)
-internal_dns_secret=$(yq -e '.global.internalDomain.domain' "$SCRIPT_DIR"/../../gardener-local/controlplane/extensions-config/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
-dns_provider_type=$(yq -e '.global.internalDomain.provider' "$SCRIPT_DIR"/../../gardener-local/controlplane/extensions-config/values.yaml)
+internal_dns_secret=$(yq -e '.global.internalDomain.domain' "$SCRIPT_DIR"/../../provider-extensions/garden/controlplane/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
+dns_provider_type=$(yq -e '.global.internalDomain.provider' "$SCRIPT_DIR"/../../provider-extensions/garden/controlplane/values.yaml)
 
 if [[ $(yq '.useGardenerShootInfo' "$SCRIPT_DIR"/seed-config.yaml) == "true" ]]; then
   echo "Getting config from shoot"

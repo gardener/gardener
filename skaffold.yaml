@@ -568,7 +568,7 @@ profiles:
                 candidateDeterminationStrategy: MinimalDistance
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/gardener-local/controlplane/extensions-config/values.yaml
+    value: example/provider-extensions/garden/controlplane/values.yaml
 
 ---
 apiVersion: skaffold/v2beta29
@@ -1189,8 +1189,8 @@ profiles:
         sleep 2
       done
       kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=bootstrapped seed $SEED_NAME --timeout=5m
-  - op: replace
-    path: /deploy/helm/releases/0/valuesFiles/0
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
     # for the provider-extensions profile only 2 images are built: gardenlet and resource-manager
     # so the imageVectorOverwrite must be patched to specify the correct tags
@@ -1224,6 +1224,10 @@ profiles:
         - name: gardener-resource-manager
           repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_resource-manager
           tag: "{{.IMAGE_TAG2}}"
+  # Optional values.yaml for a custom config
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/provider-extensions/gardenlet/values.yaml
 
 - name: ha-single-zone
   patches:

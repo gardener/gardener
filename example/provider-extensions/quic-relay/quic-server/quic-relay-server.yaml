@@ -14,7 +14,12 @@ spec:
     metadata:
       labels:
         app: gardener-api-quic-server
+        projected-token-mount.resources.gardener.cloud/skip: "true"
+        seccompprofile.resources.gardener.cloud/skip: "true"
+        topology-spread-constraints.resources.gardener.cloud/skip: "true"
     spec:
+      # Relay should not be evicted for gardener pods because gardenlet does not work when it cannot reach the gardener-apiserver
+      priorityClassName: system-cluster-critical
       containers:
       - args:
         - --listen-tcp=0.0.0.0:6443

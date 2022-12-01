@@ -10,6 +10,7 @@ metadata:
       Locally built Gardener images are pushed to a container registry on the the seed.
       This registry requires an imagePullSecret, which cannot to gardener components by gardener itself.   
 spec:
+  failurePolicy: Ignore
   rules:
   - name: add-gardener-imagepullsecret
     match:

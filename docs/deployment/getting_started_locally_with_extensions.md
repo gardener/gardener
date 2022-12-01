@@ -1,11 +1,11 @@
 # Deploying Gardener locally and enable provider-extensions
 
-This document will walk you through deploying Gardener on your local machine and bootstrap your own seed clusters in an existing Gardener landscape.
-It is supposed to run your local Gardener developments on a real infrastructure. For Gardener entirely local please check the [getting started locally](getting_started_locally.md) docs.
+This document will walk you through deploying Gardener on your local machine and bootstrap your own seed clusters on a existing Kubernetes cluster.
+It is supposed to run your local Gardener developments on a real infrastructure. For running Gardener only entirely local, please check the [getting started locally](getting_started_locally.md) docs.
 If you encounter difficulties, please open an issue so that we can make this process easier.
 
 Gardener runs in any Kubernetes cluster.
-In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which is used as garden cluster. Existing Gardener clusters will be used as seed clusters in order to support provider extensions (please refer to the [architecture overview](../concepts/architecture.md)).
+In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which is used as garden cluster. Any Kubernetes cluster could be used as seed clusters in order to support provider extensions (please refer to the [architecture overview](../concepts/architecture.md)). This guide is tested for using Kubernetes Clusters provided by Gardener, AWS, Azure and GCP as seed so far.
 
 Based on [Skaffold](https://skaffold.dev/), the container images for all required components will be built and deployed into the clusters (via their [Helm charts](https://helm.sh/)).
 
@@ -21,9 +21,8 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
   - The seed cluster requires at least 16 CPUs in total to run one shoot cluster
   - You could use any Kubernetes cluster for your seed cluster. However, using a Gardener shoot cluster for your seed simplifies some configuration steps.
   - When bootstrapping `gardenlet` to the cluster your new seed will have the same provider type as the shoot cluster you use...an AWS shoot will become an AWS seed, an GCP shoot will become an GCP seed etc. (only relevant when using a Gardener shoot as seed).
-  - Hibernating seeds could cause problems, so please don't hibernate (and deactivate hibernation schedule) while using it as seed (only relevant when using a Gardener shoot as seed).
 
-## Provide infrastructure credentials and configuration
+## Provide Infrastructure Credentials And Configuration
 
 As this setup is running on a real infrastructure, you have to provide credentials for DNS, the infrastructure and the kubeconfig for Gardener cluster you want to use as seed.
 
@@ -32,9 +31,9 @@ As this setup is running on a real infrastructure, you have to provide credentia
 ### DNS
 Gardener control plane requires DNS for default and internal domains. Thus, you have to configure a valid DNS provider for your setup.
 
-Please maintain your DNS provider configuration and credentials at `./example/gardener-local/controlplane/extensions-config/values.yaml`.
+Please maintain your DNS provider configuration and credentials at `./example/provider-extensions/garden/controlplane/values.yaml`.
 
-You can find a template for the file at `./example/gardener-local/controlplane/extensions-config/values.yaml.tmpl`.
+You can find a template for the file at `./example/provider-extensions/garden/controlplane/values.yaml.tmpl`.
 
 ### Infrastructure
 Infrastructure secrets and the corresponding secret bindings should be maintained at:
@@ -43,7 +42,7 @@ Infrastructure secrets and the corresponding secret bindings should be maintaine
 
 There are templates with `.tmpl` suffixes for the files in the same folder.
 
-### Seed cluster preparation
+### Seed Cluster Preparation
 The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.
 Additionally, please maintain the configuration of your seed in `./example/provider-extensions/seed/seed-config.yaml`. You can use `seed-config.yaml.tmpl` in the same directory as a template. This file also includes explanations of the settings.
 
@@ -51,10 +50,10 @@ Using a Gardener cluster as seed simplifies the process, because some configurat
 
 However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `seed-config.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up` , which is explained later, will pause and tell you what to do.
 
-### Cloud-profiles
-There are no demo cloud-profiles yet. Thus, please copy cloud-profiles from another landscape to `./example/provider-extensions/garden/cloud-profiles/profiles` or create your own cloud-profiles based on the [gardener examples](../../example/30-cloudprofile.yaml).  
+### `CloudProfile`s
+There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from another landscape to `./example/provider-extensions/garden/cloud-profiles/profiles` or create your own `CloudProfiles` based on the [gardener examples](../../example/30-cloudprofile.yaml). Please check the GitHub repository of your desired provider-extension. Most of them include example `CloudProfile`s.
 
-## Setting up the KinD cluster
+## Setting Up The KinD Cluster
 
 ```bash
 make kind-extensions-up
@@ -67,16 +66,16 @@ Alternatively, make sure to set your `KUBECONFIG` environment variable to `./exa
 
 All following steps assume that you are using this kubeconfig.
 
-Additionally, this command also deploys a local container registry to the cluster as well as a few registry mirrors, that are set up as a pull-through cache for all upstream registries Gardener uses by default.
+Additionally, this command deploys a local container registry to the cluster as well as a few registry mirrors that are set up as a pull-through cache for all upstream registries Gardener uses by default.
 This is done to speed up image pulls across local clusters.
 The local registry can be accessed as `localhost:5001` for pushing and pulling.
-The storage directories of the registries are mounted to the host machine under `dev/local-registry`.
+The storage directories of the registries are mounted to your machine under `dev/local-registry`.
 With this, mirrored images don't have to be pulled again after recreating the cluster.
 
 The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
 Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
 
-## Setting up Gardener (Garden on KinD, Seed on Gardener cluster)
+## Setting Up Gardener (Garden on KinD, Seed on Gardener Cluster)
 
 ```bash
 make gardener-extensions-up
@@ -86,9 +85,9 @@ This will first prepare the basic configuration of your KinD and Gardener cluste
 Afterwards, the images for the Garden cluster are built and deployed into the KinD cluster.
 Finally, the images for the Seed cluster are built, pushed to a container registry on the Seed and the `gardenlet` is started.
 
-## Pause and unpause the KinD cluster
+## Pause And Unpause The KinD Cluster
 
-Unlike in the `getting started locally` scenario the KinD cluster can be paused by stopping and keeping its docker container. This is done by:
+The KinD cluster can be paused by stopping and keeping its docker container. This can be done by running:
 
 ```bash
 make kind-extensions-down
@@ -98,66 +97,55 @@ When you run `make kind-extensions-up` again, you will start the docker containe
 
 This provides the option to switch off your local KinD cluster fast without leaving orphaned infrastructure elements behind.
 
-
-## Creating a `Shoot` cluster
+## Creating a `Shoot` Cluster
 
 You can wait for the `Seed` to be ready by running
 
 ```bash
-kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed provider-extensions --timeout=5m
+kubectl wait --for=condition=gardenletready seed provider-extensions --timeout=5m
 ```
+
+`make kind-extensions-up` already includes such a check. However, it might be useful when you wake up your `Seed` from hibernation or unpause you KinD cluster.
 
 Alternatively, you can run `kubectl get seed provider-extensions` and wait for the `STATUS` to indicate readiness:
 
 ```bash
 NAME                  STATUS   PROVIDER   REGION         AGE    VERSION      K8S VERSION
-provider-extensions   Ready    gcp        europe-west1   111m   v0.0.0-dev   v1.24.2
+provider-extensions   Ready    gcp        europe-west1   111m   v1.61.0-dev   v1.24.7
 ```
 
-In order to create a first shoot cluster, just try one of the following example shoot configurations. Please remember that only shoot cluster with the same provider type as your seed cluster will be started successfully. The others will remain in `<pending>` state.
+In order to create a first shoot cluster, please create your own `Shoot` definition and apply it to your KinD cluster. `gardener-scheduler` includes `candidateDeterminationStrategy: MinimalDistance` configuration so you are able to run schedule `Shoot`s of different providers on your `Seed`.
 
-```bash
-kubectl apply -f ./example/provider-extensions/shoot/aws.yaml
-kubectl apply -f ./example/provider-extensions/shoot/aws-arm64.yaml
-kubectl apply -f ./example/provider-extensions/shoot/azure.yaml
-kubectl apply -f ./example/provider-extensions/shoot/gcp.yaml
-```
 
-You can wait for the `Shoot` to be ready by running `kubectl -n garden-local get shoots` and wait for the `LAST OPERATION` to reach `100%`:
+You can wait for your `Shoot`s to be ready by running `kubectl -n garden-local get shoots` and wait for the `LAST OPERATION` to reach `100%`. The output depends on your `Shoot` definition. This is an example output:
 
 ```bash
 NAME        CLOUDPROFILE   PROVIDER   REGION         K8S VERSION   HIBERNATION   LAST OPERATION               STATUS    AGE
-aws         aws            aws        eu-west-1      1.24.3        Awake         <pending>                    healthy   84s
-aws-arm64   aws            aws        eu-west-1      1.24.3        Awake         <pending>                    healthy   65s
-azure       az             azure      westeurope     1.24.2        Awake         <pending>                    healthy   57s
+aws         aws            aws        eu-west-1      1.24.3        Awake         Create Processing (43%)      healthy   84s
+aws-arm64   aws            aws        eu-west-1      1.24.3        Awake         Create Processing (43%)      healthy   65s
+azure       az             azure      westeurope     1.24.2        Awake         Create Processing (43%)      healthy   57s
 gcp         gcp            gcp        europe-west1   1.24.3        Awake         Create Processing (43%)      healthy   94s
 ```
 
-### Accessing the `Shoot` cluster
+### Accessing The `Shoot` Cluster
 
-Your shoot clusters will have a public DNS entries for their API servers, so that they are could be reached via `kubectl` after you downloaded their `kubeconfig`.
+Your shoot clusters will have a public DNS entries for their API servers, so that they are could be reached via the Internet via  `kubectl` after you created their `kubeconfig`.
 
-The cluster from the examples listed before have kubeconfigs with static tokens. This is how to access the `gcp` cluster example. The others could be accessed accordingly. 
+We encourage you to use the [adminkubeconfig subresource](../proposals/16-adminkubeconfig-subresource.md) for accessing your shoot cluster. You find an example how to use it in our [docs](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
 
-```bash
-kubectl get secrets -n garden-local gcp.kubeconfig -o yaml | yq .data.kubeconfig | base64 -d > /tmp/kubeconfig-extensions.yaml
-kubectl --kubeconfig=/tmp/kubeconfig-extensions.yaml get nodes
-```
+## Deleting The `Shoot` Clusters
 
-## Deleting the `Shoot` clusters
+Before tearing down your environment you have to delete your shoot clusters. This is highly recommended because otherwise you would leave orphaned items on your infrastructure accounts.
 
 ```bash
-./hack/usage/delete shoot aws garden-local
-./hack/usage/delete shoot aws-arm64 garden-local
-./hack/usage/delete shoot azure garden-local
-./hack/usage/delete shoot gcp garden-local
+./hack/usage/delete shoot <your-shoot> garden-local
 ```
 
-## Tear down the Gardener environment
+## Tear Down The Gardener Environment
 
-Before you delete your local KinD cluster you should shut down your `Shoots` and `Seed` in a clean way to avoid orphaned infrastructure elements in your projects. 
+Before you delete your local KinD cluster, you should shut down your `Shoots` and `Seed` in a clean way to avoid orphaned infrastructure elements in your projects. 
 
-Please ensure that your KinD and Seed clusters are online and run:
+Please ensure that your KinD and Seed clusters are online (not paused or hibernated) and run:
 
 ```bash
 make gardener-extensions-down
@@ -165,7 +153,7 @@ make gardener-extensions-down
 
 This will delete all `Shoots` first (this could take a couple of minutes), then uninstall `gardenlet` from the Seed and the gardener components from the KinD. Finally, the additional components like container registry etc. are deleted from both clusters.
 
-When this is done you can securely delete your local KinD cluster by:
+When this is done, you can securely delete your local KinD cluster by:
 
 ```bash
 make kind-extensions-clean

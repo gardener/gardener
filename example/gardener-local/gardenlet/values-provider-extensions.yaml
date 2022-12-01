@@ -1,11 +1,6 @@
 config:
   gardenClientConnection:
-    kubeconfigSecret:
-      name: gardenlet-kubeconfig
-      namespace: garden
     bootstrapKubeconfig:
-      name: gardenlet-kubeconfig-bootstrap
-      namespace: garden
       kubeconfig: |
         apiVersion: v1
         kind: Config
@@ -24,38 +19,13 @@ config:
         - name: gardenlet-bootstrap
           user:
             token: 07401d.f395accd246ae52d
-  controllers:
-    shoot:
-      reconcileInMaintenanceOnly: true
-  featureGates:
-    HVPA: true
-    HVPAForShootedSeed: true
-    ManagedIstio: true
-    APIServerSNI: true
-    ReversedVPN: true
-    CopyEtcdBackupsDuringControlPlaneMigration: true
-    DefaultSeccompProfile: true
-    CoreDNSQueryRewriting: true
-  logging:
-    enabled: true
-    loki:
-      enabled: true
-    shootNodeLogging:
-      shootPurposes:
-      - "infrastructure"
-      - "production"
-      - "development"
-      - "evaluation"
   seedConfig:
     metadata:
       # Set via skaffold.yaml
       name: ""
     spec:
-      # backup:
-      #   provider: gcp
-      #   secretRef:
-      #     name: backup-gcp
-      #     namespace: garden
+      backup: null
+      secretRef: null
       dns:
         provider:
           secretRef:
@@ -78,9 +48,6 @@ config:
         nodes: $NODES_CIDR
         services: ""
         shootDefaults:
-          # CIDR should not overlap with default shoot CIDRs of Gardener landscapes
-          # pods: 100.64.0.0/12
-          # services: 100.104.0.0/13
           pods: 100.80.0.0/12
           services: 100.112.0.0/13
       provider:
