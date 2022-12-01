@@ -101,7 +101,7 @@ func excludeBlock(parentBlock *net.IPNet, cidrs ...string) ([]string, error) {
 		parentBlockMaskLength, _ := parentBlock.Mask.Size()
 		ipNetMaskLength, _ := ipNet.Mask.Size()
 
-		if parentBlock.Contains(ip) && (parentBlockMaskLength < ipNetMaskLength) {
+		if parentBlock.Contains(ip) && parentBlockMaskLength < ipNetMaskLength {
 			matchedCIDRs = append(matchedCIDRs, cidr)
 		}
 	}
