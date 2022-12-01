@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// GetKubeAPIServerAuthToken returns kube API server auth token for given shoot's control-plane namespace in seed cluster.
 func GetKubeAPIServerAuthToken(ctx context.Context, seedClient kubernetes.Interface, namespace string) string {
 	c := seedClient.Client()
 	deployment := &appsv1.Deployment{
@@ -294,6 +295,7 @@ func getNextConsecutiveMinorVersion(cloudProfile *gardencorev1beta1.CloudProfile
 	return newVersion, nil
 }
 
+// WaitForJobToBeReady waits until given job's associated pod is ready.
 func WaitForJobToBeReady(ctx context.Context, cl client.Client, job *batchv1.Job) {
 	r, _ := labels.NewRequirement("job-name", selection.Equals, []string{job.Name})
 	opts := &client.ListOptions{

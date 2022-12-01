@@ -52,7 +52,15 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 		f.Shoot = shootTest2
 
 		When("Pre-upgrade (version:'"+gardenerPreviousRelease+"')", Ordered, Label("pre-upgrade"), func() {
-			ctx, _ := context.WithTimeout(parentCtx, 30*time.Minute)
+			var (
+				ctx    context.Context
+				cancel context.CancelFunc
+			)
+
+			BeforeAll(func() {
+				ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+				DeferCleanup(cancel)
+			})
 
 			It("should create a shoot", func() {
 				Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
@@ -76,10 +84,15 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 		})
 
 		When("Post-upgrade (version:'"+gardenerCurrentRelease+"')", Ordered, Label("post-upgrade"), func() {
-			var seedClient client.Client
-			ctx, _ := context.WithTimeout(parentCtx, 20*time.Minute)
+			var (
+				ctx        context.Context
+				cancel     context.CancelFunc
+				seedClient client.Client
+			)
 
 			BeforeAll(func() {
+				ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+				DeferCleanup(cancel)
 				Expect(f.GetShoot(ctx, shootTest2)).To(Succeed())
 				f.ShootFramework, err = f.NewShootFramework(ctx, shootTest2)
 				Expect(err).NotTo(HaveOccurred())
@@ -97,7 +110,7 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 				Expect(seedClient.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationForeground))).To(Succeed())
 			})
 
-			It("should able to delete a shoot which was created in previous release", Label("delete"), func() {
+			It("should able to delete a shoot which was created in previous release", func() {
 				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousRelease))
 				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, shootTest2)).To(Succeed())
 			})
