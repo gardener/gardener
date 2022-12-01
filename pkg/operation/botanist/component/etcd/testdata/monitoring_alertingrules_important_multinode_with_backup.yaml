@@ -32,7 +32,7 @@ tests:
   - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test",kind="Full",pod="etcd",role="test"}'
     values: '1+0x2912'
   - series: 'etcd_server_is_leader{job="kube-etcd3-test",pod="etcd",role="test"}'
-    values: '1+0x100'
+    values: '1+0x2912'
   # KubeEtcdRestorationFailed
   - series: 'etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore-test",succeeded="false"}'
     values: '0+0x7 1 2 2'
@@ -100,6 +100,8 @@ tests:
     alertname: KubeEtcdDeltaBackupFailed
     exp_alerts:
     - exp_labels:
+        pod: etcd
+        role: test
         job: kube-etcd3-backup-restore-test
         kind: Incr
         service: etcd
@@ -113,6 +115,8 @@ tests:
     alertname: KubeEtcdFullBackupFailed
     exp_alerts:
     - exp_labels:
+        pod: etcd
+        role: test
         job: kube-etcd3-backup-restore-test
         kind: Full
         service: etcd

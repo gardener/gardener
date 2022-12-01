@@ -25,11 +25,13 @@ tests:
   - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test",kind="Incr", pod="etcd", role="test"}'
     values: '1+0x62'
   - series: 'etcd_server_is_leader{job="kube-etcd3-test", pod="etcd", role="test"}'
-    values: '1+0x30'
+    values: '1+0x62'
   # KubeEtcdFullBackupFailed
-  - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-test",kind="Full"}'
+  - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-test",kind="Full", pod="etcd", role="test"}'
     values: '0+0x2912'
-  - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test",kind="Full"}'
+  - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test",kind="Full", pod="etcd", role="test"}'
+    values: '1+0x2912'
+  - series: 'etcd_server_is_leader{job="kube-etcd3-test", pod="etcd", role="test"}'
     values: '1+0x2912'
   # KubeEtcdRestorationFailed
   - series: 'etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore-test",succeeded="false"}'
@@ -98,6 +100,8 @@ tests:
     alertname: KubeEtcdDeltaBackupFailed
     exp_alerts:
     - exp_labels:
+        pod: etcd
+        role: test
         job: kube-etcd3-backup-restore-test
         kind: Incr
         service: etcd
@@ -105,12 +109,14 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: No delta snapshot for the past at least 30 minutes.
+        description: No delta snapshot for the past at least 30 minutes taken by backup-restore leader.
         summary: Etcd delta snapshot failure.
   - eval_time: 1456m
     alertname: KubeEtcdFullBackupFailed
     exp_alerts:
     - exp_labels:
+        pod: etcd
+        role: test
         job: kube-etcd3-backup-restore-test
         kind: Full
         service: etcd
@@ -118,7 +124,7 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: No full snapshot taken in the past day.
+        description: No full snapshot taken in the past day taken by backup-restore leader.
         summary: Etcd full snapshot failure.
   - eval_time: 5m
     alertname: KubeEtcdRestorationFailed
