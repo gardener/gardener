@@ -87,7 +87,6 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#DestroySourceBackupEntry", func() {
-
 		It("shouldn't destroy the SourceBackupEntry component when CopyEtcdBackupsDuringControlPlaneMigration=false", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, false)()
 
@@ -128,9 +127,10 @@ var _ = Describe("BackupEntry", func() {
 			Expect(botanist.DestroySourceBackupEntry(ctx)).To(Succeed())
 		})
 
-		It("should destroy the SourceBackupEntry component", func() {
+		It("should set force-deletion annotation and destroy the SourceBackupEntry component", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, true)()
 
+			sourceBackupEntry.EXPECT().SetForceDeletionAnnotation(ctx)
 			sourceBackupEntry.EXPECT().Destroy(ctx)
 
 			Expect(botanist.DestroySourceBackupEntry(ctx)).To(Succeed())
