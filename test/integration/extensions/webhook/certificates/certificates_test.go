@@ -314,13 +314,15 @@ var _ = Describe("Certificates tests", func() {
 					},
 				},
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				FailurePolicy:           &failurePolicyFail,
-				MatchPolicy:             &matchPolicyExact,
-				SideEffects:             &sideEffectsNone,
-				TimeoutSeconds:          &timeoutSeconds,
-				ReinvocationPolicy:      &reinvocationPolicy,
-				NamespaceSelector:       &metav1.LabelSelector{},
-				ObjectSelector:          &metav1.LabelSelector{},
+				// here variable failurePolicyFail can't be used as it can be overwritten to
+				// `Ignore` by previous tests
+				FailurePolicy:      (*admissionregistrationv1.FailurePolicyType)(pointer.String("Fail")),
+				MatchPolicy:        &matchPolicyExact,
+				SideEffects:        &sideEffectsNone,
+				TimeoutSeconds:     &timeoutSeconds,
+				ReinvocationPolicy: &reinvocationPolicy,
+				NamespaceSelector:  &metav1.LabelSelector{},
+				ObjectSelector:     &metav1.LabelSelector{},
 			}
 
 			seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
