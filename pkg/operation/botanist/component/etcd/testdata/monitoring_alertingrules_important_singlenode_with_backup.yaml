@@ -20,10 +20,12 @@ tests:
   - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-test"}'
     values: '7194070000+107374182x20' # 6.7GB 6.8GB 6.9GB .. 7.7GB
   # KubeEtcdDeltaBackupFailed
-  - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-test",kind="Incr"}'
+  - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-test",kind="Incr", pod="etcd", role="test"}'
     values: '0+0x62'
-  - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test",kind="Incr"}'
+  - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test",kind="Incr", pod="etcd", role="test"}'
     values: '1+0x62'
+  - series: 'etcd_server_is_leader{job="kube-etcd3-test", pod="etcd", role="test"}'
+    values: '1+0x30'
   # KubeEtcdFullBackupFailed
   - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-test",kind="Full"}'
     values: '0+0x2912'

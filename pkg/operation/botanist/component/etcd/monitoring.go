@@ -176,7 +176,7 @@ const (
   {{- if .backupEnabled }}
   # etcd backup failure alerts
   - alert: KubeEtcdDeltaBackupFailed
-    expr: (time() - ` + monitoringMetricBackupRestoreSnapshotLatestTimestamp + `{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Incr"} > bool 900) + (etcdbr_snapshot_required{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}", kind="Incr"} >= bool 1) == 2
+    expr: ((time() - ` + monitoringMetricBackupRestoreSnapshotLatestTimestamp + `{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Incr"} > bool 900) + (etcdbr_snapshot_required{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}", kind="Incr"} >= bool 1) == 2) + on(pod,role) 0 * (` + monitoringMetricEtcdServerIsLeader + `{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}" == 1 )
     for: 15m
     labels:
       service: etcd
@@ -184,10 +184,10 @@ const (
       type: seed
       visibility: operator
     annotations:
-      description: No delta snapshot for the past at least 30 minutes.
+      description: No delta snapshot for the past at least 30 minutes taken by backup-restore leader.
       summary: Etcd delta snapshot failure.
   - alert: KubeEtcdFullBackupFailed
-    expr: (time() - ` + monitoringMetricBackupRestoreSnapshotLatestTimestamp + `{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Full"} > bool 86400) + (etcdbr_snapshot_required{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}", kind="Full"} >= bool 1) == 2
+    expr: ((time() - ` + monitoringMetricBackupRestoreSnapshotLatestTimestamp + `{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Full"} > bool 86400) + (etcdbr_snapshot_required{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}", kind="Full"} >= bool 1) == 2) + on(pod,role) 0 * (` + monitoringMetricEtcdServerIsLeader + `{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}" == 1 )
     for: 15m
     labels:
       service: etcd
@@ -195,7 +195,7 @@ const (
       type: seed
       visibility: operator
     annotations:
-      description: No full snapshot taken in the past day.
+      description: No full snapshot taken in the past day taken by backup-restore leader.
       summary: Etcd full snapshot failure.
 
   # etcd data restoration failure alert

@@ -373,7 +373,7 @@ metric_relabel_configs:
 
 	alertingRulesBackup = `  # etcd backup failure alerts
   - alert: KubeEtcdDeltaBackupFailed
-    expr: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Incr"} > bool 900) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `", kind="Incr"} >= bool 1) == 2
+    expr: ((time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Incr"} > bool 900) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `", kind="Incr"} >= bool 1) == 2) + on(pod,role) 0 * (etcd_server_is_leader{job="kube-etcd3-` + testRole + `" == 1 )
     for: 15m
     labels:
       service: etcd
@@ -381,10 +381,10 @@ metric_relabel_configs:
       type: seed
       visibility: operator
     annotations:
-      description: No delta snapshot for the past at least 30 minutes.
+      description: No delta snapshot for the past at least 30 minutes taken by backup-restore leader.
       summary: Etcd delta snapshot failure.
   - alert: KubeEtcdFullBackupFailed
-    expr: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"} > bool 86400) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `", kind="Full"} >= bool 1) == 2
+    expr: ((time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"} > bool 86400) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `", kind="Full"} >= bool 1) == 2) + on(pod,role) 0 * (etcd_server_is_leader{job="kube-etcd3-` + testRole + `" == 1 )
     for: 15m
     labels:
       service: etcd
@@ -392,7 +392,7 @@ metric_relabel_configs:
       type: seed
       visibility: operator
     annotations:
-      description: No full snapshot taken in the past day.
+      description: No full snapshot taken in the past day taken by backup-restore leader.
       summary: Etcd full snapshot failure.
 
   # etcd data restoration failure alert
