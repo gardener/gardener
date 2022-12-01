@@ -313,12 +313,27 @@ var _ = Describe("BackupEntry", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should return the retrived backupentry and save it locally", func() {
+		It("should return the retrieved backupentry and save it locally", func() {
 			Expect(c.Create(ctx, expected)).To(Succeed())
 			backupEntry, err := defaultDepWaiter.Get(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(backupEntry).To(Equal(expected))
 			Expect(defaultDepWaiter.GetActualBucketName()).To(Equal(expected.Spec.BucketName))
+		})
+	})
+
+	Describe("#SetForceDeletionAnnotation", func() {
+		It("should not do anything if backupentry does not exist", func() {
+			Expect(defaultDepWaiter.SetForceDeletionAnnotation(ctx)).To(Succeed())
+		})
+
+		It("should set the force-deletion annotation on the backupentry", func() {
+			modified := expected.DeepCopy()
+
+			Expect(c.Create(ctx, expected)).To(Succeed())
+			Expect(defaultDepWaiter.SetForceDeletionAnnotation(ctx)).To(Succeed())
+			Expect(c.Get(ctx, kutil.Key(modified.Namespace, modified.Name), modified)).To(Succeed())
+			Expect(modified.Annotations["backupentry.core.gardener.cloud/force-deletion"]).To(Equal("true"))
 		})
 	})
 })
