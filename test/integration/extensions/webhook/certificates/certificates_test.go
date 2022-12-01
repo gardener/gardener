@@ -199,13 +199,15 @@ var _ = Describe("Certificates tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("verifying certificates exist on disk")
-			serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverCert).NotTo(BeEmpty())
+			Eventually(func(g Gomega) {
+				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverCert).NotTo(BeEmpty())
 
-			serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverKey).NotTo(BeEmpty())
+				serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverKey).NotTo(BeEmpty())
+			}).Should(Succeed())
 
 			By("starting manager")
 			mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -357,13 +359,15 @@ var _ = Describe("Certificates tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("verifying certificates exist on disk")
-			serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverCert).NotTo(BeEmpty())
+			Eventually(func(g Gomega) {
+				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverCert).NotTo(BeEmpty())
 
-			serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverKey).NotTo(BeEmpty())
+				serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverKey).NotTo(BeEmpty())
+			}).Should(Succeed())
 
 			By("starting manager")
 			mgrContext, mgrCancel := context.WithCancel(ctx)
