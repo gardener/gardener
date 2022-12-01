@@ -181,8 +181,7 @@ This includes the kind cluster configuration itself as well as its calico config
 Developers will need to perform some configuration of their machine and Docker installation.
 Corresponding instructions are made available for macOS and Linux machines.
 
-provider-local is configured to use IPv6 addresses for patching the status of LoadBalancer services.
-This is auto-detected if provider-local runs on the seed itself and configured explicitly if running on the host machine (which might have both IPv4 and IPv6 addresses).
+provider-local is configured to use an IPv6 address (`::1`) instead of `127.0.0.1` for patching the status of LoadBalancer services.
 
 #### Scheduling
 
