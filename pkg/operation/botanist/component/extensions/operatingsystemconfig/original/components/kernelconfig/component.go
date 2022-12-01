@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/utils/version"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 )
 
 type component struct{}
@@ -40,9 +40,8 @@ func (component) Name() string {
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var newData = data
-	// Gardener sets protectKernelDefaults = true by default for k8s >= 1.26
-	if (ctx.KubeletConfigParameters.ProtectKernelDefaults != nil && *ctx.KubeletConfigParameters.ProtectKernelDefaults) ||
-		(ctx.KubeletConfigParameters.ProtectKernelDefaults == nil && ctx.KubernetesVersion != nil && version.ConstraintK8sGreaterEqual126.Check(ctx.KubernetesVersion)) {
+
+	if kubelet.ShouldProtectKernelDefaultsBeEnabled(&ctx.KubeletConfigParameters, ctx.KubernetesVersion) {
 		newData += "#Needed configuration by kubelet\n" +
 			"#The kubelet sets these values but it is not able to when protectKernelDefaults=true\n" +
 			"#Ref https://github.com/gardener/gardener/issues/7069\n" +
