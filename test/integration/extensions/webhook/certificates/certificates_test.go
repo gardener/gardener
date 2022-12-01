@@ -246,14 +246,14 @@ var _ = Describe("Certificates tests", func() {
 			})
 
 			It("should rotate the certificates and update the webhook configs", func() {
-				var caBundle1, caBundle2, serverCert1 []byte
+				var serverCert1 []byte
 
 				By("retrieving CA bundle (before first reconciliation)")
 
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				}).Should(Equal(caBundle1))
+				}).Should(Not(BeEmpty()))
 
 				By("reading generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
@@ -274,7 +274,7 @@ var _ = Describe("Certificates tests", func() {
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				}).Should(Equal(caBundle2))
+				}).Should(Not(BeEmpty()))
 
 				By("reading re-generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
