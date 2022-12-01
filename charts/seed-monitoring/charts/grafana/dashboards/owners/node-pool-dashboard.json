@@ -455,17 +455,35 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "$$hashKey": "object:122",
+          "alias": "Sum of selected groups",
+          "color": "#C4162A",
+          "fill": 1,
+          "fillGradient": 3
+        }
+      ],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"})",
+          "exemplar": true,
+          "expr": "count(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool)",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "nodes",
+          "legendFormat": "{{label_worker_gardener_cloud_pool}}",
           "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "count(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"})",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sum of selected groups",
+          "refId": "B"
         }
       ],
       "thresholds": [],
