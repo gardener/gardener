@@ -15,11 +15,16 @@
 package kernelconfig
 
 import (
+	"fmt"
+	"strconv"
+
+	"k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 )
 
 type component struct{}
@@ -33,7 +38,21 @@ func (component) Name() string {
 	return "kernel-config"
 }
 
-func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+	var newData = data
+
+	if kubelet.ShouldProtectKernelDefaultsBeEnabled(&ctx.KubeletConfigParameters, ctx.KubernetesVersion) {
+		newData += "#Needed configuration by kubelet\n" +
+			"#The kubelet sets these values but it is not able to when protectKernelDefaults=true\n" +
+			"#Ref https://github.com/gardener/gardener/issues/7069\n" +
+			fmt.Sprintf("%s = %s\n", sysctl.VMOvercommitMemory, strconv.Itoa(sysctl.VMOvercommitMemoryAlways)) +
+			fmt.Sprintf("%s = %s\n", sysctl.VMPanicOnOOM, strconv.Itoa(sysctl.VMPanicOnOOMInvokeOOMKiller)) +
+			fmt.Sprintf("%s = %s\n", sysctl.KernelPanicOnOops, strconv.Itoa(sysctl.KernelPanicOnOopsAlways)) +
+			fmt.Sprintf("%s = %s\n", sysctl.KernelPanic, strconv.Itoa(sysctl.KernelPanicRebootTimeout)) +
+			fmt.Sprintf("%s = %s\n", sysctl.RootMaxKeys, strconv.Itoa(sysctl.RootMaxKeysSetting)) +
+			fmt.Sprintf("%s = %s\n", sysctl.RootMaxBytes, strconv.Itoa(sysctl.RootMaxBytesSetting))
+	}
+
 	return []extensionsv1alpha1.Unit{
 			{
 				// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
@@ -48,8 +67,16 @@ func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []exte
 				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
-						// Do not change the encoding here because extensions might modify it!
-						Data: `# A higher vm.max_map_count is great for elasticsearch, mongo, or other mmap users
+						Data: newData,
+					},
+				},
+			},
+		},
+		nil
+}
+
+// Do not change the encoding here because extensions might modify it!
+const data = `# A higher vm.max_map_count is great for elasticsearch, mongo, or other mmap users
 # See https://github.com/kubernetes/kops/issues/1340
 vm.max_map_count = 135217728
 # See https://github.com/kubernetes/kubernetes/pull/38001
@@ -103,10 +130,4 @@ vm.memory_failure_early_kill = 1
 # This can happen if you run a lot of workloads on a given host,
 # or if your workloads create a lot of TCP connections or bidirectional UDP streams.
 net.netfilter.nf_conntrack_max = 1048576
-`,
-					},
-				},
-			},
-		},
-		nil
-}
+`

@@ -15,47 +15,83 @@
 package kernelconfig_test
 
 import (
+	"fmt"
+	"strconv"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kernelconfig"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Component", func() {
-	Describe("#Config", func() {
-		var component components.Component
+	var (
+		component components.Component
 
-		BeforeEach(func() {
-			component = New()
+		kubeletSysctlConfigComment = "#Needed configuration by kubelet\n" +
+			"#The kubelet sets these values but it is not able to when protectKernelDefaults=true\n" +
+			"#Ref https://github.com/gardener/gardener/issues/7069\n"
+		kubeletSysctlConfig = kubeletSysctlConfigComment +
+			fmt.Sprintf("%s = %s\n", sysctl.VMOvercommitMemory, strconv.Itoa(sysctl.VMOvercommitMemoryAlways)) +
+			fmt.Sprintf("%s = %s\n", sysctl.VMPanicOnOOM, strconv.Itoa(sysctl.VMPanicOnOOMInvokeOOMKiller)) +
+			fmt.Sprintf("%s = %s\n", sysctl.KernelPanicOnOops, strconv.Itoa(sysctl.KernelPanicOnOopsAlways)) +
+			fmt.Sprintf("%s = %s\n", sysctl.KernelPanic, strconv.Itoa(sysctl.KernelPanicRebootTimeout)) +
+			fmt.Sprintf("%s = %s\n", sysctl.RootMaxKeys, strconv.Itoa(sysctl.RootMaxKeysSetting)) +
+			fmt.Sprintf("%s = %s\n", sysctl.RootMaxBytes, strconv.Itoa(sysctl.RootMaxBytesSetting))
+		hardCodedKubeletSysctlConfig = kubeletSysctlConfigComment +
+			"vm/overcommit_memory = 1\n" +
+			"vm/panic_on_oom = 0\n" +
+			"kernel/panic_on_oops = 1\n" +
+			"kernel/panic = 10\n" +
+			"kernel/keys/root_maxkeys = 1000000\n" +
+			"kernel/keys/root_maxbytes = 25000000\n"
+	)
+
+	BeforeEach(func() {
+		component = New()
+	})
+
+	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool) {
+		units, files, err := component.Config(components.Context{
+			KubernetesVersion: semver.MustParse(k8sVersion),
+			KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
+				ProtectKernelDefaults: protectKernelDefaults,
+			},
 		})
+		modifiedData := data + additionalData
 
-		It("should return the expected units and files", func() {
-			units, files, err := component.Config(components.Context{})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				extensionsv1alpha1.Unit{
-					Name:    "systemd-sysctl.service",
-					Command: pointer.String("restart"),
-					Enable:  pointer.Bool(true),
-				},
-			))
-			Expect(files).To(ConsistOf(
-				extensionsv1alpha1.File{
-					Path:        "/etc/sysctl.d/99-k8s-general.conf",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Data: data,
-						},
+		Expect(err).NotTo(HaveOccurred())
+		Expect(units).To(ConsistOf(
+			extensionsv1alpha1.Unit{
+				Name:    "systemd-sysctl.service",
+				Command: pointer.String("restart"),
+				Enable:  pointer.Bool(true),
+			},
+		))
+		Expect(files).To(ConsistOf(
+			extensionsv1alpha1.File{
+				Path:        "/etc/sysctl.d/99-k8s-general.conf",
+				Permissions: pointer.Int32(0644),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Data: modifiedData,
 					},
 				},
-			))
-		})
-	})
+			},
+		))
+	},
+		Entry("should return the expected units and files", "1.24.0", "", nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true)),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false)),
+		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
+		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil),
+	)
 })
 
 const data = `# A higher vm.max_map_count is great for elasticsearch, mongo, or other mmap users
