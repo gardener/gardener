@@ -666,6 +666,20 @@ Gardener enables this webhook to schedule pods of deployments across nodes and z
 
 Please note, the `gardener-resource-manager` itself as well as pods labelled with `topology-spread-constraints.resources.gardener.cloud/skip` are excluded from any mutations.
 
+#### System Components Webhook
+
+If enabled, this webhook handles scheduling concerns for system components `Pod`s (expect those managed by `DaemonSet`s).
+The following tasks are performed by this webhook:
+
+- Add `pod.spec.nodeSelector` as given in the webhook configuration.
+- Add `pod.spec.tolerations` as given in the webhook configuration.
+- Add `pod.spec.tolerations` for any existing nodes matching the node selector given in the webhook configuration. Known taints and tolerations used for [taint based evictions](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions) are disregarded.
+
+Gardener enables this webhook for `kube-system` and `kubernetes-dashboard` namespaces in shoot clusters.
+It furthermore adds the configuration, so that `Pod`s will get the `worker.gardener.cloud/system-components: true` node selector as well as tolerate any custom taint that is added to system component worker nodes (`shoot.spec.provider.workers[].systemComponents.allow: true`).
+
+> You can opt-out of this behaviour for `Pod`s by labeling them with `system-components-config.resources.gardener.cloud/skip=true`.
+
 ### Validating Webhooks
 
 #### Unconfirmed Deletion Prevention For Custom Resources And Definitions

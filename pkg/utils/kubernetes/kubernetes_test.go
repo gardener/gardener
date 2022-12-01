@@ -1303,4 +1303,36 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			Expect(cert.Leaf.NotAfter).To(Equal(time.Date(2027, 4, 11, 7, 7, 0, 0, time.UTC)))
 		})
 	})
+
+	Describe("#TolerationForTaint", func() {
+		It("should return a toleration for taint with 'Equal' operator", func() {
+			taint := corev1.Taint{
+				Key:       "someKey",
+				Value:     "someValue",
+				Effect:    corev1.TaintEffectNoSchedule,
+				TimeAdded: &metav1.Time{},
+			}
+
+			Expect(TolerationForTaint(taint)).To(Equal(corev1.Toleration{
+				Key:      taint.Key,
+				Operator: corev1.TolerationOpEqual,
+				Value:    taint.Value,
+				Effect:   taint.Effect,
+			}))
+		})
+
+		It("should return a toleration for taint with 'Exists' operator", func() {
+			taint := corev1.Taint{
+				Key:       "someKey",
+				Effect:    corev1.TaintEffectNoSchedule,
+				TimeAdded: &metav1.Time{},
+			}
+
+			Expect(TolerationForTaint(taint)).To(Equal(corev1.Toleration{
+				Key:      taint.Key,
+				Operator: corev1.TolerationOpExists,
+				Effect:   taint.Effect,
+			}))
+		})
+	})
 })

@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 )
 
-var shootNamespaceSelector labels.Selector = labels.SelectorFromSet(labels.Set{
+var shootNamespaceSelector = labels.SelectorFromSet(labels.Set{
 	v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
 })
 

@@ -43,7 +43,9 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	gsets "github.com/gardener/gardener/pkg/utils/sets"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -488,4 +490,20 @@ func GetShootSeedNames(obj client.Object) (*string, *string) {
 		return nil, nil
 	}
 	return shoot.Spec.SeedName, shoot.Status.SeedName
+}
+
+// ExtractSystemComponentsTolerations returns tolerations that are required to schedule shoot system components
+// on the given workers. Tolerations are only considered for workers which have `SystemComponents.Allow: true`.
+func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []corev1.Toleration {
+	tolerations := gsets.New[corev1.Toleration]()
+
+	for _, worker := range workers {
+		if gardencorev1beta1helper.SystemComponentsAllowed(&worker) {
+			for _, taint := range worker.Taints {
+				tolerations.Insert(kutil.TolerationForTaint(taint))
+			}
+		}
+	}
+
+	return tolerations.UnsortedList()
 }

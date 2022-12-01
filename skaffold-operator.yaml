@@ -97,6 +97,7 @@ build:
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
+        - pkg/resourcemanager/webhook/systemcomponentsconfig
         - pkg/resourcemanager/webhook/tokeninvalidator
         - pkg/utils
         - pkg/utils/chart
@@ -113,6 +114,7 @@ build:
         - pkg/utils/managedresources/builder
         - pkg/utils/retry
         - pkg/utils/secrets
+        - pkg/utils/sets
         - pkg/utils/secrets/manager
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
@@ -197,6 +199,7 @@ build:
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
+        - pkg/resourcemanager/webhook/systemcomponentsconfig
         - pkg/resourcemanager/webhook/tokeninvalidator
         - pkg/utils
         - pkg/utils/context
@@ -208,6 +211,7 @@ build:
         - pkg/utils/kubernetes/unstructured
         - pkg/utils/retry
         - pkg/utils/secrets
+        - pkg/utils/sets
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr

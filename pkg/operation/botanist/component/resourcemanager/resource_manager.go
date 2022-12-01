@@ -64,6 +64,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -265,6 +266,8 @@ type Values struct {
 	SecretNameServerCA string
 	// SyncPeriod configures the duration of how often existing resources should be synced
 	SyncPeriod *metav1.Duration
+	// SystemComponentTolerations are the tolerations required for shoot system components.
+	SystemComponentTolerations []corev1.Toleration
 	// TargetDiffersFromSourceCluster states whether the target cluster is a different one than the source cluster
 	TargetDiffersFromSourceCluster bool
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
@@ -581,6 +584,19 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		config.Webhooks.PodSchedulerName.Enabled = true
 		config.Webhooks.PodSchedulerName.SchedulerName = pointer.String(kubescheduler.BinPackingSchedulerName)
+	}
+
+	if r.values.TargetDiffersFromSourceCluster {
+		config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
+			Enabled: true,
+			NodeSelector: map[string]string{
+				v1beta1constants.LabelWorkerPoolSystemComponents: "true",
+			},
+			PodNodeSelector: map[string]string{
+				v1beta1constants.LabelWorkerPoolSystemComponents: "true",
+			},
+			PodTolerations: r.values.SystemComponentTolerations,
+		}
 	}
 
 	data, err := runtime.Encode(codec, config)
@@ -1190,6 +1206,10 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
+	if r.values.TargetDiffersFromSourceCluster {
+		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+	}
+
 	if r.values.PodTopologySpreadConstraintsEnabled {
 		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
@@ -1622,6 +1642,45 @@ func GetSeccompProfileMutatingWebhook(
 			},
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, seccompprofile.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
+// GetSystemComponentsConfigMutatingWebhook returns the system-components-config mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetSystemComponentsConfigMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "system-components-config.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+			},
+		}},
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      resourcesv1alpha1.SystemComponentsConfigSkip,
+					Operator: metav1.LabelSelectorOpDoesNotExist,
+				},
+			},
+		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, systemcomponentsconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,

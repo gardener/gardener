@@ -704,3 +704,18 @@ func ClientCertificateFromRESTConfig(restConfig *rest.Config) (*tls.Certificate,
 	cert.Leaf = certs[0]
 	return &cert, nil
 }
+
+// TolerationForTaint returns the corresponding toleration for the given taint.
+func TolerationForTaint(taint corev1.Taint) corev1.Toleration {
+	operator := corev1.TolerationOpEqual
+	if taint.Value == "" {
+		operator = corev1.TolerationOpExists
+	}
+
+	return corev1.Toleration{
+		Key:      taint.Key,
+		Operator: operator,
+		Value:    taint.Value,
+		Effect:   taint.Effect,
+	}
+}
