@@ -44,7 +44,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Seed controller tests", Ordered, func() {
+var _ = Describe("Seed controller tests", func() {
 	var (
 		seed *gardencorev1beta1.Seed
 	)
@@ -226,6 +226,16 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 				})
 
 				test := func(seedIsGarden bool) {
+					// Make sure there are no garden resources present before proceeding to the test, since the controller takes the
+					// decision whether the seed is garden or not based on this.
+					if !seedIsGarden {
+						Eventually(func(g Gomega) []operatorv1alpha1.Garden {
+							gardenList := &operatorv1alpha1.GardenList{}
+							g.Expect(mgrClient.List(ctx, gardenList)).To(Succeed())
+							return gardenList.Items
+						}).Should(BeEmpty())
+					}
+
 					By("Wait for Seed to have finalizer")
 					Eventually(func(g Gomega) []string {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
@@ -303,11 +313,6 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 							g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
 							g.Expect(testClient.Delete(ctx, validatingWebhookConfiguration)).To(Succeed())
 						}).Should(Succeed())
-
-						Eventually(func(g Gomega) {
-							g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).Should(BeNotFoundError())
-							g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).Should(BeNotFoundError())
-						}).Should(Succeed())
 					} else {
 						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
 						// ManagedResources. However, it is not really running, so we have to fake its behaviour here.
@@ -365,6 +370,10 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 					Expect(testClient.Delete(ctx, seed)).To(Succeed())
 
 					if seedIsGarden {
+						// The CRDs are cleaned up by the Destroy function of GRM, in case the seed is not garden. So It might happen that, before we fetch the
+						// ManagedResourceList is empty, the CRDs are already gone. Since the gardener-resource-manager is deleted only after all the managedresources
+						// are gone, we don't need to assert it seperately. In case the seed is garden, the Destroy is called by the gardener-operator and since it's
+						// not running in this test, we can safely assert the below-mentioned.
 						By("Verify that the seed system components have been deleted")
 						Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 							managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
