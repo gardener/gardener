@@ -36,6 +36,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -56,7 +57,6 @@ import (
 const (
 	servicePort = 12345
 
-	extensionName                   = "provider-test"
 	extensionType                   = "test"
 	shootWebhookManagedResourceName = "extension-provider-test-shoot-webhooks"
 
@@ -73,6 +73,7 @@ var _ = Describe("Certificates tests", func() {
 		codec     = newCodec(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		fakeClock *testclock.FakeClock
 
+		extensionName      string
 		extensionNamespace *corev1.Namespace
 		shootNamespace     *corev1.Namespace
 		cluster            *extensionsv1alpha1.Cluster
@@ -125,6 +126,9 @@ var _ = Describe("Certificates tests", func() {
 	})
 
 	BeforeEach(func() {
+		// use unique extension name for each test,for unique webhook config name
+		extensionName = "provider-test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 		fakeClock = testclock.NewFakeClock(time.Now())
 
 		cluster = &extensionsv1alpha1.Cluster{
@@ -292,7 +296,7 @@ var _ = Describe("Certificates tests", func() {
 	Context("run with seed webhook", func() {
 		BeforeEach(func() {
 			seedWebhook = admissionregistrationv1.MutatingWebhook{
-				Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, extensionType),
+				Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, strings.TrimPrefix(extensionName, "provider-")),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{
 						Name:      "gardener-extension-" + extensionName,
