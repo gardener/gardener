@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -58,9 +59,12 @@ var _ = Describe("VPNShoot", func() {
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 
-		c        client.Client
-		sm       secretsmanager.Interface
-		vpnShoot Interface
+		kubernetesInterface kubernetes.Interface
+		c                   client.Client
+		sm                  secretsmanager.Interface
+		vpnShoot            Interface
+
+		shootVersion = semver.MustParse("1.22.1")
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -97,6 +101,7 @@ var _ = Describe("VPNShoot", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).WithVersion(shootVersion.String()).Build()
 		sm = fakesecretsmanager.New(c, namespace)
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -776,7 +781,7 @@ status:
 		)
 
 		JustBeforeEach(func() {
-			vpnShoot = New(c, namespace, sm, values)
+			vpnShoot = New(kubernetesInterface, namespace, sm, values)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
@@ -986,7 +991,25 @@ status:
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
-			vpnShoot = New(c, namespace, sm, Values{})
+			vpnShoot = New(kubernetesInterface, namespace, sm, Values{})
+			Expect(c.Create(ctx, managedResource)).To(Succeed())
+			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+			Expect(vpnShoot.Destroy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+		})
+
+		It("should successfully destroy all resources", func() {
+			vpnShoot = New(kubernetesInterface, namespace, sm, Values{
+				VPNHighAvailabilityEnabled:      true,
+				VPNHighAvailabilitySeedServers:  2,
+				VPNHighAvailabilityShootClients: 2,
+			})
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
@@ -1007,7 +1030,7 @@ status:
 		)
 
 		BeforeEach(func() {
-			vpnShoot = New(c, namespace, sm, Values{})
+			vpnShoot = New(kubernetesInterface, namespace, sm, Values{})
 
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
 			resetVars = test.WithVars(

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -29,7 +30,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
+	"github.com/gardener/gardener/pkg/utils/version"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -39,6 +40,8 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,7 +120,7 @@ type IstioIngressGateway struct {
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
 func New(
-	client client.Client,
+	client kubernetes.Interface,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	imageAPIServerProxy string,
@@ -133,7 +136,7 @@ func New(
 	istioIngressGateway IstioIngressGateway,
 ) Interface {
 	return &vpnSeedServer{
-		client:                  client,
+		client:                  client.Client(),
 		namespace:               namespace,
 		secretsManager:          secretsManager,
 		imageAPIServerProxy:     imageAPIServerProxy,
@@ -147,6 +150,7 @@ func New(
 		highAvailabilityServers: highAvailabilityServers,
 		highAvailabilityClients: highAvailabilityClients,
 		istioIngressGateway:     istioIngressGateway,
+		seedVersion:             client.Version(),
 	}
 }
 
@@ -169,6 +173,7 @@ type vpnSeedServer struct {
 	exposureClassHandlerName *string
 	sniConfig                *config.SNI
 	secrets                  Secrets
+	seedVersion              string
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
@@ -621,15 +626,16 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 
 func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string]string, template *corev1.PodTemplateSpec) error {
 	sts := v.emptyStatefulSet()
+	podLabels := map[string]string{
+		v1beta1constants.LabelApp: DeploymentName,
+	}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, sts, func() error {
 		sts.Labels = labels
 		sts.Spec = appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
 			Replicas:             pointer.Int32(v.replicas),
 			RevisionHistoryLimit: pointer.Int32(1),
-			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-				v1beta1constants.LabelApp: DeploymentName,
-			}},
+			Selector:             &metav1.LabelSelector{MatchLabels: podLabels},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
@@ -638,6 +644,44 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 		utilruntime.Must(references.InjectAnnotations(sts))
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	err = v.deployPodDisruptionBudget(ctx, podLabels)
+
+	return err
+}
+
+func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels map[string]string) error {
+	var (
+		pdbMaxUnavailable = intstr.FromInt(1)
+		pdbSelector       = &metav1.LabelSelector{MatchLabels: podLabels}
+	)
+
+	seedK8sVersionGreaterEqual121, err := version.CompareVersions(v.seedVersion, ">=", "1.21")
+	if err != nil {
+		return err
+	}
+	obj := v.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121)
+
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, v.client, obj, func() error {
+		switch pdb := obj.(type) {
+		case *policyv1.PodDisruptionBudget:
+			pdb.Labels = podLabels
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			}
+		case *policyv1beta1.PodDisruptionBudget:
+			pdb.Labels = podLabels
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			}
+		}
+		return nil
+	})
+
 	return err
 }
 
@@ -867,6 +911,12 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 }
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
+	seedK8sVersionGreaterEqual121, err := version.CompareVersions(v.seedVersion, ">=", "1.21")
+	if err != nil {
+		return err
+	}
+	pdbObj := v.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121)
+
 	objects := []client.Object{
 		v.emptyNetworkPolicy(),
 		v.emptyDeployment(),
@@ -875,6 +925,7 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 		v.emptyService(nil),
 		v.emptyVPA(),
 		v.emptyEnvoyFilter(),
+		pdbObj,
 	}
 	for i := 0; i < v.highAvailabilityServers; i++ {
 		objects = append(objects, v.emptyDestinationRule(&i), v.emptyService(&i))
@@ -912,6 +963,22 @@ func (v *vpnSeedServer) emptyDeployment() *appsv1.Deployment {
 
 func (v *vpnSeedServer) emptyStatefulSet() *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
+}
+
+func (v *vpnSeedServer) emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121 bool) client.Object {
+	pdbObjectMeta := metav1.ObjectMeta{
+		Name:      DeploymentName,
+		Namespace: v.namespace,
+	}
+
+	if seedK8sVersionGreaterEqual121 {
+		return &policyv1.PodDisruptionBudget{
+			ObjectMeta: pdbObjectMeta,
+		}
+	}
+	return &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: pdbObjectMeta,
+	}
 }
 
 func (v *vpnSeedServer) emptyNetworkPolicy() *networkingv1.NetworkPolicy {

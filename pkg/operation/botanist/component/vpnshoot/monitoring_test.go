@@ -17,18 +17,23 @@ package vpnshoot_test
 import (
 	"path/filepath"
 
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 
 	. "github.com/onsi/ginkgo/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Monitoring", func() {
 	var component component.MonitoringComponent
 
 	BeforeEach(func() {
-		component = New(nil, "", nil, Values{})
+		var c client.Client
+		kubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
+
+		component = New(kubernetesInterface, "", nil, Values{})
 	})
 
 	It("should successfully test the alerting rules", func() {

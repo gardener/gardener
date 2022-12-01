@@ -82,7 +82,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		replicas = b.Shoot.VPNHighAvailabilityServers
 	}
 	return vpnseedserver.New(
-		b.SeedClientSet.Client(),
+		b.SeedClientSet,
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		imageAPIServerProxy.String(),

@@ -32,6 +32,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
+	policyv1 "k8s.io/api/policy/v1"
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
@@ -132,16 +134,17 @@ type Values struct {
 
 // New creates a new instance of DeployWaiter for vpnshoot
 func New(
-	client client.Client,
+	client kubernetes.Interface,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
 	return &vpnShoot{
-		client:         client,
+		client:         client.Client(),
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
+		shootVersion:   client.Version(),
 	}
 }
 
@@ -151,6 +154,7 @@ type vpnShoot struct {
 	secretsManager secretsmanager.Interface
 	values         Values
 	secrets        Secrets
+	shootVersion   string
 }
 
 type vpnSecret struct {
@@ -548,6 +552,13 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	for _, item := range secretsVPNShoot {
 		objects = append(objects, item.secret)
 	}
+	if v.values.VPNHighAvailabilityEnabled {
+		pdb, err := v.podDisruptionBudget()
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, pdb)
+	}
 	objects = append(objects,
 		secretCA,
 		secretTLSAuth,
@@ -564,6 +575,40 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		roleBindingPSP,
 	)
 	return registry.AddAllAndSerialize(objects...)
+}
+
+func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
+	var (
+		pdbObjectMeta = metav1.ObjectMeta{
+			Name:      deploymentName,
+			Namespace: metav1.NamespaceSystem,
+			Labels:    getLabels(),
+		}
+		pdbMaxUnavailable = intstr.FromInt(1)
+		pdbSelector       = &metav1.LabelSelector{MatchLabels: getLabels()}
+	)
+
+	seedK8sVersionGreaterEqual121, err := version.CompareVersions(v.shootVersion, ">=", "1.21")
+	if err != nil {
+		return nil, err
+	}
+
+	if seedK8sVersionGreaterEqual121 {
+		return &policyv1.PodDisruptionBudget{
+			ObjectMeta: pdbObjectMeta,
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			},
+		}, nil
+	}
+	return &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: pdbObjectMeta,
+		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &pdbMaxUnavailable,
+			Selector:       pdbSelector,
+		},
+	}, nil
 }
 
 func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []vpnSecret, secretCA, secretTLSAuth, secretDH *corev1.Secret) *corev1.PodTemplateSpec {

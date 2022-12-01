@@ -66,7 +66,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	}
 
 	return vpnshoot.New(
-		b.SeedClientSet.Client(),
+		b.SeedClientSet,
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		values,

@@ -15,18 +15,23 @@
 package vpnseedserver_test
 
 import (
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 
 	. "github.com/onsi/ginkgo/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Monitoring", func() {
 	var vpnSeedServer component.MonitoringComponent
 
 	BeforeEach(func() {
-		vpnSeedServer = New(nil, "shoot--foo--bar", nil, "", "", nil, "", "", nil, 0, false, 0, 0, IstioIngressGateway{})
+		var c client.Client
+		kubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
+
+		vpnSeedServer = New(kubernetesInterface, "shoot--foo--bar", nil, "", "", nil, "", "", nil, 0, false, 0, 0, IstioIngressGateway{})
 	})
 
 	It("should successfully test the scrape configs", func() {
