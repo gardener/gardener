@@ -246,21 +246,31 @@ spec:
   - Egress
 status: {}
 `
-		deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string) string {
+		deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string, keepReplicas bool, useHALabel bool) string {
 			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
-    high-availability-config.resources.gardener.cloud/type: server
-    k8s-app: kube-dns
+`
+			if useHALabel {
+				out += `    high-availability-config.resources.gardener.cloud/type: server
+`
+			}
+
+			out += `    k8s-app: kube-dns
     origin: gardener
   name: coredns
   namespace: kube-system
 spec:
-  replicas: 2
-  revisionHistoryLimit: 2
+`
+			if keepReplicas {
+				out += `  replicas: 2
+`
+			}
+
+			out += `  revisionHistoryLimit: 2
   selector:
     matchLabels:
       k8s-app: kube-dns
@@ -712,7 +722,7 @@ status: {}
 			})
 			Context("w/o apiserver host, w/o pod annotations", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, true, true)))
 				})
 			})
 
@@ -729,7 +739,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations)))
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations, true, true)))
 				})
 			})
 
@@ -743,7 +753,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, true, true)))
 				})
 
 				AfterEach(func() {
@@ -764,7 +774,7 @@ status: {}
 
 				Context("w/o apiserver host, w/o pod annotations", func() {
 					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+						Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, false, false)))
 					})
 				})
 
@@ -781,7 +791,7 @@ status: {}
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations)))
+						Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations, false, false)))
 					})
 				})
 
@@ -794,7 +804,7 @@ status: {}
 
 					Context("w/o apiserver host, w/o pod annotations", func() {
 						It("should successfully deploy all resources", func() {
-							Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+							Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, false, false)))
 						})
 					})
 				})
@@ -817,7 +827,7 @@ status: {}
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAMLFor(false)))
 				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAMLFor(false)))
-				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations, true, true)))
 			})
 		})
 	})
