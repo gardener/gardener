@@ -118,7 +118,7 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 			seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: gutil.ComputeGardenNamespace(seed.Name)}}
 			Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
 
-			By("wait till the manager obeserves seed namespace")
+			By("Wait until the manager cache observes the seed namespace")
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), &corev1.Namespace{})
 			}).Should(Succeed())
@@ -197,7 +197,7 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 				BeforeEach(func() {
 					DeferCleanup(
 						test.WithVars(
-							&resourcemanager.WaitForDeployment, waitForDeploymentInTest,
+							&resourcemanager.Until, untilInTest,
 							&resourcemanager.TimeoutWaitForDeployment, 50*time.Millisecond,
 						),
 					)
@@ -370,7 +370,7 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 							managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 							g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 							return managedResourceList.Items
-						}).WithTimeout(10 * time.Second).Should(BeEmpty())
+						}).Should(BeEmpty())
 					}
 
 					if !seedIsGarden {
@@ -378,13 +378,13 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 						Eventually(func(g Gomega) error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).WithTimeout(10 * time.Second).Should(BeNotFoundError())
+						}).Should(BeNotFoundError())
 					}
 
 					By("Ensure Seed is gone")
 					Eventually(func() error {
 						return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
-					}).WithTimeout(10 * time.Second).Should(BeNotFoundError())
+					}).Should(BeNotFoundError())
 				}
 
 				It("should properly maintain the Bootstrapped condition and deploy all seed system components", func() {
@@ -405,7 +405,7 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 						Expect(testClient.Create(ctx, garden)).To(Succeed())
 						log.Info("Created Garden for test", "garden", garden.Name)
 
-						By("Wait until manager has observed garden")
+						By("Wait until the manager cache observes the garden")
 						Eventually(func() error {
 							return mgrClient.Get(ctx, client.ObjectKeyFromObject(garden), &operatorv1alpha1.Garden{})
 						}).Should(Succeed())
@@ -425,6 +425,6 @@ var _ = Describe("Seed controller tests", Ordered, func() {
 	})
 })
 
-func waitForDeploymentInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
+func untilInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
 	return nil
 }
