@@ -772,6 +772,9 @@ import custom/*.server
 		if c.values.WantsVerticalPodAutoscaler {
 			managedObjects = append(managedObjects, clusterProportionalDNSAutoscalerVPA)
 		}
+		// Replicas are managed by the cluster-proportional autoscaler and not the high-availability webhook
+		delete(deployment.Labels, resourcesv1alpha1.HighAvailabilityConfigType)
+		deployment.Spec.Replicas = nil
 	} else {
 		managedObjects = append(managedObjects, horizontalPodAutoscaler)
 	}
