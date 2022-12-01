@@ -144,7 +144,7 @@ images:
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
-  tag: "1.9.3"
+  tag: "1.10.0"
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: registry.k8s.io/dns/k8s-dns-node-cache
