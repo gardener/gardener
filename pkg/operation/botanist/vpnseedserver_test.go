@@ -96,7 +96,7 @@ var _ = Describe("VPNSeedServer", func() {
 		It("should successfully create a vpn seed server interface", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
 			kubernetesClient.EXPECT().Client()
-			kubernetesClient.EXPECT().Version()
+			kubernetesClient.EXPECT().Version().Times(2)
 			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
 
 			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
