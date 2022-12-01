@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -36,6 +35,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,16 +78,16 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Get kubeconfig and extract token")
-		data, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
+		kubeconfigData, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
-		lines := strings.Split(string(data), "\n")
-		var token string
-		for _, line := range lines {
-			index := strings.Index(line, "token:")
-			if index >= 0 {
-				token = strings.TrimSpace(line[index+len("token:"):])
-			}
-		}
+
+		kubeconfig := &clientcmdv1.Config{}
+		_, _, err = clientcmdlatest.Codec.Decode([]byte(kubeconfigData), nil, kubeconfig)
+		framework.ExpectNoError(err)
+
+		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
+		Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
+		token := kubeconfig.AuthInfos[0].AuthInfo.Token
 
 		ginkgo.By("Get the pods matching the logging-pod label")
 		pods := &corev1.PodList{}
