@@ -81,7 +81,7 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
 ExecStart=/opt/bin/promtail -config.file=` + PathConfig),
 				},
@@ -331,7 +331,7 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStartPre=/bin/systemctl disable promtail.service
 ExecStart=/bin/sh -c "echo service promtail.service is removed!; while true; do sleep 86400; done"`),
 				},
