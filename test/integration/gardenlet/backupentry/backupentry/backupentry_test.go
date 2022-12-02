@@ -166,6 +166,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			Expect(testClient.Delete(ctx, backupBucket)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
+		By("creating Shoot")
 		shootName := "shoot-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -173,8 +174,45 @@ var _ = Describe("BackupEntry controller tests", func() {
 				Namespace: testNamespace.Name,
 				UID:       "foo",
 			},
+			Spec: gardencorev1beta1.ShootSpec{
+				SecretBindingName: "test-sb",
+				CloudProfileName:  "test-cloudprofile",
+				Region:            "foo-region",
+				Provider: gardencorev1beta1.Provider{
+					Type: "provider",
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name:    "cpu-worker",
+							Minimum: 2,
+							Maximum: 2,
+							Machine: gardencorev1beta1.Machine{
+								Type: "large",
+							},
+						},
+					},
+				},
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: "1.21.1",
+				},
+				Networking: gardencorev1beta1.Networking{
+					Type: "foo-networking",
+				},
+			},
 		}
 		shootTechnicalID = fmt.Sprintf("shoot--%s--%s", projectName, shootName)
+
+		Expect(testClient.Create(ctx, shoot)).To(Succeed())
+		log.Info("Created Shoot for test", "namespaceName", shoot.Name)
+
+		By("wait until manager has observed shoot")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
+		}).Should(Succeed())
+
+		DeferCleanup(func() {
+			By("deleting shoot")
+			Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
+		})
 
 		By("creating Shoot Namespace")
 		shootNamespace = &corev1.Namespace{
@@ -481,7 +519,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			}).Should(Succeed())
 
 			By("stepping the clock to pass the grace period")
-			fakeClock.Step((time.Duration(deletionGracePeriodHours)*time.Hour + time.Second))
+			fakeClock.Step((time.Duration(deletionGracePeriodHours)*time.Hour + time.Minute))
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			patch := client.MergeFrom(backupEntry.DeepCopy())
 			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)

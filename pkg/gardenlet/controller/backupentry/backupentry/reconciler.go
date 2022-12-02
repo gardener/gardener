@@ -52,7 +52,7 @@ import (
 )
 
 var (
-	// DefaultTimeout defines how long the controller should wait until the extension resource is ready or is succesfully deleted. Exposed for tests.
+	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is succesfully deleted. Exposed for tests.
 	DefaultTimeout = 30 * time.Second
 	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
 	DefaultSevereThreshold = 15 * time.Second
@@ -346,7 +346,11 @@ func (r *Reconciler) deleteBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 	}
 
-	return reconcile.Result{}, nil
+	requeueAfter := backupEntry.DeletionTimestamp.Time.Add(gracePeriod).Sub(r.Clock.Now())
+	if requeueAfter < 0 {
+		return reconcile.Result{}, fmt.Errorf("the backupentry should have been deleted by now")
+	}
+	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *Reconciler) migrateBackupEntry(
