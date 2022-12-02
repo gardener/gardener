@@ -15,6 +15,7 @@
 package validation
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -30,6 +31,10 @@ import (
 var (
 	availableIngressKinds = sets.NewString(
 		v1beta1constants.IngressKindNginx,
+	)
+	availableExternalTrafficPolicies = sets.NewString(
+		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
+		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
 )
 
@@ -177,6 +182,29 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 
 	if seedSpec.Settings != nil && seedSpec.Settings.LoadBalancerServices != nil {
 		allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
+
+		if policy := seedSpec.Settings.LoadBalancerServices.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "externalTrafficPolicy"), *policy, availableExternalTrafficPolicies.List()))
+		}
+
+		zones := sets.NewString(seedSpec.Provider.Zones...)
+		specifiedZones := sets.NewString()
+
+		for i, zoneSettings := range seedSpec.Settings.LoadBalancerServices.ZoneSettings {
+			if !zones.Has(zoneSettings.ZoneName) {
+				allErrs = append(allErrs, field.NotFound(fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("zoneName"), zoneSettings.ZoneName))
+			}
+			if specifiedZones.Has(zoneSettings.ZoneName) {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("zoneName"), zoneSettings.ZoneName))
+			}
+			specifiedZones.Insert(zoneSettings.ZoneName)
+
+			allErrs = append(allErrs, apivalidation.ValidateAnnotations(zoneSettings.Annotations, fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("annotations"))...)
+
+			if policy := zoneSettings.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("externalTrafficPolicy"), *policy, availableExternalTrafficPolicies.List()))
+			}
+		}
 	}
 
 	if seedSpec.DNS.IngressDomain != nil {
