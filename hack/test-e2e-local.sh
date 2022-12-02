@@ -43,6 +43,10 @@ if [[ "$1" != "operator" ]]; then
 
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     for shoot in "${shoot_names[@]}" ; do
+      if [ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" = "zone" -a "$shoot" = "e2e-upgrade-zone.local" ]; then
+        # Do not add the entry for the e2e-upgrade-zone test as the target ip is dynamic
+        continue
+      fi
       printf "\n127.0.0.1 api.%s.external.local.gardener.cloud\n127.0.0.1 api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
     done
     printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts

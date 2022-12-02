@@ -82,13 +82,36 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 	networkPolicyAllowToIstioIngressGateway := emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace)
 	networkPolicyAllowToIstioIngressGateway.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress"}},
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
-				}},
-			}},
+			To: []networkingv1.NetworkPolicyPeer{
+				{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress"}},
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":   "istio-ingressgateway",
+						"istio": "ingressgateway",
+					}},
+				},
+				{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress--0"}},
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":   "istio-ingressgateway",
+						"istio": "ingressgateway--zone--0",
+					}},
+				},
+				{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress--1"}},
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":   "istio-ingressgateway",
+						"istio": "ingressgateway--zone--1",
+					}},
+				},
+				{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress--2"}},
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":   "istio-ingressgateway",
+						"istio": "ingressgateway--zone--2",
+					}},
+				},
+			},
 			Ports: []networkingv1.NetworkPolicyPort{
 				{Port: intStrPtr(8132), Protocol: &protocolTCP},
 				{Port: intStrPtr(8443), Protocol: &protocolTCP},

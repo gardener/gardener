@@ -3,7 +3,10 @@ gardener:
     deployed: false
   seed:
     istio:
-      listenAddress: 127.0.0.2
+      listenAddressDefault: 127.0.0.2
+      listenAddressZone0: 127.0.0.20
+      listenAddressZone1: 127.0.0.21
+      listenAddressZone2: 127.0.0.22
 
 registry:
   deployed: false

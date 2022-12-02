@@ -10,6 +10,7 @@ nodes:
 {{ include "extraPortMappings.gardener.seed.istio" . | indent 2 }}
 {{ include "extraPortMappings.gardener.seed.nginx" . | indent 2 }}
 {{ include "extraPortMappings.registry" . | indent 2 }}
+{{ include "extraPortMappings.gardener.seed.dns" . | indent 2 }}
   extraMounts:
 {{ include "extraMounts.gardener.controlPlane" . | indent 2 }}
 {{ include "extraMounts.backupBucket" . | indent 2 }}
