@@ -15,11 +15,11 @@ reviewers:
 - "@timebertt"
 ---
 
-# GEP-19: Observability Stack - Migrating to prometheus-operator and fluent-bit-operator
+# GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit-operator
 
 ## Table of Contents
 
-- [GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit operator](#gep-19-observability-stack---migrating-to-the-prometheus-operator and fluent-bit operator)
+- [GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit operator](#gep-19-observability-stack---migrating-to-the-prometheus-operator-and-fluent-bit-operator)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
@@ -33,7 +33,7 @@ reviewers:
     - [BYOMC (Bring your own monitoring configuration)](#byomc-bring-your-own-monitoring-configuration)
     - [Grafana Sidecar](#grafana-sidecar)
     - [Fluent-bit Operator CRDs](#fluent-bit-operator-crds)
-    - [Fluent-bit Filters and Parsers](#fluent-bit-filters-parsers)
+    - [Fluent-bit filters and parsers](#fluent-bit-filters-and-parsers)
     - [BYOMC (Bring your own logging configuration)](#byomc-bring-your-own-logging-configuration)
     - [Migration](#migration)
   - [Alternatives](#alternatives)
@@ -511,10 +511,12 @@ Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and prov
 
 ### Fluent-bit Operator CRDs
 
-Fluent-bit operator oversees two types for resources: Fluent-Bit Custom Resource and
-Fluent-bit Inputs, Outputs, Filters and Parsers configurations.
+The fluent-bit operator oversees two types for resources:
 
-1. Fluent-Bit Custom Resource
+1. `FluentBit` resource defining the properties of the fluent-bit deamonset.
+1. `ClusterInputs`, `ClusterOutputs`, `ClusterFilters` and `ClusterParsers` defining the fluent-but app configuration.
+
+1. `FluentBit` custom resource
 
 ```yaml
 apiVersion: fluentbit.fluent.io/v1alpha2
@@ -527,20 +529,31 @@ metadata:
 spec:
   image: kubesphere/fluent-bit:v1.9.9
   fluentBitConfigName: fluent-bit-config
+  # workload properties
+  annotations: {}
   resources: {}
   nodeSelector: {}
-  annotations: {}
+  tolerations: {}
+  priorityClassName: ""
   ...
-  # and so on
+  # fluent-bit configurations
+  # container runtime output path
+  containerLogRealPath: ""
+  # Recommended in case of input tail plugin
+  # holds persisted events in fluent-bit supporting re-emitting
+  positionDB: {}
 ```
 
 [fluent-bit-resource] carries the usual kubernetes workload properties,
 such as resource definitions, node selectors, pod/node affinity and so on. The sole purpose
 is to construct the [fluent-bit-daemonset] spec managing the fluent-bit application instances
 on the cluster nodes.
-The current state of the fluent-bit operator fully supports Gardener use cases, such as adding support for fluent-bit custom plugins. In this state, the fluent-bit operator can be used by Gardener "as is" without the need of forking it.
 
-### Fluent-bit Filters and Parsers
+The upstream project has been enhanced by Gardener and now it supports adding fluent-bit custom plugins.
+The latter is required by Gardener to mainting the custom `ordering` plugin.
+In its current state, the fluent-bit operator can be used by Gardener "as is". without the need of forking it.
+
+### Fluent-bit filters and parsers
 
 The second major function of the fluent-bit operator is to compile a valid application configuration aggregating declarations supplied by fluent-bit custom resources such as ClusterFitlers, ClusterParsers and so on as shown by the example.
 
@@ -593,11 +606,11 @@ spec:
 
 ```
 
-In this example, we have a fluent bit [filter-plugin] of type parser and the corresponding [regex-parser]. In the Gardener context, the configuration resources are supplied by the core components and extensions.
+In this example, we have a fluent bit [filter-plugin] of type parser and the corresponding [regex-parser]. In the Gardener context, these configuration resources are supplied by the core components and extensions.
 
 ### BYOMC (Bring your own logging configuration)
 
-Since fluent-bit uses [input-tail] plugin and reads any container output under `/var/log/pods` it process logs outputs of all workloads. In this case, any workload may bring its own set of filters and parsers if needed using the declarative APIs supported by the operator.
+Since fluent-bit uses [input-tail] plugin and reads any container output under `/var/log/pods` it processes logs outputs of all workloads. In this case, any workload may bring its own set of filters and parsers if needed using the declarative APIs supported by the operator.
 
 ### Migration
 
