@@ -625,7 +625,7 @@ Since fluent-bit uses [input-tail] plugin and reads any container output under `
 #### Fluent-bit Operator
 
 1. Add fluent-bit operator CRDs in Gardener
-1. Add ClusterFilters and ClusterParsers resources in all extensions which are deploying ConfigMap with label extensions.gardener.cloud/configuration: logging
+1. Add `ClusterFilters` and `ClusterParsers` resources in all extensions which are deploying ConfigMap with label: ```extensions.gardener.cloud/configuration: logging```
 1. Add the Fluent operator in Gardener in place of fluent-bit
 
 ## Alternatives
