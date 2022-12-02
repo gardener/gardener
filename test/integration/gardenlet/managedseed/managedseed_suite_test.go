@@ -216,9 +216,10 @@ var _ = BeforeSuite(func() {
 	cfg := &config.GardenletConfiguration{
 		Controllers: &config.GardenletControllerConfiguration{
 			ManagedSeed: &config.ManagedSeedControllerConfiguration{
-				WaitSyncPeriod:  &metav1.Duration{Duration: 50 * time.Millisecond},
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
+				WaitSyncPeriod:   &metav1.Duration{Duration: 5 * time.Millisecond},
+				ConcurrentSyncs:  pointer.Int(5),
+				SyncPeriod:       &metav1.Duration{Duration: 500 * time.Millisecond},
+				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
 			},
 		},
 		SeedConfig: &config.SeedConfig{

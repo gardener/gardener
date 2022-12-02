@@ -48,7 +48,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+			ExpectWithOffset(1, testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 		}
 
 		deployGardenlet = func() {
@@ -118,7 +118,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 				},
 			},
 		})
-		Expect(err).To(Succeed())
+		Expect(err).NotTo(HaveOccurred())
 
 		managedSeed = &seedmanagementv1alpha1.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -180,7 +180,11 @@ var _ = Describe("ManagedSeed controller test", func() {
 	})
 
 	JustBeforeEach(func() {
-		By("creating SecretBinding")
+		Eventually(func(g Gomega) {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), &corev1.Namespace{})).To(Succeed())
+		}).Should(Succeed())
+
+		By("creating Secret")
 		testSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -199,6 +203,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecret))).To(Succeed())
 		})
 
+		By("creating SecretBinding")
 		testSecretBinding = &gardencorev1beta1.SecretBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -340,7 +345,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			By("Mark ManagedSeed for deletion")
 			Expect(testClient.Delete(ctx, managedSeed)).To(Succeed())
 
-			EventuallyWithOffset(1, func(g Gomega) {
+			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespace.Name}, &appsv1.Deployment{})).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(BeNotFoundError())
 			}).Should(Succeed())

@@ -40,8 +40,9 @@ var _ = Describe("Add", func() {
 		reconciler *Reconciler
 		pred       predicate.Predicate
 
-		managedSeedShoot *seedmanagementv1alpha1.Shoot
-		shoot            *gardencorev1beta1.Shoot
+		managedSeedShoot       *seedmanagementv1alpha1.Shoot
+		shoot                  *gardencorev1beta1.Shoot
+		seedNameFromSeedConfig string
 	)
 
 	BeforeEach(func() {
@@ -60,6 +61,8 @@ var _ = Describe("Add", func() {
 		managedSeedShoot = &seedmanagementv1alpha1.Shoot{
 			Name: name,
 		}
+
+		seedNameFromSeedConfig = "test-seed"
 	})
 
 	Describe("#ManagedSeedFilterPredicate", func() {
@@ -68,7 +71,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			pred = reconciler.ManagedSeedFilterPredicate("test-seed")
+			pred = reconciler.ManagedSeedFilterPredicate(seedNameFromSeedConfig)
 
 			oldManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -88,7 +91,7 @@ var _ = Describe("Add", func() {
 			Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
 		})
 
-		It("should return false when ManagedSeed does not references any shoot", func() {
+		It("should return false when ManagedSeed does not reference any shoot", func() {
 			Expect(pred.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
 			Expect(pred.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
 			Expect(pred.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeFalse())
@@ -104,7 +107,7 @@ var _ = Describe("Add", func() {
 			Expect(pred.Generic(event.GenericEvent{})).To(BeFalse())
 		})
 
-		It("should return false when shoot referenced by ManagedSeed does not references any seed", func() {
+		It("should return false when shoot referenced by ManagedSeed does not reference any seed", func() {
 			oldManagedSeed.Spec.Shoot = managedSeedShoot
 			newManagedSeed.Spec.Shoot = managedSeedShoot
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -117,7 +120,7 @@ var _ = Describe("Add", func() {
 		It("should return true when shoot referenced by ManagedSeed references a seed which is same as the seed mentioned in gardenlet configuration", func() {
 			oldManagedSeed.Spec.Shoot = managedSeedShoot
 			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String("test-seed")
+			shoot.Spec.SeedName = pointer.String(seedNameFromSeedConfig)
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(pred.Create(event.CreateEvent{Object: newManagedSeed})).To(BeTrue())
 			Expect(pred.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeTrue())
@@ -152,7 +155,7 @@ var _ = Describe("Add", func() {
 			oldManagedSeed.Spec.Shoot = managedSeedShoot
 			newManagedSeed.Spec.Shoot = managedSeedShoot
 			shoot.Spec.SeedName = pointer.String("test")
-			shoot.Status.SeedName = pointer.String("test-seed")
+			shoot.Status.SeedName = pointer.String(seedNameFromSeedConfig)
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(pred.Create(event.CreateEvent{Object: newManagedSeed})).To(BeTrue())
 			Expect(pred.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeTrue())

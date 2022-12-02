@@ -123,52 +123,48 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, cfg *config.GardenletConf
 
 // ManagedSeedFilterPredicate returns the predicate for ManagedSeed and Seed events.
 func (r *Reconciler) ManagedSeedFilterPredicate(seedName string) predicate.Predicate {
-	return &ManagedSeedFilterPredicate{seedName: seedName}
+	return &managedSeedFilterPredicate{seedName: seedName}
 }
 
-type ManagedSeedFilterPredicate struct {
+type managedSeedFilterPredicate struct {
 	ctx      context.Context
 	reader   client.Reader
 	seedName string
 }
 
-func (p *ManagedSeedFilterPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
+func (p *managedSeedFilterPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
 	p.ctx = contextutil.FromStopChannel(stopChan)
 	return nil
 }
 
-func (p *ManagedSeedFilterPredicate) InjectClient(client client.Client) error {
+func (p *managedSeedFilterPredicate) InjectClient(client client.Client) error {
 	p.reader = client
 	return nil
 }
 
-func (p *ManagedSeedFilterPredicate) Create(e event.CreateEvent) bool {
+func (p *managedSeedFilterPredicate) Create(e event.CreateEvent) bool {
 	return p.filterManagedSeed(e.Object)
 }
 
-func (p *ManagedSeedFilterPredicate) Update(e event.UpdateEvent) bool {
+func (p *managedSeedFilterPredicate) Update(e event.UpdateEvent) bool {
 	return p.filterManagedSeed(e.ObjectNew)
 }
 
-func (p *ManagedSeedFilterPredicate) Delete(e event.DeleteEvent) bool {
+func (p *managedSeedFilterPredicate) Delete(e event.DeleteEvent) bool {
 	return p.filterManagedSeed(e.Object)
 }
 
-func (p *ManagedSeedFilterPredicate) Generic(_ event.GenericEvent) bool { return false }
+func (p *managedSeedFilterPredicate) Generic(_ event.GenericEvent) bool { return false }
 
 // filterManagedSeed checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible.
-func (p *ManagedSeedFilterPredicate) filterManagedSeed(obj client.Object) bool {
+func (p *managedSeedFilterPredicate) filterManagedSeed(obj client.Object) bool {
 	var managedSeed *seedmanagementv1alpha1.ManagedSeed
-	switch obj.(type) {
+	switch obj := obj.(type) {
 	case *seedmanagementv1alpha1.ManagedSeed:
-		managedSeed, _ = obj.(*seedmanagementv1alpha1.ManagedSeed)
+		managedSeed = obj
 	case *gardencorev1beta1.Seed:
-		seed, ok := obj.(*gardencorev1beta1.Seed)
-		if !ok {
-			return false
-		}
 		managedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-		if err := p.reader.Get(p.ctx, kutil.Key(gardencorev1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+		if err := p.reader.Get(p.ctx, kutil.Key(gardencorev1beta1constants.GardenNamespace, obj.Name), managedSeed); err != nil {
 			return false
 		}
 	default:
@@ -195,7 +191,7 @@ func (p *ManagedSeedFilterPredicate) filterManagedSeed(obj client.Object) bool {
 	return *shoot.Status.SeedName == p.seedName
 }
 
-// MapManagedResourceToSeed is a mapper.MapFunc for mapping a ManagedResource to the owning Seed.
+// MapSeedToManagedSeed is a mapper.MapFunc for mapping a Seed to the owning ManagedSeed.
 func (r *Reconciler) MapSeedToManagedSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: gardencorev1beta1constants.GardenNamespace, Name: obj.GetName()}}}
 }
