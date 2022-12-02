@@ -285,6 +285,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	// Without this if condition, both `etcdMain` and `etcdEvents` component deployers execute this code. However, these
+	// network policies are not specified to them (they apply to both because there is no `role` label in the selector).
+	// Hence, it doesn't make sense if both component deployers are running this code - let's only do it for the main
+	// ETCD.
 	if e.values.Role == v1beta1constants.ETCDRoleMain {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, clientNetworkPolicy, func() error {
 			clientNetworkPolicy.Annotations = map[string]string{
