@@ -22,8 +22,8 @@ require (
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/onsi/ginkgo/v2 v2.1.4
-	github.com/onsi/gomega v1.20.0
+	github.com/onsi/ginkgo/v2 v2.1.6
+	github.com/onsi/gomega v1.21.1
 	github.com/prometheus/client_golang v1.12.2
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/cobra v1.4.0
@@ -42,9 +42,9 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
-	k8s.io/api v0.25.0
+	k8s.io/api v0.25.2
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.25.0
+	k8s.io/apimachinery v0.25.2
 	k8s.io/apiserver v0.25.0
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.12.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
@@ -54,7 +54,7 @@ require (
 	k8s.io/component-helpers v0.25.0
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/klog/v2 v2.70.1
+	k8s.io/klog/v2 v2.80.1
 	k8s.io/kube-aggregator v0.25.0
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1
 	k8s.io/kube-proxy v0.25.0
@@ -86,6 +86,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
+	github.com/fluent/fluent-operator v1.7.0
 	github.com/frankban/quicktest v1.13.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
@@ -151,8 +152,8 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.20.0 // indirect
 	go.opentelemetry.io/otel/trace v0.20.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.7.0 // indirect
-	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
@@ -172,6 +173,8 @@ require (
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
+
+require github.com/go-openapi/errors v0.20.3 // indirect
 
 replace (
 	github.com/emicklei/go-restful/v3 => github.com/emicklei/go-restful/v3 v3.8.0 // keep this value in sync with k8s.io/apiserver

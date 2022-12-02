@@ -892,6 +892,7 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/extensions/worker
+        - pkg/operation/botanist/component/fluentoperator
         - pkg/operation/botanist/component/gardeneraccess
         - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/istio
