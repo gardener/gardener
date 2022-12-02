@@ -49,7 +49,7 @@ var _ = Describe("Seed controller tests", func() {
 		seed *gardencorev1beta1.Seed
 	)
 
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
 		DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
 
@@ -113,7 +113,7 @@ var _ = Describe("Seed controller tests", func() {
 		// Typically, GCM creates the seed-specific namespace, but it doesn't run in this test, hence we have to do it.
 		var seedNamespace *corev1.Namespace
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			By("Create seed namespace in garden")
 			seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: gutil.ComputeGardenNamespace(seed.Name)}}
 			Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
@@ -149,7 +149,7 @@ var _ = Describe("Seed controller tests", func() {
 		})
 
 		Context("when internal domain secret exists", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				By("Create internal domain secret in seed namespace")
 				internalDomainSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "secret-",
@@ -194,7 +194,7 @@ var _ = Describe("Seed controller tests", func() {
 				// Typically, GCM creates the global monitoring secret, but it doesn't run in this test, hence we have to do it.
 				var globalMonitoringSecret *corev1.Secret
 
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					DeferCleanup(
 						test.WithVars(
 							&resourcemanager.Until, untilInTest,
