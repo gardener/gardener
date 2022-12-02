@@ -301,7 +301,8 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 
-	if a.GetOperation() != admission.Delete {
+	// Skip the validation if the operation is admission.Delete or the spec hasn't changed.
+	if a.GetOperation() != admission.Delete && !reflect.DeepEqual(validationContext.shoot.Spec, validationContext.oldShoot.Spec) {
 		dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
 		if err != nil {
 			return apierrors.NewInternalError(err)
