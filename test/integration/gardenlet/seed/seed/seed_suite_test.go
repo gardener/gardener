@@ -19,6 +19,7 @@ import (
 	_ "embed"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -43,7 +44,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -175,8 +175,8 @@ var _ = BeforeSuite(func() {
 		Config: config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				Seed: &config.SeedControllerConfiguration{
-					// This controller is pretty heavy-weight, so use DefaultControllerSyncPeriod
-					SyncPeriod: &gardenletconfigv1alpha1.DefaultControllerSyncPeriod,
+					// This controller is pretty heavy-weight, so use a higher duration.
+					SyncPeriod: &metav1.Duration{Duration: time.Minute},
 				},
 			},
 			SNI: &config.SNI{
