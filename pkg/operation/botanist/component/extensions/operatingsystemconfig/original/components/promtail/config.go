@@ -138,7 +138,7 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStartPre=` + execStartPre + `
 ExecStart=` + execStart),
 	}
