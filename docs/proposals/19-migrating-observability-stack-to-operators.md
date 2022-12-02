@@ -1,5 +1,5 @@
 ---
-title:  Observabilits Stack - Migrating to the prometheus-operator and fluent-bit operator
+title:  Observability Stack - Migrating to the prometheus-operator and fluent-bit operator
 gep-number: 0019
 creation-date: 2022-06-21
 status: implementable
@@ -34,7 +34,7 @@ reviewers:
     - [Grafana Sidecar](#grafana-sidecar)
     - [Fluent-bit Operator CRDs](#fluent-bit-operator-crds)
     - [Fluent-bit filters and parsers](#fluent-bit-filters-and-parsers)
-    - [BYOMC (Bring your own logging configuration)](#byomc-bring-your-own-logging-configuration)
+    - [BYOLC (Bring your own logging configuration)](#byolc-bring-your-own-logging-configuration)
     - [Migration](#migration)
   - [Alternatives](#alternatives)
 
@@ -522,7 +522,7 @@ apiVersion: fluentbit.fluent.io/v1alpha2
 kind: FluentBit
 metadata:
   name: fluent-bit
-  namespace: fluent
+  namespace: garden
   labels:
     app.kubernetes.io/name: fluent-bit
 spec:
@@ -607,13 +607,13 @@ spec:
 
 In this example, we have a fluent bit [filter-plugin] of type parser and the corresponding [regex-parser]. In the Gardener context, these configuration resources are supplied by the core components and extensions.
 
-### BYOMC (Bring your own logging configuration)
+### BYOLC (Bring your own logging configuration)
 
 Since fluent-bit uses [input-tail] plugin and reads any container output under `/var/log/pods` it processes logs outputs of all workloads. In this case, any workload may bring its own set of filters and parsers if needed using the declarative APIs supported by the operator.
 
 ### Migration
 
-#### Promtheus Operator
+#### Prometheus Operator
 
 1. Deploy the [prometheus-operator] and its custom resources.
 1. Delete the old monitoring-stack.
