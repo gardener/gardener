@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -138,6 +139,9 @@ var _ = BeforeSuite(func() {
 				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
+				&operatorv1alpha1.Garden{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
 			},
 		}),
 	})
@@ -171,6 +175,7 @@ var _ = BeforeSuite(func() {
 		Config: config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				Seed: &config.SeedControllerConfiguration{
+					// This controller is pretty heavy-weight, so use a higher duration.
 					SyncPeriod: &metav1.Duration{Duration: time.Minute},
 				},
 			},
