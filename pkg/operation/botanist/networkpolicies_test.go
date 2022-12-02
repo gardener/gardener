@@ -57,7 +57,10 @@ var _ = Describe("Networkpolicies", func() {
 				Except: []string{podCIDRSeed},
 			}},
 			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
-			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/16"}},
+			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
+				CIDR:   "192.168.0.0/16",
+				Except: []string{serviceCIDRSeed},
+			}},
 			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "100.64.0.0/10"}},
 		}
 	)
@@ -149,7 +152,10 @@ var _ = Describe("Networkpolicies", func() {
 						Except: append([]string{podCIDRSeed, nodeCIDRSeed}, blockCIDRs...),
 					}},
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/16"}},
+					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
+						CIDR:   "192.168.0.0/16",
+						Except: []string{serviceCIDRSeed},
+					}},
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
 						CIDR:   "100.64.0.0/10",
 						Except: nil,
@@ -186,8 +192,14 @@ var _ = Describe("Networkpolicies", func() {
 						CIDR:   "10.0.0.0/8",
 						Except: append(append([]string{podCIDRSeed, nodeCIDRSeed}, blockCIDRs...), nodeCIDRShoot),
 					}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/16"}},
+					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
+						CIDR:   "172.16.0.0/12",
+						Except: []string{serviceCIDRShoot},
+					}},
+					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
+						CIDR:   "192.168.0.0/16",
+						Except: []string{serviceCIDRSeed},
+					}},
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
 						CIDR:   "100.64.0.0/10",
 						Except: []string{podCIDRShoot},
