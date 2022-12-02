@@ -48,9 +48,8 @@ different repositories (for example extensions). While it is not possible to
 centralize the configuration, it is possible to improve the developer experience
 and improve the general stability of the monitoring and logging. This can be done by
 introducing kubernetes operators such as the [prometheus-operator] for monitoring stack
-and fluent-bit opertator for the logging stack [fluent-bit-operator].
-These operator will make it easier for
-monitoring and logging configurations to be discovered and picked up with the use of the respective custom resources:
+and [fluent-bit-operator] for the logging stack.
+These operators will make it easier for monitoring and logging configurations to be discovered and picked up with the use of the respective custom resources:
 
 1. [Prometheus Custom Resources][prom-crds] provided by the prometheus-operator.
 1. [Fluent-bit Custom Resources][fluent-bit-crds] provided by the fluent-bit-operator.
@@ -63,7 +62,7 @@ such as Thanos in the case of prometheus-operator
 
 ## Motivation
 
-Simplify monitoring and logging changes and extensions with the use of the
+Simplify monitoring and logging updates and extensions with the use of the
 [prometheus-operator] and [fluent-bit-operator]. The current extension contract is described
 [here][extension-contract]. This document aims to define a new contract.
 
@@ -614,12 +613,20 @@ Since fluent-bit uses [input-tail] plugin and reads any container output under `
 
 ### Migration
 
+#### Promtheus Operator
+
 1. Deploy the [prometheus-operator] and its custom resources.
 1. Delete the old monitoring-stack.
 1. Configure `Prometheus` to "reuse" the `pv` from the old Prometheus's
     `pvc`. An init container will be temporarily needed for this migration.
     This ensures that no data is lost and provides a clean migration.
 1. Any extension or monitoring configuration that is not migrated to the [prometheus-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
+
+#### Fluent-bit Operator
+
+1. Add fluent-bit operator CRDs in Gardener
+1. Add ClusterFilters and ClusterParsers resources in all extensions which are deploying ConfigMap with label extensions.gardener.cloud/configuration: logging
+1. Add the Fluent operator in Gardener in place of fluent-bit
 
 ## Alternatives
 
