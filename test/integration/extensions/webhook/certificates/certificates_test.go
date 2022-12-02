@@ -36,6 +36,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -56,7 +57,6 @@ import (
 const (
 	servicePort = 12345
 
-	extensionName                   = "provider-test"
 	extensionType                   = "test"
 	shootWebhookManagedResourceName = "extension-provider-test-shoot-webhooks"
 
@@ -73,6 +73,7 @@ var _ = Describe("Certificates tests", func() {
 		codec     = newCodec(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		fakeClock *testclock.FakeClock
 
+		extensionName      string
 		extensionNamespace *corev1.Namespace
 		shootNamespace     *corev1.Namespace
 		cluster            *extensionsv1alpha1.Cluster
@@ -125,6 +126,9 @@ var _ = Describe("Certificates tests", func() {
 	})
 
 	BeforeEach(func() {
+		// use unique extension name for each test,for unique webhook config name
+		extensionName = "provider-test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 		fakeClock = testclock.NewFakeClock(time.Now())
 
 		cluster = &extensionsv1alpha1.Cluster{
@@ -195,13 +199,15 @@ var _ = Describe("Certificates tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("verifying certificates exist on disk")
-			serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverCert).NotTo(BeEmpty())
+			Eventually(func(g Gomega) {
+				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverCert).NotTo(BeEmpty())
 
-			serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverKey).NotTo(BeEmpty())
+				serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverKey).NotTo(BeEmpty())
+			}).Should(Succeed())
 
 			By("starting manager")
 			mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -210,6 +216,12 @@ var _ = Describe("Certificates tests", func() {
 				defer GinkgoRecover()
 				Expect(mgr.Start(mgrContext)).To(Succeed())
 			}()
+
+			// Wait for the webhook server to start
+			Eventually(func() error {
+				checker := mgr.GetWebhookServer().StartedChecker()
+				return checker(&http.Request{})
+			}).Should(BeNil())
 
 			DeferCleanup(func() {
 				By("stopping manager")
@@ -246,14 +258,14 @@ var _ = Describe("Certificates tests", func() {
 			})
 
 			It("should rotate the certificates and update the webhook configs", func() {
-				var caBundle1, caBundle2, serverCert1 []byte
+				var serverCert1 []byte
 
 				By("retrieving CA bundle (before first reconciliation)")
 
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				}).Should(Equal(caBundle1))
+				}).Should(Not(BeEmpty()))
 
 				By("reading generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
@@ -274,7 +286,7 @@ var _ = Describe("Certificates tests", func() {
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				}).Should(Equal(caBundle2))
+				}).Should(Not(BeEmpty()))
 
 				By("reading re-generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
@@ -292,7 +304,7 @@ var _ = Describe("Certificates tests", func() {
 	Context("run with seed webhook", func() {
 		BeforeEach(func() {
 			seedWebhook = admissionregistrationv1.MutatingWebhook{
-				Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, extensionType),
+				Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, strings.TrimPrefix(extensionName, "provider-")),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{
 						Name:      "gardener-extension-" + extensionName,
@@ -308,13 +320,15 @@ var _ = Describe("Certificates tests", func() {
 					},
 				},
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				FailurePolicy:           &failurePolicyFail,
-				MatchPolicy:             &matchPolicyExact,
-				SideEffects:             &sideEffectsNone,
-				TimeoutSeconds:          &timeoutSeconds,
-				ReinvocationPolicy:      &reinvocationPolicy,
-				NamespaceSelector:       &metav1.LabelSelector{},
-				ObjectSelector:          &metav1.LabelSelector{},
+				// here variable failurePolicyFail can't be used as it can be overwritten to
+				// `Ignore` by previous tests
+				FailurePolicy:      (*admissionregistrationv1.FailurePolicyType)(pointer.String("Fail")),
+				MatchPolicy:        &matchPolicyExact,
+				SideEffects:        &sideEffectsNone,
+				TimeoutSeconds:     &timeoutSeconds,
+				ReinvocationPolicy: &reinvocationPolicy,
+				NamespaceSelector:  &metav1.LabelSelector{},
+				ObjectSelector:     &metav1.LabelSelector{},
 			}
 
 			seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
@@ -353,13 +367,15 @@ var _ = Describe("Certificates tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("verifying certificates exist on disk")
-			serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverCert).NotTo(BeEmpty())
+			Eventually(func(g Gomega) {
+				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverCert).NotTo(BeEmpty())
 
-			serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(serverKey).NotTo(BeEmpty())
+				serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(serverKey).NotTo(BeEmpty())
+			}).Should(Succeed())
 
 			By("starting manager")
 			mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -368,6 +384,12 @@ var _ = Describe("Certificates tests", func() {
 				defer GinkgoRecover()
 				Expect(mgr.Start(mgrContext)).To(Succeed())
 			}()
+
+			// Wait for the webhook server to start
+			Eventually(func() error {
+				checker := mgr.GetWebhookServer().StartedChecker()
+				return checker(&http.Request{})
+			}).Should(BeNil())
 
 			DeferCleanup(func() {
 				By("stopping manager")
