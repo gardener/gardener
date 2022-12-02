@@ -53,7 +53,7 @@ var _ = Describe("#CRDs", func() {
 
 		applier := kubernetes.NewApplier(c, mapper)
 
-		crdDeployer = fluentoperator.NewFluentOperatorCRD(applier)
+		crdDeployer = fluentoperator.NewCRDs(applier)
 	})
 
 	JustBeforeEach(func() {

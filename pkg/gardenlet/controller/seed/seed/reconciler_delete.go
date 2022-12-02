@@ -192,7 +192,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		vpnAuthzServer     = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
 		istioCRDs          = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
 		istio              = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
-		fluentOperatorCRDs = fluentoperator.NewFluentOperatorCRD(r.SeedClientSet.Applier())
+		fluentOperatorCRDs = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
 	)
 
 	// TODO(rfranzke): Delete this in a future version.

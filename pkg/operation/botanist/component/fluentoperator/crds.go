@@ -53,19 +53,19 @@ func init() {
 	)
 }
 
-type fluentOperatorCRDs struct {
+type crds struct {
 	applier kubernetes.Applier
 }
 
-// NewFluentOperatorCRD can be used to deploy fluent operator CRDs.
-func NewFluentOperatorCRD(a kubernetes.Applier) component.DeployWaiter {
-	return &fluentOperatorCRDs{
+// NewCRDs can be used to deploy fluent operator CRDs.
+func NewCRDs(a kubernetes.Applier) component.DeployWaiter {
+	return &crds{
 		applier: a,
 	}
 }
 
 // Deploy creates and updates the CRD definitions for the fluent operator.
-func (c *fluentOperatorCRDs) Deploy(ctx context.Context) error {
+func (c *crds) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
 	for _, resource := range resources {
@@ -79,7 +79,7 @@ func (c *fluentOperatorCRDs) Deploy(ctx context.Context) error {
 }
 
 // Destroy deletes the CRDs for the fluent operator
-func (c *fluentOperatorCRDs) Destroy(ctx context.Context) error {
+func (c *crds) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
 	for _, resource := range resources {
@@ -93,11 +93,11 @@ func (c *fluentOperatorCRDs) Destroy(ctx context.Context) error {
 }
 
 // Wait does nothing
-func (c *fluentOperatorCRDs) Wait(ctx context.Context) error {
+func (c *crds) Wait(ctx context.Context) error {
 	return nil
 }
 
 // WaitCleanup does nothing
-func (c *fluentOperatorCRDs) WaitCleanup(ctx context.Context) error {
+func (c *crds) WaitCleanup(ctx context.Context) error {
 	return nil
 }

@@ -395,7 +395,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	if err := fluentoperator.NewFluentOperatorCRD(applier).Deploy(ctx); err != nil {
+	if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
 		return err
 	}
 
