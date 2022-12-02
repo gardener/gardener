@@ -22,6 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// MutateScheduleFunc is a function for mutating the schedule based on the maintenance time window and UID.
+type MutateScheduleFunc func(string, MaintenanceTimeWindow, types.UID) string
+
 // DetermineSchedule determines a schedule based on the provided format and the creation timestamp. If both the begin
 // and end of a maintenance time window are provided and different from the 'always time window' then the provided
 // mutation function is applied.
@@ -30,7 +33,7 @@ func DetermineSchedule(
 	begin, end string,
 	uid types.UID,
 	creationTimestamp metav1.Time,
-	mutate func(string, MaintenanceTimeWindow, types.UID) string,
+	mutate MutateScheduleFunc,
 ) (
 	string,
 	error,
