@@ -1,11 +1,13 @@
 ---
-title:  Monitoring Stack - Migrating to the prometheus-operator
+title:  Observabilits Stack - Migrating to the prometheus-operator and fluent-bit operator
 gep-number: 0019
 creation-date: 2022-06-21
 status: implementable
 authors:
 - "@wyb1"
 - "@istvanballok"
+- "@nickytd"
+- "@Kristian-ZH"
 reviewers:
 - "@rfranzke"
 - "@ialidzhikov"
@@ -13,11 +15,11 @@ reviewers:
 - "@timebertt"
 ---
 
-# GEP-19: Monitoring Stack - Migrating to the prometheus-operator
+# GEP-19: Observability Stack - Migrating to prometheus-operator and fluent-bit-operator
 
 ## Table of Contents
 
-- [GEP-19: Monitoring Stack - Migrating to the prometheus-operator](#gep-19-monitoring-stack---migrating-to-the-prometheus-operator)
+- [GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit operator](#gep-19-observability-stack---migrating-to-the-prometheus-operator and fluent-bit operator)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
@@ -30,39 +32,49 @@ reviewers:
     - [Seed Monitoring](#seed-monitoring)
     - [BYOMC (Bring your own monitoring configuration)](#byomc-bring-your-own-monitoring-configuration)
     - [Grafana Sidecar](#grafana-sidecar)
+    - [Fluent-bit Operator CRDs](#fluent-bit-operator-crds)
+    - [Fluent-bit Filters and Parsers](#fluent-bit-filters-parsers)
+    - [BYOMC (Bring your own logging configuration)](#byomc-bring-your-own-logging-configuration)
     - [Migration](#migration)
   - [Alternatives](#alternatives)
 
 ## Summary
 
-As Gardener has grown, the monitoring configuration has also evolved with it.
+As Gardener has grown, the observability configurations have also evolved with it.
 Many components must be monitored and the configuration for these components
 must also be managed. This poses a challenge because the configuration is
 distributed across the Gardener project among different folders and even
 different repositories (for example extensions). While it is not possible to
 centralize the configuration, it is possible to improve the developer experience
-and improve the general stability of the monitoring. This can be done by
-introducing the [prometheus-operator]. This operator will make it easier for
-monitoring configuration to be discovered and picked up with the use of the
-[Custom Resources][prom-crds] provided by the prometheus-operator. These
-resources can also be directly referenced in Go and be deployed by their
+and improve the general stability of the monitoring and logging. This can be done by
+introducing kubernetes operators such as the [prometheus-operator] for monitoring stack
+and fluent-bit opertator for the logging stack [fluent-bit-operator].
+These operator will make it easier for
+monitoring and logging configurations to be discovered and picked up with the use of the respective custom resources:
+
+1. [Prometheus Custom Resources][prom-crds] provided by the prometheus-operator.
+1. [Fluent-bit Custom Resources][fluent-bit-crds] provided by the fluent-bit-operator.
+
+These resources can also be directly referenced in Go and be deployed by their
 respective components, instead of creating `.yaml` files in Go, or templating
-charts. With the addition of the prometheus-operator it should also be easier to
-add new features, such as Thanos.
+charts. With the addition of the operators it should is easier to provide
+flexible deployment layouts of the components or even introduce new features,
+such as Thanos in the case of prometheus-operator
 
 ## Motivation
 
-Simplify monitoring changes and extensions with the use of the
-[prometheus-operator]. The current extension contract is described
+Simplify monitoring and logging changes and extensions with the use of the
+[prometheus-operator] and [fluent-bit-operator]. The current extension contract is described
 [here][extension-contract]. This document aims to define a new contract.
 
-Make it easier to add new monitoring features and make new changes. For example,
-when using the [prometheus-operator] components can bring their own monitoring
+Make it easier to add new monitoring and logging features and make new changes. For example,
+when using the operators components can bring their own monitoring
 configuration and specify exactly how they should be monitored without needing
-to add this configuration directly into Prometheus.
+to add this configuration directly into Prometheus. Or components can defined how their logs
+shall be parsed or enhanced before being indexed.
 
-The prometheus-operator handles validation of monitoring configuration. It will
-be more difficult to give Prometheus invalid config.
+Both operators handles validation of the respective configurations. It will
+be more difficult to give Prometheus or Fluent-Bit apps an invalid config.
 
 ### Goals
 
@@ -80,9 +92,14 @@ be more difficult to give Prometheus invalid config.
   all dashboards are appended into a single configmap. This can be an issue if
   the maximum configmap size of 1MiB is ever exceeded.
 
-### Non-Goals
+- Migrate the life-cycle of log shippers to an operator.
 
-- Changes to the logging stack.
+- Introduce a stable, declarative API for defining filters and parsers for gardener
+  core components and extensions.
+
+- Full match of the current log shippers configurations in gardener
+
+### Non-Goals
 
 - Feature parity between the current solution and the one proposed in this GEP.
   The new stack should provide similar monitoring coverage, but it will be very
@@ -91,10 +108,10 @@ be more difficult to give Prometheus invalid config.
 
 ## Proposal
 
-Today, Gardener provides monitoring for shoot clusters (i.e. system components
+Today, Gardener provides monitoring and logging for shoot clusters (i.e. system components
 and the control plane) and for the seed cluster. The proposal is to migrate
-these monitoring stacks to use the [prometheus-operator]. The proposal is lined
-out below:
+these stacks to use the [prometheus-operator] and [fluent-bit-operator].
+The proposal is lined out below:
 
 ### API
 
@@ -492,6 +509,96 @@ Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and prov
 
 - Dashboards can have multiple labels and be provisioned in a seed and/or shoot Grafana.
 
+### Fluent-bit Operator CRDs
+
+Fluent-bit operator oversees two types for resources: Fluent-Bit Custom Resource and
+Fluent-bit Inputs, Outputs, Filters and Parsers configurations.
+
+1. Fluent-Bit Custom Resource
+
+```yaml
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: FluentBit
+metadata:
+  name: fluent-bit
+  namespace: fluent
+  labels:
+    app.kubernetes.io/name: fluent-bit
+spec:
+  image: kubesphere/fluent-bit:v1.9.9
+  fluentBitConfigName: fluent-bit-config
+  resources: {}
+  nodeSelector: {}
+  annotations: {}
+  ...
+  # and so on
+```
+
+[fluent-bit-resource] carries the usual kubernetes workload properties,
+such as resource definitions, node selectors, pod/node affinity and so on. The sole purpose
+is to construct the [fluent-bit-daemonset] spec managing the fluent-bit application instances
+on the cluster nodes.
+The current state of the fluent-bit operator fully supports Gardener use cases, such as adding support for fluent-bit custom plugins. In this state, the fluent-bit operator can be used by Gardener "as is" without the need of forking it.
+
+### Fluent-bit Filters and Parsers
+
+The second major function of the fluent-bit operator is to compile a valid application configuration aggregating declarations supplied by fluent-bit custom resources such as ClusterFitlers, ClusterParsers and so on as shown by the example.
+
+1. Fluent-Bit Inputs, Outputs, Filters and Parsers
+
+```yaml
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFluentBitConfig
+metadata:
+  name: fluent-bit-config
+  labels:
+    app.kubernetes.io/name: fluent-bit
+spec:
+  service:
+    parsersFile: parsers.conf
+  filterSelector:
+    matchLabels:
+      fluentbit.fluent.io/enabled: "true"
+  parserSelector:
+    matchLabels:
+      fluentbit.fluent.io/enabled: "true"
+
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parser
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: "*"
+  filters:
+  - parser:
+      keyName: log
+      parser: my-regex
+
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: my-regex
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  regex:
+    timeKey: time
+    timeFormat: "%d/%b/%Y:%H:%M:%S %z"
+    types: "code:integer size:integer"
+    regex: '^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$'
+
+```
+
+In this example, we have a fluent bit [filter-plugin] of type parser and the corresponding [regex-parser]. In the Gardener context, the configuration resources are supplied by the core components and extensions.
+
+### BYOMC (Bring your own logging configuration)
+
+Since fluent-bit uses [input-tail] plugin and reads any container output under `/var/log/pods` it process logs outputs of all workloads. In this case, any workload may bring its own set of filters and parsers if needed using the declarative APIs supported by the operator.
+
 ### Migration
 
 1. Deploy the [prometheus-operator] and its custom resources.
@@ -518,6 +625,13 @@ Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and prov
 [prom-crds]: https://github.com/prometheus-operator/prometheus-operator#customresourcedefinitions
 [prom-op-issue]: https://github.com/prometheus-operator/prometheus-operator/issues/4828
 [prometheus-operator]: https://github.com/prometheus-operator/prometheus-operator
+[fluent-bit-operator]: https://github.com/fluent/fluent-operator
+[fluent-bit-crds]: https://github.com/fluent/fluent-operator/tree/master/apis/fluentbit/v1alpha2
+[fluent-bit-resource]: https://github.com/fluent/fluent-operator/blob/4b984f7c9440119ebacc2c31b8ec376bfd0d63c4/apis/fluentbit/v1alpha2/fluentbit_types.go#L31
+[fluent-bit-daemonset]: https://github.com/fluent/fluent-operator/blob/4b984f7c9440119ebacc2c31b8ec376bfd0d63c4/pkg/operator/daemonset.go#L13
+[filter-plugin]: https://docs.fluentbit.io/manual/pipeline/filters/parser
+[regex-parser]: https://docs.fluentbit.io/manual/pipeline/parsers/regular-expression
+[input-tail]: https://docs.fluentbit.io/manual/pipeline/inputs/tail
 [seed-alertmanager]: https://github.com/gardener/gardener/blob/0f4d22270927e2aee8b821f858fb76162ccd8a86/charts/seed-bootstrap/templates/alertmanager/alertmanager.yaml
 [shoot-alertmanager]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts/alertmanager
 [shoot-monitoring]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts
