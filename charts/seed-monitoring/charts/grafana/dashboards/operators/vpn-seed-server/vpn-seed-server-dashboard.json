@@ -68,7 +68,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum (label_replace(rate(openvpn_server_client_received_bytes_total{common_name=~\"vpn-seed-client\"}[$__rate_interval]), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")) by (service)",
+          "expr": "sum (rate(openvpn_server_client_received_bytes_total{common_name=\"vpn-seed-client\"}[$__rate_interval])) by (service)",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 1,
@@ -77,7 +77,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum (label_replace(rate(openvpn_server_client_sent_bytes_total{common_name=~\"vpn-seed-client\"}[$__rate_interval]), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")) by (service)",
+          "expr": "sum (rate(openvpn_server_client_sent_bytes_total{common_name=\"vpn-seed-client\"}[$__rate_interval])) by (service)",
           "format": "time_series",
           "hide": false,
           "interval": "1m",
@@ -106,7 +106,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:118",
-          "format": "decbytes",
+          "format": "binBps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -178,7 +178,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum (label_replace(rate(openvpn_server_client_received_bytes_total{common_name=~\"vpn-shoot-client-0\"}[$__rate_interval]), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")) by (service)",
+          "expr": "sum (rate(openvpn_server_client_received_bytes_total{common_name=\"vpn-shoot-client-0\"}[$__rate_interval])) by (service)",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 1,
@@ -187,7 +187,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum (label_replace(rate(openvpn_server_client_sent_bytes_total{common_name=~\"vpn-shoot-client-0\"}[$__rate_interval]), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")) by (service)",
+          "expr": "sum (rate(openvpn_server_client_sent_bytes_total{common_name=\"vpn-shoot-client-0\"}[$__rate_interval])) by (service)",
           "format": "time_series",
           "hide": false,
           "interval": "1m",
@@ -216,7 +216,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:118",
-          "format": "decbytes",
+          "format": "binBps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -288,7 +288,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum (label_replace(rate(openvpn_server_client_received_bytes_total{common_name=~\"vpn-shoot-client-1\"}[$__rate_interval]), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")) by (service)",
+          "expr": "sum (rate(openvpn_server_client_received_bytes_total{common_name=\"vpn-shoot-client-1\"}[$__rate_interval])) by (service)",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 1,
@@ -297,7 +297,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum (label_replace(rate(openvpn_server_client_sent_bytes_total{common_name=~\"vpn-shoot-client-1\"}[$__rate_interval]), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")) by (service)",
+          "expr": "sum (rate(openvpn_server_client_sent_bytes_total{common_name=\"vpn-shoot-client-1\"}[$__rate_interval])) by (service)",
           "format": "time_series",
           "hide": false,
           "interval": "1m",
@@ -326,7 +326,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:118",
-          "format": "decbytes",
+          "format": "binBps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -398,7 +398,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "label_replace(count(timestamp(openvpn_status_update_time_seconds)-openvpn_status_update_time_seconds < 35) by (instance), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")",
+          "expr": "count(timestamp(openvpn_status_update_time_seconds)-openvpn_status_update_time_seconds < 35) by (instance)",
           "format": "time_series",
           "instant": false,
           "interval": "1m",
@@ -500,7 +500,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "label_replace(count(timestamp(openvpn_server_route_last_reference_time_seconds) - openvpn_server_route_last_reference_time_seconds < 35) by (instance), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")",
+          "expr": "count(timestamp(openvpn_server_route_last_reference_time_seconds) - openvpn_server_route_last_reference_time_seconds < 35) by (instance)",
           "format": "time_series",
           "instant": false,
           "interval": "1m",
@@ -605,7 +605,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "label_replace(sum(increase(openvpn_server_client_sent_bytes_total[1d])) by (instance), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")",
+          "expr": "sum(increase(openvpn_server_client_sent_bytes_total[1d])) by (instance)",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -616,7 +616,7 @@
       ],
       "timeFrom": "24h",
       "timeShift": null,
-      "title": "Traffic sent today",
+      "title": "Traffic sent in the last 24 hour",
       "type": "stat"
     },
     {
@@ -672,7 +672,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "label_replace(sum(increase(openvpn_server_client_received_bytes_total[1d])) by (instance), \"service\", \"$1\", \"instance\", \"([^.]+)(.+)\")",
+          "expr": "sum(increase(openvpn_server_client_received_bytes_total[1d])) by (instance)",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -683,7 +683,7 @@
       ],
       "timeFrom": "24h",
       "timeShift": null,
-      "title": "Traffic received today",
+      "title": "Traffic received in the last 24 hour",
       "type": "stat"
     },
     {
@@ -782,7 +782,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(label_replace(label_replace(openvpn_server_client_sent_bytes_total{},\"real_ip\", \"$1\", \"real_address\", \"(.+):.+\"), \"service\", \"$1\", \"instance\", \"([^.]+).+\")) by(common_name, connection_time, virtual_address,real_ip,real_address,service)",
+          "expr": "sum(openvpn_server_client_sent_bytes_total{}) by(common_name, connection_time,virtual_address,real_ip,real_address,service)",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -792,7 +792,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(label_replace(label_replace(openvpn_server_client_received_bytes_total{},\"real_ip\", \"$1\", \"real_address\", \"(.+):.+\"), \"service\", \"$1\", \"instance\", \"([^.]+).+\")) by(common_name, connection_time, virtual_address,real_ip,real_address,service)",
+          "expr": "sum(openvpn_server_client_received_bytes_total{}) by(common_name, connection_time,virtual_address,real_ip,real_address,service)",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -802,7 +802,7 @@
         },
         {
           "exemplar": true,
-          "expr": "label_replace(label_replace(openvpn_server_route_last_reference_time_seconds,\"real_ip\", \"$1\", \"real_address\", \"(.+):.+\"), \"service\", \"$1\", \"instance\", \"([^.]+).+\")",
+          "expr": "openvpn_server_route_last_reference_time_seconds",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1183,6 +1183,6 @@
   },
   "timezone": "utc",
   "title": "Reversed VPN OpenVPN Server (HA)",
-  "uid": "_1DM17HWk",
+  "uid": "reversed-vpn-ha",
   "version": 1
 }

@@ -181,6 +181,18 @@ metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
   regex: ^(` + strings.Join(monitoringAllowedMetricsHA, "|") + `)$
+- source_labels: [instance] 
+  action: replace
+  regex: ([^.]+).+ 
+  target_label: service 
+  replacement: $1
+- source_labels: [real_address]
+  action: replace
+  regex: ([^:]+).+ 
+  target_label: real_ip 
+  replacement: $1
+- regex: "username"
+  action: labeldrop
 `
 	monitoringScrapeConfigTemplateHA *template.Template
 )

@@ -63,11 +63,11 @@ because either VPN server or client are not reachable anymore. New request shoul
 ### HA Architecture for VPN
 
 Establishing a connection from the VPN client on the shoot to the server in the control plane works nearly the same
-way as in the non-HA case. The only difference is that the VPN client targets one of two VPN server, represented by two services 
+way as in the non-HA case. The only difference is that the VPN client targets one of two VPN servers, represented by two services 
 `vpn-seed-server-0` and `vpn-seed-server-1` with endpoints in pods with the same name.
 The VPN tunnel is used by a `kube-apiserver` to reach nodes, services, or pods in the shoot cluster. 
 In the non-HA case, a kube-apiserver uses an HTTP proxy running as a side-car in the VPN server to address
-the shoot networks via the VPN tunnel and the `vpn-shoot` acting as router.
+the shoot networks via the VPN tunnel and the `vpn-shoot` acts as a router.
 In the HA case, the setup is more complicated. Instead of an HTTP proxy in the VPN server, the kube-apiserver has
 additional side-cars. One side-car for each VPN client to connect to the corresponding VPN server.
 On the shoot side there are now two `vpn-shoot` pods, each with two VPN clients for each VPN server.
