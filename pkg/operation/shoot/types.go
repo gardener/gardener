@@ -110,6 +110,7 @@ type Components struct {
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
 	HVPA                     component.MonitoringComponent
+	IstioConfig              component.IstioConfigInterface
 }
 
 // ControlPlane contains references to K8S control plane components.

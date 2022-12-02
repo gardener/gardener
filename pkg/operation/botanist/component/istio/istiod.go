@@ -133,15 +133,26 @@ func (i *istiod) Deploy(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-injection", "disabled")
 
-			if value, ok := istioIngressGateway.Values.Labels[v1beta1constants.GardenRole]; ok && value == v1beta1constants.GardenRoleExposureClassHandler {
-				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExposureClassHandler)
+			if value, ok := istioIngressGateway.Values.Labels[v1beta1constants.GardenRole]; ok && strings.HasPrefix(value, v1beta1constants.GardenRoleExposureClassHandler) {
+				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, value)
 			}
 			if value, ok := istioIngressGateway.Values.Labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
 				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.LabelExposureClassHandlerName, value)
 			}
 
+			if value, ok := istioIngressGateway.Values.Labels[DefaultZoneKey]; ok {
+				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, DefaultZoneKey, value)
+			}
+
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-			metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(i.values.Zones, ","))
+			zones := i.values.Zones
+			if len(istioIngressGateway.Values.Zones) > 0 {
+				zones = istioIngressGateway.Values.Zones
+			}
+			metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+			if len(zones) == 1 {
+				metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "true")
+			}
 			return nil
 		}); err != nil {
 			return err

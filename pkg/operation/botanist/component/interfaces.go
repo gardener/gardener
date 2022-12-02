@@ -55,6 +55,18 @@ type MonitoringComponent interface {
 	AlertingRules() (map[string]string, error)
 }
 
+// IstioConfigInterface contains functions for retrieving data from the istio configuration.
+type IstioConfigInterface interface {
+	// ServiceName is the currently used name of the istio ingress service, which is responsible for the shoot cluster.
+	ServiceName() string
+	// Namespace is the currently used namespace of the istio ingress gateway, which is responsible for the shoot cluster.
+	Namespace() string
+	// LoadBalancerAnnotations contain the annotation to be used for the istio ingress service load balancer.
+	LoadBalancerAnnotations() map[string]string
+	// Labels contain the labels to be used for the istio ingress gateway entities.
+	Labels() map[string]string
+}
+
 type (
 	// AggregateMonitoringConfiguration is a function alias for returning configuration for the aggregate monitoring.
 	AggregateMonitoringConfiguration func() (AggregateMonitoringConfig, error)

@@ -33,7 +33,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -770,7 +773,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 	sniEnabledOrInUse := anySNIInUse || gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI)
 
-	if err := cleanupOrphanExposureClassHandlerResources(ctx, log, seedClient, r.Config.ExposureClassHandlers); err != nil {
+	if err := cleanupOrphanExposureClassHandlerResources(ctx, log, seedClient, r.Config.ExposureClassHandlers, seed.GetInfo().Spec.Provider.Zones); err != nil {
 		return err
 	}
 
@@ -1091,61 +1094,128 @@ func cleanupOrphanExposureClassHandlerResources(
 	log logr.Logger,
 	c client.Client,
 	exposureClassHandlers []config.ExposureClassHandler,
+	zones []string,
 ) error {
+	// Remove ordinary, orphaned istio exposure class namespaces
 	exposureClassHandlerNamespaces := &corev1.NamespaceList{}
 	if err := c.List(ctx, exposureClassHandlerNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler}); err != nil {
 		return err
 	}
 
 	for _, namespace := range exposureClassHandlerNamespaces.Items {
-		log = log.WithValues("namespace", client.ObjectKeyFromObject(&namespace))
-
-		var exposureClassHandlerExists bool
-		for _, handler := range exposureClassHandlers {
-			if *handler.SNI.Ingress.Namespace == namespace.Name {
-				exposureClassHandlerExists = true
-				break
+		if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, true, func() bool {
+			for _, handler := range exposureClassHandlers {
+				if *handler.SNI.Ingress.Namespace == namespace.Name {
+					return true
+				}
 			}
-		}
-		if exposureClassHandlerExists {
-			continue
-		}
-		log.Info("Namespace is orphan as there is no ExposureClass handler in the gardenlet configuration anymore")
-
-		// Determine the corresponding handler name to the ExposureClass handler resources.
-		handlerName, ok := namespace.Labels[v1beta1constants.LabelExposureClassHandlerName]
-		if !ok {
-			log.Info("Cannot delete ExposureClass handler resources as the corresponging handler is unknown and it is not save to remove them")
-			continue
-		}
-
-		gatewayList := &istiov1beta1.GatewayList{}
-		if err := c.List(ctx, gatewayList); err != nil {
+			return false
+		}); err != nil {
 			return err
 		}
+	}
 
-		var exposureClassHandlerInUse bool
-		for _, gateway := range gatewayList.Items {
-			if gateway.Name != v1beta1constants.DeploymentNameKubeAPIServer && gateway.Name != v1beta1constants.DeploymentNameVPNSeedServer {
-				continue
+	// Remove zonal, orphaned istio exposure class namespaces
+	zonalExposureClassHandlerNamespaces := &corev1.NamespaceList{}
+	labelSelector := client.MatchingLabelsSelector{
+		Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)).Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
+	}
+	if err := c.List(ctx, zonalExposureClassHandlerNamespaces, labelSelector); err != nil {
+		return err
+	}
+
+	zoneSet := sets.NewString(zones...)
+	for _, namespace := range zonalExposureClassHandlerNamespaces.Items {
+		if ok, zone := istio.IsZonalIstioExtension(namespace.Labels); ok {
+			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, true, func() bool {
+				if !zoneSet.Has(zone) {
+					return false
+				}
+				for _, handler := range exposureClassHandlers {
+					if handler.Name == namespace.Labels[v1beta1constants.LabelExposureClassHandlerName] {
+						return true
+					}
+				}
+				return false
+			}); err != nil {
+				return err
 			}
+		}
+	}
+
+	// Remove zonal, orphaned istio default namespaces
+	zonalIstioNamespaces := &corev1.NamespaceList{}
+	labelSelector = client.MatchingLabelsSelector{
+		Selector: labels.NewSelector().Add(utils.MustNewRequirement(istio.DefaultZoneKey, selection.Exists)),
+	}
+	if err := c.List(ctx, zonalIstioNamespaces, labelSelector); err != nil {
+		return err
+	}
+
+	for _, namespace := range zonalIstioNamespaces.Items {
+		if ok, zone := istio.IsZonalIstioExtension(namespace.Labels); ok {
+			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, false, func() bool {
+				return zoneSet.Has(zone)
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func cleanupOrphanIstioNamespace(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	namespace corev1.Namespace,
+	needsHandler bool,
+	isAliveFunc func() bool,
+) error {
+	log = log.WithValues("namespace", client.ObjectKeyFromObject(&namespace))
+
+	if isAlive := isAliveFunc(); isAlive {
+		return nil
+	}
+	log.Info("Namespace is orphan as there is no ExposureClass handler in the gardenlet configuration anymore or the zone was removed")
+
+	// Determine the corresponding handler name to the ExposureClass handler resources.
+	handlerName, ok := namespace.Labels[v1beta1constants.LabelExposureClassHandlerName]
+	if !ok && needsHandler {
+		log.Info("Cannot delete ExposureClass handler resources as the corresponging handler is unknown and it is not save to remove them")
+		return nil
+	}
+
+	gatewayList := &istiov1beta1.GatewayList{}
+	if err := c.List(ctx, gatewayList); err != nil {
+		return err
+	}
+
+	for _, gateway := range gatewayList.Items {
+		if gateway.Name != v1beta1constants.DeploymentNameKubeAPIServer && gateway.Name != v1beta1constants.DeploymentNameVPNSeedServer {
+			continue
+		}
+		if needsHandler {
 			// Check if the gateway still selects the ExposureClass handler ingress gateway.
 			if value, ok := gateway.Spec.Selector[v1beta1constants.LabelExposureClassHandlerName]; ok && value == handlerName {
-				exposureClassHandlerInUse = true
-				break
+				log.Info("Resources of ExposureClass handler cannot be deleted as they are still in use", "exposureClassHandler", handlerName)
+				return nil
+			}
+		} else {
+			_, zone := istio.IsZonalIstioExtension(namespace.Labels)
+			if value, ok := gateway.Spec.Selector[istio.DefaultZoneKey]; ok && strings.HasSuffix(value, zone) {
+				log.Info("Resources of default zonal istio handler cannot be deleted as they are still in use", "zone", zone)
+				return nil
 			}
 		}
-		if exposureClassHandlerInUse {
-			log.Info("Resources of ExposureClass handler cannot be deleted as they are still in use", "exposureClassHandler", handlerName)
-			continue
-		}
+	}
 
-		// ExposureClass handler is orphan and not used by any Shoots anymore
-		// therefore it is save to clean it up.
-		log.Info("Delete orphan ExposureClass handler namespace")
-		if err := c.Delete(ctx, &namespace); client.IgnoreNotFound(err) != nil {
-			return err
-		}
+	// ExposureClass handler is orphan and not used by any Shoots anymore
+	// therefore it is save to clean it up.
+	log.Info("Delete orphan ExposureClass handler namespace")
+	if err := c.Delete(ctx, &namespace); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	return nil
