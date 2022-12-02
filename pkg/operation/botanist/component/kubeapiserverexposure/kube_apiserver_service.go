@@ -35,15 +35,15 @@ import (
 
 // ServiceValues configure the kube-apiserver service.
 type ServiceValues struct {
-	Annotations map[string]string
-	SNIPhase    component.Phase
+	AnnotationsFunc func() map[string]string
+	SNIPhase        component.Phase
 }
 
 // serviceValues configure the kube-apiserver service.
 // this one is not exposed as not all values should be configured
 // from the outside.
 type serviceValues struct {
-	annotations     map[string]string
+	annotationsFunc func() map[string]string
 	serviceType     corev1.ServiceType
 	enableSNI       bool
 	gardenerManaged bool
@@ -55,8 +55,8 @@ func NewService(
 	log logr.Logger,
 	crclient client.Client,
 	values *ServiceValues,
-	serviceKey client.ObjectKey,
-	sniServiceKey client.ObjectKey,
+	serviceKeyFunc func() client.ObjectKey,
+	sniServiceKeyFunc func() client.ObjectKey,
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
@@ -74,8 +74,10 @@ func NewService(
 	}
 
 	var (
-		internalValues         = &serviceValues{}
-		loadBalancerServiceKey client.ObjectKey
+		internalValues = &serviceValues{
+			annotationsFunc: func() map[string]string { return map[string]string{} },
+		}
+		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
 
 	if values != nil {
@@ -84,57 +86,57 @@ func NewService(
 			internalValues.serviceType = corev1.ServiceTypeClusterIP
 			internalValues.enableSNI = true
 			internalValues.gardenerManaged = true
-			loadBalancerServiceKey = sniServiceKey
+			loadBalancerServiceKeyFunc = sniServiceKeyFunc
 		case component.PhaseEnabling:
 			// existing traffic must still access the old loadbalancer
 			// IP (due to DNS cache).
 			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
 			internalValues.enableSNI = true
 			internalValues.gardenerManaged = false
-			loadBalancerServiceKey = sniServiceKey
+			loadBalancerServiceKeyFunc = sniServiceKeyFunc
 		case component.PhaseDisabling:
 			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
 			internalValues.enableSNI = true
 			internalValues.gardenerManaged = true
-			loadBalancerServiceKey = serviceKey
+			loadBalancerServiceKeyFunc = serviceKeyFunc
 		default:
 			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
 			internalValues.enableSNI = false
 			internalValues.gardenerManaged = false
-			loadBalancerServiceKey = serviceKey
+			loadBalancerServiceKeyFunc = serviceKeyFunc
 		}
 
-		internalValues.annotations = values.Annotations
+		internalValues.annotationsFunc = values.AnnotationsFunc
 	}
 
 	return &service{
-		log:                    log,
-		client:                 crclient,
-		values:                 internalValues,
-		serviceKey:             serviceKey,
-		loadBalancerServiceKey: loadBalancerServiceKey,
-		waiter:                 waiter,
-		clusterIPFunc:          clusterIPFunc,
-		ingressFunc:            ingressFunc,
+		log:                        log,
+		client:                     crclient,
+		values:                     internalValues,
+		serviceKeyFunc:             serviceKeyFunc,
+		loadBalancerServiceKeyFunc: loadBalancerServiceKeyFunc,
+		waiter:                     waiter,
+		clusterIPFunc:              clusterIPFunc,
+		ingressFunc:                ingressFunc,
 	}
 }
 
 type service struct {
-	log                    logr.Logger
-	client                 client.Client
-	values                 *serviceValues
-	serviceKey             client.ObjectKey
-	loadBalancerServiceKey client.ObjectKey
-	waiter                 retry.Ops
-	clusterIPFunc          func(clusterIP string)
-	ingressFunc            func(ingressIP string)
+	log                        logr.Logger
+	client                     client.Client
+	values                     *serviceValues
+	serviceKeyFunc             func() client.ObjectKey
+	loadBalancerServiceKeyFunc func() client.ObjectKey
+	waiter                     retry.Ops
+	clusterIPFunc              func(clusterIP string)
+	ingressFunc                func(ingressIP string)
 }
 
 func (s *service) Deploy(ctx context.Context) error {
 	obj := s.emptyService()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
-		obj.Annotations = s.values.annotations
+		obj.Annotations = s.values.annotationsFunc()
 		if s.values.enableSNI {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		}
@@ -176,8 +178,8 @@ func (s *service) Wait(ctx context.Context) error {
 		// this ingress can be either the kube-apiserver's service or istio's IGW loadbalancer.
 		svc := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      s.loadBalancerServiceKey.Name,
-				Namespace: s.loadBalancerServiceKey.Namespace,
+				Name:      s.loadBalancerServiceKeyFunc().Name,
+				Namespace: s.loadBalancerServiceKeyFunc().Namespace,
 			},
 		}
 
@@ -197,7 +199,7 @@ func (s *service) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *service) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.serviceKey.Name, Namespace: s.serviceKey.Namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.serviceKeyFunc().Name, Namespace: s.serviceKeyFunc().Namespace}}
 }
 
 func getLabels() map[string]string {
