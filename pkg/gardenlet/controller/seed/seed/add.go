@@ -41,7 +41,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.GardenClient = gardenCluster.GetClient()
 	}
 	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
 	}
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace

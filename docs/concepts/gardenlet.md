@@ -32,7 +32,7 @@ located in its particular seed cluster:
 
 ![Counterparts in the Gardener Architecture and the Kubernetes Architecture](images/gardenlet-architecture-similarities.png)
 
-The `gardener-controller-manager` has control loops to manage resources of the Gardener API. However, instead of letting the `gardener-controller-manager` talk directly to seed clusters or shoot clusters, the responsibility isn’t only delegated to the gardenlet, but also managed using a reversed control flow: It's up to the gardenlet to contact the Gardener API server, for example, to share a status for its managed seed clusters.
+The `gardener-controller-manager` has controllers to manage resources of the Gardener API. However, instead of letting the `gardener-controller-manager` talk directly to seed clusters or shoot clusters, the responsibility isn’t only delegated to the gardenlet, but also managed using a reversed control flow: It's up to the gardenlet to contact the Gardener API server, for example, to share a status for its managed seed clusters.
 
 Reversing the control flow allows placing seed clusters or shoot clusters behind firewalls without the necessity of direct access via VPN tunnels anymore.
 
@@ -159,7 +159,7 @@ in `seedConfig` if it's not present already.
 In the component configuration for the gardenlet, it’s possible to define:
 
 * settings for the Kubernetes clients interacting with the various clusters
-* settings for the control loops inside the gardenlet
+* settings for the controllers inside the gardenlet
 * settings for leader election and log levels, feature gates, and seed selection or seed configuration.
 
 More information: [Example Gardenlet Component Configuration](../../example/20-componentconfig-gardenlet.yaml).
@@ -194,7 +194,7 @@ is available.
 However, the Gardenlet is designed to withstand such connection outages and
 retries until the connection is reestablished.
 
-## Control Loops
+## Controllers
 
 The gardenlet consists out of several controllers which are now described in more detail.
 
@@ -208,7 +208,7 @@ The status from the reconciliation is reported in the `.status.lastOperation` fi
 
 If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller deletes the generated secret in the garden cluster and the `extensions.gardener.cloud/v1alpha1.BackupBucket` resource in the seed cluster and it waits for the respective extension controller to remove its finalizers from the `extensions.gardener.cloud/v1alpha1.BackupBucket`. Then it deletes the secret in the seed cluster and finally removes the finalizers from the `core.gardener.cloud/v1beta1.BackupBucket` and the referred secret.
 
-### `BackupEntry` Controller
+### [`BackupEntry` Controller](../../pkg/gardenlet/controller/backupentry)
 
 The `BackupEntry` controller reconciles those `core.gardener.cloud/v1beta1.BackupEntry` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 Those resources are created by the `Shoot` controller (only if backup is enabled for the respective `Seed`) and there is exactly one `BackupEntry` per `Shoot`.
@@ -362,6 +362,34 @@ This internal health status is available via the `gardenlet`'s `/healthz` endpoi
 ### [`Shoot` Controller](../../pkg/gardenlet/controller/shoot)
 
 The `Shoot` controller in the `gardenlet` reconciles `Shoot` objects with the help of the following reconcilers.
+
+#### "Main" Reconciler
+
+This reconciler is responsible for managing all shoot cluster components and implements the core logic for creating, updating, hibernating, deleting, and migrating shoot clusters.
+It is also responsible for syncing the [`Cluster` cluster](../extensions/cluster.md) to the seed cluster before and after each successful shoot reconciliation.
+
+The main reconciliation logic is performed in 3 different task flows dedicated to specific operation types:
+
+- `reconcile` (operations: create, reconcile, restore): this is the main flow responsible for creation and regular reconciliation of shoots. Hibernating a shoot also triggers this flow. It is also used for restoration of the shoot control plane on the new seed (second half of a [Control Plane Migration](../usage/control_plane_migration.md#shoot-control-plane-migration))
+- `migrate`: this flow is triggered when `spec.seedName` specifies a different seed than `status.seedName`. It performs the first half of the [Control Plane Migration](../usage/control_plane_migration.md#shoot-control-plane-migration), i.e., a backup (`migrate` operation) of all control plane components followed by a "shallow delete".
+- `delete`: this flow is triggered when the shoot's `deletionTimestamp` is set, i.e., when it is deleted.
+
+Gardenlet takes special care to prevent unnecessary shoot reconciliations.
+This is important for several reasons, e.g., to not overload the seed API servers and to not exhaust infrastructure rate limits too fast.
+Gardenlet performs shoot reconciliations according to the following rules:
+
+- If `status.observedGeneration` is less than `metadata.generation`: this is the case, e.g., when the spec was changed, a [manual reconciliation operation](../usage/shoot_operations.md) was triggered, or the shoot was deleted.
+- If the [last operation](../usage/shoot_status.md) was not successful.
+- If the shoot is in a [failed state](../usage/shoot_status.md), gardenlet does not perform any reconciliation on the shoot (unless the retry operation was triggered). However, it syncs the `Cluster` resource to the seed in order to inform extension controllers about the failed state.
+- Regular reconciliations are performed with every `GardenletConfiguration.controllers.shoot.syncPeriod` (defaults to `1h`).
+- Shoot reconciliations are not performed if the assigned seed cluster is not healthy or has not been reconciled by the current gardenlet version yet (determined by the `Seed.status.gardener` section). This is done to make sure that shoots are reconciled with fully rolled out seed system components after a gardener upgrade. Otherwise, gardenlet might perform operations of the new version that doesn't match the old version of the deployed seed system components, which might lead to unspecified behavior.
+
+There are a few special cases that overwrite or confine how often and under which circumstances periodic shoot reconciliations are performed:
+
+- In case, the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), the sync period for a shoot can be increased individually by setting the `shoot.gardener.cloud/sync-period` annotation. This is always allowed for shoots in the `garden` namespace. Shoots are not reconciled with a higher frequency than specified in `GardenletConfiguration.controllers.shoot.syncPeriod`.
+- In case, the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), shoots can be marked as "ignored" by setting the `shoot.gardener.cloud/ignore` annotation. In this case, gardenlet does not perform any reconciliation for the shoot.
+- In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). Gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [this doc](../usage/shoot_maintenance.md#cluster-reconciliation)).
+- In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [this doc](../usage/shoot_maintenance.md)).
 
 #### "Migration" Reconciler
 

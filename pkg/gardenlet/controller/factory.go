@@ -72,7 +72,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 
 	// run controllers
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
-	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs)
+	go shootController.Run(controllerCtx, *f.Config.Controllers.ShootCare.ConcurrentSyncs)
 
 	log.Info("gardenlet initialized")
 

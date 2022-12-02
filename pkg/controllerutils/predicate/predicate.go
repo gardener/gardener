@@ -271,12 +271,21 @@ func (p *isBeingMigratedPredicate) Create(e event.CreateEvent) bool {
 
 func (p *isBeingMigratedPredicate) Update(e event.UpdateEvent) bool {
 	return IsObjectBeingMigrated(p.ctx, p.reader, e.ObjectNew, p.seedName, p.getSeedNamesFromObject)
-
 }
+
 func (p *isBeingMigratedPredicate) Delete(e event.DeleteEvent) bool {
 	return IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
 }
 
 func (p *isBeingMigratedPredicate) Generic(e event.GenericEvent) bool {
 	return IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
+}
+
+// SeedNamePredicate returns a predicate which returns true for objects that are being migrated to a different
+// seed cluster.
+func SeedNamePredicate(seedName string, getSeedNamesFromObject func(client.Object) (*string, *string)) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		specSeedName, statusSeedName := getSeedNamesFromObject(obj)
+		return gutil.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
+	})
 }

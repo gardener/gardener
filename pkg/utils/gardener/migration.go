@@ -24,7 +24,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// IsObjectBeingMigrated checks whether the objec is being migrated.
+// IsObjectBeingMigrated checks whether the object is being migrated.
 func IsObjectBeingMigrated(
 	ctx context.Context,
 	reader client.Reader,
@@ -43,4 +43,25 @@ func IsObjectBeingMigrated(
 	}
 
 	return false
+}
+
+// GetResponsibleSeedName returns the seed name which is responsible for the next reconciliation.
+func GetResponsibleSeedName(specSeedName, statusSeedName *string) string {
+	switch {
+	case specSeedName == nil:
+		// If the spec.seedName is empty then nobody is responsible.
+		return ""
+
+	case statusSeedName == nil:
+		// If status.seedName is not set yet, the seed given in spec.seedName is responsible for reconciliation.
+		return *specSeedName
+
+	case *specSeedName != *statusSeedName:
+		// Migration of the object was triggered, the seed given in status.seedName is responsible for preparing the
+		// migration.
+		return *statusSeedName
+
+	default:
+		return *specSeedName
+	}
 }

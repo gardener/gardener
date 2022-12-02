@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 
 	// If the backup entry is being deleted or no longer being migrated to this seed, clear the migration start time
-	if backupEntry.DeletionTimestamp != nil || !gutil.IsObjectBeingMigrated(ctx, r.GardenClient, backupEntry, r.SeedName, getBackupEntrySeedNames) {
+	if backupEntry.DeletionTimestamp != nil || !gutil.IsObjectBeingMigrated(ctx, r.GardenClient, backupEntry, r.SeedName, gutil.GetBackupEntrySeedNames) {
 		log.V(1).Info("Clearing migration start time")
 		if err := r.setMigrationStartTime(ctx, backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)

@@ -73,8 +73,8 @@ The reason is that Gardener cannot differentiate between create/update/reconcile
 
 ⚠️  If `confineSpecUpdateRollout=true`, please note that if you change the maintenance time window itself then it will only be effective after the upcoming maintenance.
 
-⚠️  There is one exceptional change in the shoot specification that triggers an immediate roll out which is changes to the `.spec.hibernation.enabled` field.
-If you hibernate or wake-up your shoot then Gardener gets active right away.
+⚠️  As exceptions to above rules, [manually triggered reconciliations](shoot_operations.md#immediate-reconciliation) and changes to the `.spec.hibernation.enabled` field trigger immediate rollouts.
+I.e., if you hibernate or wake-up your shoot, or you explicitly tell Gardener to reconcile your shoot, then Gardener gets active right away.
 
 ## Shoot Operations
 

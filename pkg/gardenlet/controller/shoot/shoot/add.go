@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package migration
+package shoot
 
 import (
-	"k8s.io/utils/clock"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,15 +33,18 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "shoot-migration"
+const ControllerName = "shoot"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
-	if r.Clock == nil {
-		r.Clock = clock.RealClock{}
+	if r.Recorder == nil {
+		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
+	}
+	if r.ReconciliationDueTracker == nil {
+		r.ReconciliationDueTracker = newReconciliationDueTracker()
 	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
@@ -48,7 +54,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		mgr,
 		controller.Options{
 			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.Shoot.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
 		},
 	)
@@ -58,8 +64,34 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
+		r.EventHandler(),
+		predicateutils.SeedNamePredicate(r.Config.SeedConfig.Name, gutil.GetShootSeedNames),
 		&predicate.GenerationChangedPredicate{},
-		predicateutils.IsBeingMigratedPredicate(r.GardenClient, r.SeedName, gutil.GetShootSeedNames),
 	)
+}
+
+// EventHandler returns an event handler.
+func (r *Reconciler) EventHandler() handler.EventHandler {
+	return &handler.Funcs{
+		CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      e.Object.GetName(),
+				Namespace: e.Object.GetNamespace(),
+			}})
+		},
+		UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+			req := reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      e.ObjectNew.GetName(),
+				Namespace: e.ObjectNew.GetNamespace(),
+			}}
+
+			// If the shoot's deletion timestamp is set then we want to forget about the potentially established exponential
+			// backoff and enqueue it faster.
+			if e.ObjectOld.GetDeletionTimestamp() == nil && e.ObjectNew.GetDeletionTimestamp() != nil {
+				q.Forget(req)
+			}
+
+			q.Add(req)
+		},
+	}
 }

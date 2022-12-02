@@ -69,7 +69,7 @@ make KUBECONFIG=... test-e2e-local-operator
 
 ## Implementation Details
 
-### Control Loops
+### Controllers
 
 As of today, the `gardener-operator` only has one controller which is now described in more detail.
 

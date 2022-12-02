@@ -205,7 +205,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
-	if !IsShootManagedByThisGardenlet(shoot, r.config) {
+	if pointer.StringDeref(shoot.Spec.SeedName, "") != r.config.SeedConfig.Name {
 		return reconcile.Result{}, nil
 	}
 

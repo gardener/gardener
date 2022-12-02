@@ -46,7 +46,7 @@ import (
 
 // runDeleteShootFlow deletes a Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
-func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
 		kubeAPIServerDeploymentFound         = true
@@ -628,14 +628,14 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 	return nil
 }
 
-func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
+func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
 		return err
 	}
 
 	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
 			return fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -643,7 +643,7 @@ func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, log logr.Logg
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
 	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (bool, error) {
-		err := r.gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		if apierrors.IsNotFound(err) {
 			return retryutils.Ok()
 		}

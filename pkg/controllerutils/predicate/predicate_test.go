@@ -21,6 +21,7 @@ import (
 	"github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -531,5 +532,32 @@ var _ = Describe("Predicate", func() {
 			gomega.Expect(p.Delete(event.DeleteEvent{Object: obj})).To(gomega.BeFalse())
 			gomega.Expect(p.Generic(event.GenericEvent{Object: obj})).To(gomega.BeFalse())
 		})
+	})
+
+	Describe("#SeedNamePredicate", func() {
+		var (
+			p        predicate.Predicate
+			seedName = "seed"
+		)
+
+		DescribeTable("filter by seedName",
+			func(specSeedName, statusSeedName *string, match gomegatypes.GomegaMatcher) {
+				p = SeedNamePredicate(seedName, func(client.Object) (*string, *string) {
+					return specSeedName, statusSeedName
+				})
+
+				gomega.Expect(p.Create(event.CreateEvent{})).To(match)
+				gomega.Expect(p.Update(event.UpdateEvent{})).To(match)
+				gomega.Expect(p.Delete(event.DeleteEvent{})).To(match)
+				gomega.Expect(p.Generic(event.GenericEvent{})).To(match)
+			},
+
+			Entry("spec.seedName and status.seedName are nil", nil, nil, gomega.BeFalse()),
+			Entry("spec.seedName does not match and status.seedName is nil", pointer.String("otherSeed"), nil, gomega.BeFalse()),
+			Entry("spec.seedName and status.seedName do not match", pointer.String("otherSeed"), pointer.String("otherSeed"), gomega.BeFalse()),
+			Entry("spec.seedName is nil but status.seedName matches", nil, pointer.String("seed"), gomega.BeFalse()),
+			Entry("spec.seedName matches and status.seedName is nil", pointer.String("seed"), nil, gomega.BeTrue()),
+			Entry("spec.seedName does not match but status.seedName matches", pointer.String("otherSeed"), pointer.String("seed"), gomega.BeTrue()),
+		)
 	})
 })

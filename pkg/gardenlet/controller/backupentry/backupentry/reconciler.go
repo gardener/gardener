@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -91,17 +90,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	if responsibleSeedName := gutil.GetResponsibleSeedName(backupEntry.Spec.SeedName, backupEntry.Status.SeedName); responsibleSeedName != r.SeedName {
+		log.Info("Skipping because BackupEntry is not managed by this gardenlet", "seedName", responsibleSeedName)
+		return reconcile.Result{}, nil
+	}
+
 	if backupEntry.DeletionTimestamp != nil {
 		return r.deleteBackupEntry(ctx, log, backupEntry)
 	}
 
 	if shouldMigrateBackupEntry(backupEntry) {
 		return r.migrateBackupEntry(ctx, log, backupEntry)
-	}
-
-	if !IsBackupEntryManagedByThisGardenlet(backupEntry, r.SeedName) {
-		log.V(1).Info("Skipping because BackupEntry is not managed by this gardenlet", "seedName", *backupEntry.Spec.SeedName)
-		return reconcile.Result{}, nil
 	}
 
 	return r.reconcileBackupEntry(ctx, log, backupEntry)
@@ -670,9 +669,4 @@ func removeGardenerOperationAnnotation(ctx context.Context, c client.Client, be 
 	patch := client.MergeFrom(be.DeepCopy())
 	delete(be.GetAnnotations(), v1beta1constants.GardenerOperation)
 	return c.Patch(ctx, be, patch)
-}
-
-// IsBackupEntryManagedByThisGardenlet checks if the given BackupEntry is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func IsBackupEntryManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
-	return pointer.StringDeref(backupEntry.Spec.SeedName, "") == seedName
 }

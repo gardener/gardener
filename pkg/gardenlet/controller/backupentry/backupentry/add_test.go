@@ -22,16 +22,12 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -68,40 +64,6 @@ var _ = Describe("Add", func() {
 				SeedName: pointer.String("seed"),
 			},
 		}
-	})
-
-	Describe("#SeedNamePredicate", func() {
-		var p predicate.Predicate
-
-		BeforeEach(func() {
-			p = reconciler.SeedNamePredicate()
-		})
-
-		It("should return false if the specified object is not a BackupEntry", func() {
-			Expect(p.Create(event.CreateEvent{Object: &corev1.Secret{}})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: &corev1.Secret{}})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: &corev1.Secret{}})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{Object: &corev1.Secret{}})).To(BeFalse())
-		})
-
-		DescribeTable("filter BackupEntry by seedName",
-			func(specSeedName, statusSeedName *string, match gomegatypes.GomegaMatcher) {
-				backupEntry.Spec.SeedName = specSeedName
-				backupEntry.Status.SeedName = statusSeedName
-
-				Expect(p.Create(event.CreateEvent{Object: backupEntry})).To(match)
-				Expect(p.Update(event.UpdateEvent{ObjectNew: backupEntry})).To(match)
-				Expect(p.Delete(event.DeleteEvent{Object: backupEntry})).To(match)
-				Expect(p.Generic(event.GenericEvent{Object: backupEntry})).To(match)
-			},
-
-			Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName are nil", nil, nil, BeFalse()),
-			Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.String("otherSeed"), nil, BeFalse()),
-			Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.String("otherSeed"), pointer.String("otherSeed"), BeFalse()),
-			Entry("BackupEntry.Spec.SeedName is nil but BackupEntry.Status.SeedName matches", nil, pointer.String("seed"), BeFalse()),
-			Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.String("seed"), nil, BeTrue()),
-			Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.String("otherSeed"), pointer.String("seed"), BeTrue()),
-		)
 	})
 
 	Describe("#MapExtensionBackupEntryToBackupEntry", func() {
