@@ -398,7 +398,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(timestamp(openvpn_status_update_time_seconds)-openvpn_status_update_time_seconds < 35) by (instance)",
+          "expr": "count(timestamp(openvpn_status_update_time_seconds)-openvpn_status_update_time_seconds < 35) by (service)",
           "format": "time_series",
           "instant": false,
           "interval": "1m",
@@ -500,7 +500,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(timestamp(openvpn_server_route_last_reference_time_seconds) - openvpn_server_route_last_reference_time_seconds < 35) by (instance)",
+          "expr": "count(timestamp(openvpn_server_route_last_reference_time_seconds) - openvpn_server_route_last_reference_time_seconds < 35) by (service)",
           "format": "time_series",
           "instant": false,
           "interval": "1m",
@@ -605,7 +605,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(increase(openvpn_server_client_sent_bytes_total[1d])) by (instance)",
+          "expr": "sum(increase(openvpn_server_client_sent_bytes_total[1d])) by (service)",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -672,7 +672,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(increase(openvpn_server_client_received_bytes_total[1d])) by (instance)",
+          "expr": "sum(increase(openvpn_server_client_received_bytes_total[1d])) by (service)",
           "format": "time_series",
           "instant": true,
           "interval": "",
