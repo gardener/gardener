@@ -102,7 +102,7 @@
 * [GEP-16: Dynamic kubeconfig generation for Shoot clusters](proposals/16-adminkubeconfig-subresource.md)
 * [GEP-17: Shoot Control Plane Migration "Bad Case" Scenario](proposals/17-shoot-control-plane-migration-bad-case.md)
 * [GEP-18: Automated Shoot CA Rotation](proposals/18-shoot-CA-rotation.md)
-* [GEP-19: Monitoring Stack - Migrating to the prometheus-operator](proposals/19-migrating-to-prometheus-operator.md)
+* [GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit operator](proposals/19-migrating-observability-stack-to-operators.md)
 * [GEP-20: Highly Available Shoot Control Planes](proposals/20-ha-control-planes.md)
 
 ## Development
