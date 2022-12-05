@@ -56,6 +56,7 @@ Supporting these kinds of networking setups in shoot clusters is a complex endea
 Hence, we propose to take several steps towards the ultimate goal of supporting all three of: IPv4 single-stack (already available today), IPv6 single-stack, IPv4/IPv6 dual-stack – both in the local setup and on cloud infrastructure.
 As a first step, this GEP proposes support for IPv6 single-stack networking in the local Gardener environment only.
 This keeps things focused on the most important changes to the API and central components while neglecting infrastructure-specific quirks and other difficulties that will arise with dual-stack networking.
+For example, when using IPv6 single-stack networking on cloud infrastructure, users might want to use IPv6 prefixes assigned to them by the provider instead of configuring the shoot's node and pod CIDRs upfront.
 
 While focusing on IPv6 single-stack networking for now, we cannot neglect how a future IPv4/IPv6 dual-stack implementation may look like and provide a corresponding outlook.
 However, these ideas only serve an informational purpose for motivating decisions regarding the IPv6 single-stack implementation.
@@ -72,8 +73,11 @@ Once this enhancement has been implemented and IPv6 single-stack networking in l
 ### Non-Goals
 
 - support IPv4/IPv6 dual-stack networking
+- provide IPv4 connectivity on IPv6 single-stack clusters
 - support IPv6 single-stack networking on cloud infrastructure
+- use IPv6 prefixes assigned by provider for pod CIDR similar to [provider-assigned node CIDR](https://github.com/gardener/gardener/blob/219d828fcdea81fb3edf13de2736daf81e137923/pkg/operation/botanist/infrastructure.go#L73)
 - support changing the networking setup of shoots from IPv4 to IPv6 single-stack or vice-versa
+- host IPv6 single-stack shoots on IPv4 single-stack seeds or vice-versa
 - propose changes API types defined outside of gardener/gardener and their implementations, e.g., the `NetworkConfig` APIs (`providerConfig`) of networking extensions
 - support the legacy VPN tunnel (`ReversedVPN` feature gate is disabled)
 
@@ -181,6 +185,8 @@ spec:
 
 `ipFamilies` has the same semantics as `Shoot.spec.networking.ipFamilies`.
 Again, the existing CIDR fields are used to specify the IPv6 CIDRs instead of IPv4 CIDRs, e.g. `Seed.spec.networks.{nodes,pods,services}` and `Seed.spec.networks.shootDefaults.{pods,services}`.
+Similar to the other networking-related fields in the `Seed` API, the `ipFamilies` field has informational character only.
+It can be used to handle IP family-specifics (see [Docker Hub Images](#docker-hub-images)) and may be used for restricting scheduling of shoots to seeds with matching IP families.
 
 The existing `Seed.spec.networks.blockCIDRs` field is augmented to allow IPv6 CIDR values in addition to IPv4 values.
 
@@ -234,14 +240,6 @@ Corresponding instructions are made available for macOS and Linux machines.
 
 provider-local is configured to use an IPv6 address (`::1`) instead of `127.0.0.1` for patching the status of LoadBalancer services.
 
-#### Scheduling
-
-gardener-apiserver only allows scheduling shoots to seeds with matching `ipFamilies` settings.
-I.e., all `Shoot.spec.networking.ipFamilies` values must be included in `Seed.spec.networks.ipFamilies`.
-This might be changed later on if "networking magic" is in place to host dual-stack shoots on IPv6 singe-stack seeds or similar.
-
-Also, gardener-scheduler chooses seeds with `ipFamilies` settings matching the shoot's configuration.
-
 #### DNS Records
 
 gardenlet creates `DNSRecord` objects for the shoot API server with the record type corresponding to the `Shoot.spec.networking.ipFamilies` setting (`A` for IPv4, `AAAA` for IPv6).
@@ -271,8 +269,18 @@ Hence, [e2e tests](../development/testing.md#end-to-end-e2e-tests-using-provider
 #### Networking Extensions
 
 Networking extensions need to support the configuration of IPv6-related settings of the networking implementation in their `NetworkConfig` API.
-This is not specified any further by gardener and will be implemented differently in different extensions (as the `NetworkConfig` API design differs already today).
+The concrete API changes and implementation thereof are not specified any further by this GEP.
+It is expected that IPv6 support will be implemented differently in different extensions, similar to differences in the `NetworkConfig` API design that are already present today.
 In general, extensions need to respect the `Shoot.spec.networking.ipFamilies` settings in all aspects: API validation, defaulting, and corresponding handling in code (i.e., configuring IPAM, etc.).
+
+As this GEP aims for creating IPv6 single-stack shoots in the local environment, it depends on the IPv6 implementation in networking-calico, which is currently used as the networking extension for local shoots.
+Hence, we only list a few important steps of the implementation here without going into detail:
+
+- the `NetworkConfig` API is extended to allow specifying IPv6-related settings similar to IPv4-related settings (pool, auto-detection, etc.)
+- IPv4 support is disabled on calico-node via environment variables
+- IPv4 IPAM is disabled on calico-node via configuration
+- IPv6 support is enabled on calico-node via environment variables (IPv6 auto-detection, IPv6 pod CIDR, etc.)
+- IPv6 IPAM is enabled on calico-node via configuration
 
 ## Alternatives Considered
 
