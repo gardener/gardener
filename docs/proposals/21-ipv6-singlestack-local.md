@@ -97,12 +97,12 @@ apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 spec:
   networking:
+    pods: 2001:db8:1::/48
+    nodes: 2001:db8:2::/48
+    services: 2001:db8:3::/48
     # ...
     ipFamilies:
     - IPv6
-    podsV6: 2001:db8:1::/48
-    nodesV6: 2001:db8:2::/48
-    servicesV6: 2001:db8:3::/48
 ```
 
 `ipFamilies` is the central setting for specifying the IP families used for shoot networking.
@@ -120,10 +120,44 @@ In this case, users might not supply any of the CIDRs in their shoot specificati
 Hence, we need a central field that allows configuring the used IP families explicitly instead of implicitly.
 That's exactly the purpose of the `ipFamilies` field.
 
-Additionally, IPv6-equivalents of all CIDR and mask fields are introduced, e.g., `Shoot.spec.networking.{pods,services,nodes}V6` and `Shoot.spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeV6`.
-Depending on the `ipFamilies` value, either the IPv4 field or the IPv6 field may be specified – or both in a potential dual-stack implementation.
+If IPv6 single-stack networking is configured via the `ipFamilies` field, the existing `Shoot.spec.networking.{pods,services,nodes}` fields are used to specify the IPv6 CIDRs instead of the IPv4 CIDRs.
 
 All gardener components and extensions need to respect the `ipFamilies` field and handle it correctly, e.g., in API validation, defaulting, and configuring Shoot components.
+
+#### Future Dual-Stack Enhancements
+
+For supporting dual-stack networking setups in the future, the `Shoot` API must allow specifying CIDRs of both IP families.
+Similar to the [`Service` API](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), the `Shoot` API may be extended with list equivalents of `Shoot.spec.networking.{pods,services,nodes}`.
+In this case, the existing CIDR fields may specify the respective CIDR of the primary IP family while the list fields contain CIDRs of both IP families.
+The primary IP family may be determined by the first element of the `ipFamilies` field.
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+spec:
+  networking:
+    pods: 2001:db8:1::/48
+    nodes: 2001:db8:2::/48
+    services: 2001:db8:3::/48
+    ipFamilies:
+    - IPv6
+    - IPv4
+    # ...
+    podsCIDRs:
+    - 2001:db8:1::/48
+    - 10.0.1.0/24
+    nodesCIDRs:
+    - 2001:db8:2::/48
+    - 10.0.2.0/24
+    servicesCIDRs:
+    - 2001:db8:3::/48
+    - 10.0.3.0/24
+```
+
+The new and existing CIDR API fields are immutable, similar to the `Service.spec.clusterIP` field ([ref](https://github.com/kubernetes/kubernetes/blob/release-1.24/pkg/apis/core/validation/validation.go#L4828-L4831)).
+Hence, there won't be any complex logic for syncing the primary CIDR to the list and vice-versa.
+
+Corresponding changes may be performed to the other relevant APIs, e.g., the `Seed` and `Network` APIs.
 
 ### `Seed` API
 
@@ -134,21 +168,19 @@ apiVersion: core.gardener.cloud/v1beta1
 kind: Seed
 spec:
   networks:
+    nodes: 2001:db8:11::/48
+    pods: 2001:db8:12::/48
+    services: 2001:db8:13::/48
+    shootDefaults:
+      pods: 2001:db8:1::/48
+      services: 2001:db8:3::/48
     # ...
     ipFamilies:
     - IPv6
-    nodesV6: 2001:db8:11::/48
-    podsV6: 2001:db8:12::/48
-    servicesV6: 2001:db8:13::/48
-    shootDefaults:
-      # ...
-      podsV6: 2001:db8:1::/48
-      servicesV6: 2001:db8:3::/48
 ```
 
 `ipFamilies` has the same semantics as `Shoot.spec.networking.ipFamilies`.
-Again, IPv6-equivalents of all CIDR and mask fields are introduced, e.g. `Seed.spec.networks.{nodes,pods,services}V6` and `Seed.spec.networks.shootDefaults.{pods,services}V6`
-Depending on the `ipFamilies` value, either the IPv4 field or the IPv6 field may be specified – or both in a potential dual-stack implementation.
+Again, the existing CIDR fields are used to specify the IPv6 CIDRs instead of IPv4 CIDRs, e.g. `Seed.spec.networks.{nodes,pods,services}` and `Seed.spec.networks.shootDefaults.{pods,services}`.
 
 The existing `Seed.spec.networks.blockCIDRs` field is augmented to allow IPv6 CIDR values in addition to IPv4 values.
 
@@ -160,15 +192,15 @@ The `Network` API is augmented analogously to the `Shoot.spec.networking` sectio
 apiVersion: extensions.gardener.cloud/v1alpha1
 kind: Network
 spec:
+  podCIDR: 2001:db8:1::/48
+  serviceCIDR: 2001:db8:3::/48
   # ...
   ipFamilies:
   - IPv6
-  podCIDRv6: 2001:db8:1::/48
-  serviceCIDRv6: 2001:db8:3::/48
 ```
 
-Similar to the `Shoot` API, a new `ipFamilies` field is introduced along with IPv6-equivalents of all CIDR fields, i.e.., `Network.spec.{pod,service}CIDRv6`.
-As with the existing `Network` fields, these fields are filled by gardenlet according to the `Shoot` specification on reconciliations.
+Similar to the `Shoot` API, a new `ipFamilies` field is introduced.
+Again, the existing CIDR fields are used to specify the IPv6 CIDRs instead of IPv4 CIDRs, e.g., `Network.spec.{pod,service}CIDR`.
 
 ### `DNSRecord` API
 
@@ -244,8 +276,6 @@ In general, extensions need to respect the `Shoot.spec.networking.ipFamilies` se
 
 ## Alternatives Considered
 
-Instead of adding IPv6-equivalent fields in the `Shoot` and `Seed` API (e.g., `Shoot.spec.networking.{pods,services,nodes}V6`), new arrays could be added that allow specifying both settings in a single list (similar to `Service.spec.clusterIPs`).
-However, to guarantee backward and forward compatibility, the new array would need to be kept in sync with the existing field and the existing field must not be removed.
-This makes API validation more complex and might confuse users.
-For the sake of simplicity and a more expressive and less confusing API, this approach was discarded.
-However, a potential `core.gardener.cloud/v1` API might choose to use a single array for both settings instead of separate fields.
+Instead of reusing the existing CIDR fields in the `Shoot`, `Seed`, and `Network` APIs, new fields could be added that allow specifying the IPv6 CIDRs only, e.g., `Shoot.spec.networking.{pods,services,nodes}V6`.
+This could simplify handling in code (e.g., validation and defaulting logic) in a future dual-stack implementation.
+We decided to reuse the existing CIDR fields for specifying the IPv6 CIDRs in a single-stack setup and introduce additional lists for specifying the secondary CIDRs in a dual-stack setup, as it resembles the `Service` API, is cleaner from an API design perspective, and is less confusing for shoot owners.
