@@ -79,6 +79,10 @@ var _ = Describe("ManagedSeed controller test", func() {
 	)
 
 	BeforeEach(func() {
+		Eventually(func(g Gomega) {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), &corev1.Namespace{})).To(Succeed())
+		}).Should(Succeed())
+
 		gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletconfigv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
@@ -180,10 +184,6 @@ var _ = Describe("ManagedSeed controller test", func() {
 	})
 
 	JustBeforeEach(func() {
-		Eventually(func(g Gomega) {
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), &corev1.Namespace{})).To(Succeed())
-		}).Should(Succeed())
-
 		By("creating Secret")
 		testSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -288,7 +288,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			}).Should(Succeed())
 		})
 
-		It("should set the ShootRecociled status to true when the shoot is reconciled successfully", func() {
+		It("should set the ShootReconciled status to true when the shoot is reconciled successfully", func() {
 			reconcileShoot()
 
 			Eventually(func(g Gomega) {
@@ -312,9 +312,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-backup-secret", Namespace: gardenNamespace.Name}, secret)).To(Succeed())
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-seed-secret", Namespace: gardenNamespace.Name}, secret)).To(Succeed())
 				}).Should(Succeed())
-			})
 
-			It("should deploy the gardenlet", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet:apiserver-sni"}, &rbacv1.ClusterRole{})).To(Succeed())

@@ -89,11 +89,10 @@ func AddToManager(
 	}
 
 	if err := (&managedseed.Reconciler{
-		Config:          *cfg.Controllers.ManagedSeed,
-		ChartsPath:      filepath.Join(charts.Path, "gardener", "gardenlet"),
-		GardenNamespace: gardenNamespace.Name,
-	}).AddToManager(mgr, cfg, gardenCluster, seedCluster, shootClientMap); err != nil {
-		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
+		Config:     *cfg.Controllers.ManagedSeed,
+		ChartsPath: charts.Path,
+	}).AddToManager(mgr, *cfg, gardenCluster, seedCluster, shootClientMap, imageVector); err != nil {
+		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
 	}
 
 	if err := (&networkpolicy.Reconciler{

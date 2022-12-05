@@ -116,7 +116,7 @@ var _ = Describe("Actuator", func() {
 		shootClientSet.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
 
 		log = logr.Discard()
-		actuator = newActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, vh, recorder, filepath.Join(charts.Path, "gardener", "gardenlet"), namespace)
+		actuator = newActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, vh, recorder, charts.Path, namespace)
 
 		ctx = context.TODO()
 

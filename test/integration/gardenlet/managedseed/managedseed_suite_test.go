@@ -52,7 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
@@ -152,6 +152,7 @@ var _ = BeforeSuite(func() {
 			GenerateName: "garden-",
 		},
 	}
+
 	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
 
@@ -206,19 +207,16 @@ var _ = BeforeSuite(func() {
 
 	By("starting controller")
 	chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
 	Expect(err).NotTo(HaveOccurred())
+
 	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot" + testRunID, Namespace: gardenNamespace.Name}}), testClientSet).Build()
 
-	DeferCleanup(func() {
-		test.WithVar(&charts.Path, chartsPath)
-	})
-
-	cfg := &config.GardenletConfiguration{
+	cfg := config.GardenletConfiguration{
 		Controllers: &config.GardenletControllerConfiguration{
 			ManagedSeed: &config.ManagedSeedControllerConfiguration{
 				WaitSyncPeriod:   &metav1.Duration{Duration: 5 * time.Millisecond},
 				ConcurrentSyncs:  pointer.Int(5),
-				SyncPeriod:       &metav1.Duration{Duration: 500 * time.Millisecond},
 				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
 			},
 		},
@@ -232,10 +230,9 @@ var _ = BeforeSuite(func() {
 	}
 
 	Expect((&managedseed.Reconciler{
-		Config:          *cfg.Controllers.ManagedSeed,
 		ChartsPath:      chartsPath,
 		GardenNamespace: gardenNamespace.Name,
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
-	}).AddToManager(mgr, cfg, mgr, mgr, shootClientMap)).To(Succeed())
+	}).AddToManager(mgr, cfg, mgr, mgr, shootClientMap, imageVector)).To(Succeed())
 })

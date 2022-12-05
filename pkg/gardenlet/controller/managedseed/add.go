@@ -16,8 +16,6 @@ package managedseed
 
 import (
 	"context"
-	"fmt"
-	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -58,34 +56,33 @@ const (
 )
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, cfg *config.GardenletConfiguration, gardenCluster cluster.Cluster, seedCluster cluster.Cluster, shootClientMap clientmap.ClientMap) error {
+func (r *Reconciler) AddToManager(
+	mgr manager.Manager,
+	cfg config.GardenletConfiguration,
+	gardenCluster cluster.Cluster,
+	seedCluster cluster.Cluster,
+	shootClientMap clientmap.ClientMap,
+	imageVector imagevector.ImageVector,
+) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
-
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(r.ChartsPath, "images.yaml"))
-	if err != nil {
-		return fmt.Errorf("failed reading image vector override: %w", err)
-	}
-
-	valuesHelper := NewValuesHelper(cfg, imageVector)
-
-	if r.Actuator == nil {
-		r.Actuator = newActuator(gardenCluster.GetConfig(),
-			gardenCluster.GetAPIReader(),
-			gardenCluster.GetClient(),
-			seedCluster.GetClient(),
-			shootClientMap,
-			valuesHelper,
-			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
-			r.ChartsPath,
-			r.GardenNamespace,
-		)
-	}
-
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
+
+	valuesHelper := NewValuesHelper(&cfg, imageVector)
+
+	r.Actuator = newActuator(gardenCluster.GetConfig(),
+		gardenCluster.GetAPIReader(),
+		gardenCluster.GetClient(),
+		seedCluster.GetClient(),
+		shootClientMap,
+		valuesHelper,
+		gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
+		r.ChartsPath,
+		r.GardenNamespace,
+	)
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
 	// the controller manually.
