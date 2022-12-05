@@ -16,7 +16,7 @@
 
 set -o errexit
 
-VERSION=$(cat VERSION)
+VERSION="$(cat VERSION)"
 
 export_logs() {
   cluster_name="${1}"

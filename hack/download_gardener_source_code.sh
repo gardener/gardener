@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+# Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,7 @@ set -o nounset
 set -o pipefail
 
 GARDENER_VERSION=$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)
-DOWNLOAD_PATH=$(dirname "${0}")/dev
-
+DOWNLOAD_PATH=$(dirname "${0}")/dev/gardener-releases
 
 parse_flags() {
   while test $# -gt 0; do
@@ -38,5 +37,5 @@ parse_flags() {
 parse_flags "$@"
 
 
-curl -sL https://github.com/gardener/gardener/archive/refs/tags/${GARDENER_VERSION}.tar.gz -o /tmp/source_code.tar.gz && mkdir -p $DOWNLOAD_PATH/gardener && \
-    tar -C $DOWNLOAD_PATH/gardener -xzf /tmp/source_code.tar.gz --strip-components=1 && rm /tmp/source_code.tar.gz
+curl -sL https://github.com/gardener/gardener/archive/refs/tags/${GARDENER_VERSION}.tar.gz -o /tmp/source_code.tar.gz && mkdir -p $DOWNLOAD_PATH/${GARDENER_VERSION} && \
+    tar -C $DOWNLOAD_PATH/${GARDENER_VERSION} -xzf /tmp/source_code.tar.gz --strip-components=1 && rm /tmp/source_code.tar.gz

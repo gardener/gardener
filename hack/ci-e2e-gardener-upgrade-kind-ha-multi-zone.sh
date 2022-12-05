@@ -33,7 +33,6 @@ trap "
   ( make kind-ha-multi-zone-down;)
 " EXIT
 
-
 download_and_install_gardener_previous_release
 
 echo "Running gardener pre-upgrade tests"

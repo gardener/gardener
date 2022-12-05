@@ -438,14 +438,15 @@ gsutil cp -r gs://gardener-prow/pr-logs/pull/gardener_gardener/6136/pull-gardene
   - only set higher timeouts if waiting for long-running reconciliations to be finished
 
 ## Gardener Upgrade Tests (using provider-local)
-Gardener upgrade tests will setup kind cluster and deploys gardener version `vX.X.X` then it upgrades to given version `vY.Y.Y`.
 
-This allow us to qualify/verify the current g/g revision/branch (not yet released) or a specific release whether it is compatible with latest or a specific release (**`GARDENER_PREVIOUS_RELEASE`**).
+Gardener upgrade tests setup a kind cluster and deploy Gardener version `vX.X.X` before upgrading it to a given version `vY.Y.Y`.
 
-This helps us to understand real time scenario what happens or how it reacts when gardener upgrades from version `vX.X.X` to `vY.Y.Y` for existing shoots in different states (`creation`/`hibernation`/`wakeup`/`deletion`). Gardener upgrade tests also help us to qualify releases for all flavors **non-HA**, **HA** with failure tolerance `node`/`zone`. 
+This allows verifying whether the current (unreleased) revision/branch (or a specific release) is compatible with the latest (or a specific other release). The `GARDENER_PREVIOUS_RELEASE` and `GARDENER_NEXT_RELEASE` environment variables are used to specify the respective versions.
 
-Just like E2E test also a [KinD cluster](https://kind.sigs.k8s.io/) and [skaffold](https://skaffold.dev/) to bootstrap a full installation of Gardener based on the current revision/branch, including [provider-local](../extensions/provider-local.md).
-This allows us to run e2e tests in an isolated test environment, fully locally without any infrastructure interaction.
+This helps understanding what happens or how the system reacts when Gardener upgrades from versions `vX.X.X` to `vY.Y.Y` for existing shoots in different states (`creation`/`hibernation`/`wakeup`/`deletion`). Gardener upgrade tests also help qualifying releases for all flavors (**non-HA** or **HA** with failure tolerance `node`/`zone`). 
+
+Just like E2E tests, upgrade tests also use a [KinD cluster](https://kind.sigs.k8s.io/) and [skaffold](https://skaffold.dev/) for bootstrapping a full Gardener installation based on the current revision/branch, including [provider-local](../extensions/provider-local.md).
+This allows running e2e tests in an isolated test environment, fully locally without any infrastructure interaction.
 The tests perform a set of operations on Shoot clusters, e.g. create, delete, hibernate and wake up.
 
 Below is a sequence describing how the tests are performed.
@@ -455,26 +456,20 @@ Below is a sequence describing how the tests are performed.
 - Run gardener pre-upgrade tests which are labeled with `pre-upgrade`.
 - Upgrade Gardener version from `vX.X.X` to `vY.Y.Y`.
 - Run gardener post-upgrade tests which are labeled with `post-upgrade`
-- Tear down seed and cluster.
+- Tear down seed and kind cluster.
 
+### Debugging upgrade Tests
 
-### Debugging e2e Tests
+Gardener upgrade tests can be executed for both non-HA and HA environments. Tests are defined [here](../../test/e2e/gardener/upgrade/upgrade.go).
+- `make ci-e2e-gardener-upgrade-kind` -- This will setup a non-HA environment and execute upgrade tests.
+- `make ci-e2e-gardener-upgrade-kind-ha-single-zone` -- This will setup a HA environment with failure tolerance `node` and execute upgrade tests.
+- `make ci-e2e-gardener-upgrade-kind-ha-multi-zone` This will setup a HA environment with failure tolerance `node` and execute upgrade tests.
 
-Gardener upgrade tests can be executed for both non-HA and HA environments. Tests are defined here [upgrade.go](../../test/e2e/gardener/upgrade/upgrade.go)
-- `make ci-e2e-gardener-upgrade-kind` -- This will setup a non-HA environment and executes gardener upgrade tests.
-- `make ci-e2e-gardener-upgrade-kind-ha-single-zone` -- This will setup a HA environment with failure tolerance `node` and executes gardener upgrade tests.
-- `make ci-e2e-gardener-upgrade-kind-ha-multi-zone` This will setup a HA environment with failure tolerance `node` and executes gardener upgrade tests.
-
-By default if we run one of the above command, it will try to qualify current revision of g/g code against **[latest Gardener release](https://github.com/gardener/gardener/releases/latest)**. 
-If we want to qualify a specific release, then set this variable **`GARDENER_PREVIOUS_RELEASE`** with specific release value.
-
-``` 
-make ci-e2e-gardener-upgrade-kind GARDENER_PREVIOUS_RELEASE=v1.60.0
-```
+By default, the current revision of the `master` branch is verified against the **[latest Gardener release](https://github.com/gardener/gardener/releases/latest)**. 
 
 ### How to run upgrade tests between two Gardener releases
 
-Sometime we need to verify/qualify two gardener releases when we upgrade from one version to another.  
+Sometimes, we need to verify/qualify two Gardener releases when we upgrade from one version to another.  
 This can performed by fetching the two Gardener versions from **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)** and set appropriate env variables `GARDENER_PREVIOUS_RELEASE`, `GARDENER_NEXT_RELEASE`.   
 
 >**`GARDENER_PREVIOUS_RELEASE`** -- This env variable refers to a source release which has to be installed first and then upgraded to version **`GARDENER_NEXT_RELEASE`**. By default it fetches latest release version from  **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)**.
@@ -487,13 +482,14 @@ This can performed by fetching the two Gardener versions from **[Github Gardener
 - `make ci-e2e-gardener-upgrade-kind-ha-multi-zone GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
 
 
-### Purpose of e2e Tests
+### Purpose of upgrade Tests
 
-- tests will ensure previous version of gardener shoot's will work as expected in next(current revision)/specific Gardener release.
+- tests will ensure that shoot clusters reconciled with the previous version of Gardener work as expected even with the next Gardener version.
 - this will reproduce or catch actual issues faced by end users.
-- one of the test case ensures no downtime faced by end-users for shoots while upgrading gardener if shoot's control-plane is configured as HA.
+- one of the test case ensures no downtime faced by end-users for shoots while upgrading Gardener if shoot's control-plane is configured as HA.
 
-### Writing e2e Tests
+### Writing upgrade Tests
+
 - tests are divided into two parts and labeled with `pre-upgrade` and `post-upgrade` labels.
 - Example test case which ensures shoot which was `hibernated` in previous gardener release should `wakeup` as expected in next release. 
   - Creating a shoot and hibernating a shoot is pre-upgrade test case which should be labeled `pre-upgrade` label.

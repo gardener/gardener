@@ -23,7 +23,6 @@ source $(dirname "${0}")/ci-common.sh
 clamp_mss_to_pmtu
 set_gardener_version_env_variables
 
-
 # test setup
 make kind-up
 

@@ -27,7 +27,6 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -44,7 +43,7 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 			parentCtx  = context.Background()
 			job        *batchv1.Job
 			err        error
-			shootTest2 = e2e.DefaultShoot("e2e-g-upgrade")
+			shootTest = e2e.DefaultShoot("e2e-upgrade")
 			f          = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
 		)
 
