@@ -308,7 +308,8 @@ kind-operator-up: $(KIND) $(KUBECTL) $(HELM)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
 kind-operator-down: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
-	rm -rf $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
+	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
+	docker run --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/gardener-operator
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
