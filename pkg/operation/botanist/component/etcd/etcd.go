@@ -17,6 +17,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -124,36 +125,21 @@ type Interface interface {
 
 // New creates a new instance of DeployWaiter for the Etcd.
 func New(
-	c client.Client,
 	log logr.Logger,
+	c client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	role string,
-	class Class,
-	failureToleranceType *gardencorev1beta1.FailureToleranceType,
-	replicas *int32,
-	storageCapacity string,
-	defragmentationSchedule *string,
-	caRotationPhase gardencorev1beta1.ShootCredentialsRotationPhase,
-	k8sVersion string,
+	values Values,
 ) Interface {
-	name := "etcd-" + role
+	name := values.NamePrefix + "etcd-" + values.Role
 	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
 
 	return &etcd{
-		client:                  c,
-		log:                     log,
-		namespace:               namespace,
-		secretsManager:          secretsManager,
-		role:                    role,
-		class:                   class,
-		failureToleranceType:    failureToleranceType,
-		replicas:                replicas,
-		storageCapacity:         storageCapacity,
-		defragmentationSchedule: defragmentationSchedule,
-		caRotationPhase:         caRotationPhase,
-		k8sVersion:              k8sVersion,
-
+		client:         c,
+		log:            log,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 		etcd: &druidv1alpha1.Etcd{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -164,25 +150,33 @@ func New(
 }
 
 type etcd struct {
-	client                  client.Client
-	log                     logr.Logger
-	namespace               string
-	secretsManager          secretsmanager.Interface
-	role                    string
-	class                   Class
-	failureToleranceType    *gardencorev1beta1.FailureToleranceType
-	replicas                *int32
-	storageCapacity         string
-	defragmentationSchedule *string
-	caRotationPhase         gardencorev1beta1.ShootCredentialsRotationPhase
-	k8sVersion              string
-	etcd                    *druidv1alpha1.Etcd
-	backupConfig            *BackupConfig
-	hvpaConfig              *HVPAConfig
+	client         client.Client
+	log            logr.Logger
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
+	etcd           *druidv1alpha1.Etcd
+}
+
+// Values are the configuration values for the ETCD.
+type Values struct {
+	NamePrefix              string
+	Role                    string
+	Class                   Class
+	FailureToleranceType    *gardencorev1beta1.FailureToleranceType
+	Replicas                *int32
+	StorageCapacity         string
+	StorageClassName        *string
+	DefragmentationSchedule *string
+	CARotationPhase         gardencorev1beta1.ShootCredentialsRotationPhase
+	K8sVersion              string
+	BackupConfig            *BackupConfig
+	HvpaConfig              *HVPAConfig
+	PriorityClassName       string
 }
 
 func (e *etcd) hasHAControlPlane() bool {
-	return helper.IsFailureToleranceTypeNode(e.failureToleranceType) || helper.IsFailureToleranceTypeZone(e.failureToleranceType)
+	return helper.IsFailureToleranceTypeNode(e.values.FailureToleranceType) || helper.IsFailureToleranceTypeZone(e.values.FailureToleranceType)
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -227,7 +221,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources(existingSts)
 		quota                                 = resource.MustParse("8Gi")
-		storageCapacity                       = resource.MustParse(e.storageCapacity)
+		storageCapacity                       = resource.MustParse(e.values.StorageCapacity)
 		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
 		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy                     = druidv1alpha1.GzipCompression
@@ -245,10 +239,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	)
 
-	if e.class == ClassImportant {
+	if e.values.Class == ClassImportant {
 		annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		metrics = druidv1alpha1.Extensive
-		volumeClaimTemplate = e.role + "-etcd"
+		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		minAllowed = corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("200m"),
 			corev1.ResourceMemory: resource.MustParse("700M"),
@@ -261,7 +255,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	serverSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixServer + e.role,
+		Name:                        secretNamePrefixServer + e.values.Role,
 		CommonName:                  "etcd-server",
 		DNSNames:                    e.clientServiceDNSNames(),
 		CertType:                    secretutils.ServerClientCert,
@@ -291,97 +285,37 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, clientNetworkPolicy, func() error {
-		clientNetworkPolicy.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
-		}
-		clientNetworkPolicy.Labels = map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		}
-		clientNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
-			MatchLabels: GetLabels(),
-		}
-		clientNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
-			{
-				From: []networkingv1.NetworkPolicyPeer{
-					{
-						PodSelector: &metav1.LabelSelector{
-							// TODO: Replace below map with a function call to the to-be-introduced kubeapiserver package.
-							MatchLabels: map[string]string{
-								v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-								v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-								v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-							},
-						},
-					},
-					{
-						PodSelector: &metav1.LabelSelector{
-							MatchLabels: monitoring.GetPrometheusLabels(),
-						},
-					},
-				},
-				Ports: []networkingv1.NetworkPolicyPort{
-					{
-						Protocol: &protocolTCP,
-						Port:     &intStrPortEtcdClient,
-					},
-					{
-						Protocol: &protocolTCP,
-						Port:     &intStrPortBackupRestore,
-					},
-				},
-			},
-		}
-		clientNetworkPolicy.Spec.Egress = nil
-		clientNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	// create peer network policy only if the shoot has a HA control plane
-	if e.hasHAControlPlane() {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
-			peerNetworkPolicy.Annotations = map[string]string{
-				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
+	// Without this if condition, both `etcdMain` and `etcdEvents` component deployers execute this code. However, these
+	// network policies are not specified to them (they apply to both because there is no `role` label in the selector).
+	// Hence, it doesn't make sense if both component deployers are running this code - let's only do it for the main
+	// ETCD.
+	if e.values.Role == v1beta1constants.ETCDRoleMain {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, clientNetworkPolicy, func() error {
+			clientNetworkPolicy.Annotations = map[string]string{
+				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
 			}
-			peerNetworkPolicy.Labels = map[string]string{
+			clientNetworkPolicy.Labels = map[string]string{
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			}
-			peerNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
+			clientNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			}
-			peerNetworkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{
-				{
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortEtcdClient,
-						},
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortBackupRestore,
-						},
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortEtcdPeer,
-						},
-					},
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: GetLabels(),
-							},
-						},
-					},
-				},
-			}
-			peerNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+			clientNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
 				{
 					From: []networkingv1.NetworkPolicyPeer{
 						{
 							PodSelector: &metav1.LabelSelector{
-								MatchLabels: GetLabels(),
+								// TODO: Replace below map with a function call to the to-be-introduced kubeapiserver package.
+								MatchLabels: map[string]string{
+									v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+									v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+									v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
+								},
+							},
+						},
+						{
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: monitoring.GetPrometheusLabels(),
 							},
 						},
 					},
@@ -394,20 +328,86 @@ func (e *etcd) Deploy(ctx context.Context) error {
 							Protocol: &protocolTCP,
 							Port:     &intStrPortBackupRestore,
 						},
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortEtcdPeer,
-						},
 					},
 				},
 			}
-			peerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{
-				networkingv1.PolicyTypeIngress,
-				networkingv1.PolicyTypeEgress,
-			}
+			clientNetworkPolicy.Spec.Egress = nil
+			clientNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 			return nil
 		}); err != nil {
 			return err
+		}
+
+		// create peer network policy only if the shoot has a HA control plane
+		if e.hasHAControlPlane() {
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
+				peerNetworkPolicy.Annotations = map[string]string{
+					v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
+				}
+				peerNetworkPolicy.Labels = map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+				}
+				peerNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
+					MatchLabels: GetLabels(),
+				}
+				peerNetworkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{
+					{
+						Ports: []networkingv1.NetworkPolicyPort{
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdClient,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortBackupRestore,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdPeer,
+							},
+						},
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: GetLabels(),
+								},
+							},
+						},
+					},
+				}
+				peerNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+					{
+						From: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: GetLabels(),
+								},
+							},
+						},
+						Ports: []networkingv1.NetworkPolicyPort{
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdClient,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortBackupRestore,
+							},
+							{
+								Protocol: &protocolTCP,
+								Port:     &intStrPortEtcdPeer,
+							},
+						},
+					},
+				}
+				peerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{
+					networkingv1.PolicyTypeIngress,
+					networkingv1.PolicyTypeEgress,
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -416,11 +416,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		e.etcd.Labels = map[string]string{
-			v1beta1constants.LabelRole:  e.role,
+			v1beta1constants.LabelRole:  e.values.Role,
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		e.etcd.Spec.Replicas = replicas
-		e.etcd.Spec.PriorityClassName = pointer.String(v1beta1constants.PriorityClassNameShootControlPlane500)
+		e.etcd.Spec.PriorityClassName = &e.values.PriorityClassName
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
 			v1beta1constants.LabelApp:                            LabelAppValue,
@@ -502,48 +502,49 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			SnapshotCompression:     &compressionSpec,
 		}
 
-		if e.backupConfig != nil {
+		if e.values.BackupConfig != nil {
 			var (
-				provider                 = druidv1alpha1.StorageProvider(e.backupConfig.Provider)
+				provider                 = druidv1alpha1.StorageProvider(e.values.BackupConfig.Provider)
 				deltaSnapshotPeriod      = metav1.Duration{Duration: 5 * time.Minute}
 				deltaSnapshotMemoryLimit = resource.MustParse("100Mi")
 			)
 
 			e.etcd.Spec.Backup.Store = &druidv1alpha1.StoreSpec{
-				SecretRef: &corev1.SecretReference{Name: e.backupConfig.SecretRefName},
-				Container: &e.backupConfig.Container,
+				SecretRef: &corev1.SecretReference{Name: e.values.BackupConfig.SecretRefName},
+				Container: &e.values.BackupConfig.Container,
 				Provider:  &provider,
-				Prefix:    fmt.Sprintf("%s/etcd-%s", e.backupConfig.Prefix, e.role),
+				Prefix:    fmt.Sprintf("%s/etcd-%s", e.values.BackupConfig.Prefix, e.values.Role),
 			}
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
 			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
 
-			if e.backupConfig.LeaderElection != nil {
+			if e.values.BackupConfig.LeaderElection != nil {
 				e.etcd.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
-					EtcdConnectionTimeout: e.backupConfig.LeaderElection.EtcdConnectionTimeout,
-					ReelectionPeriod:      e.backupConfig.LeaderElection.ReelectionPeriod,
+					EtcdConnectionTimeout: e.values.BackupConfig.LeaderElection.EtcdConnectionTimeout,
+					ReelectionPeriod:      e.values.BackupConfig.LeaderElection.ReelectionPeriod,
 				}
 			}
 		}
 
 		e.etcd.Spec.StorageCapacity = &storageCapacity
+		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil
 	}); err != nil {
 		return err
 	}
 
-	if e.hvpaConfig != nil && e.hvpaConfig.Enabled {
+	if e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
 		var (
-			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
-			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
+			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.values.Role}
+			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.values.Role}
 			updateModeAuto     = hvpav1alpha1.UpdateModeAuto
 			containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
 			controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		)
 
-		scaleDownUpdateMode := e.hvpaConfig.ScaleDownUpdateMode
+		scaleDownUpdateMode := e.values.HvpaConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
 			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		}
@@ -554,8 +555,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			})
 			hvpa.Spec.Replicas = pointer.Int32(1)
 			hvpa.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
-				Begin: e.hvpaConfig.MaintenanceTimeWindow.Begin,
-				End:   e.hvpaConfig.MaintenanceTimeWindow.End,
+				Begin: e.values.HvpaConfig.MaintenanceTimeWindow.Begin,
+				End:   e.values.HvpaConfig.MaintenanceTimeWindow.End,
 			}
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
@@ -707,7 +708,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 func (e *etcd) getRoleLabels() map[string]string {
 	return utils.MergeStringMaps(map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.LabelRole:  e.role,
+		v1beta1constants.LabelRole:  e.values.Role,
 	})
 }
 
@@ -728,7 +729,7 @@ func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
 }
 
 func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor) error {
-	if e.backupConfig == nil {
+	if e.values.BackupConfig == nil {
 		return fmt.Errorf("no backup is configured for this etcd, cannot make a snapshot")
 	}
 
@@ -747,27 +748,29 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 		podsList.Items[0].GetName(),
 		containerNameBackupRestore,
 		"/bin/sh",
-		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full?final=true", e.role, PortBackupRestore),
+		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full?final=true", e.values.Role, PortBackupRestore),
 	)
 	return err
 }
 
 func (e *etcd) clientServiceDNSNames() []string {
 	var domainNames []string
-	domainNames = append(domainNames, fmt.Sprintf("etcd-%s-local", e.role))
-	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.role), e.namespace)...)
+	domainNames = append(domainNames, fmt.Sprintf("%s-local", e.etcd.Name))
+	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("%s-client", e.etcd.Name), e.namespace)...)
 
 	// The peer service needs to be considered here since the etcd-backup-restore side-car
 	// connects to member pods via pod domain names (e.g. for defragmentation).
 	// See https://github.com/gardener/etcd-backup-restore/issues/494
-	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("*.etcd-%s-peer", e.role), e.namespace)...)
+	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...)
 
 	return domainNames
 }
 
 func (e *etcd) peerServiceDNSNames() []string {
-	return append(kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-peer", e.role), e.namespace),
-		kutil.DNSNamesForService(fmt.Sprintf("*.etcd-%s-peer", e.role), e.namespace)...)
+	return append(
+		kutil.DNSNamesForService(fmt.Sprintf("%s-peer", e.etcd.Name), e.namespace),
+		kutil.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...,
+	)
 }
 
 // Get retrieves the Etcd resource
@@ -778,8 +781,8 @@ func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
 	return e.etcd, nil
 }
 
-func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.backupConfig = backupConfig }
-func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.hvpaConfig = hvpaConfig }
+func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.values.BackupConfig = backupConfig }
+func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.values.HvpaConfig = hvpaConfig }
 
 func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 	etcdObj := &druidv1alpha1.Etcd{}
@@ -856,7 +859,7 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 
 func (e *etcd) podLabelSelector() labels.Selector {
 	app, _ := labels.NewRequirement(v1beta1constants.LabelApp, selection.Equals, []string{LabelAppValue})
-	role, _ := labels.NewRequirement(v1beta1constants.LabelRole, selection.Equals, []string{e.role})
+	role, _ := labels.NewRequirement(v1beta1constants.LabelRole, selection.Equals, []string{e.values.Role})
 	return labels.NewSelector().Add(*role, *app)
 }
 
@@ -876,7 +879,7 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 		}
 	)
 
-	if existingSts != nil && e.hvpaConfig != nil && e.hvpaConfig.Enabled {
+	if existingSts != nil && e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
 		for k := range existingSts.Spec.Template.Spec.Containers {
 			v := existingSts.Spec.Template.Spec.Containers[k]
 			switch v.Name {
@@ -896,8 +899,8 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 }
 
 func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int32 {
-	if e.replicas != nil {
-		return *e.replicas
+	if e.values.Replicas != nil {
+		return *e.values.Replicas
 	}
 
 	if existingEtcd != nil {
@@ -907,7 +910,7 @@ func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int32 {
 }
 
 func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidv1alpha1.Etcd) *string {
-	defragmentationSchedule := e.defragmentationSchedule
+	defragmentationSchedule := e.values.DefragmentationSchedule
 	if existingEtcd != nil && existingEtcd.Spec.Etcd.DefragmentationSchedule != nil {
 		defragmentationSchedule = existingEtcd.Spec.Etcd.DefragmentationSchedule
 	}
@@ -915,7 +918,7 @@ func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidv1alpha1.Etcd) 
 }
 
 func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *string {
-	fullSnapshotSchedule := &e.backupConfig.FullSnapshotSchedule
+	fullSnapshotSchedule := &e.values.BackupConfig.FullSnapshotSchedule
 	if existingEtcd != nil && existingEtcd.Spec.Backup.FullSnapshotSchedule != nil {
 		fullSnapshotSchedule = existingEtcd.Spec.Backup.FullSnapshotSchedule
 	}
@@ -935,12 +938,12 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 
 	var singedByCAOptions []secretsmanager.SignedByCAOption
 
-	if e.caRotationPhase == gardencorev1beta1.RotationPreparing {
+	if e.values.CARotationPhase == gardencorev1beta1.RotationPreparing {
 		singedByCAOptions = append(singedByCAOptions, secretsmanager.UseCurrentCA)
 	}
 
 	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixPeerServer + e.role,
+		Name:                        secretNamePrefixPeerServer + e.values.Role,
 		CommonName:                  "etcd-server",
 		DNSNames:                    e.peerServiceDNSNames(),
 		CertType:                    secretutils.ServerClientCert,

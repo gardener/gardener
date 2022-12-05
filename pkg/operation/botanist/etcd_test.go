@@ -464,28 +464,21 @@ type newEtcdValidator struct {
 }
 
 func (v *newEtcdValidator) NewEtcd(
-	client client.Client,
 	log logr.Logger,
+	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	role string,
-	class etcd.Class,
-	_ *gardencorev1beta1.FailureToleranceType,
-	replicas *int32,
-	storageCapacity string,
-	defragmentationSchedule *string,
-	_ gardencorev1beta1.ShootCredentialsRotationPhase,
-	_ string,
+	values etcd.Values,
 ) etcd.Interface {
-	Expect(client).To(v.expectedClient)
 	Expect(log).To(v.expectedLogger)
+	Expect(client).To(v.expectedClient)
 	Expect(namespace).To(v.expectedNamespace)
 	Expect(secretsManager).To(v.expectedSecretsManager)
-	Expect(role).To(v.expectedRole)
-	Expect(class).To(v.expectedClass)
-	Expect(replicas).To(v.expectedReplicas)
-	Expect(storageCapacity).To(v.expectedStorageCapacity)
-	Expect(defragmentationSchedule).To(v.expectedDefragmentationSchedule)
+	Expect(values.Role).To(v.expectedRole)
+	Expect(values.Class).To(v.expectedClass)
+	Expect(values.Replicas).To(v.expectedReplicas)
+	Expect(values.StorageCapacity).To(v.expectedStorageCapacity)
+	Expect(values.DefragmentationSchedule).To(v.expectedDefragmentationSchedule)
 
 	return v
 }

@@ -415,6 +415,16 @@ var _ = Describe("Seed controller tests", func() {
 									testID: testRunID,
 								},
 							},
+							Spec: operatorv1alpha1.GardenSpec{
+								VirtualCluster: operatorv1alpha1.VirtualCluster{
+									Maintenance: operatorv1alpha1.Maintenance{
+										TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
+											Begin: "220000+0100",
+											End:   "230000+0100",
+										},
+									},
+								},
+							},
 						}
 						Expect(testClient.Create(ctx, garden)).To(Succeed())
 						log.Info("Created Garden for test", "garden", garden.Name)

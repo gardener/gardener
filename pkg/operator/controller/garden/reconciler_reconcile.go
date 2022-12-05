@@ -28,16 +28,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 func (r *Reconciler) reconcile(
@@ -77,19 +82,20 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Generating general CA certificate for runtime cluster")
-	if _, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:       operatorv1alpha1.SecretNameCARuntime,
-		CommonName: "garden-runtime",
-		CertType:   secretutils.CACert,
-		Validity:   pointer.Duration(30 * 24 * time.Hour),
-	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
-		return reconcile.Result{}, err
+	log.Info("Generating CA certificates for runtime and virtual clusters")
+	for _, config := range caCertConfigurations() {
+		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName(), "")...); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	log.Info("Instantiating component deployers")
+	// garden system components
 	vpaCRD := vpa.NewCRD(applier, nil)
 	hvpaCRD := hvpa.NewCRD(applier)
+	if !hvpaEnabled() {
+		hvpaCRD = component.OpDestroy(hvpaCRD)
+	}
 	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -108,8 +114,14 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	if !hvpaEnabled() {
-		hvpaCRD = component.OpDestroy(hvpaCRD)
+	// virtual garden control plane components
+	etcdMain, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	etcdEvents, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	var (
@@ -127,25 +139,41 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(gardenerResourceManager).Deploy,
 			Dependencies: flow.NewTaskIDs(deployVPACRD, reconcileHVPACRD),
 		})
-		_ = g.Add(flow.Task{
+		deploySystemResources = g.Add(flow.Task{
 			Name:         "Deploying system resources",
 			Fn:           system.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		_ = g.Add(flow.Task{
+		deployVPA = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           verticalPodAutoscaler.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		_ = g.Add(flow.Task{
+		deployHVPA = g.Add(flow.Task{
 			Name:         "Deploying HVPA controller",
 			Fn:           hvpaController.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		_ = g.Add(flow.Task{
+		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
 			Fn:           etcdDruid.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		syncPointSystemComponents = flow.NewTaskIDs(
+			deploySystemResources,
+			deployVPA,
+			deployHVPA,
+			deployEtcdDruid,
+		)
+		deployEtcds = g.Add(flow.Task{
+			Name:         "Deploying main and events ETCDs of virtual garden",
+			Fn:           r.deployEtcdsFunc(garden, etcdMain, etcdEvents, ""),
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until main and event ETCDs report readiness",
+			Fn:           flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
+			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
 	)
 
@@ -154,4 +182,74 @@ func (r *Reconciler) reconcile(
 	}
 
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
+}
+
+func caCertConfigurations() []secretutils.ConfigInterface {
+	return []secretutils.ConfigInterface{
+		&secretutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretutils.CACert},
+	}
+}
+
+func caCertGenerateOptionsFor(name string, rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase) []secretsmanager.GenerateOption {
+	options := []secretsmanager.GenerateOption{secretsmanager.Rotate(secretsmanager.KeepOld)}
+
+	if name == operatorv1alpha1.SecretNameCARuntime {
+		options = append(options, secretsmanager.IgnoreOldSecretsAfter(24*time.Hour))
+	} else if rotationPhase == gardencorev1beta1.RotationCompleting {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
+	}
+
+	return options
+}
+
+func (r *Reconciler) deployEtcdsFunc(
+	garden *operatorv1alpha1.Garden,
+	etcdMain, etcdEvents etcd.Interface,
+	rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase,
+) func(context.Context) error {
+	return func(ctx context.Context) error {
+		if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil {
+			snapshotSchedule, err := timewindow.DetermineSchedule(
+				"%d %d * * *",
+				garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
+				garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
+				garden.UID,
+				garden.CreationTimestamp,
+				timewindow.RandomizeWithinFirstHourOfTimeWindow,
+			)
+			if err != nil {
+				return err
+			}
+
+			var backupLeaderElection *gardenletconfig.ETCDBackupLeaderElection
+			if r.Config.Controllers.Garden.ETCDConfig != nil {
+				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
+			}
+
+			etcdMain.SetBackupConfig(&etcd.BackupConfig{
+				Provider:             etcdConfig.Main.Backup.Provider,
+				SecretRefName:        etcdConfig.Main.Backup.SecretRef.Name,
+				Container:            etcdConfig.Main.Backup.BucketName,
+				Prefix:               "virtual-garden-etcd-main",
+				FullSnapshotSchedule: snapshotSchedule,
+				LeaderElection:       backupLeaderElection,
+			})
+		}
+
+		// Roll out the new peer CA first so that every member in the cluster trusts the old and the new CA.
+		// This is required because peer certificates which are used for client and server authentication at the same time,
+		// are re-created with the new CA in the `Deploy` step.
+		if rotationPhase == gardencorev1beta1.RotationPreparing {
+			if err := flow.Sequential(
+				flow.Parallel(etcdMain.RolloutPeerCA, etcdEvents.RolloutPeerCA),
+				flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
+			)(ctx); err != nil {
+				return err
+			}
+		}
+
+		return flow.Parallel(etcdMain.Deploy, etcdEvents.Deploy)(ctx)
+	}
 }

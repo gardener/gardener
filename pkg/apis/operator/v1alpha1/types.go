@@ -15,9 +15,11 @@
 package v1alpha1
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -53,6 +55,8 @@ type GardenList struct {
 type GardenSpec struct {
 	// RuntimeCluster contains configuration for the runtime cluster.
 	RuntimeCluster RuntimeCluster `json:"runtimeCluster"`
+	// VirtualCluster contains configuration for the virtual cluster.
+	VirtualCluster VirtualCluster `json:"virtualCluster"`
 }
 
 // RuntimeCluster contains configuration for the runtime cluster.
@@ -89,6 +93,72 @@ type SettingVerticalPodAutoscaler struct {
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// VirtualCluster contains configuration for the virtual cluster.
+type VirtualCluster struct {
+	// ETCD contains configuration for the etcds of the virtual garden cluster.
+	// +optional
+	ETCD *ETCD `json:"etcd,omitempty"`
+	// Maintenance contains information about the time window for maintenance operations.
+	Maintenance Maintenance `json:"maintenance"`
+}
+
+// ETCD contains configuration for the etcds of the virtual garden cluster.
+type ETCD struct {
+	// Main contains configuration for the main etcd.
+	// +optional
+	Main *ETCDMain `json:"main,omitempty"`
+	// Events contains configuration for the events etcd.
+	// +optional
+	Events *ETCDEvents `json:"events,omitempty"`
+}
+
+// ETCDMain contains configuration for the main etcd.
+type ETCDMain struct {
+	// Backup contains the object store configuration for backups for the virtual garden etcd.
+	// +optional
+	Backup *Backup `json:"backup,omitempty"`
+	// Storage contains storage configuration.
+	// +optional
+	Storage *Storage `json:"storage,omitempty"`
+}
+
+// ETCDEvents contains configuration for the events etcd.
+type ETCDEvents struct {
+	// Storage contains storage configuration.
+	// +optional
+	Storage *Storage `json:"storage,omitempty"`
+}
+
+// Storage contains storage configuration.
+type Storage struct {
+	// Capacity is the storage capacity for the volumes.
+	// +kubebuilder:default=`10Gi`
+	// +optional
+	Capacity *resource.Quantity `json:"capacity,omitempty"`
+	// ClassName is the name of a storage class.
+	// +optional
+	ClassName *string `json:"className,omitempty"`
+}
+
+// Backup contains the object store configuration for backups for the virtual garden etcd.
+type Backup struct {
+	// Provider is a provider name. This field is immutable.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Provider string `json:"provider"`
+	// BucketName is the name of the backup bucket.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	BucketName string `json:"bucketName"`
+	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
+	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
+	SecretRef corev1.SecretReference `json:"secretRef"`
+}
+
+// Maintenance contains information about the time window for maintenance operations.
+type Maintenance struct {
+	// TimeWindow contains information about the time window for maintenance operations.
+	TimeWindow gardencorev1beta1.MaintenanceTimeWindow `json:"timeWindow"`
 }
 
 // GardenStatus is the status of a garden environment.

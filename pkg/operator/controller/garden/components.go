@@ -15,14 +15,20 @@
 package garden
 
 import (
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
+	"k8s.io/utils/pointer"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardensystem"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
@@ -80,4 +86,80 @@ func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
 
 func (r *Reconciler) newSystem() component.DeployWaiter {
 	return gardensystem.New(r.RuntimeClient, r.GardenNamespace)
+}
+
+func (r *Reconciler) newEtcd(
+	log logr.Logger,
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	role string,
+	class etcd.Class,
+) (
+	etcd.Interface,
+	error,
+) {
+	var (
+		hvpaScaleDownUpdateMode       *string
+		defragmentationScheduleFormat string
+		storageClassName              *string
+		storageCapacity               string
+	)
+
+	switch role {
+	case v1beta1constants.ETCDRoleMain:
+		hvpaScaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeOff)
+		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
+		storageCapacity = "25Gi"
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Storage != nil {
+			storageClassName = etcd.Main.Storage.ClassName
+			if etcd.Main.Storage.Capacity != nil {
+				storageCapacity = etcd.Main.Storage.Capacity.String()
+			}
+		}
+
+	case v1beta1constants.ETCDRoleEvents:
+		hvpaScaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+		defragmentationScheduleFormat = "%d %d */3 * *"
+		storageCapacity = "10Gi"
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Storage != nil {
+			storageClassName = etcd.Events.Storage.ClassName
+			if etcd.Events.Storage.Capacity != nil {
+				storageCapacity = etcd.Events.Storage.Capacity.String()
+			}
+		}
+	}
+
+	defragmentationSchedule, err := timewindow.DetermineSchedule(
+		defragmentationScheduleFormat,
+		garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
+		garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
+		garden.UID,
+		garden.CreationTimestamp,
+		timewindow.RandomizeWithinTimeWindow,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return etcd.New(
+		log,
+		r.RuntimeClient,
+		r.GardenNamespace,
+		secretsManager,
+		etcd.Values{
+			NamePrefix:              "virtual-garden-",
+			Role:                    role,
+			Class:                   class,
+			Replicas:                pointer.Int32(1),
+			DefragmentationSchedule: &defragmentationSchedule,
+			StorageCapacity:         storageCapacity,
+			StorageClassName:        storageClassName,
+			PriorityClassName:       v1beta1constants.PriorityClassNameGardenSystem500,
+			HvpaConfig: &etcd.HVPAConfig{
+				Enabled:               hvpaEnabled(),
+				MaintenanceTimeWindow: garden.Spec.VirtualCluster.Maintenance.TimeWindow,
+				ScaleDownUpdateMode:   hvpaScaleDownUpdateMode,
+			},
+		},
+	), nil
 }

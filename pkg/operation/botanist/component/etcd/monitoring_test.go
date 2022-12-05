@@ -18,18 +18,23 @@ import (
 	"fmt"
 	"path/filepath"
 
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
-	"k8s.io/utils/pointer"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
+	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 )
 
 var _ = Describe("Monitoring", func() {
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
-			etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+			etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+				Role:       testRole,
+				Class:      ClassNormal,
+				Replicas:   pointer.Int32(1),
+				K8sVersion: "1.20.1",
+			})
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
 		})
 	})
@@ -38,7 +43,12 @@ var _ = Describe("Monitoring", func() {
 		Context("for single-node etcd", func() {
 			Context("w/o backup", func() {
 				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassNormal,
+						Replicas:   pointer.Int32(1),
+						K8sVersion: "1.20.1",
+					})
 					test.AlertingRulesWithPromtool(
 						etcd,
 						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalSingleNodeWithoutBackup},
@@ -47,7 +57,12 @@ var _ = Describe("Monitoring", func() {
 				})
 
 				It("should successfully test the alerting rules (important) for single-node etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassImportant,
+						Replicas:   pointer.Int32(1),
+						K8sVersion: "1.20.1",
+					})
 					test.AlertingRulesWithPromtool(
 						etcd,
 						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantSingleNodeWithoutBackup},
@@ -56,7 +71,12 @@ var _ = Describe("Monitoring", func() {
 				})
 
 				It("should successfully test the alerting rules for k8s >= 1.21 (normal) for single-node etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.21.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassNormal,
+						Replicas:   pointer.Int32(1),
+						K8sVersion: "1.21.1",
+					})
 					test.AlertingRulesWithPromtool(
 						etcd,
 						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalK8SGTE121},
@@ -67,7 +87,12 @@ var _ = Describe("Monitoring", func() {
 
 			Context("w/ backup", func() {
 				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassNormal,
+						Replicas:   pointer.Int32(1),
+						K8sVersion: "1.20.1",
+					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -77,7 +102,12 @@ var _ = Describe("Monitoring", func() {
 				})
 
 				It("should successfully test the alerting rules (important) for single-node etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(1), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassImportant,
+						Replicas:   pointer.Int32(1),
+						K8sVersion: "1.20.1",
+					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -90,7 +120,12 @@ var _ = Describe("Monitoring", func() {
 		Context("for multinode etcd", func() {
 			Context("w/o backup", func() {
 				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassNormal,
+						Replicas:   pointer.Int32(3),
+						K8sVersion: "1.20.1",
+					})
 					test.AlertingRulesWithPromtool(
 						etcd,
 						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalMultiNodeWithoutBackup},
@@ -99,7 +134,12 @@ var _ = Describe("Monitoring", func() {
 				})
 
 				It("should successfully test the alerting rules (important) for multinode etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassImportant,
+						Replicas:   pointer.Int32(3),
+						K8sVersion: "1.20.1",
+					})
 					test.AlertingRulesWithPromtool(
 						etcd,
 						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantMultiNodeWithoutBackup},
@@ -110,7 +150,12 @@ var _ = Describe("Monitoring", func() {
 
 			Context("w/ backup", func() {
 				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassNormal,
+						Replicas:   pointer.Int32(3),
+						K8sVersion: "1.20.1",
+					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -120,7 +165,12 @@ var _ = Describe("Monitoring", func() {
 				})
 
 				It("should successfully test the alerting rules (important) for multinode etcd", func() {
-					etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, pointer.Int32Ptr(3), "", nil, "", "1.20.1")
+					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
+						Role:       testRole,
+						Class:      ClassImportant,
+						Replicas:   pointer.Int32(3),
+						K8sVersion: "1.20.1",
+					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
 						etcd,

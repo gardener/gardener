@@ -86,4 +86,13 @@ Other system components are:
 - HVPA controller (when `HVPA` feature gate is enabled)
 - ETCD Druid
 
+As soon as all system components are up, the reconciler deploys the virtual garden cluster.
+It comprises out of two ETCDs (one "main" etcd, one "events" etcd) which are managed by ETCD Druid via `druid.gardener.cloud/v1alpha1.Etcd` custom resources.
+The whole management works similar to how it works for `Shoot`s, so you can take a look at [this document](etcd.md) for more information in general.
+
+The virtual garden control plane components are:
+
+- `virtual-garden-etcd-main`
+- `virtual-garden-etcd-events`
+
 The controller maintains the `Reconciled` condition which indicates the status of an operation.

@@ -10,6 +10,188 @@
 </p>
 Resource Types:
 <ul></ul>
+<h3 id="operator.gardener.cloud/v1alpha1.Backup">Backup
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCDMain">ETCDMain</a>)
+</p>
+<p>
+<p>Backup contains the object store configuration for backups for the virtual garden etcd.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Provider is a provider name. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>bucketName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BucketName is the name of the backup bucket.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
+backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ETCD">ETCD
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>ETCD contains configuration for the etcds of the virtual garden cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>main</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCDMain">
+ETCDMain
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Main contains configuration for the main etcd.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>events</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCDEvents">
+ETCDEvents
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Events contains configuration for the events etcd.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ETCDEvents">ETCDEvents
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCD">ETCD</a>)
+</p>
+<p>
+<p>ETCDEvents contains configuration for the events etcd.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>storage</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Storage">
+Storage
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Storage contains storage configuration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ETCDMain">ETCDMain
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCD">ETCD</a>)
+</p>
+<p>
+<p>ETCDMain contains configuration for the main etcd.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>backup</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Backup">
+Backup
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Backup contains the object store configuration for backups for the virtual garden etcd.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>storage</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Storage">
+Storage
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Storage contains storage configuration.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Garden">Garden
 </h3>
 <p>
@@ -65,6 +247,19 @@ RuntimeCluster
 <p>RuntimeCluster contains configuration for the runtime cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>virtualCluster</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">
+VirtualCluster
+</a>
+</em>
+</td>
+<td>
+<p>VirtualCluster contains configuration for the virtual cluster.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -111,6 +306,19 @@ RuntimeCluster
 </td>
 <td>
 <p>RuntimeCluster contains configuration for the runtime cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>virtualCluster</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">
+VirtualCluster
+</a>
+</em>
+</td>
+<td>
+<p>VirtualCluster contains configuration for the virtual cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -164,6 +372,36 @@ int64
 </td>
 <td>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Maintenance">Maintenance
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>Maintenance contains information about the time window for maintenance operations.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>timeWindow</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow
+</em>
+</td>
+<td>
+<p>TimeWindow contains information about the time window for maintenance operations.</p>
 </td>
 </tr>
 </tbody>
@@ -310,6 +548,96 @@ SettingVerticalPodAutoscaler
 <em>(Optional)</em>
 <p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
 cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Storage">Storage
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCDEvents">ETCDEvents</a>, 
+<a href="#operator.gardener.cloud/v1alpha1.ETCDMain">ETCDMain</a>)
+</p>
+<p>
+<p>Storage contains storage configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>capacity</code></br>
+<em>
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Capacity is the storage capacity for the volumes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>className</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ClassName is the name of a storage class.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenSpec">GardenSpec</a>)
+</p>
+<p>
+<p>VirtualCluster contains configuration for the virtual cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>etcd</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ETCD">
+ETCD
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCD contains configuration for the etcds of the virtual garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maintenance</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Maintenance">
+Maintenance
+</a>
+</em>
+</td>
+<td>
+<p>Maintenance contains information about the time window for maintenance operations.</p>
 </td>
 </tr>
 </tbody>

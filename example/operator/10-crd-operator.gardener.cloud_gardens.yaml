@@ -84,8 +84,129 @@ spec:
                 required:
                 - provider
                 type: object
+              virtualCluster:
+                description: VirtualCluster contains configuration for the virtual
+                  cluster.
+                properties:
+                  etcd:
+                    description: ETCD contains configuration for the etcds of the
+                      virtual garden cluster.
+                    properties:
+                      events:
+                        description: Events contains configuration for the events
+                          etcd.
+                        properties:
+                          storage:
+                            description: Storage contains storage configuration.
+                            properties:
+                              capacity:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                default: 10Gi
+                                description: Capacity is the storage capacity for
+                                  the volumes.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              className:
+                                description: ClassName is the name of a storage class.
+                                type: string
+                            type: object
+                        type: object
+                      main:
+                        description: Main contains configuration for the main etcd.
+                        properties:
+                          backup:
+                            description: Backup contains the object store configuration
+                              for backups for the virtual garden etcd.
+                            properties:
+                              bucketName:
+                                description: BucketName is the name of the backup
+                                  bucket.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: Value is immutable
+                                  rule: self == oldSelf
+                              provider:
+                                description: Provider is a provider name. This field
+                                  is immutable.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: Value is immutable
+                                  rule: self == oldSelf
+                              secretRef:
+                                description: SecretRef is a reference to a Secret
+                                  object containing the cloud provider credentials
+                                  for the object store where backups should be stored.
+                                  It should have enough privileges to manipulate the
+                                  objects as well as buckets.
+                                properties:
+                                  name:
+                                    description: name is unique within a namespace
+                                      to reference a secret resource.
+                                    type: string
+                                  namespace:
+                                    description: namespace defines the space within
+                                      which the secret name must be unique.
+                                    type: string
+                                type: object
+                                x-kubernetes-map-type: atomic
+                            required:
+                            - bucketName
+                            - provider
+                            - secretRef
+                            type: object
+                          storage:
+                            description: Storage contains storage configuration.
+                            properties:
+                              capacity:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                default: 10Gi
+                                description: Capacity is the storage capacity for
+                                  the volumes.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              className:
+                                description: ClassName is the name of a storage class.
+                                type: string
+                            type: object
+                        type: object
+                    type: object
+                  maintenance:
+                    description: Maintenance contains information about the time window
+                      for maintenance operations.
+                    properties:
+                      timeWindow:
+                        description: TimeWindow contains information about the time
+                          window for maintenance operations.
+                        properties:
+                          begin:
+                            description: Begin is the beginning of the time window
+                              in the format HHMMSS+ZONE, e.g. "220000+0100". If not
+                              present, a random value will be computed.
+                            pattern: ([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]\+[0-1][0-4]00
+                            type: string
+                          end:
+                            description: End is the end of the time window in the
+                              format HHMMSS+ZONE, e.g. "220000+0100". If not present,
+                              the value will be computed based on the "Begin" value.
+                            pattern: ([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]\+[0-1][0-4]00
+                            type: string
+                        required:
+                        - begin
+                        - end
+                        type: object
+                    required:
+                    - timeWindow
+                    type: object
+                required:
+                - maintenance
+                type: object
             required:
             - runtimeCluster
+            - virtualCluster
             type: object
           status:
             description: Status contains the status of this garden.

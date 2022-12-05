@@ -9,6 +9,9 @@ gardener:
     istio:
       listenAddress: 127.0.0.1
 
+backupBucket:
+  deployed: true
+
 registry:
   deployed: true
   hostname: gardener-local-control-plane

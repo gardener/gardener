@@ -80,7 +80,9 @@ var _ = Describe("Etcd", func() {
 		replicas                = pointer.Int32(1)
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
+		storageClassName        = "my-storage-class"
 		defragmentationSchedule = "abcd"
+		priorityClassName       = "some-priority-class"
 
 		secretNameCA         = "ca-etcd"
 		secretNamePeerCA     = "ca-etcd-peer"
@@ -271,7 +273,6 @@ var _ = Describe("Etcd", func() {
 			peerCASecretName *string,
 			peerServerSecretName *string,
 		) *druidv1alpha1.Etcd {
-
 			defragSchedule := defragmentationSchedule
 			if existingDefragmentationSchedule != "" {
 				defragSchedule = existingDefragmentationSchedule
@@ -312,7 +313,7 @@ var _ = Describe("Etcd", func() {
 				},
 				Spec: druidv1alpha1.EtcdSpec{
 					Replicas:          replicas,
-					PriorityClassName: pointer.String("gardener-system-500"),
+					PriorityClassName: &priorityClassName,
 					Labels: map[string]string{
 						"gardener.cloud/role":              "controlplane",
 						"role":                             testRole,
@@ -379,6 +380,7 @@ var _ = Describe("Etcd", func() {
 						SnapshotCompression:     &compressionSpec,
 					},
 					StorageCapacity:     &storageCapacityQuantity,
+					StorageClass:        &storageClassName,
 					VolumeClaimTemplate: pointer.String(etcdName),
 				},
 			}
@@ -619,7 +621,18 @@ var _ = Describe("Etcd", func() {
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-		etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+		etcd = New(log, c, testNamespace, sm, Values{
+			Role:                    testRole,
+			Class:                   class,
+			FailureToleranceType:    failureToleranceType,
+			Replicas:                replicas,
+			StorageCapacity:         storageCapacity,
+			StorageClassName:        &storageClassName,
+			DefragmentationSchedule: &defragmentationSchedule,
+			CARotationPhase:         "",
+			K8sVersion:              "1.20.1",
+			PriorityClassName:       priorityClassName,
+		})
 	})
 
 	AfterEach(func() {
@@ -781,7 +794,18 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    nil,
+				Replicas:                nil,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
+			})
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -841,7 +865,18 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    failureToleranceType,
+				Replicas:                nil,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
+			})
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -1132,7 +1167,18 @@ var _ = Describe("Etcd", func() {
 
 				replicas = pointer.Int32(1)
 
-				etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+				etcd = New(log, c, testNamespace, sm, Values{
+					Role:                    testRole,
+					Class:                   class,
+					FailureToleranceType:    failureToleranceType,
+					Replicas:                replicas,
+					StorageCapacity:         storageCapacity,
+					StorageClassName:        &storageClassName,
+					DefragmentationSchedule: &defragmentationSchedule,
+					CARotationPhase:         "",
+					K8sVersion:              "1.20.1",
+					PriorityClassName:       priorityClassName,
+				})
 				newSetHVPAConfigFunc(updateMode)()
 
 				gomock.InOrder(
@@ -1341,7 +1387,18 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
-				etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, rotationPhase, "1.20.1")
+				etcd = New(log, c, testNamespace, sm, Values{
+					Role:                    testRole,
+					Class:                   class,
+					FailureToleranceType:    failureToleranceType,
+					Replicas:                replicas,
+					StorageCapacity:         storageCapacity,
+					StorageClassName:        &storageClassName,
+					DefragmentationSchedule: &defragmentationSchedule,
+					CARotationPhase:         rotationPhase,
+					K8sVersion:              "1.20.1",
+					PriorityClassName:       priorityClassName,
+				})
 			})
 
 			Context("when CA rotation phase is in `Preparing` state", func() {
@@ -1411,14 +1468,14 @@ var _ = Describe("Etcd", func() {
 						Name:       "etcd-peer-server-" + testRole,
 						CommonName: "etcd-server",
 						DNSNames: []string{
-							"etcd-test-peer",
-							"etcd-test-peer.shoot--test--test",
-							"etcd-test-peer.shoot--test--test.svc",
-							"etcd-test-peer.shoot--test--test.svc.cluster.local",
-							"*.etcd-test-peer",
-							"*.etcd-test-peer.shoot--test--test",
-							"*.etcd-test-peer.shoot--test--test.svc",
-							"*.etcd-test-peer.shoot--test--test.svc.cluster.local",
+							"etcd-" + testRole + "-peer",
+							"etcd-" + testRole + "-peer.shoot--test--test",
+							"etcd-" + testRole + "-peer.shoot--test--test.svc",
+							"etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
+							"*.etcd-" + testRole + "-peer",
+							"*.etcd-" + testRole + "-peer.shoot--test--test",
+							"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
+							"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
 						},
 						CertType:                    secretutils.ServerClientCert,
 						SkipPublishingCACertificate: true,
@@ -1437,15 +1494,15 @@ var _ = Describe("Etcd", func() {
 						Name:       "etcd-server-" + testRole,
 						CommonName: "etcd-server",
 						DNSNames: []string{
-							"etcd-test-local",
-							"etcd-test-client",
-							"etcd-test-client.shoot--test--test",
-							"etcd-test-client.shoot--test--test.svc",
-							"etcd-test-client.shoot--test--test.svc.cluster.local",
-							"*.etcd-test-peer",
-							"*.etcd-test-peer.shoot--test--test",
-							"*.etcd-test-peer.shoot--test--test.svc",
-							"*.etcd-test-peer.shoot--test--test.svc.cluster.local",
+							"etcd-" + testRole + "-local",
+							"etcd-" + testRole + "-client",
+							"etcd-" + testRole + "-client.shoot--test--test",
+							"etcd-" + testRole + "-client.shoot--test--test.svc",
+							"etcd-" + testRole + "-client.shoot--test--test.svc.cluster.local",
+							"*.etcd-" + testRole + "-peer",
+							"*.etcd-" + testRole + "-peer.shoot--test--test",
+							"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
+							"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
 						},
 						CertType:                    secretutils.ServerClientCert,
 						SkipPublishingCACertificate: true,
@@ -1500,7 +1557,18 @@ var _ = Describe("Etcd", func() {
 		)
 
 		JustBeforeEach(func() {
-			etcd = New(c, log, testNamespace, sm, testRole, class, shootFailureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    shootFailureToleranceType,
+				Replicas:                replicas,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
+			})
 		})
 
 		BeforeEach(func() {
@@ -1690,7 +1758,7 @@ var _ = Describe("Etcd", func() {
 		BeforeEach(func() {
 			etcdObj = &druidv1alpha1.Etcd{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-test",
+					Name:      "etcd-" + testRole,
 					Namespace: testNamespace,
 				},
 			}
@@ -1796,7 +1864,18 @@ var _ = Describe("Etcd", func() {
 		var failureToleranceTypeZone *gardencorev1beta1.FailureToleranceType
 
 		JustBeforeEach(func() {
-			etcd = New(c, log, testNamespace, sm, testRole, class, failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				FailureToleranceType:    failureToleranceTypeZone,
+				Replicas:                replicas,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				K8sVersion:              "1.20.1",
+				PriorityClassName:       priorityClassName,
+			})
 		})
 
 		Context("when HA control-plane is not requested", func() {

@@ -19,6 +19,7 @@ import (
 	"os"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -46,7 +47,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		parentCtx     = context.Background()
 		runtimeClient client.Client
-		garden        *operatorv1alpha1.Garden
+
+		backupSecret *corev1.Secret
+		garden       *operatorv1alpha1.Garden
 	)
 
 	BeforeEach(func() {
@@ -55,6 +58,15 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		runtimeClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
 		Expect(err).NotTo(HaveOccurred())
+
+		backupSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "virtual-garden-etcd-main-backup",
+				Namespace: "garden",
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{"hostPath": []byte("/etc/gardener/local-backupbuckets")},
+		}
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -71,6 +83,26 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 						},
 					},
 				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					ETCD: &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "local",
+								BucketName: "gardener-operator",
+								SecretRef: corev1.SecretReference{
+									Name:      backupSecret.Name,
+									Namespace: backupSecret.Namespace,
+								},
+							},
+						},
+					},
+					Maintenance: operatorv1alpha1.Maintenance{
+						TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
+							Begin: "220000+0100",
+							End:   "230000+0100",
+						},
+					},
+				},
 			},
 		}
 	})
@@ -80,6 +112,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
 		defer cancel()
 
+		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 		CEventually(ctx, func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -98,11 +131,22 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 
+		CEventually(ctx, func(g Gomega) []druidv1alpha1.Etcd {
+			etcdList := &druidv1alpha1.EtcdList{}
+			g.Expect(runtimeClient.List(ctx, etcdList, client.InNamespace("garden"))).To(Succeed())
+			return etcdList.Items
+		}).Should(ConsistOf(
+			healthyEtcd("virtual-garden-etcd-main"),
+			healthyEtcd("virtual-garden-etcd-events"),
+		))
+
 		By("Delete Garden")
 		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 
 		Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
+		Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
+
 		CEventually(ctx, func() error {
 			return runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 		}).WithPolling(2 * time.Second).Should(BeNotFoundError())
@@ -131,5 +175,12 @@ func healthyManagedResource(name string) gomegatypes.GomegaMatcher {
 			ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionTrue)),
 			ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse)),
 		)}),
+	})
+}
+
+func healthyEtcd(name string) gomegatypes.GomegaMatcher {
+	return MatchFields(IgnoreExtras, Fields{
+		"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal(name)}),
+		"Status":     MatchFields(IgnoreExtras, Fields{"Ready": PointTo(BeTrue())}),
 	})
 }

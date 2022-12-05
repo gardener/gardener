@@ -12,7 +12,7 @@ nodes:
 {{ include "extraPortMappings.registry" . | indent 2 }}
   extraMounts:
 {{ include "extraMounts.gardener.controlPlane" . | indent 2 }}
-{{ include "extraMounts.gardener.seed.backupBuckets" . | indent 2 }}
+{{ include "extraMounts.backupBucket" . | indent 2 }}
 {{ include "extraMounts.registry" . | indent 2 }}
   kubeadmConfigPatches:
 {{ include "kubeadmConfigPatches" . | indent 2 }}
@@ -24,7 +24,7 @@ nodes:
     topology.kubernetes.io/zone: {{ $worker.zone | quote }}
   extraMounts:
 {{ include "extraMounts.gardener.controlPlane" $ | indent 2 }}
-{{ include "extraMounts.gardener.seed.backupBuckets" $ | indent 2 }}
+{{ include "extraMounts.backupBucket" $ | indent 2 }}
   kubeadmConfigPatches:
 {{ include "kubeadmConfigPatches" $ | indent 2 }}
 {{- end }}
