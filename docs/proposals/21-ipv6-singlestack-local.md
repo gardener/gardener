@@ -41,6 +41,7 @@ reviewers:
 
 Today, all shoot clusters provisioned by Gardener use IPv4 single-stack networking.
 This GEP proposes changes to support IPv6 single-stack networking for shoots using provider-local.
+Additionally, it considers future enhancements to support IPv4/IPv6 dual-stack networking for shoots without implementing it in the same step as IPv6 single-stack networking.
 
 ## Motivation
 
@@ -51,10 +52,14 @@ Kubernetes already supports such setups as described in [this doc](https://kuber
 However, supporting these in Gardener requires changes to the API and many components (networking extensions, VPN tunnel, etc.).
 For example, many components listen on `0.0.0.0` which makes them reachable via IPv4 only.
 
-To bring Gardener closer to supporting these kinds of networking setups, this GEP focuses on supporting IPv6 single-stack networking in the local Gardener environment.
+Supporting these kinds of networking setups in shoot clusters is a complex endeavour.
+Hence, we propose to take several steps towards the ultimate goal of supporting all three of: IPv4 single-stack (already available today), IPv6 single-stack, IPv4/IPv6 dual-stack – both in the local setup and on cloud infrastructure.
+As a first step, this GEP proposes support for IPv6 single-stack networking in the local Gardener environment only.
 This keeps things focused on the most important changes to the API and central components while neglecting infrastructure-specific quirks and other difficulties that will arise with dual-stack networking.
 
-Once this enhancement has been implemented and IPv6 single-stack networking in local shoots is a stable feature, further changes can be proposed to support IPv6 single-stack on cloud infrastructure or IPv4/IPv6 dual-stack networking.
+While focusing on IPv6 single-stack networking for now, we cannot neglect how a future IPv4/IPv6 dual-stack implementation may look like and provide a corresponding outlook.
+However, these ideas only serve an informational purpose for motivating decisions regarding the IPv6 single-stack implementation.
+Once this enhancement has been implemented and IPv6 single-stack networking in local shoots is a stable feature, further changes can be proposed to support IPv6 single-stack on cloud infrastructure, and eventually IPv4/IPv6 dual-stack networking.
 
 ### Goals
 
@@ -78,6 +83,11 @@ A new feature gate `IPv6SingleStack` is added to gardener-apiserver.
 The IPv6-related fields and values can only be used if the feature gate is enabled.
 The feature gate cannot be enabled if the `ReversedVPN` feature gate is disabled (the legacy VPN tunnel solution is [not supported by provider-local](https://github.com/gardener/gardener/blob/83de074f1bc1c009f92e97a08289340591377af6/docs/extensions/provider-local.md#current-limitations) anyway).
 
+The feature gate serves the purpose of disabling the feature in productive Gardener installations and prevents users from configuring IPv6 networking for their shoot clusters, while it is still under development and not supported on cloud infrastructure.
+As part of this enhancement, the feature gate is supposed to be enabled only in the local environment.
+Later on, the feature gate may also be used for safe-guarding maturing and enablement of a IPv6 single-stack implementation on cloud infrastructure.
+The feature gate is not supposed to be toggled back and forth.
+
 ### `Shoot` API
 
 The `Shoot.spec.networking` section is extended as follows:
@@ -99,7 +109,16 @@ spec:
 This field is inspired by the `Service.spec.ipFamilies` field in Kubernetes ([doc](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services)).
 The default value is `["IPv4"]` (IPv4 single-stack).
 If the `IPv6SingleStack` feature gate is enabled, `["IPv6"]` can be specified to switch to IPv6 single-stack.
-Later on, `["IPv4","IPv6"]` or `["IPv6","IPv4"]` can be supported for dual-stack networking (ordering is relevant for Kubernetes configuration like the `--service-cluster-ip-range` flag).
+
+Later on, `["IPv4","IPv6"]` or `["IPv6","IPv4"]` can be supported for dual-stack networking.
+In dual-stack networking, the ordering of `ipFamilies` is needed for correctly configuring Kubernetes components, e.g., the API server's `--service-cluster-ip-range` flag controls which IP family is used to allocate the primary `clusterIP` of services.
+
+Instead of explicitly configuring the `ipFamilies` field, the used families could be determined implicitly from the corresponding CIDR fields.
+However, when using IPv6 single-stack networking on cloud infrastructure, users might want to use IPv6 prefixes assigned to them by the provider.
+Typically, these are not known by the user upfront and need to be allocated during cluster creation.
+In this case, users might not supply any of the CIDRs in their shoot specification.
+Hence, we need a central field that allows configuring the used IP families explicitly instead of implicitly.
+That's exactly the purpose of the `ipFamilies` field.
 
 Additionally, IPv6-equivalents of all CIDR and mask fields are introduced, e.g., `Shoot.spec.networking.{pods,services,nodes}V6` and `Shoot.spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeV6`.
 Depending on the `ipFamilies` value, either the IPv4 field or the IPv6 field may be specified – or both in a potential dual-stack implementation.
