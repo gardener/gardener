@@ -360,7 +360,6 @@ func (s *Shoot) GetExtensionComponentsForParallelMigration() []component.DeployM
 	return []component.DeployMigrateWaiter{
 		s.Components.Extensions.ContainerRuntime,
 		s.Components.Extensions.ControlPlaneExposure,
-		s.Components.Extensions.Extension,
 		s.Components.Extensions.Network,
 		s.Components.Extensions.OperatingSystemConfig,
 		s.Components.Extensions.Worker,

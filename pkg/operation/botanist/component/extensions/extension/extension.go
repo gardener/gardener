@@ -19,11 +19,11 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
 	"github.com/go-logr/logr"
@@ -48,13 +48,49 @@ var TimeNow = time.Now
 
 // Interface contains references to an Extension deployer.
 type Interface interface {
-	component.DeployMigrateWaiter
 	// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
 	WaitCleanupStaleResources(context.Context) error
 	// Extensions returns the map of extensions where the key is the type and the value is an Extension structure.
 	Extensions() map[string]Extension
+
+	// DeployBeforeKubeAPIServer deploys extensions that should be handled before the kube-apiserver.
+	DeployBeforeKubeAPIServer(context.Context) error
+	// RestoreBeforeKubeAPIServer restores extensions that should be handled before the kube-apiserver.
+	RestoreBeforeKubeAPIServer(context.Context, *gardencorev1alpha1.ShootState) error
+	// WaitBeforeKubeAPIServer waits until all extensions that should be handled before the kube-apiserver are deployed and report readiness.
+	WaitBeforeKubeAPIServer(context.Context) error
+
+	// DeployAfterKubeAPIServer deploys extensions that should be handled after the kube-apiserver.
+	DeployAfterKubeAPIServer(ctx context.Context) error
+	// RestoreAfterKubeAPIServer restores extensions that should be handled after the kube-apiserver.
+	RestoreAfterKubeAPIServer(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error
+	// WaitAfterKubeAPIServer waits until all extensions that should be handled after the kube-apiserver are deployed and report readiness.
+	WaitAfterKubeAPIServer(ctx context.Context) error
+
+	// DestroyBeforeKubeAPIServer deletes the extensions that should be handled before the kube-apiserver.
+	DestroyBeforeKubeAPIServer(context.Context) error
+	// WaitCleanupBeforeKubeAPIServer waits until the extensions that should be handled before the kube-apiserver are cleaned up.
+	WaitCleanupBeforeKubeAPIServer(context.Context) error
+
+	// DestroyAfterKubeAPIServer deletes the extensions that should be handled after the kube-apiserver.
+	DestroyAfterKubeAPIServer(context.Context) error
+	// WaitCleanupAfterKubeAPIServer waits until the extensions that should be handled after the kube-apiserver are cleaned up.
+	WaitCleanupAfterKubeAPIServer(context.Context) error
+
+	// WaitCleanup waits until all extensions are cleaned up.
+	WaitCleanup(ctx context.Context) error
+
+	// MigrateBeforeKubeAPIServer migrates all Extension resources that should be handled before the kube-apiserver.
+	MigrateBeforeKubeAPIServer(ctx context.Context) error
+	// WaitMigrateBeforeKubeAPIServer waits until all Extension resources that should be handled before the kube-apiserver are migrated.
+	WaitMigrateBeforeKubeAPIServer(ctx context.Context) error
+
+	// MigrateAfterKubeAPIServer migrates all Extension resources that should be handled after the kube-apiserver.
+	MigrateAfterKubeAPIServer(ctx context.Context) error
+	// WaitMigrateAfterKubeAPIServer waits until all Extension resources that should be handled after the kube-apiserver are migrated.
+	WaitMigrateAfterKubeAPIServer(ctx context.Context) error
 }
 
 // Extension contains information about the desired Extension resources as well as configuration information.
@@ -62,6 +98,8 @@ type Extension struct {
 	extensionsv1alpha1.Extension
 	// Timeout is the maximum waiting time for the Extension status to report readiness.
 	Timeout time.Duration
+	// Lifecycle defines when an extension resource should be updated during different operations.
+	Lifecycle *gardencorev1beta1.ControllerResourceLifecycle
 }
 
 // Values contains the values used to create an Extension resources.
@@ -104,12 +142,22 @@ func New(
 	}
 }
 
-// Deploy uses the seed client to create or update the Extension resources.
-func (e *extension) Deploy(ctx context.Context) error {
+// DeployAfterKubeAPIServer uses the seed client to create or update the Extension resources that should be deployed after the kube-apiserver.
+func (e *extension) DeployAfterKubeAPIServer(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
 		_, err := e.deploy(ctx, ext, extType, providerConfig, v1beta1constants.GardenerOperationReconcile)
 		return err
-	})
+	}, deployAfterKubeAPIServer)
+
+	return flow.Parallel(fns...)(ctx)
+}
+
+// DeployBeforeKubeAPIServer uses the seed client to create or update the Extension resources that should be deployed before the kube-apiserver.
+func (e *extension) DeployBeforeKubeAPIServer(ctx context.Context) error {
+	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
+		_, err := e.deploy(ctx, ext, extType, providerConfig, v1beta1constants.GardenerOperationReconcile)
+		return err
+	}, deployBeforeKubeAPIServer)
 
 	return flow.Parallel(fns...)(ctx)
 }
@@ -125,13 +173,24 @@ func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extensio
 	return ext, err
 }
 
-// Destroy deletes all the Extension resources.
-func (e *extension) Destroy(ctx context.Context) error {
-	return e.deleteExtensionResources(ctx, sets.NewString())
+// DestroyBeforeKubeAPIServer deletes all Extension resources that should be handled before the kube-apiserver.
+func (e *extension) DestroyBeforeKubeAPIServer(ctx context.Context) error {
+	extensionsBeforeKAPI := e.filterExtensions(deleteBeforeKubeAPIServer)
+	return e.deleteExtensionResources(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
 }
 
-// Wait waits until the Extension resources are ready.
-func (e *extension) Wait(ctx context.Context) error {
+// DestroyAfterKubeAPIServer deletes all Extension resources that should be handled after the kube-apiserver.
+func (e *extension) DestroyAfterKubeAPIServer(ctx context.Context) error {
+	extensionsAfterKAPI := e.filterExtensions(deleteAfterKubeAPIServer)
+	return e.deleteExtensionResources(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
+}
+
+// WaitAfterKubeAPIServer waits until the Extension resources that should be deployed after the kube-apiserver are ready.
+func (e *extension) WaitAfterKubeAPIServer(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
 		return extensions.WaitUntilExtensionObjectReady(
 			ctx,
@@ -144,18 +203,53 @@ func (e *extension) Wait(ctx context.Context) error {
 			timeout,
 			nil,
 		)
-	})
+	}, deployAfterKubeAPIServer)
+
+	return flow.ParallelExitOnError(fns...)(ctx)
+}
+
+// Wait waits until the Extension resources that should be deployed before the kube-apiserver are ready.
+func (e *extension) WaitBeforeKubeAPIServer(ctx context.Context) error {
+	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
+		return extensions.WaitUntilExtensionObjectReady(
+			ctx,
+			e.client,
+			e.log,
+			ext,
+			extensionsv1alpha1.ExtensionResource,
+			e.waitInterval,
+			e.waitSevereThreshold,
+			timeout,
+			nil,
+		)
+	}, deployBeforeKubeAPIServer)
 
 	return flow.ParallelExitOnError(fns...)(ctx)
 }
 
 // WaitCleanup waits until the Extension resources are cleaned up.
 func (e *extension) WaitCleanup(ctx context.Context) error {
-	return e.waitCleanup(ctx, sets.NewString())
+	return e.waitCleanup(ctx, nil)
 }
 
-// Restore uses the seed client and the ShootState to create the Extension resources and restore their state.
-func (e *extension) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
+// WaitCleanupBeforeKubeAPIServer waits until all Extension resources that are handled before the kube-apiserver are cleaned up.
+func (e *extension) WaitCleanupBeforeKubeAPIServer(ctx context.Context) error {
+	extensionsBeforeKAPI := e.filterExtensions(deleteBeforeKubeAPIServer)
+	return e.waitCleanup(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
+}
+
+// WaitCleanupAfterKubeAPIServer waits until all Extension resources that are handled after the kube-apiserver are cleaned up.
+func (e *extension) WaitCleanupAfterKubeAPIServer(ctx context.Context) error {
+	extensionsAfterKAPI := e.filterExtensions(deleteAfterKubeAPIServer)
+	return e.waitCleanup(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
+}
+
+// RestoreAfterKubeAPIServer uses the seed client and the ShootState to create the Extension resources that should be deployed after the kube-apiserver and restore their state.
+func (e *extension) RestoreAfterKubeAPIServer(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
 		return extensions.RestoreExtensionWithDeployFunction(
 			ctx,
@@ -166,23 +260,45 @@ func (e *extension) Restore(ctx context.Context, shootState *gardencorev1alpha1.
 				return e.deploy(ctx, ext, extType, providerConfig, operationAnnotation)
 			},
 		)
-	})
+	}, deployAfterKubeAPIServer)
 
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Migrate migrates the Extension resources.
-func (e *extension) Migrate(ctx context.Context) error {
+// Restore uses the seed client and the ShootState to create the Extension resources that should be deployed before the kube-apiserver and restore their state.
+func (e *extension) RestoreBeforeKubeAPIServer(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
+	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
+		return extensions.RestoreExtensionWithDeployFunction(
+			ctx,
+			e.client,
+			shootState,
+			extensionsv1alpha1.ExtensionResource,
+			func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error) {
+				return e.deploy(ctx, ext, extType, providerConfig, operationAnnotation)
+			},
+		)
+	}, deployBeforeKubeAPIServer)
+
+	return flow.Parallel(fns...)(ctx)
+}
+
+// MigrateBeforeKubeAPIServer migrates all Extension resources that should be handled before the kube-apiserver.
+func (e *extension) MigrateBeforeKubeAPIServer(ctx context.Context) error {
+	extensionsBeforeKAPI := e.filterExtensions(migrateBeforeKubeAPIServer)
 	return extensions.MigrateExtensionObjects(
 		ctx,
 		e.client,
 		&extensionsv1alpha1.ExtensionList{},
 		e.values.Namespace,
+		func(obj extensionsv1alpha1.Object) bool {
+			return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
 	)
 }
 
-// WaitMigrate waits until the Extension resources are migrated successfully.
-func (e *extension) WaitMigrate(ctx context.Context) error {
+// WaitMigrateBeforeKubeAPIServer waits until all Extension resources that should be handled before the kube-apiserver are migrated.
+func (e *extension) WaitMigrateBeforeKubeAPIServer(ctx context.Context) error {
+	extensionsBeforeKAPI := e.filterExtensions(migrateBeforeKubeAPIServer)
 	return extensions.WaitUntilExtensionObjectsMigrated(
 		ctx,
 		e.client,
@@ -191,32 +307,70 @@ func (e *extension) WaitMigrate(ctx context.Context) error {
 		e.values.Namespace,
 		e.waitInterval,
 		e.waitTimeout,
+		func(obj extensionsv1alpha1.Object) bool {
+			return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
 	)
 }
 
-// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
-func (e *extension) DeleteStaleResources(ctx context.Context) error {
-	return e.deleteExtensionResources(ctx, e.getWantedExtensionTypes())
-}
-
-// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
-func (e *extension) WaitCleanupStaleResources(ctx context.Context) error {
-	return e.waitCleanup(ctx, e.getWantedExtensionTypes())
-}
-
-func (e *extension) deleteExtensionResources(ctx context.Context, wantedExtensionTypes sets.String) error {
-	return extensions.DeleteExtensionObjects(
+// MigrateAfterKubeAPIServer migrates all Extension resources that should be handled after the kube-apiserver.
+func (e *extension) MigrateAfterKubeAPIServer(ctx context.Context) error {
+	extensionsAfterKAPI := e.filterExtensions(migrateAfterKubeAPIServer)
+	return extensions.MigrateExtensionObjects(
 		ctx,
 		e.client,
 		&extensionsv1alpha1.ExtensionList{},
 		e.values.Namespace,
 		func(obj extensionsv1alpha1.Object) bool {
-			return !wantedExtensionTypes.Has(obj.GetExtensionSpec().GetExtensionType())
+			return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
 		},
 	)
 }
 
-func (e *extension) waitCleanup(ctx context.Context, wantedExtensionTypes sets.String) error {
+// WaitMigrateAfterKubeAPIServer waits until all Extension resources that should be handled after the kube-apiserver are migrated.
+func (e *extension) WaitMigrateAfterKubeAPIServer(ctx context.Context) error {
+	extensionsAfterKAPI := e.filterExtensions(migrateAfterKubeAPIServer)
+	return extensions.WaitUntilExtensionObjectsMigrated(
+		ctx,
+		e.client,
+		&extensionsv1alpha1.ExtensionList{},
+		extensionsv1alpha1.ExtensionResource,
+		e.values.Namespace,
+		e.waitInterval,
+		e.waitTimeout,
+		func(obj extensionsv1alpha1.Object) bool {
+			return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
+	)
+}
+
+// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
+func (e *extension) DeleteStaleResources(ctx context.Context) error {
+	wantedExtensionTypes := e.getWantedExtensionTypes()
+	return e.deleteExtensionResources(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return !wantedExtensionTypes.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
+}
+
+// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
+func (e *extension) WaitCleanupStaleResources(ctx context.Context) error {
+	wantedExtensionTypes := e.getWantedExtensionTypes()
+	return e.waitCleanup(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return !wantedExtensionTypes.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
+}
+
+func (e *extension) deleteExtensionResources(ctx context.Context, predicate func(obj extensionsv1alpha1.Object) bool) error {
+	return extensions.DeleteExtensionObjects(
+		ctx,
+		e.client,
+		&extensionsv1alpha1.ExtensionList{},
+		e.values.Namespace,
+		predicate,
+	)
+}
+
+func (e *extension) waitCleanup(ctx context.Context, predicate func(obj extensionsv1alpha1.Object) bool) error {
 	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		e.client,
@@ -226,9 +380,7 @@ func (e *extension) waitCleanup(ctx context.Context, wantedExtensionTypes sets.S
 		e.values.Namespace,
 		e.waitInterval,
 		e.waitTimeout,
-		func(obj extensionsv1alpha1.Object) bool {
-			return !wantedExtensionTypes.Has(obj.GetExtensionSpec().GetExtensionType())
-		},
+		predicate,
 	)
 }
 
@@ -242,10 +394,16 @@ func (e *extension) getWantedExtensionTypes() sets.String {
 	return wantedExtensionTypes
 }
 
-func (e *extension) forEach(fn func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, timeout time.Duration) error) []flow.TaskFn {
+func (e *extension) forEach(
+	fn func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, timeout time.Duration) error,
+	f filter,
+) []flow.TaskFn {
 	fns := make([]flow.TaskFn, 0, len(e.values.Extensions))
 
 	for _, ext := range e.values.Extensions {
+		if !f(ext) {
+			continue
+		}
 		extensionTemplate := ext
 
 		extensionObj, ok := e.extensions[extensionTemplate.Name]

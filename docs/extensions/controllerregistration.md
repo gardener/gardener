@@ -201,11 +201,30 @@ spec:
     primary: true
     globallyEnabled: true
     reconcileTimeout: 30s
+    lifecycle:
+      reconcile: AfterKubeAPIServer
+      delete: BeforeKubeAPIServer
+      migrate: BeforeKubeAPIServer
 ```
 
 The `globallyEnabled=true` option specifies that the `Extension/foo` object shall be created by default for all shoots (unless they opted out by setting `.spec.extensions[].enabled=false` in the `Shoot` spec).
 
 The `reconcileTimeout` tells Gardener how long it should wait during its shoot reconciliation flow for the `Extension/foo`'s reconciliation to finish.
+
+#### `Extension` Lifecycle
+The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer` and `BeforeKubeAPIServer`. Let's take the following configuration and explain it.
+
+```yaml
+    ...
+    lifecycle:
+      reconcile: AfterKubeAPIServer
+      delete: BeforeKubeAPIServer
+      migrate: BeforeKubeAPIServer
+```
+
+ - `reconcile: AfterKubeAPIServer` means that the extension resource will be reconciled after the successful reconciliation of the `kube-apiserver` during shoot reconciliation. This is also the default behaviour if this value is not specified. During shoot hibernation, the opposite rule is applied meaning that in this case the reconciliation of the extension will happen before the `kube-apiserver` is scaled to 0 replicas. On the other hand, if the extension needs to be reconciled before the `kube-apiserver` and scaled down after it, then the value `BeforeKubeAPIServer` should be used.
+- `delete: BeforeKubeAPIServer` means that the extension resource will be deleted before the `kube-apiserver` is destroyed during shoot deletion. This is the default behaviour if this value is not specified.
+- `migrate: BeforeKubeAPIServer` means that the extension resource will be migrated before the `kube-apiserver` is destroyed in the source cluster during [control plane migration](../usage/control_plane_migration.md). This is the default behaviour if this value is not specified. The restoration of the control plane follows the reconciliation control flow.
 
 ### Deployment configuration options
 

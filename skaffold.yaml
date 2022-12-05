@@ -579,6 +579,7 @@ build:
         - extensions/pkg/controller/controlplane
         - extensions/pkg/controller/controlplane/genericactuator
         - extensions/pkg/controller/dnsrecord
+        - extensions/pkg/controller/extension
         - extensions/pkg/controller/healthcheck
         - extensions/pkg/controller/healthcheck/general
         - extensions/pkg/controller/healthcheck/worker
@@ -664,6 +665,8 @@ build:
         - pkg/provider-local/controller/backupoptions
         - pkg/provider-local/controller/controlplane
         - pkg/provider-local/controller/dnsrecord
+        - pkg/provider-local/controller/extension/seed
+        - pkg/provider-local/controller/extension/shoot
         - pkg/provider-local/controller/healthcheck
         - pkg/provider-local/controller/infrastructure
         - pkg/provider-local/controller/ingress

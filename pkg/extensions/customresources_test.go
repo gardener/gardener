@@ -673,7 +673,7 @@ var _ = Describe("extensions", func() {
 	Describe("#MigrateExtensionObjects", func() {
 		It("should not return error if there are no extension resources", func() {
 			Expect(
-				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.BackupBucketList{}, namespace),
+				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.BackupBucketList{}, namespace, nil),
 			).To(Succeed())
 		})
 
@@ -689,7 +689,7 @@ var _ = Describe("extensions", func() {
 			}
 
 			Expect(
-				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.ContainerRuntimeList{}, namespace),
+				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.ContainerRuntimeList{}, namespace, nil),
 			).To(Succeed())
 
 			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
@@ -697,6 +697,36 @@ var _ = Describe("extensions", func() {
 			Expect(len(containerRuntimeList.Items)).To(Equal(4))
 			for _, item := range containerRuntimeList.Items {
 				Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
+			}
+		})
+
+		It("should properly annotate only the desired extension objects for migration", func() {
+			for i := 0; i < 4; i++ {
+				containerRuntimeExtension := &extensionsv1alpha1.ContainerRuntime{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      fmt.Sprintf("containerruntime-%d", i),
+					},
+				}
+				Expect(c.Create(ctx, containerRuntimeExtension)).To(Succeed(), containerRuntimeExtension.ObjectMeta.Name+" should get created")
+			}
+
+			Expect(
+				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.ContainerRuntimeList{}, namespace, func(obj extensionsv1alpha1.Object) bool {
+					return obj.GetName() == "containerruntime-2"
+				}),
+			).To(Succeed())
+
+			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
+			Expect(c.List(ctx, containerRuntimeList, client.InNamespace(namespace))).To(Succeed())
+			Expect(containerRuntimeList.Items).To(HaveLen(4))
+			for _, item := range containerRuntimeList.Items {
+				if item.ObjectMeta.Name == "containerruntime-2" {
+					Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate), item.ObjectMeta.Name+" should have gardener.cloud/operation annotation")
+				} else {
+					_, ok := item.Annotations[v1beta1constants.GardenerOperation]
+					Expect(ok).To(BeFalse(), item.ObjectMeta.Name+" should not have gardener.cloud/operation annotation")
+				}
 			}
 		})
 	})
@@ -754,7 +784,8 @@ var _ = Describe("extensions", func() {
 				extensionsv1alpha1.WorkerResource,
 				namespace,
 				defaultInterval,
-				defaultTimeout)).To(Succeed())
+				defaultTimeout,
+				nil)).To(Succeed())
 		})
 
 		DescribeTable("should return error if migration times out",
@@ -772,7 +803,8 @@ var _ = Describe("extensions", func() {
 					extensionsv1alpha1.WorkerResource,
 					namespace,
 					defaultInterval,
-					defaultTimeout)
+					defaultTimeout,
+					nil)
 				Expect(err).To(match())
 			},
 			Entry("last operation is not Migrate",

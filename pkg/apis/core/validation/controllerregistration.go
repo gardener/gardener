@@ -34,6 +34,11 @@ var availablePolicies = sets.NewString(
 	string(core.ControllerDeploymentPolicyAlwaysExceptNoShoots),
 )
 
+var availableExtensionStrategies = sets.NewString(
+	string(core.BeforeKubeAPIServer),
+	string(core.AfterKubeAPIServer),
+)
+
 // ValidateControllerRegistration validates a ControllerRegistration object.
 func ValidateControllerRegistration(controllerRegistration *core.ControllerRegistration) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -94,6 +99,22 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			}
 			if resource.ReconcileTimeout != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("reconcileTimeout"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+			if resource.Lifecycle != nil {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("lifecycle"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+		}
+
+		if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.Lifecycle != nil {
+			lifecyclePath := idxPath.Child("lifecycle")
+			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Reconcile)) {
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, availableExtensionStrategies.List()))
+			}
+			if resource.Lifecycle.Delete != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Delete)) {
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("delete"), *resource.Lifecycle.Delete, availableExtensionStrategies.List()))
+			}
+			if resource.Lifecycle.Migrate != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Migrate)) {
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, availableExtensionStrategies.List()))
 			}
 		}
 

@@ -169,6 +169,7 @@ func (c *controlPlane) Migrate(ctx context.Context) error {
 		c.client,
 		&extensionsv1alpha1.ControlPlaneList{},
 		c.values.Namespace,
+		nil,
 	)
 }
 

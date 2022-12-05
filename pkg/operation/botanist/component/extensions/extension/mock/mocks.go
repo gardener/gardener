@@ -50,32 +50,60 @@ func (mr *MockInterfaceMockRecorder) DeleteStaleResources(arg0 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStaleResources", reflect.TypeOf((*MockInterface)(nil).DeleteStaleResources), arg0)
 }
 
-// Deploy mocks base method.
-func (m *MockInterface) Deploy(arg0 context.Context) error {
+// DeployAfterKubeAPIServer mocks base method.
+func (m *MockInterface) DeployAfterKubeAPIServer(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", arg0)
+	ret := m.ctrl.Call(m, "DeployAfterKubeAPIServer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Deploy indicates an expected call of Deploy.
-func (mr *MockInterfaceMockRecorder) Deploy(arg0 interface{}) *gomock.Call {
+// DeployAfterKubeAPIServer indicates an expected call of DeployAfterKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) DeployAfterKubeAPIServer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAfterKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).DeployAfterKubeAPIServer), arg0)
 }
 
-// Destroy mocks base method.
-func (m *MockInterface) Destroy(arg0 context.Context) error {
+// DeployBeforeKubeAPIServer mocks base method.
+func (m *MockInterface) DeployBeforeKubeAPIServer(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", arg0)
+	ret := m.ctrl.Call(m, "DeployBeforeKubeAPIServer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Destroy indicates an expected call of Destroy.
-func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
+// DeployBeforeKubeAPIServer indicates an expected call of DeployBeforeKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) DeployBeforeKubeAPIServer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployBeforeKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).DeployBeforeKubeAPIServer), arg0)
+}
+
+// DestroyAfterKubeAPIServer mocks base method.
+func (m *MockInterface) DestroyAfterKubeAPIServer(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DestroyAfterKubeAPIServer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DestroyAfterKubeAPIServer indicates an expected call of DestroyAfterKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) DestroyAfterKubeAPIServer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DestroyAfterKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).DestroyAfterKubeAPIServer), arg0)
+}
+
+// DestroyBeforeKubeAPIServer mocks base method.
+func (m *MockInterface) DestroyBeforeKubeAPIServer(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DestroyBeforeKubeAPIServer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DestroyBeforeKubeAPIServer indicates an expected call of DestroyBeforeKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) DestroyBeforeKubeAPIServer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DestroyBeforeKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).DestroyBeforeKubeAPIServer), arg0)
 }
 
 // Extensions mocks base method.
@@ -92,46 +120,88 @@ func (mr *MockInterfaceMockRecorder) Extensions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Extensions", reflect.TypeOf((*MockInterface)(nil).Extensions))
 }
 
-// Migrate mocks base method.
-func (m *MockInterface) Migrate(arg0 context.Context) error {
+// MigrateAfterKubeAPIServer mocks base method.
+func (m *MockInterface) MigrateAfterKubeAPIServer(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Migrate", arg0)
+	ret := m.ctrl.Call(m, "MigrateAfterKubeAPIServer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Migrate indicates an expected call of Migrate.
-func (mr *MockInterfaceMockRecorder) Migrate(arg0 interface{}) *gomock.Call {
+// MigrateAfterKubeAPIServer indicates an expected call of MigrateAfterKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) MigrateAfterKubeAPIServer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockInterface)(nil).Migrate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MigrateAfterKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).MigrateAfterKubeAPIServer), arg0)
 }
 
-// Restore mocks base method.
-func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
+// MigrateBeforeKubeAPIServer mocks base method.
+func (m *MockInterface) MigrateBeforeKubeAPIServer(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Restore", arg0, arg1)
+	ret := m.ctrl.Call(m, "MigrateBeforeKubeAPIServer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Restore indicates an expected call of Restore.
-func (mr *MockInterfaceMockRecorder) Restore(arg0, arg1 interface{}) *gomock.Call {
+// MigrateBeforeKubeAPIServer indicates an expected call of MigrateBeforeKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) MigrateBeforeKubeAPIServer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockInterface)(nil).Restore), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MigrateBeforeKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).MigrateBeforeKubeAPIServer), arg0)
 }
 
-// Wait mocks base method.
-func (m *MockInterface) Wait(arg0 context.Context) error {
+// RestoreAfterKubeAPIServer mocks base method.
+func (m *MockInterface) RestoreAfterKubeAPIServer(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "RestoreAfterKubeAPIServer", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Wait indicates an expected call of Wait.
-func (mr *MockInterfaceMockRecorder) Wait(arg0 interface{}) *gomock.Call {
+// RestoreAfterKubeAPIServer indicates an expected call of RestoreAfterKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) RestoreAfterKubeAPIServer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockInterface)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreAfterKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).RestoreAfterKubeAPIServer), arg0, arg1)
+}
+
+// RestoreBeforeKubeAPIServer mocks base method.
+func (m *MockInterface) RestoreBeforeKubeAPIServer(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestoreBeforeKubeAPIServer", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestoreBeforeKubeAPIServer indicates an expected call of RestoreBeforeKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) RestoreBeforeKubeAPIServer(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreBeforeKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).RestoreBeforeKubeAPIServer), arg0, arg1)
+}
+
+// WaitAfterKubeAPIServer mocks base method.
+func (m *MockInterface) WaitAfterKubeAPIServer(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitAfterKubeAPIServer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitAfterKubeAPIServer indicates an expected call of WaitAfterKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) WaitAfterKubeAPIServer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitAfterKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).WaitAfterKubeAPIServer), arg0)
+}
+
+// WaitBeforeKubeAPIServer mocks base method.
+func (m *MockInterface) WaitBeforeKubeAPIServer(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitBeforeKubeAPIServer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitBeforeKubeAPIServer indicates an expected call of WaitBeforeKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) WaitBeforeKubeAPIServer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitBeforeKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).WaitBeforeKubeAPIServer), arg0)
 }
 
 // WaitCleanup mocks base method.
@@ -148,6 +218,34 @@ func (mr *MockInterfaceMockRecorder) WaitCleanup(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), arg0)
 }
 
+// WaitCleanupAfterKubeAPIServer mocks base method.
+func (m *MockInterface) WaitCleanupAfterKubeAPIServer(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitCleanupAfterKubeAPIServer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitCleanupAfterKubeAPIServer indicates an expected call of WaitCleanupAfterKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) WaitCleanupAfterKubeAPIServer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanupAfterKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).WaitCleanupAfterKubeAPIServer), arg0)
+}
+
+// WaitCleanupBeforeKubeAPIServer mocks base method.
+func (m *MockInterface) WaitCleanupBeforeKubeAPIServer(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitCleanupBeforeKubeAPIServer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitCleanupBeforeKubeAPIServer indicates an expected call of WaitCleanupBeforeKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) WaitCleanupBeforeKubeAPIServer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanupBeforeKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).WaitCleanupBeforeKubeAPIServer), arg0)
+}
+
 // WaitCleanupStaleResources mocks base method.
 func (m *MockInterface) WaitCleanupStaleResources(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -162,16 +260,30 @@ func (mr *MockInterfaceMockRecorder) WaitCleanupStaleResources(arg0 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanupStaleResources", reflect.TypeOf((*MockInterface)(nil).WaitCleanupStaleResources), arg0)
 }
 
-// WaitMigrate mocks base method.
-func (m *MockInterface) WaitMigrate(arg0 context.Context) error {
+// WaitMigrateAfterKubeAPIServer mocks base method.
+func (m *MockInterface) WaitMigrateAfterKubeAPIServer(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitMigrate", arg0)
+	ret := m.ctrl.Call(m, "WaitMigrateAfterKubeAPIServer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// WaitMigrate indicates an expected call of WaitMigrate.
-func (mr *MockInterfaceMockRecorder) WaitMigrate(arg0 interface{}) *gomock.Call {
+// WaitMigrateAfterKubeAPIServer indicates an expected call of WaitMigrateAfterKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) WaitMigrateAfterKubeAPIServer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrate", reflect.TypeOf((*MockInterface)(nil).WaitMigrate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrateAfterKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).WaitMigrateAfterKubeAPIServer), arg0)
+}
+
+// WaitMigrateBeforeKubeAPIServer mocks base method.
+func (m *MockInterface) WaitMigrateBeforeKubeAPIServer(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitMigrateBeforeKubeAPIServer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitMigrateBeforeKubeAPIServer indicates an expected call of WaitMigrateBeforeKubeAPIServer.
+func (mr *MockInterfaceMockRecorder) WaitMigrateBeforeKubeAPIServer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrateBeforeKubeAPIServer", reflect.TypeOf((*MockInterface)(nil).WaitMigrateBeforeKubeAPIServer), arg0)
 }

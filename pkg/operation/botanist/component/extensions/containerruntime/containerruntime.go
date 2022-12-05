@@ -168,6 +168,7 @@ func (c *containerRuntime) Migrate(ctx context.Context) error {
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		c.values.Namespace,
+		nil,
 	)
 }
 
@@ -181,6 +182,7 @@ func (c *containerRuntime) WaitMigrate(ctx context.Context) error {
 		c.values.Namespace,
 		c.waitInterval,
 		c.waitTimeout,
+		nil,
 	)
 }
 

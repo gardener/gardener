@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../../hack/generate-controller-registration.sh provider-local . v0.0.0 ../../../../example/provider-local/garden/base/controller-registration.yaml BackupBucket:local BackupEntry:local DNSRecord:local ControlPlane:local Infrastructure:local OperatingSystemConfig:local Worker:local
+//go:generate ../../../../hack/generate-controller-registration.sh provider-local . v0.0.0 ../../../../example/provider-local/garden/base/controller-registration.yaml BackupBucket:local BackupEntry:local DNSRecord:local ControlPlane:local Extension:local-ext-seed Extension:local-ext-shoot Infrastructure:local OperatingSystemConfig:local Worker:local
+//go:generate sh -c "sed -i 's/    type: local-ext-seed/    type: local-ext-seed\\n    lifecycle:\\n      reconcile: BeforeKubeAPIServer\\n      delete: AfterKubeAPIServer\\n      migrate: AfterKubeAPIServer/' ../../../../example/provider-local/garden/base/controller-registration.yaml"
 //go:generate cp ../../../../example/provider-local/garden/base/controller-registration.yaml ../../../../charts/gardener/provider-local/registration/templates/controller-registration.yaml
 //go:generate sh -c "sed -i 's/    image:/{{ toYaml .Values.values | indent 4 }}/g' ../../../../charts/gardener/provider-local/registration/templates/controller-registration.yaml"
 //go:generate sh -c "sed -i 's/      tag: .*//g' ../../../../charts/gardener/provider-local/registration/templates/controller-registration.yaml"

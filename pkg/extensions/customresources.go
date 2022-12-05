@@ -324,13 +324,16 @@ func MigrateExtensionObject(
 }
 
 // MigrateExtensionObjects lists all extension objects of a given kind and annotates them with the Migrate operation.
+// It executes the given predicateFunc for each of them, and if it evaluates to true, then it migrates the extension object.
+// If predicateFunc is nil then migrates all extension objects.
 func MigrateExtensionObjects(
 	ctx context.Context,
 	c client.Client,
 	listObj client.ObjectList,
 	namespace string,
+	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 ) error {
-	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, nil, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
+	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
 		return MigrateExtensionObject(ctx, c, obj)
 	})
 	if err != nil {
@@ -375,6 +378,8 @@ func WaitUntilExtensionObjectMigrated(
 }
 
 // WaitUntilExtensionObjectsMigrated lists all extension objects of a given kind and waits until they are migrated.
+// It executes the given predicateFunc for each of them, and if it evaluates to true, then it waits for the extension object to be migrated.
+// If predicateFunc is nil then waits for all extension objects to be migrated.
 func WaitUntilExtensionObjectsMigrated(
 	ctx context.Context,
 	c client.Client,
@@ -383,8 +388,9 @@ func WaitUntilExtensionObjectsMigrated(
 	namespace string,
 	interval time.Duration,
 	timeout time.Duration,
+	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 ) error {
-	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, nil, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
+	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
 		return WaitUntilExtensionObjectMigrated(ctx, c, obj, kind, interval, timeout)
 	})
 	if err != nil {

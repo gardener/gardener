@@ -3115,7 +3115,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.</p>
+<p>GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
+This field is defaulted to false when kind is &ldquo;Extension&rdquo;.</p>
 </td>
 </tr>
 <tr>
@@ -3129,7 +3130,8 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.</p>
+<p>ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+This field is defaulted to 3m0s when kind is &ldquo;Extension&rdquo;.</p>
 </td>
 </tr>
 <tr>
@@ -3146,8 +3148,96 @@ resource&rsquo;s lifecycle. This field defaults to true. There must be exactly o
 combination. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>lifecycle</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycle">
+ControllerResourceLifecycle
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+This field is defaulted in the following way when kind is &ldquo;Extension&rdquo;.
+Reconcile: &ldquo;AfterKubeAPIServer&rdquo;
+Delete: &ldquo;BeforeKubeAPIServer&rdquo;
+Migrate: &ldquo;BeforeKubeAPIServer&rdquo;</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControllerResourceLifecycle">ControllerResourceLifecycle
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResource">ControllerResource</a>)
+</p>
+<p>
+<p>ControllerResourceLifecycle defines the lifecycle of a controller resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>reconcile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
+ControllerResourceLifecycleStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reconcile defines the strategy during reconciliation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>delete</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
+ControllerResourceLifecycleStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Delete defines the strategy during deletion.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>migrate</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
+ControllerResourceLifecycleStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Migrate defines the strategy during migration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">ControllerResourceLifecycleStrategy
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycle">ControllerResourceLifecycle</a>)
+</p>
+<p>
+<p>ControllerResourceLifecycleStrategy is a string alias.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.CoreDNS">CoreDNS
 </h3>
 <p>

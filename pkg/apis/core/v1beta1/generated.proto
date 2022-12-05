@@ -528,10 +528,12 @@ message ControllerResource {
   optional string type = 2;
 
   // GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
+  // This field is defaulted to false when kind is "Extension".
   // +optional
   optional bool globallyEnabled = 3;
 
   // ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+  // This field is defaulted to 3m0s when kind is "Extension".
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration reconcileTimeout = 4;
 
@@ -540,6 +542,29 @@ message ControllerResource {
   // combination. This field is immutable.
   // +optional
   optional bool primary = 5;
+
+  // Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+  // This field is defaulted in the following way when kind is "Extension".
+  //  Reconcile: "AfterKubeAPIServer"
+  //  Delete: "BeforeKubeAPIServer"
+  //  Migrate: "BeforeKubeAPIServer"
+  // +optional
+  optional ControllerResourceLifecycle lifecycle = 6;
+}
+
+// ControllerResourceLifecycle defines the lifecycle of a controller resource.
+message ControllerResourceLifecycle {
+  // Reconcile defines the strategy during reconciliation.
+  // +optional
+  optional string reconcile = 1;
+
+  // Delete defines the strategy during deletion.
+  // +optional
+  optional string delete = 2;
+
+  // Migrate defines the strategy during migration.
+  // +optional
+  optional string migrate = 3;
 }
 
 // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.

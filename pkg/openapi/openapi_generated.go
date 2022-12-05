@@ -71,6 +71,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationList":             schema_pkg_apis_core_v1alpha1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec":             schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":                     schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResourceLifecycle":            schema_pkg_apis_core_v1alpha1_ControllerResourceLifecycle(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS":                                schema_pkg_apis_core_v1alpha1_CoreDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling":                     schema_pkg_apis_core_v1alpha1_CoreDNSAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSRewriting":                       schema_pkg_apis_core_v1alpha1_CoreDNSRewriting(ref),
@@ -228,6 +229,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationList":              schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationSpec":              schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource":                      schema_pkg_apis_core_v1beta1_ControllerResource(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle":             schema_pkg_apis_core_v1beta1_ControllerResourceLifecycle(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS":                                 schema_pkg_apis_core_v1beta1_CoreDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling":                      schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting":                        schema_pkg_apis_core_v1beta1_CoreDNSRewriting(ref),
@@ -2359,14 +2361,14 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 					},
 					"globallyEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.",
+							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. This field is defaulted to false when kind is \"Extension\".",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
 					"reconcileTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.",
+							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation. This field is defaulted to 3m0s when kind is \"Extension\".",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -2377,12 +2379,52 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
+					"lifecycle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed. This field is defaulted in the following way when kind is \"Extension\".\n Reconcile: \"AfterKubeAPIServer\"\n Delete: \"BeforeKubeAPIServer\"\n Migrate: \"BeforeKubeAPIServer\"",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResourceLifecycle"),
+						},
+					},
 				},
 				Required: []string{"kind", "type"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResourceLifecycle", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ControllerResourceLifecycle(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControllerResourceLifecycle defines the lifecycle of a controller resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Reconcile defines the strategy during reconciliation.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"delete": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Delete defines the strategy during deletion.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"migrate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Migrate defines the strategy during migration.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -9735,14 +9777,14 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"globallyEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.",
+							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. This field is defaulted to false when kind is \"Extension\".",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
 					"reconcileTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.",
+							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation. This field is defaulted to 3m0s when kind is \"Extension\".",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -9753,12 +9795,52 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 							Format:      "",
 						},
 					},
+					"lifecycle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed. This field is defaulted in the following way when kind is \"Extension\".\n Reconcile: \"AfterKubeAPIServer\"\n Delete: \"BeforeKubeAPIServer\"\n Migrate: \"BeforeKubeAPIServer\"",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle"),
+						},
+					},
 				},
 				Required: []string{"kind", "type"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ControllerResourceLifecycle(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControllerResourceLifecycle defines the lifecycle of a controller resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Reconcile defines the strategy during reconciliation.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"delete": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Delete defines the strategy during deletion.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"migrate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Migrate defines the strategy during migration.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

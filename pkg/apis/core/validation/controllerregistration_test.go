@@ -176,11 +176,15 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should allow to set required field for kind Extension", func() {
+			strat := core.BeforeKubeAPIServer
 			resource := core.ControllerResource{
 				Kind:             extensionsv1alpha1.ExtensionResource,
 				Type:             "arbitrary",
 				GloballyEnabled:  pointer.Bool(true),
 				ReconcileTimeout: makeDurationPointer(10 * time.Second),
+				Lifecycle: &core.ControllerResourceLifecycle{
+					Reconcile: &strat,
+				},
 			}
 
 			controllerRegistration.Spec.Resources = []core.ControllerResource{resource}
@@ -190,8 +194,12 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set certain fields for kind != Extension", func() {
+			strat := core.BeforeKubeAPIServer
 			ctrlResource.GloballyEnabled = pointer.Bool(true)
 			ctrlResource.ReconcileTimeout = makeDurationPointer(10 * time.Second)
+			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &strat,
+			}
 			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
@@ -202,6 +210,61 @@ var _ = Describe("validation", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.resources[0].reconcileTimeout"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.resources[0].lifecycle"),
+			}))))
+		})
+
+		It("should allow setting the BeforeKubeAPIServer lifecycle strategy", func() {
+			beforeStrat := core.BeforeKubeAPIServer
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &beforeStrat,
+				Delete:    &beforeStrat,
+				Migrate:   &beforeStrat,
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow setting the AfterKubeAPIServer lifecycle strategy", func() {
+			afterStrat := core.AfterKubeAPIServer
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &afterStrat,
+				Delete:    &afterStrat,
+				Migrate:   &afterStrat,
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not allow setting invalid lifecycle strategies", func() {
+			one := core.ControllerResourceLifecycleStrategy("one")
+			two := core.ControllerResourceLifecycleStrategy("two")
+			three := core.ControllerResourceLifecycleStrategy("three")
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &one,
+				Delete:    &two,
+				Migrate:   &three,
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].lifecycle.reconcile"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].lifecycle.delete"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].lifecycle.migrate"),
 			}))))
 		})
 
