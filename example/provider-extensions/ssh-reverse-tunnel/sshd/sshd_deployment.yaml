@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gardener-api-quic-server
+  name: gardener-apiserver-tunnel-sshd
   namespace: relay
   labels:
-    app: gardener-api-quic-server
+    app: gardener-apiserver-tunnel-sshd
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gardener-api-quic-server
+      app: gardener-apiserver-tunnel-sshd
   template:
     metadata:
       labels:
-        app: gardener-api-quic-server
+        app: gardener-apiserver-tunnel-sshd
         projected-token-mount.resources.gardener.cloud/skip: "true"
         seccompprofile.resources.gardener.cloud/skip: "true"
         topology-spread-constraints.resources.gardener.cloud/skip: "true"
@@ -21,35 +21,36 @@ spec:
       # Relay should not be evicted for gardener pods because gardenlet does not work when it cannot reach the gardener-apiserver
       priorityClassName: system-cluster-critical
       containers:
-      - args:
-        - --listen-tcp=0.0.0.0:6443
-        - --listen-quic=0.0.0.0:10443
-        - --cert-file=/certs/tls.crt
-        - --cert-key=/certs/tls.key 
-        - --client-ca-file=/certs/ca.crt
-        - --v=2
-        image: ghcr.io/mvladev/quic-reverse-http-tunnel/quic-server:v0.1.3
-        name: quic-server
+      - command: ["/gardener_apiserver_sshd/entrypoint.sh"]
+        image: alpine:3.17
+        name: sshd
         volumeMounts:
-        - name: quic-tls
-          mountPath: "/certs"
-          readOnly: true
+        - name: gardener-apiserver-sshd
+          mountPath: /gardener_apiserver_sshd
+        - name: gardener-apiserver-sshd-keys
+          mountPath: /gardener-apiserver-ssh-keys
         resources:
           limits:
-            cpu: 50m
+            cpu: 1
             memory: 128Mi
           requests:
             cpu: 20m
             memory: 64Mi
         ports:
-        - name: tcp
+        - name: https
           containerPort: 6443
-        - name: quic
-          containerPort: 10443
+        - name: ssh
+          containerPort: 6222
       volumes:
-      - name: quic-tls
-        secret:
-          secretName: quic-tls
+      - name: gardener-apiserver-sshd
+        configMap:
+          name: gardener-apiserver-sshd
+          defaultMode: 0700
+      - name: gardener-apiserver-sshd-keys
+        configMap:
+          name: gardener-apiserver-sshd-keys
+          defaultMode: 0600
+
 ---
 apiVersion: v1
 kind: Service
@@ -57,7 +58,7 @@ metadata:
   name:  gardener-apiserver
   namespace: relay
   labels:
-    app:  gardener-api-quic-server
+    app:  gardener-apiserver-tunnel-sshd
 spec:
   ports:
   - port: 443
@@ -65,5 +66,5 @@ spec:
     targetPort: 6443
     name: https
   selector:
-    app:  gardener-api-quic-server
+    app:  gardener-apiserver-tunnel-sshd
   type: ClusterIP

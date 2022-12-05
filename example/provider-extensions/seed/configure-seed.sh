@@ -112,7 +112,6 @@ check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlpla
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootInfo"
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootDNS"
 
-
 registry_domain=$(yq '.registryDomain' "$SCRIPT_DIR"/seed-config.yaml)
 relay_domain=$(yq '.relayDomain' "$SCRIPT_DIR"/seed-config.yaml)
 type=$(yq '.provider' "$SCRIPT_DIR"/seed-config.yaml)
@@ -133,16 +132,11 @@ fi
 
 echo "Deploying load-balancer services"
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../registry-seed/load-balancer/base
-
-if [[ $type == "aws" ]]; then
-  kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../quic-relay/load-balancer/aws
-else
-  kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../quic-relay/load-balancer/base
-fi
+kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../ssh-reverse-tunnel/load-balancer
 
 if [[ $(yq '.useGardenerShootDNS' "$SCRIPT_DIR"/seed-config.yaml) == "true" ]]; then
   ensure-gardener-dns-annotations registry registry "$registry_domain"
-  ensure-gardener-dns-annotations relay gardener-api-quic-server "$relay_domain"
+  ensure-gardener-dns-annotations relay gardener-apiserver-tunnel "$relay_domain"
 else
   echo "######################################################################################"
   echo "Please create DNS entries and generate TLS certificates for registry and relay domains"
@@ -152,14 +146,19 @@ else
   echo "TLS certificate for domain \"$registry_domain\" -> Please store the TLS certificate in secret \"name: tls namespace: registry\" (https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets)"
   echo " "
   echo "Relay domain:"
-  echo "DNS entry for domain: \"$relay_domain\" -> IP from load balancer service \"kubectl get svc -n relay gardener-api-quic-server -o yaml\""
+  echo "DNS entry for domain: \"$relay_domain\" -> IP from load balancer service \"kubectl get svc -n relay gardener-apiserver-tunnel -o yaml\""
   echo "######################################################################################"
   read -rsp "When you are ready, please press ENTER to continue"
 fi
+
+echo "Create host and client keys for SSH reverse tunnel"
+"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$relay_domain" 6222
+"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$relay_domain" provider-extensions
 
 echo "Deploying kyverno, quic-relay and container registry"
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno
 until kubectl --kubeconfig "$seed_kubeconfig" get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno-policies
-"$SCRIPT_DIR"/../quic-relay/deploy-quic-relay.sh "$garden_kubeconfig" "$seed_kubeconfig" "$relay_domain"
+kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../ssh-reverse-tunnel/sshd
+kubectl --server-side=true --kubeconfig "$garden_kubeconfig" apply -k "$SCRIPT_DIR"/../ssh-reverse-tunnel/ssh
 "$SCRIPT_DIR"/../registry-seed/deploy-registry.sh "$seed_kubeconfig" "$registry_domain"

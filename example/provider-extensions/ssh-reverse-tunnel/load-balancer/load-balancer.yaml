@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gardener-apiserver-tunnel
+  namespace: relay
+  labels:
+    app:  gardener-apiserver-tunnel-sshd
+spec:
+  selector:
+    app: gardener-apiserver-tunnel-sshd
+  ports:
+  - name: gardener-apiserver-tunnel
+    protocol: TCP
+    port: 6222
+    targetPort: 6222
+  type: LoadBalancer
