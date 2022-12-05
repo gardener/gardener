@@ -34,7 +34,7 @@ GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG   := $(REPO_ROOT)/example/gardener-loca
 GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG    := $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/kubeconfig
 GARDENER_LOCAL_OPERATOR_KUBECONFIG         := $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
 GARDENER_PREVIOUS_RELEASE                  :=""
-GARDENER_NEXT_RELEASE 				       :=$(VERSION)
+GARDENER_NEXT_RELEASE                      :=$(VERSION)
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
 ACTIVATE_SEEDAUTHORIZER                    := false
@@ -42,7 +42,7 @@ SEED_NAME                                  := ""
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
 PARALLEL_E2E_TESTS                         := 5
-DOWNLOAD_PATH							   := $(REPO_ROOT)/dev
+GARDENER_RELEASE_DOWNLOAD_PATH                              := $(REPO_ROOT)/dev
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -283,11 +283,11 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 # Rules for local environment                                       #
 #####################################################################
 
-kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local test-gardener-post-upgrade test-gardener-pre-upgrade ci-e2e-gardener-upgrade-kind: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local test-post-upgrade test-pre-upgrade ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
-kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone test-gardener-post-upgrade-ha-single-zone test-gardener-pre-upgrade-ha-single-zone ci-e2e-gardener-upgrade-kind-ha-single-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
-kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone test-gardener-post-upgrade-ha-multi-zone test-gardener-pre-upgrade-ha-multi-zone ci-e2e-gardener-upgrade-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
+kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone test-post-upgrade-ha-single-zone test-pre-upgrade-ha-single-zone ci-e2e-kind-ha-single-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone test-post-upgrade-ha-multi-zone test-pre-upgrade-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
 gardener-extensions-up gardener-extensions-down: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
@@ -415,19 +415,19 @@ test-e2e-local-ha-multi-zone: $(GINKGO)
 test-e2e-local-operator: $(GINKGO)
 	./hack/test-e2e-local.sh operator --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/operator/...
 
-test-gardener-pre-upgrade: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="gardener && pre-upgrade && !high-availability" ./test/e2e/gardener/...
-test-gardener-pre-upgrade-ha-single-zone: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="((gardener && pre-upgrade) || (gardener && pre-upgrade && high-availability))" ./test/e2e/gardener/...
-test-gardener-pre-upgrade-ha-multi-zone: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="((gardener && pre-upgrade) || (gardener && pre-upgrade && high-availability))" ./test/e2e/gardener/...
+test-pre-upgrade: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade" ./test/e2e/gardener/...
+test-pre-upgrade-ha-single-zone: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade" ./test/e2e/gardener/...
+test-pre-upgrade-ha-multi-zone: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade" ./test/e2e/gardener/...
 
-test-gardener-post-upgrade: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="gardener && post-upgrade && !high-availability" ./test/e2e/gardener/...
-test-gardener-post-upgrade-ha-single-zone: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="(gardener && post-upgrade) || (gardener && post-upgrade && high-availability)" ./test/e2e/gardener/...
-test-gardener-post-upgrade-ha-multi-zone: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="(gardener && post-upgrade) || (gardener && post-upgrade && high-availability)" ./test/e2e/gardener/...
+test-post-upgrade: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="post-upgrade" ./test/e2e/gardener/...
+test-post-upgrade-ha-single-zone: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="post-upgrade" ./test/e2e/gardener/...
+test-post-upgrade-ha-multi-zone: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="post-upgrade" ./test/e2e/gardener/...
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
@@ -440,9 +440,9 @@ ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
 ci-e2e-kind-operator: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-operator.sh
 
-ci-e2e-gardener-upgrade-kind: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE="" GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) DOWNLOAD_PATH=$(DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-gardener-upgrade-kind.sh
-ci-e2e-gardener-upgrade-kind-ha-single-zone: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE="node" GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) DOWNLOAD_PATH=$(DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-gardener-upgrade-kind-ha-single-zone.sh
-ci-e2e-gardener-upgrade-kind-ha-multi-zone: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE="zone" GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) DOWNLOAD_PATH=$(DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-gardener-upgrade-kind-ha-multi-zone.sh
+ci-e2e-kind-upgrade: $(KIND) $(YQ)
+	SHOOT_FAILURE_TOLERANCE_TYPE="" GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
+ci-e2e-kind-ha-single-zone-upgrade: $(KIND) $(YQ)
+	SHOOT_FAILURE_TOLERANCE_TYPE="node" GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-ha-single-zone-upgrade.sh
+ci-e2e-kind-ha-multi-zone-upgrade: $(KIND) $(YQ)
+	SHOOT_FAILURE_TOLERANCE_TYPE="zone" GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-ha-multi-zone-upgrade.sh

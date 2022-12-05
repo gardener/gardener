@@ -25,32 +25,32 @@ import (
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	batchv1 "k8s.io/api/batch/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
+var _ = Describe("Gardener upgrade Tests for", func() {
 	var (
 		gardenerPreviousRelease = os.Getenv("GARDENER_PREVIOUS_RELEASE")
 		gardenerCurrentRelease  = os.Getenv("GARDENER_NEXT_RELEASE")
 		projectNamespace        = "garden-local"
 	)
 
-	Context("Shoot::e2e-g-upgrade", func() {
+	Context("Shoot::e2e-upgrade", func() {
 		var (
-			parentCtx  = context.Background()
-			job        *batchv1.Job
-			err        error
+			parentCtx = context.Background()
+			job       *batchv1.Job
+			err       error
 			shootTest = e2e.DefaultShoot("e2e-upgrade")
-			f          = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
+			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
 		)
 
-		shootTest2.Namespace = projectNamespace
-		f.Shoot = shootTest2
+		shootTest.Namespace = projectNamespace
+		f.Shoot = shootTest
 
-		When("Pre-upgrade (version:'"+gardenerPreviousRelease+"')", Ordered, Label("pre-upgrade"), func() {
+		When("Pre-Upgrade (Gardener version:'"+gardenerPreviousRelease+"')", Ordered, Label("pre-upgrade"), func() {
 			var (
 				ctx    context.Context
 				cancel context.CancelFunc
@@ -66,7 +66,7 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 				f.Verify()
 			})
 
-			It("deploying zero-downtime validator job to ensure no downtime while after upgrading gardener", Label("high-availability"), func() {
+			It("deploying zero-downtime validator job to ensure no downtime while after upgrading gardener", func() {
 				shootSeedNamespace := f.Shoot.Status.TechnicalID
 				job, err = highavailability.DeployZeroDownTimeValidatorJob(
 					ctx,
@@ -82,7 +82,7 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 			})
 		})
 
-		When("Post-upgrade (version:'"+gardenerCurrentRelease+"')", Ordered, Label("post-upgrade"), func() {
+		When("Post-Upgrade (Gardener version:'"+gardenerCurrentRelease+"')", Ordered, Label("post-upgrade"), func() {
 			var (
 				ctx        context.Context
 				cancel     context.CancelFunc
@@ -92,17 +92,17 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 			BeforeAll(func() {
 				ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 				DeferCleanup(cancel)
-				Expect(f.GetShoot(ctx, shootTest2)).To(Succeed())
-				f.ShootFramework, err = f.NewShootFramework(ctx, shootTest2)
+				Expect(f.GetShoot(ctx, shootTest)).To(Succeed())
+				f.ShootFramework, err = f.NewShootFramework(ctx, shootTest)
 				Expect(err).NotTo(HaveOccurred())
 				seedClient = f.ShootFramework.SeedClient.Client()
 			})
 
-			It("verifying no downtime while upgrading gardener", Label("high-availability"), func() {
+			It("verifying no downtime while upgrading gardener", func() {
 				job = &batchv1.Job{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "zero-down-time-validator-update",
-						Namespace: shootTest2.Status.TechnicalID,
+						Namespace: shootTest.Status.TechnicalID,
 					}}
 				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
 				Expect(job.Status.Failed).Should(BeZero())
@@ -111,7 +111,7 @@ var _ = Describe("Gardener upgrade Tests for", Label("gardener"), func() {
 
 			It("should able to delete a shoot which was created in previous release", func() {
 				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousRelease))
-				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, shootTest2)).To(Succeed())
+				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, shootTest)).To(Succeed())
 			})
 		})
 	})

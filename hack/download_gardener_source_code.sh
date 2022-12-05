@@ -18,16 +18,18 @@ set -o nounset
 set -o pipefail
 
 GARDENER_VERSION=$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)
-DOWNLOAD_PATH=$(dirname "${0}")/dev/gardener-releases
+GARDENER_RELEASE_DOWNLOAD_PATH=$(dirname "${0}")/dev/gardener-releases
 
 parse_flags() {
   while test $# -gt 0; do
     case "$1" in
     --gardener-version)
-      shift; GARDENER_VERSION="$1"
+      shift
+      GARDENER_VERSION="$1"
       ;;
     --download-path)
-      shift; DOWNLOAD_PATH="$1"
+      shift
+      GARDENER_RELEASE_DOWNLOAD_PATH="$1"
       ;;
     esac
     shift
@@ -36,6 +38,10 @@ parse_flags() {
 
 parse_flags "$@"
 
+# TODO (seshachalam-yv): uncomment me once new release v1.60.4 is released.
+# Due to client certificate for gardener-apiserver to talk to ETCD has expired.
+# Fixed in https://github.com/gardener/gardener/pull/7146 and not yet released.
+# curl -sL https://github.com/gardener/gardener/archive/refs/tags/${GARDENER_VERSION}.tar.gz -o /tmp/source_code.tar.gz && mkdir -p ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION} &&
+#   tar -C ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION} -xzf /tmp/source_code.tar.gz --strip-components=1 && rm /tmp/source_code.tar.gz
 
-curl -sL https://github.com/gardener/gardener/archive/refs/tags/${GARDENER_VERSION}.tar.gz -o /tmp/source_code.tar.gz && mkdir -p $DOWNLOAD_PATH/${GARDENER_VERSION} && \
-    tar -C $DOWNLOAD_PATH/${GARDENER_VERSION} -xzf /tmp/source_code.tar.gz --strip-components=1 && rm /tmp/source_code.tar.gz
+git clone -b release-v1.60 https://github.com/gardener/gardener.git ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION}

@@ -36,8 +36,8 @@ if [[ "$1" != "operator" ]]; then
     e2e-migrate.local
     e2e-rotate.local
     e2e-default.local
-    e2e-upgrade-node.local
-    e2e-upgrade-zone.local
+    e2e-update-node.local
+    e2e-update-zone.local
     e2e-upgrade.local
   )
 

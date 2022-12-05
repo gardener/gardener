@@ -16,8 +16,6 @@
 
 set -o errexit
 
-VERSION="$(cat VERSION)"
-
 export_logs() {
   cluster_name="${1}"
   echo "> Exporting logs of kind cluster '$cluster_name'"
@@ -88,93 +86,21 @@ clamp_mss_to_pmtu() {
   fi
 }
 
-# copy_kubeconfig_from_kubeconfig_env_var copies the kubeconfig to apporiate location based on kind setup
-copy_kubeconfig_from_kubeconfig_env_var(){
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-    node )
-      cp $KUBECONFIG example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
-      cp $KUBECONFIG example/gardener-local/kind/ha-single-zone/kubeconfig
-      ;;
-    zone )
-      cp $KUBECONFIG example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
-      cp $KUBECONFIG example/gardener-local/kind/ha-multi-zone/kubeconfig
-      ;;
-    *)
-      cp $KUBECONFIG example/provider-local/seed-kind/base/kubeconfig
-      cp $KUBECONFIG example/gardener-local/kind/local/kubeconfig
-      ;;
-  esac
-}
-
-gardener_up(){
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-    node )
-      make gardener-ha-single-zone-up
-      ;;
-    zone )
-      make gardener-ha-multi-zone-up
-      ;;
-    *)
-      make gardener-up
-      ;;
-  esac
-}
-
-set_gardener_version_env_variables(){
-if [[ -z $GARDENER_PREVIOUS_RELEASE ]]; then
-  export GARDENER_PREVIOUS_RELEASE=$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)
-fi
-
-if [[ -z $GARDENER_NEXT_RELEASE ]]; then
-  export GARDENER_NEXT_RELEASE=$VERSION
-fi
-}
-
-download_and_install_gardener_previous_release(){
-  # download gardener previous release to perform gardener upgrade tests
-  $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $DOWNLOAD_PATH/gardener-upgrade/$GARDENER_PREVIOUS_RELEASE
-  cd $DOWNLOAD_PATH/gardener-upgrade/$GARDENER_PREVIOUS_RELEASE/gardener
-  copy_kubeconfig_from_kubeconfig_env_var
-  echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
-  gardener_up
-  cd -
-}
-
-# download_and_upgrade_gardener_next_release downloads and upgrades to GARDENER_NEXT_RELEASE release if GARDENER_NEXT_RELEASE is not same as version mentioned in VERSION file.
-# if GARDENER_NEXT_RELEASE is same as version mentioned in VERSION file then it is considered as local release and install gardener from local repo. 
-download_and_upgrade_gardener_next_release(){
-  echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  if [[ -n $GARDENER_NEXT_RELEASE && $GARDENER_NEXT_RELEASE != $VERSION ]]; then
-    # download gardener previous release to perform gardener upgrade tests
-    $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_NEXT_RELEASE --download-path $DOWNLOAD_PATH/gardener-upgrade/$GARDENER_NEXT_RELEASE
-    cd $DOWNLOAD_PATH/gardener-upgrade/$GARDENER_NEXT_RELEASE/gardener
-    copy_kubeconfig_from_kubeconfig_env_var
-    gardener_up
-    cd -
-    wait_until_seed_gets_upgraded
-    return
+set_gardener_version_env_variables() {
+  export VERSION="$(cat VERSION)"
+  if [[ -z $GARDENER_PREVIOUS_RELEASE ]]; then
+    export GARDENER_PREVIOUS_RELEASE=$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)
   fi
-  
-  gardener_up
-  wait_until_seed_gets_upgraded
+
+  if [[ -z $GARDENER_NEXT_RELEASE ]]; then
+    export GARDENER_NEXT_RELEASE=$VERSION
+  fi
 }
 
-wait_until_seed_gets_upgraded(){
-  seed_name=""
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-    node )
-      seed_name="local-ha-single-zone"
-      ;;
-    zone )
-      seed_name="local-ha-multi-zone"
-      ;;
-    *)
-      seed_name="local"
-      ;;
-  esac
+wait_until_seed_gets_upgraded() {
   echo "Wait until seed gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  kubectl wait seed $seed_name --timeout=5m \
+  kubectl wait seed $1 --timeout=5m \
     --for=jsonpath='{.status.gardener.version}'=$GARDENER_NEXT_RELEASE \
     --for=condition=gardenletready --for=condition=extensionsready \
-    --for=condition=bootstrapped 
+    --for=condition=bootstrapped
 }

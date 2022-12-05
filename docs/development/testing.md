@@ -458,15 +458,6 @@ Below is a sequence describing how the tests are performed.
 - Run gardener post-upgrade tests which are labeled with `post-upgrade`
 - Tear down seed and kind cluster.
 
-### Debugging upgrade Tests
-
-Gardener upgrade tests can be executed for both non-HA and HA environments. Tests are defined [here](../../test/e2e/gardener/upgrade/upgrade.go).
-- `make ci-e2e-gardener-upgrade-kind` -- This will setup a non-HA environment and execute upgrade tests.
-- `make ci-e2e-gardener-upgrade-kind-ha-single-zone` -- This will setup a HA environment with failure tolerance `node` and execute upgrade tests.
-- `make ci-e2e-gardener-upgrade-kind-ha-multi-zone` This will setup a HA environment with failure tolerance `node` and execute upgrade tests.
-
-By default, the current revision of the `master` branch is verified against the **[latest Gardener release](https://github.com/gardener/gardener/releases/latest)**. 
-
 ### How to run upgrade tests between two Gardener releases
 
 Sometimes, we need to verify/qualify two Gardener releases when we upgrade from one version to another.  
@@ -477,9 +468,9 @@ This can performed by fetching the two Gardener versions from **[Github Gardener
 >**`GARDENER_NEXT_RELEASE`** -- This env variable refers to the target version to be upgraded to after successful installation of **`GARDENER_PREVIOUS_RELEASE`**. By default it considers local HEAD revision, builds code and installs gardener from current revision where gardener upgrade tests triggered.
 
 
-- `make ci-e2e-gardener-upgrade-kind GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
-- `make ci-e2e-gardener-upgrade-kind-ha-single-zone GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
-- `make ci-e2e-gardener-upgrade-kind-ha-multi-zone GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
+- `make ci-e2e-kind-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
+- `make ci-e2e-kind-ha-single-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
+- `make ci-e2e-kind-ha-multi-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
 
 
 ### Purpose of upgrade Tests
