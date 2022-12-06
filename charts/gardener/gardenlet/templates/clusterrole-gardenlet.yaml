@@ -13,6 +13,14 @@ metadata:
     heritage: "{{ .Release.Service }}"
 rules:
 - apiGroups:
+  - operator.gardener.cloud
+  resources:
+  - gardens
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - ""
   resources:
   - endpoints
