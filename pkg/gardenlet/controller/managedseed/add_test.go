@@ -46,10 +46,11 @@ var _ = Describe("Add", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		reconciler = &Reconciler{
 			GardenNamespace: v1beta1constants.GardenNamespace,
+			GardenClient:    fakeClient,
 		}
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -88,7 +89,6 @@ var _ = Describe("Add", func() {
 			}
 
 			Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
-			Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
 		})
 
 		It("should return false when ManagedSeed does not reference any shoot", func() {

@@ -230,6 +230,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	Expect((&managedseed.Reconciler{
+		Config:          *cfg.Controllers.ManagedSeed,
 		ChartsPath:      chartsPath,
 		GardenNamespace: gardenNamespace.Name,
 		// limit exponential backoff in tests

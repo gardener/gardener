@@ -120,7 +120,10 @@ func (r *Reconciler) AddToManager(
 
 // ManagedSeedFilterPredicate returns the predicate for ManagedSeed and Seed events.
 func (r *Reconciler) ManagedSeedFilterPredicate(seedName string) predicate.Predicate {
-	return &managedSeedFilterPredicate{seedName: seedName}
+	return &managedSeedFilterPredicate{
+		seedName: seedName,
+		reader:   r.GardenClient,
+	}
 }
 
 type managedSeedFilterPredicate struct {
@@ -131,11 +134,6 @@ type managedSeedFilterPredicate struct {
 
 func (p *managedSeedFilterPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
 	p.ctx = contextutil.FromStopChannel(stopChan)
-	return nil
-}
-
-func (p *managedSeedFilterPredicate) InjectClient(client client.Client) error {
-	p.reader = client
 	return nil
 }
 
