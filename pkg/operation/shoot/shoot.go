@@ -248,8 +248,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		if haVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneHAVPN]); err == nil {
 			shoot.VPNHighAvailabilityEnabled = haVPNEnabled
 		}
-		shoot.VPNHighAvailabilityServers = 2
-		shoot.VPNHighAvailabilityShootClients = 2
+		shoot.VPNHighAvailabilityNumberOfSeedServers = 2
+		shoot.VPNHighAvailabilityNumberOfShootClients = 2
 	}
 
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)

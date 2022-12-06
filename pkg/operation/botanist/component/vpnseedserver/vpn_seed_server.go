@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -118,39 +118,52 @@ type IstioIngressGateway struct {
 	Labels    map[string]string
 }
 
+// NetworkValues contains the configuration values for the network.
+type NetworkValues struct {
+	// PodCIDR is the CIDR of the pod network.
+	PodCIDR string
+	// ServiceCIDR is the CIDR of the service network.
+	ServiceCIDR string
+	// NodeCIDR is the CIDR of the node network.
+	NodeCIDR string
+}
+
+// Values is a set of configuration values for the VPNSeedServer component.
+type Values struct {
+	// ImageAPIServerProxy is the image name of the apiserver-proxy
+	ImageAPIServerProxy string
+	// ImageVPNSeedServer is the image name of the vpn-seed-server
+	ImageVPNSeedServer string
+	// KubeAPIServerHost is the FQDN of the kube-apiserver
+	KubeAPIServerHost *string
+	// Network contains the configuration values for the network.
+	Network NetworkValues
+	// Replicas is the number of deployment replicas
+	Replicas int32
+	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
+	HighAvailabilityEnabled bool
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	HighAvailabilityNumberOfSeedServers int
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	HighAvailabilityNumberOfShootClients int
+	// IstioIngressGateway contains the values for istio ingress gateway configuration.
+	IstioIngressGateway IstioIngressGateway
+	// SeedVersion is the Kubernetes version of the Seed.
+	SeedVersion *semver.Version
+}
+
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
 func New(
-	client kubernetes.Interface,
+	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	imageAPIServerProxy string,
-	imageVPNSeedServer string,
-	kubeAPIServerHost *string,
-	serviceNetwork string,
-	podNetwork string,
-	nodeNetwork *string,
-	replicas int32,
-	highAvailabilityEnabled bool,
-	highAvailabilityServers int,
-	highAvailabilityClients int,
-	istioIngressGateway IstioIngressGateway,
+	values Values,
 ) Interface {
 	return &vpnSeedServer{
-		client:                  client.Client(),
-		namespace:               namespace,
-		secretsManager:          secretsManager,
-		imageAPIServerProxy:     imageAPIServerProxy,
-		imageVPNSeedServer:      imageVPNSeedServer,
-		kubeAPIServerHost:       kubeAPIServerHost,
-		serviceNetwork:          serviceNetwork,
-		podNetwork:              podNetwork,
-		nodeNetwork:             nodeNetwork,
-		replicas:                replicas,
-		highAvailabilityEnabled: highAvailabilityEnabled,
-		highAvailabilityServers: highAvailabilityServers,
-		highAvailabilityClients: highAvailabilityClients,
-		istioIngressGateway:     istioIngressGateway,
-		seedVersion:             client.Version(),
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
@@ -159,21 +172,10 @@ type vpnSeedServer struct {
 	namespace                string
 	secretsManager           secretsmanager.Interface
 	namespaceUID             types.UID
-	imageAPIServerProxy      string
-	imageVPNSeedServer       string
-	kubeAPIServerHost        *string
-	serviceNetwork           string
-	podNetwork               string
-	nodeNetwork              *string
-	replicas                 int32
-	highAvailabilityEnabled  bool
-	highAvailabilityServers  int
-	highAvailabilityClients  int
-	istioIngressGateway      IstioIngressGateway
+	values                   Values
 	exposureClassHandlerName *string
 	sniConfig                *config.SNI
 	secrets                  Secrets
-	seedVersion              string
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
@@ -247,11 +249,11 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
-	if v.highAvailabilityEnabled {
+	if v.values.HighAvailabilityEnabled {
 		if err := v.deployStatefulSet(ctx, labels, podTemplate); err != nil {
 			return err
 		}
-		for i := 0; i < int(v.replicas); i++ {
+		for i := 0; i < int(v.values.Replicas); i++ {
 			if err := v.deployService(ctx, &i); err != nil {
 				return err
 			}
@@ -277,7 +279,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			return err
 		}
 		objects := []client.Object{v.emptyStatefulSet()}
-		for i := 0; i < v.highAvailabilityServers; i++ {
+		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			objects = append(objects, v.emptyService(&i), v.emptyDestinationRule(&i))
 		}
 		if err := kutil.DeleteObjects(ctx, v.client, objects...); err != nil {
@@ -312,7 +314,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 			Containers: []corev1.Container{
 				{
 					Name:            DeploymentName,
-					Image:           v.imageVPNSeedServer,
+					Image:           v.values.ImageVPNSeedServer,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{
 						{
@@ -331,11 +333,15 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					Env: []corev1.EnvVar{
 						{
 							Name:  "SERVICE_NETWORK",
-							Value: v.serviceNetwork,
+							Value: v.values.Network.ServiceCIDR,
 						},
 						{
 							Name:  "POD_NETWORK",
-							Value: v.podNetwork,
+							Value: v.values.Network.PodCIDR,
+						},
+						{
+							Name:  "NODE_NETWORK",
+							Value: v.values.Network.NodeCIDR,
 						},
 						{
 							Name: "LOCAL_NODE_IP",
@@ -460,10 +466,10 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 		},
 	}
 
-	if !v.highAvailabilityEnabled {
+	if !v.values.HighAvailabilityEnabled {
 		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
 			Name:            envoyProxyContainerName,
-			Image:           v.imageAPIServerProxy,
+			Image:           v.values.ImageAPIServerProxy,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			SecurityContext: &corev1.SecurityContext{
 				Capabilities: &corev1.Capabilities{
@@ -524,14 +530,10 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 			},
 		})
 	} else {
-		mount := corev1.VolumeMount{
-			Name:      volumeNameStatusDir,
-			MountPath: volumeMountPathStatusDir,
-		}
 		statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
 		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
 			Name:            "openvpn-exporter",
-			Image:           v.imageVPNSeedServer,
+			Image:           v.values.ImageVPNSeedServer,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
 				"/openvpn-exporter",
@@ -577,13 +579,21 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
 				},
 			},
-			VolumeMounts: []corev1.VolumeMount{mount},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      volumeNameStatusDir,
+					MountPath: volumeMountPathStatusDir,
+				},
+			},
 		})
 		template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  "OPENVPN_STATUS_PATH",
 			Value: statusPath,
 		})
-		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
+		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameStatusDir,
+			MountPath: volumeMountPathStatusDir,
+		})
 		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
 			Name: volumeNameStatusDir,
 			VolumeSource: corev1.VolumeSource{
@@ -592,13 +602,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 		})
 	}
 
-	if v.nodeNetwork != nil {
-		template.Spec.Containers[0].Env = append(
-			template.Spec.Containers[0].Env,
-			corev1.EnvVar{Name: "NODE_NETWORK", Value: *v.nodeNetwork},
-		)
-	}
-	if v.highAvailabilityEnabled {
+	if v.values.HighAvailabilityEnabled {
 		template.Spec.Containers[0].Env = append(
 			template.Spec.Containers[0].Env,
 			[]corev1.EnvVar{
@@ -616,7 +620,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 				},
 				{
 					Name:  "HA_VPN_CLIENTS",
-					Value: fmt.Sprintf("%d", v.highAvailabilityClients),
+					Value: fmt.Sprintf("%d", v.values.HighAvailabilityNumberOfShootClients),
 				},
 			}...)
 	}
@@ -633,7 +637,7 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 		sts.Labels = labels
 		sts.Spec = appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			Replicas:             pointer.Int32(v.replicas),
+			Replicas:             pointer.Int32(v.values.Replicas),
 			RevisionHistoryLimit: pointer.Int32(1),
 			Selector:             &metav1.LabelSelector{MatchLabels: podLabels},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
@@ -647,9 +651,7 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 	if err != nil {
 		return err
 	}
-	err = v.deployPodDisruptionBudget(ctx, podLabels)
-
-	return err
+	return v.deployPodDisruptionBudget(ctx, podLabels)
 }
 
 func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels map[string]string) error {
@@ -658,13 +660,9 @@ func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels
 		pdbSelector       = &metav1.LabelSelector{MatchLabels: podLabels}
 	)
 
-	seedK8sVersionGreaterEqual121, err := version.CompareVersions(v.seedVersion, ">=", "1.21")
-	if err != nil {
-		return err
-	}
-	obj := v.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121)
+	obj := v.emptyPodDisruptionBudget()
 
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, v.client, obj, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, obj, func() error {
 		switch pdb := obj.(type) {
 		case *policyv1.PodDisruptionBudget:
 			pdb.Labels = podLabels
@@ -692,7 +690,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 		maxUnavailable := intstr.FromInt(0)
 		deployment.Labels = labels
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(v.replicas),
+			Replicas:             pointer.Int32(v.values.Replicas),
 			RevisionHistoryLimit: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: DeploymentName,
@@ -911,12 +909,6 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 }
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
-	seedK8sVersionGreaterEqual121, err := version.CompareVersions(v.seedVersion, ">=", "1.21")
-	if err != nil {
-		return err
-	}
-	pdbObj := v.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121)
-
 	objects := []client.Object{
 		v.emptyNetworkPolicy(),
 		v.emptyDeployment(),
@@ -925,9 +917,9 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 		v.emptyService(nil),
 		v.emptyVPA(),
 		v.emptyEnvoyFilter(),
-		pdbObj,
+		v.emptyPodDisruptionBudget(),
 	}
-	for i := 0; i < v.highAvailabilityServers; i++ {
+	for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 		objects = append(objects, v.emptyDestinationRule(&i), v.emptyService(&i))
 	}
 	return kutil.DeleteObjects(ctx, v.client, objects...)
@@ -965,13 +957,13 @@ func (v *vpnSeedServer) emptyStatefulSet() *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
 }
 
-func (v *vpnSeedServer) emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121 bool) client.Object {
+func (v *vpnSeedServer) emptyPodDisruptionBudget() client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      DeploymentName,
 		Namespace: v.namespace,
 	}
 
-	if seedK8sVersionGreaterEqual121 {
+	if version.ConstraintK8sGreaterEqual121.Check(v.values.SeedVersion) {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 		}
@@ -994,7 +986,7 @@ func (v *vpnSeedServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
-	var namespace = v.istioIngressGateway.Namespace
+	var namespace = v.values.IstioIngressGateway.Namespace
 	if v.sniConfig != nil && v.exposureClassHandlerName != nil {
 		namespace = *v.sniConfig.Ingress.Namespace
 	}

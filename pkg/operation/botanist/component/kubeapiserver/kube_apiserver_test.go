@@ -1876,13 +1876,13 @@ rules:
 				values := Values{
 					Images: Images{VPNClient: "vpn-client-image:really-latest"},
 					VPN: VPNConfig{
-						ReversedVPNEnabled:      true,
-						HighAvailabilityEnabled: true,
-						HighAvailabilityServers: 2,
-						HighAvailabilityClients: 3,
-						PodNetworkCIDR:          "1.2.3.0/24",
-						ServiceNetworkCIDR:      "4.5.6.0/24",
-						NodeNetworkCIDR:         pointer.String("7.8.9.0/24"),
+						ReversedVPNEnabled:                   true,
+						HighAvailabilityEnabled:              true,
+						HighAvailabilityNumberOfSeedServers:  2,
+						HighAvailabilityNumberOfShootClients: 3,
+						PodNetworkCIDR:                       "1.2.3.0/24",
+						ServiceNetworkCIDR:                   "4.5.6.0/24",
+						NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
 					},
 					Version: version,
 				}
@@ -2000,11 +2000,11 @@ rules:
 					ReadOnly:  true,
 				})
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
-				Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(values.VPN.HighAvailabilityServers + 2))
-				for i := 0; i < values.VPN.HighAvailabilityServers; i++ {
+				Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
+				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
 				}
-				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityServers+1]).To(DeepEqual(corev1.Container{
+				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(corev1.Container{
 					Name:            "vpn-path-controller",
 					Image:           "vpn-client-image:really-latest",
 					ImagePullPolicy: corev1.PullIfNotPresent,
@@ -3051,13 +3051,13 @@ rules:
 					values := Values{
 						Images: Images{VPNClient: "vpn-client-image:really-latest"},
 						VPN: VPNConfig{
-							ReversedVPNEnabled:      true,
-							HighAvailabilityEnabled: false,
-							HighAvailabilityServers: 2,
-							HighAvailabilityClients: 3,
-							PodNetworkCIDR:          "1.2.3.0/24",
-							ServiceNetworkCIDR:      "4.5.6.0/24",
-							NodeNetworkCIDR:         pointer.String("7.8.9.0/24"),
+							ReversedVPNEnabled:                   true,
+							HighAvailabilityEnabled:              false,
+							HighAvailabilityNumberOfSeedServers:  2,
+							HighAvailabilityNumberOfShootClients: 3,
+							PodNetworkCIDR:                       "1.2.3.0/24",
+							ServiceNetworkCIDR:                   "4.5.6.0/24",
+							NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
 						},
 						Version: version,
 					}
@@ -3074,13 +3074,13 @@ rules:
 					values := Values{
 						Images: Images{VPNClient: "vpn-client-image:really-latest"},
 						VPN: VPNConfig{
-							ReversedVPNEnabled:      true,
-							HighAvailabilityEnabled: true,
-							HighAvailabilityServers: 2,
-							HighAvailabilityClients: 3,
-							PodNetworkCIDR:          "1.2.3.0/24",
-							ServiceNetworkCIDR:      "4.5.6.0/24",
-							NodeNetworkCIDR:         pointer.String("7.8.9.0/24"),
+							ReversedVPNEnabled:                   true,
+							HighAvailabilityEnabled:              true,
+							HighAvailabilityNumberOfSeedServers:  2,
+							HighAvailabilityNumberOfShootClients: 3,
+							PodNetworkCIDR:                       "1.2.3.0/24",
+							ServiceNetworkCIDR:                   "4.5.6.0/24",
+							NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
 						},
 						Version: version,
 					}
@@ -3094,7 +3094,7 @@ rules:
 						{
 							APIGroups: []string{""},
 							Resources: []string{"pods"},
-							Verbs:     []string{"get", "list", "patch"},
+							Verbs:     []string{"get", "list", "watch", "patch", "update"},
 						},
 					}))
 					Expect(roleBindingHAVPN.RoleRef).To(DeepEqual(rbacv1.RoleRef{

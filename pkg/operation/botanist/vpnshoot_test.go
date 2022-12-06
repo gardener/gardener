@@ -67,7 +67,6 @@ var _ = Describe("VPNShoot", func() {
 
 		It("should successfully create a vpnShoot interface for ReversedVPN not enabled case", func() {
 			kubernetesClient.EXPECT().Client()
-			kubernetesClient.EXPECT().Version()
 			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnShoot}}
 			botanist.Shoot.ReversedVPNEnabled = false
 
@@ -78,7 +77,6 @@ var _ = Describe("VPNShoot", func() {
 
 		It("should successfully create a vpnShoot interface for ReversedVPN enabled case", func() {
 			kubernetesClient.EXPECT().Client()
-			kubernetesClient.EXPECT().Version()
 			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnShootClient}}
 			botanist.Shoot.ReversedVPNEnabled = true
 

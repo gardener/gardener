@@ -120,12 +120,12 @@ type Values struct {
 	ReversedVPN ReversedVPNValues
 	// Network contains the configuration values for the network.
 	Network NetworkValues
-	// VPNHighAvailabilityEnabled marks whether HA is enabled for VPN.
-	VPNHighAvailabilityEnabled bool
-	// VPNHighAvailabilitySeedServers is the number of VPN seed servers used for HA
-	VPNHighAvailabilitySeedServers int
-	// VPNHighAvailabilityShootClients is the number of VPN shoot clients used for HA
-	VPNHighAvailabilityShootClients int
+	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
+	HighAvailabilityEnabled bool
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	HighAvailabilityNumberOfSeedServers int
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	HighAvailabilityNumberOfShootClients int
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
 	// KubernetesVersion is the Kubernetes version of the Shoot.
@@ -134,17 +134,16 @@ type Values struct {
 
 // New creates a new instance of DeployWaiter for vpnshoot
 func New(
-	client kubernetes.Interface,
+	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
 	return &vpnShoot{
-		client:         client.Client(),
+		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
-		shootVersion:   client.Version(),
 	}
 }
 
@@ -154,7 +153,6 @@ type vpnShoot struct {
 	secretsManager secretsmanager.Interface
 	values         Values
 	secrets        Secrets
-	shootVersion   string
 }
 
 type vpnSecret struct {
@@ -191,7 +189,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 	}
 
 	var secrets []vpnSecret
-	if !v.values.VPNHighAvailabilityEnabled {
+	if !v.values.HighAvailabilityEnabled {
 		secret, err := v.secretsManager.Generate(ctx, config, secretsmanager.SignedByCA(signingCA), secretsmanager.Rotate(secretsmanager.InPlace))
 		if err != nil {
 			return err
@@ -207,20 +205,17 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 			secret:     secret,
 		})
 	} else {
-		for i := 0; i < v.values.VPNHighAvailabilityShootClients; i++ {
-			name := fmt.Sprintf("vpn-shoot-client-%d", i)
-			volName := fmt.Sprintf("%s-%d", volumeName, i)
-			path := fmt.Sprintf("%s-%d", volumeMountPathSecret, i)
-			config.Name = name
-			config.CommonName = name
+		for i := 0; i < v.values.HighAvailabilityNumberOfShootClients; i++ {
+			config.Name = fmt.Sprintf("vpn-shoot-client-%d", i)
+			config.CommonName = config.Name
 			secret, err := v.secretsManager.Generate(ctx, config, secretsmanager.SignedByCA(signingCA), secretsmanager.Rotate(secretsmanager.InPlace))
 			if err != nil {
 				return err
 			}
 			secrets = append(secrets, vpnSecret{
-				name:       name,
-				volumeName: volName,
-				mountPath:  path,
+				name:       config.Name,
+				volumeName: fmt.Sprintf("%s-%d", volumeName, i),
+				mountPath:  fmt.Sprintf("%s-%d", volumeMountPathSecret, i),
 				secret:     secret,
 			})
 		}
@@ -419,7 +414,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	}
 	template := v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth, secretDH)
 	var deploymentOrStatefulSet client.Object
-	if !v.values.VPNHighAvailabilityEnabled {
+	if !v.values.HighAvailabilityEnabled {
 		deploymentOrStatefulSet = v.deployment(labels, template)
 	} else {
 		deploymentOrStatefulSet = v.statefulSet(labels, template)
@@ -510,9 +505,9 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			kind = "StatefulSet"
 		}
 		containerNames := []string{containerName}
-		if v.values.ReversedVPN.Enabled && v.values.VPNHighAvailabilityEnabled {
+		if v.values.ReversedVPN.Enabled && v.values.HighAvailabilityEnabled {
 			containerNames = nil
-			for i := 0; i < v.values.VPNHighAvailabilitySeedServers; i++ {
+			for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 				containerNames = append(containerNames, fmt.Sprintf("%s-s%d", containerName, i))
 			}
 		}
@@ -552,7 +547,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	for _, item := range secretsVPNShoot {
 		objects = append(objects, item.secret)
 	}
-	if v.values.VPNHighAvailabilityEnabled {
+	if v.values.HighAvailabilityEnabled {
 		pdb, err := v.podDisruptionBudget()
 		if err != nil {
 			return nil, err
@@ -588,12 +583,7 @@ func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
 		pdbSelector       = &metav1.LabelSelector{MatchLabels: getLabels()}
 	)
 
-	seedK8sVersionGreaterEqual121, err := version.CompareVersions(v.shootVersion, ">=", "1.21")
-	if err != nil {
-		return nil, err
-	}
-
-	if seedK8sVersionGreaterEqual121 {
+	if version.ConstraintK8sGreaterEqual121.Check(v.values.KubernetesVersion) {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 			Spec: policyv1.PodDisruptionBudgetSpec{
@@ -641,10 +631,10 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 		},
 	}
 
-	if !v.values.VPNHighAvailabilityEnabled {
+	if !v.values.HighAvailabilityEnabled {
 		template.Spec.Containers = []corev1.Container{*v.container(secrets, nil)}
 	} else {
-		for i := 0; i < v.values.VPNHighAvailabilitySeedServers; i++ {
+		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			template.Spec.Containers = append(template.Spec.Containers, *v.container(secrets, &i))
 		}
 	}
@@ -711,7 +701,7 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 }
 
 func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTemplateSpec) *appsv1.StatefulSet {
-	replicas := v.values.VPNHighAvailabilityShootClients
+	replicas := v.values.HighAvailabilityNumberOfShootClients
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -969,7 +959,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 		},
 	}
-	if v.values.VPNHighAvailabilityEnabled {
+	if v.values.HighAvailabilityEnabled {
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
 				Name:  "CONFIGURE_BONDING",
@@ -977,11 +967,11 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 			{
 				Name:  "HA_VPN_SERVERS",
-				Value: fmt.Sprintf("%d", v.values.VPNHighAvailabilitySeedServers),
+				Value: fmt.Sprintf("%d", v.values.HighAvailabilityNumberOfSeedServers),
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",
-				Value: fmt.Sprintf("%d", v.values.VPNHighAvailabilityShootClients),
+				Value: fmt.Sprintf("%d", v.values.HighAvailabilityNumberOfShootClients),
 			},
 		}...)
 	}

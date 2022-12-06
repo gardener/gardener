@@ -958,7 +958,7 @@ func (k *kubeAPIServer) handleVPNSettingsHAReversedVPN(
 ) {
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToShootNetworks] = v1beta1constants.LabelNetworkPolicyAllowed
-	for i := 0; i < k.values.VPN.HighAvailabilityServers; i++ {
+	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedClientContainer(i))
 	}
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedPathControllerContainer())
@@ -1123,11 +1123,11 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 			{
 				Name:  "HA_VPN_SERVERS",
-				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityServers),
+				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityNumberOfSeedServers),
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",
-				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityClients),
+				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityNumberOfShootClients),
 			},
 			{
 				Name:  "OPENVPN_PORT",
@@ -1193,7 +1193,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",
-				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityClients),
+				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityNumberOfShootClients),
 			},
 		},
 		Resources: corev1.ResourceRequirements{

@@ -70,11 +70,11 @@ In the non-HA case, a kube-apiserver uses an HTTP proxy running as a side-car in
 the shoot networks via the VPN tunnel and the `vpn-shoot` acts as a router.
 In the HA case, the setup is more complicated. Instead of an HTTP proxy in the VPN server, the kube-apiserver has
 additional side-cars. One side-car for each VPN client to connect to the corresponding VPN server.
-On the shoot side there are now two `vpn-shoot` pods, each with two VPN clients for each VPN server.
+On the shoot side, there are now two `vpn-shoot` pods, each with two VPN clients for each VPN server.
 With this setup, there would be four possible routes, but only one can be used. Switching the route kills all
 open connections. Therefore, another layer is introduced: link aggregation, also named [bonding](https://www.kernel.org/doc/Documentation/networking/bonding.txt).
 In Linux, you can create a network link by using several other links as slaves. Bonding is here used with
-active-backup mode. This means the traffic goes only through the active sublink and is only changed if the active
+active-backup mode. This means the traffic only goes through the active sublink and is only changed if the active one
 becomes unavailable. Switching happens in the bonding network driver without changing any routes. So with this layer, 
 vpn-seed-server pods can be rolled without disrupting open connections.
 
@@ -83,7 +83,7 @@ vpn-seed-server pods can be rolled without disrupting open connections.
 With bonding, there are 2 possible routing paths, ensuring that there is at least one routing path intact even if
 one `vpn-seed-server` pod and one `vpn-shoot` pod are unavailable at the same time.
 
-As it is not possible to use multipath routing, one routing path must be configured explicitly.
+As it is not possible to use multi-path routing, one routing path must be configured explicitly.
 For this purpose, the `path-controller` script is running in another side-car of the kube-apiserver pod.
 It pings all shoot-side VPN clients regularly every few seconds. If the active routing path is not responsive anymore,
 the routing is switched to the other responsive routing path.

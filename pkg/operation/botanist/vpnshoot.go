@@ -58,15 +58,15 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
 			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
 		},
-		VPNHighAvailabilityEnabled:      b.Shoot.VPNHighAvailabilityEnabled,
-		VPNHighAvailabilitySeedServers:  b.Shoot.VPNHighAvailabilityServers,
-		VPNHighAvailabilityShootClients: b.Shoot.VPNHighAvailabilityShootClients,
-		PSPDisabled:                     b.Shoot.PSPDisabled,
-		KubernetesVersion:               b.Shoot.KubernetesVersion,
+		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
+		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
+		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+		PSPDisabled:                          b.Shoot.PSPDisabled,
+		KubernetesVersion:                    b.Shoot.KubernetesVersion,
 	}
 
 	return vpnshoot.New(
-		b.SeedClientSet,
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		values,

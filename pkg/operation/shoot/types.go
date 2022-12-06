@@ -81,22 +81,22 @@ type Shoot struct {
 	ExternalClusterDomain *string
 	ExternalDomain        *garden.Domain
 
-	Purpose                             gardencorev1beta1.ShootPurpose
-	WantsClusterAutoscaler              bool
-	WantsVerticalPodAutoscaler          bool
-	WantsAlertmanager                   bool
-	IgnoreAlerts                        bool
-	HibernationEnabled                  bool
-	ReversedVPNEnabled                  bool
-	VPNHighAvailabilityEnabled          bool
-	VPNHighAvailabilityServers          int
-	VPNHighAvailabilityShootClients     int
-	NodeLocalDNSEnabled                 bool
-	PSPDisabled                         bool
-	Networks                            *Networks
-	ExposureClass                       *gardencorev1alpha1.ExposureClass
-	BackupEntryName                     string
-	CloudConfigExecutionMaxDelaySeconds int
+	Purpose                                 gardencorev1beta1.ShootPurpose
+	WantsClusterAutoscaler                  bool
+	WantsVerticalPodAutoscaler              bool
+	WantsAlertmanager                       bool
+	IgnoreAlerts                            bool
+	HibernationEnabled                      bool
+	ReversedVPNEnabled                      bool
+	VPNHighAvailabilityEnabled              bool
+	VPNHighAvailabilityNumberOfSeedServers  int
+	VPNHighAvailabilityNumberOfShootClients int
+	NodeLocalDNSEnabled                     bool
+	PSPDisabled                             bool
+	Networks                                *Networks
+	ExposureClass                           *gardencorev1alpha1.ExposureClass
+	BackupEntryName                         string
+	CloudConfigExecutionMaxDelaySeconds     int
 
 	Components *Components
 }

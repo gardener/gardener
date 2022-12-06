@@ -20,8 +20,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
@@ -55,33 +53,39 @@ import (
 
 var _ = Describe("VpnSeedServer", func() {
 	var (
-		ctrl                *gomock.Controller
-		kubernetesInterface kubernetes.Interface
-		c                   *mockclient.MockClient
-		sm                  secretsmanager.Interface
-		vpnSeedServer       Interface
+		ctrl          *gomock.Controller
+		c             *mockclient.MockClient
+		sm            secretsmanager.Interface
+		vpnSeedServer Interface
 
-		ctx                     = context.TODO()
-		fakeErr                 = fmt.Errorf("fake error")
-		namespace               = "shoot--foo--bar"
-		vpnImage                = "eu.gcr.io/gardener-project/gardener/vpn-seed-server:v1.2.3"
-		envoyImage              = "envoyproxy/envoy:v4.5.6"
-		kubeAPIServerHost       = "foo.bar"
-		serviceNetwork          = "10.0.0.0/24"
-		podNetwork              = "10.0.1.0/24"
-		nodeNetwork             = "10.0.2.0/24"
-		replicas          int32 = 1
-		vpaUpdateMode           = vpaautoscalingv1.UpdateModeAuto
-		controlledValues        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		seedVersion             = semver.MustParse("1.22.1")
-
-		namespaceUID        = types.UID("123456")
-		istioLabels         = map[string]string{"foo": "bar"}
-		istioNamespace      = "istio-foo"
-		istioIngressGateway = IstioIngressGateway{
-			Namespace: istioNamespace,
-			Labels:    istioLabels,
+		ctx            = context.TODO()
+		fakeErr        = fmt.Errorf("fake error")
+		namespace      = "shoot--foo--bar"
+		vpnImage       = "eu.gcr.io/gardener-project/gardener/vpn-seed-server:v1.2.3"
+		istioNamespace = "istio-foo"
+		values         = Values{
+			ImageAPIServerProxy: "envoyproxy/envoy:v4.5.6",
+			ImageVPNSeedServer:  vpnImage,
+			KubeAPIServerHost:   pointer.String("foo.bar"),
+			Network: NetworkValues{
+				PodCIDR:     "10.0.1.0/24",
+				ServiceCIDR: "10.0.0.0/24",
+				NodeCIDR:    "10.0.2.0/24",
+			},
+			Replicas: 1,
+			IstioIngressGateway: IstioIngressGateway{
+				Namespace: istioNamespace,
+				Labels:    map[string]string{"foo": "bar"},
+			},
+			HighAvailabilityEnabled:              false,
+			HighAvailabilityNumberOfSeedServers:  2,
+			HighAvailabilityNumberOfShootClients: 1,
+			SeedVersion:                          semver.MustParse("1.22.1"),
 		}
+
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		namespaceUID     = types.UID("123456")
 
 		secretNameDH     = "vpn-seed-server-dh"
 		secretChecksumDH = "9012"
@@ -260,7 +264,7 @@ admin:
 			},
 		}
 
-		template = func(nodeNetwork *string, highAvailability bool) *corev1.PodTemplateSpec {
+		template = func(nodeNetwork string, highAvailability bool) *corev1.PodTemplateSpec {
 			hostPathCharDev := corev1.HostPathCharDev
 			template := &corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -299,11 +303,15 @@ admin:
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SERVICE_NETWORK",
-									Value: serviceNetwork,
+									Value: values.Network.ServiceCIDR,
 								},
 								{
 									Name:  "POD_NETWORK",
-									Value: podNetwork,
+									Value: values.Network.PodCIDR,
+								},
+								{
+									Name:  "NODE_NETWORK",
+									Value: nodeNetwork,
 								},
 								{
 									Name: "LOCAL_NODE_IP",
@@ -514,7 +522,7 @@ admin:
 			} else {
 				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
 					Name:            "envoy-proxy",
-					Image:           envoyImage,
+					Image:           values.ImageAPIServerProxy,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					SecurityContext: &corev1.SecurityContext{
 						Capabilities: &corev1.Capabilities{
@@ -575,19 +583,16 @@ admin:
 					},
 				})
 			}
-			if nodeNetwork != nil {
-				template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, corev1.EnvVar{Name: "NODE_NETWORK", Value: *nodeNetwork})
-			}
 			return template
 		}
 
-		deployment = func(nodeNetwork *string) *appsv1.Deployment {
+		deployment = func(nodeNetwork string) *appsv1.Deployment {
 			maxSurge := intstr.FromInt(100)
 			maxUnavailable := intstr.FromInt(0)
 			deploy := &appsv1.Deployment{
 				ObjectMeta: *deploymentObjectMeta,
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(replicas),
+					Replicas:             pointer.Int32(values.Replicas),
 					RevisionHistoryLimit: pointer.Int32(1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: DeploymentName,
@@ -607,7 +612,7 @@ admin:
 			return deploy
 		}
 
-		statefulSet = func(nodeNetwork *string) *appsv1.StatefulSet {
+		statefulSet = func(nodeNetwork string) *appsv1.StatefulSet {
 			sts := &appsv1.StatefulSet{
 				ObjectMeta: *deploymentObjectMeta,
 				Spec: appsv1.StatefulSetSpec{
@@ -849,13 +854,12 @@ admin:
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).WithVersion(seedVersion.String()).Build()
 		sm = fakesecretsmanager.New(c, namespace)
 
 		By("expecting secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		c.EXPECT().Get(ctx, kutil.Key(namespace, "ca-vpn"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
-		vpnSeedServer = New(kubernetesInterface, namespace, sm, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, nil, replicas, false, 2, 1, istioIngressGateway)
+		vpnSeedServer = New(c, namespace, sm, values)
 	})
 
 	AfterEach(func() {
@@ -1043,6 +1047,12 @@ admin:
 			})
 
 			It("should successfully deploy all resources (w/o node network)", func() {
+				copy := values
+				copy.Network.NodeCIDR = ""
+				vpnSeedServer = New(c, namespace, sm, copy)
+				vpnSeedServer.SetSecrets(secrets)
+				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
+
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server"))
@@ -1066,7 +1076,7 @@ admin:
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(deployment(nil)))
+							Expect(obj).To(DeepEqual(deployment("")))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
@@ -1095,7 +1105,14 @@ admin:
 			})
 
 			It("should successfully deploy all resources (w/o node network and high availability)", func() {
-				vpnSeedServer = New(kubernetesInterface, namespace, sm, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, nil, 3, true, 3, 2, istioIngressGateway)
+				haValues := values
+				haValues.Network.NodeCIDR = ""
+				haValues.Replicas = 3
+				haValues.HighAvailabilityEnabled = true
+				haValues.HighAvailabilityNumberOfSeedServers = 3
+				haValues.HighAvailabilityNumberOfShootClients = 2
+
+				vpnSeedServer = New(c, namespace, sm, haValues)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1122,7 +1139,7 @@ admin:
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.StatefulSet{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(statefulSet(nil)))
+							Expect(obj).To(DeepEqual(statefulSet("")))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
@@ -1174,7 +1191,7 @@ admin:
 			})
 
 			It("should successfully deploy all resources (w/ node network)", func() {
-				vpnSeedServer = New(kubernetesInterface, namespace, sm, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, &nodeNetwork, replicas, false, 2, 1, istioIngressGateway)
+				vpnSeedServer = New(c, namespace, sm, values)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1201,7 +1218,7 @@ admin:
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(deployment(&nodeNetwork)))
+							Expect(obj).To(DeepEqual(deployment(values.Network.NodeCIDR)))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
@@ -1329,7 +1346,12 @@ admin:
 		})
 
 		It("should successfully destroy all resources (w/ high availability)", func() {
-			vpnSeedServer = New(kubernetesInterface, namespace, sm, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, nil, 2, true, 2, 1, istioIngressGateway)
+			haValues := values
+			haValues.Replicas = 2
+			haValues.HighAvailabilityEnabled = true
+			haValues.HighAvailabilityNumberOfSeedServers = 2
+			haValues.HighAvailabilityNumberOfShootClients = 1
+			vpnSeedServer = New(c, namespace, sm, haValues)
 
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),

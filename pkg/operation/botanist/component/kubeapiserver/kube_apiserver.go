@@ -231,10 +231,10 @@ type VPNConfig struct {
 	NodeNetworkCIDR *string
 	// HighAvailabilityEnabled states if VPN uses HA configuration (only works together with ReversedVPNEnabled=true)
 	HighAvailabilityEnabled bool
-	// HighAvailabilityServers is the number of VPN seed servers used for HA
-	HighAvailabilityServers int
-	// HighAvailabilityClients is the number of VPN shoot clients used for HA
-	HighAvailabilityClients int
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	HighAvailabilityNumberOfSeedServers int
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	HighAvailabilityNumberOfShootClients int
 }
 
 // ServerCertificateConfig contains configuration for the server certificate.
@@ -490,17 +490,6 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if k.values.VPN.HighAvailabilityEnabled {
-		err = kutil.DeleteObjects(ctx, k.client.Client(),
-			k.emptyServiceAccount(),
-			k.emptyRoleHAVPN(),
-			k.emptyRoleBindingHAVPN(),
-		)
-		if err != nil {
-			return err
-		}
-	}
-
 	return kutil.DeleteObjects(ctx, k.client.Client(),
 		k.emptyManagedResource(),
 		k.emptyManagedResourceSecret(),
@@ -512,6 +501,9 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer),
+		k.emptyServiceAccount(),
+		k.emptyRoleHAVPN(),
+		k.emptyRoleBindingHAVPN(),
 	)
 }
 
