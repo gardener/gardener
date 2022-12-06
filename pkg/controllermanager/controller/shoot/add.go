@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/retry"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/statuslabel"
 
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -46,7 +45,6 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 
 	if err := (&maintenance.Reconciler{
 		Config: cfg.Controllers.ShootMaintenance,
-		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding maintenance reconciler: %w", err)
 	}
