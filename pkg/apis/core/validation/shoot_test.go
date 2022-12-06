@@ -1662,6 +1662,41 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
+		Context("KubeAPIServerLogging validation", func() {
+			var negativeSize int32 = -1
+
+			DescribeTable("KubeAPIServerLogging validation",
+				func(loggingConfig *core.KubeAPIServerLogging, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateKubeAPIServerLogging(loggingConfig, nil)).To(matcher)
+				},
+
+				Entry("valid (unset)", nil, BeEmpty()),
+				Entry("valid (fields unset)", &core.KubeAPIServerLogging{}, BeEmpty()),
+				Entry("valid (verbosity=0)", &core.KubeAPIServerLogging{
+					Verbosity: pointer.Int32(0),
+				}, BeEmpty()),
+				Entry("valid (httpAccessVerbosity=0)", &core.KubeAPIServerLogging{
+					HTTPAccessVerbosity: pointer.Int32(0),
+				}, BeEmpty()),
+				Entry("valid (verbosity>0)", &core.KubeAPIServerLogging{
+					Verbosity: pointer.Int32(3),
+				}, BeEmpty()),
+				Entry("valid (httpAccessVerbosity>0)", &core.KubeAPIServerLogging{
+					HTTPAccessVerbosity: pointer.Int32(3),
+				}, BeEmpty()),
+				Entry("invalid (verbosity<0)", &core.KubeAPIServerLogging{
+					Verbosity: pointer.Int32(negativeSize),
+				}, ConsistOf(
+					field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+				)),
+				Entry("invalid (httpAccessVerbosity<0)", &core.KubeAPIServerLogging{
+					HTTPAccessVerbosity: pointer.Int32(negativeSize),
+				}, ConsistOf(
+					field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+				)),
+			)
+		})
+
 		Context("requests", func() {
 			It("should not allow too high values for max inflight requests fields", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{

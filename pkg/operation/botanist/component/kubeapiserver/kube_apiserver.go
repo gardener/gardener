@@ -143,6 +143,8 @@ type Values struct {
 	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
+	// Logging contains configuration settings for the log and access logging verbosity
+	Logging *gardencorev1beta1.KubeAPIServerLogging
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
 	// Requests contains configuration for the kube-apiserver requests.

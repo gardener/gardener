@@ -1945,6 +1945,10 @@ rules:
 						EventTTL:                &metav1.Duration{Duration: eventTTL},
 						ExternalHostname:        externalHostname,
 						Images:                  images,
+						Logging: &gardencorev1beta1.KubeAPIServerLogging{
+							Verbosity:           pointer.Int32(3),
+							HTTPAccessVerbosity: pointer.Int32(3),
+						},
 						ServiceAccount: ServiceAccountConfig{
 							Issuer:                serviceAccountIssuer,
 							AcceptedIssuers:       acceptedIssuers,
@@ -2015,7 +2019,8 @@ rules:
 						"--tls-cert-file=/srv/kubernetes/apiserver/tls.crt",
 						"--tls-private-key-file=/srv/kubernetes/apiserver/tls.key",
 						"--tls-cipher-suites="+strings.Join(tlscipherSuites, ","),
-						"--v=2",
+						"--vmodule=httplog=3",
+						"--v=3",
 					))
 					Expect(issuerIdx).To(BeNumerically(">=", 0))
 					Expect(issuerIdx).To(BeNumerically("<", issuerIdx1))
@@ -2498,6 +2503,30 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
 						ContainSubstring("--default-watch-cache-size="),
 						ContainSubstring("--watch-cache-sizes="),
+					))
+				})
+
+				It("should configure the KubeAPISeverLogging settings if provided", func() {
+					logging := &gardencorev1beta1.KubeAPIServerLogging{
+						Verbosity:           pointer.Int32(3),
+						HTTPAccessVerbosity: pointer.Int32(3),
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{Logging: logging, Images: images, Version: version})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+						"--vmodule=httplog=3",
+						"--v=3",
+					))
+				})
+
+				It("should not configure the KubeAPISeverLogging settings if not provided", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
+						ContainSubstring("--vmodule=httplog"),
+						ContainSubstring("--v="),
 					))
 				})
 

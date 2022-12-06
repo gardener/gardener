@@ -700,6 +700,20 @@ type KubeAPIServerConfig struct {
 	// Defaults to 1h.
 	// +optional
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
+	// Logging contains configuration for the log level and HTTP access logs.
+	// +optional
+	Logging *KubeAPIServerLogging `json:"logging,omitempty" protobuf:"bytes,13,opt,name=logging"`
+}
+
+// KubeAPIServerLogging contains configuration for the logs level and http access logs
+type KubeAPIServerLogging struct {
+	// Verbosity is the kube-apiserver log verbosity level
+	// Defaults to 2.
+	// +optional
+	Verbosity *int32 `json:"verbosity,omitempty" protobuf:"varint,1,opt,name=verbosity"`
+	// HTTPAccessVerbosity is the kube-apiserver access logs level
+	// +optional
+	HTTPAccessVerbosity *int32 `json:"httpAccessVerbosity,omitempty" protobuf:"varint,2,opt,name=httpAccessVerbosity"`
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

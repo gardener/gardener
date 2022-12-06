@@ -857,6 +857,22 @@ message KubeAPIServerConfig {
   // Defaults to 1h.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
+
+  // Logging contains configuration for the log level and HTTP access logs.
+  // +optional
+  optional KubeAPIServerLogging logging = 13;
+}
+
+// KubeAPIServerLogging contains configuration for the logs level and http access logs
+message KubeAPIServerLogging {
+  // Verbosity is the kube-apiserver log verbosity level
+  // Defaults to 2.
+  // +optional
+  optional int32 verbosity = 1;
+
+  // HTTPAccessVerbosity is the kube-apiserver access logs level
+  // +optional
+  optional int32 httpAccessVerbosity = 2;
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

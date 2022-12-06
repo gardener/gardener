@@ -192,6 +192,9 @@ spec:
   #     - foo2
   #     extendTokenExpiration: true
   #     maxTokenExpiration: 45d
+  #   logging:
+  #     verbosity: 2
+  #     httpAccessLogs: 3   
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s

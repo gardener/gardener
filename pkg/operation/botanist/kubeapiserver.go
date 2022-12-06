@@ -102,6 +102,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		requests                 *gardencorev1beta1.KubeAPIServerRequests
 		runtimeConfig            map[string]bool
 		watchCacheSizes          *gardencorev1beta1.WatchCacheSizes
+		logging                  *gardencorev1beta1.KubeAPIServerLogging
 	)
 
 	if apiServerConfig != nil {
@@ -132,6 +133,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		runtimeConfig = apiServerConfig.RuntimeConfig
 
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
+		logging = apiServerConfig.Logging
 	}
 
 	return kubeapiserver.New(
@@ -160,6 +162,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
 			WatchCacheSizes: watchCacheSizes,
+			Logging:         logging,
 		},
 	), nil
 }
