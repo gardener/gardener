@@ -32,8 +32,25 @@ import (
 
 var _ = Describe("Project Activity controller tests", func() {
 	var project *gardencorev1beta1.Project
+	var testNamespace *corev1.Namespace
 
 	BeforeEach(func() {
+		By("creating test namespace")
+		testNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+				GenerateName: "garden-" + testID + "-",
+				Labels:       map[string]string{testID: testRunID},
+			},
+		}
+		Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+		DeferCleanup(func() {
+			By("deleting test namespace")
+			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
 		project = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "test-" + utils.ComputeSHA256Hex([]byte(testRunID + CurrentSpecReport().LeafNodeLocation.String()))[:5],
@@ -47,6 +64,10 @@ var _ = Describe("Project Activity controller tests", func() {
 		By("Create Project")
 		Expect(testClient.Create(ctx, project)).To(Succeed())
 		log.Info("Created Project", "project", client.ObjectKeyFromObject(project))
+
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(project), &gardencorev1beta1.Project{})
+		}).Should(Succeed())
 
 		DeferCleanup(func() {
 			By("Delete Project")
