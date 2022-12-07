@@ -16,6 +16,7 @@ package clusteridentity
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -45,9 +46,9 @@ type clusterIdentity struct {
 	client                  client.Client
 	namespace               string
 	identity                string
+	identityType            string
 	managedResourceRegistry *managedresources.Registry
 	managedResourceName     string
-	managedResourceCreateFn func(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error
 	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error
 }
 
@@ -55,18 +56,18 @@ func new(
 	c client.Client,
 	namespace string,
 	identity string,
+	identityType string,
 	managedResourceRegistry *managedresources.Registry,
 	managedResourceName string,
-	managedResourceCreateFn func(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error,
 	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error,
 ) Interface {
 	return &clusterIdentity{
 		client:                  c,
 		namespace:               namespace,
 		identity:                identity,
+		identityType:            identityType,
 		managedResourceRegistry: managedResourceRegistry,
 		managedResourceName:     managedResourceName,
-		managedResourceCreateFn: managedResourceCreateFn,
 		managedResourceDeleteFn: managedResourceDeleteFn,
 	}
 }
@@ -77,9 +78,9 @@ func NewForSeed(c client.Client, namespace, identity string) Interface {
 		c,
 		namespace,
 		identity,
+		"seed",
 		managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer),
 		ManagedResourceControlName,
-		managedresources.CreateForSeed,
 		managedresources.DeleteForSeed,
 	)
 }
@@ -90,9 +91,9 @@ func NewForShoot(c client.Client, namespace, identity string) Interface {
 		c,
 		namespace,
 		identity,
+		"shoot",
 		managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer),
 		ShootManagedResourceName,
-		managedresources.CreateForShoot,
 		managedresources.DeleteForShoot,
 	)
 }
@@ -113,7 +114,15 @@ func (c *clusterIdentity) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return c.managedResourceCreateFn(ctx, c.client, c.namespace, c.managedResourceName, false, resources)
+	switch c.identityType {
+	case "shoot":
+		return managedresources.CreateForShoot(ctx, c.client, c.namespace, c.managedResourceName, managedresources.LabelValueGardener, false, resources)
+	case "seed":
+		return managedresources.CreateForSeed(ctx, c.client, c.namespace, c.managedResourceName, false, resources)
+	default:
+		// this should never happen
+		return fmt.Errorf("unknown cluster identity type %s", c.identityType)
+	}
 }
 
 func (c *clusterIdentity) Destroy(ctx context.Context) error {

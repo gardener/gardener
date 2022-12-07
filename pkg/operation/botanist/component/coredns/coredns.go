@@ -143,7 +143,7 @@ func (c *coreDNS) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, c.client, c.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, c.client, c.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (c *coreDNS) Destroy(ctx context.Context) error {

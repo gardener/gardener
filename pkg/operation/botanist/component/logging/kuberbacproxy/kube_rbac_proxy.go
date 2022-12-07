@@ -154,7 +154,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, false, resources)
+	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, managedresources.LabelValueGardener, false, resources)
 }
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {

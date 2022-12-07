@@ -71,7 +71,7 @@ func (s *shootSystem) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, s.client, s.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, s.client, s.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (s *shootSystem) Destroy(ctx context.Context) error {

@@ -140,7 +140,7 @@ func DeployResourceConfigs(
 		}
 	}
 
-	return managedresources.CreateForShoot(ctx, c, namespace, managedResourceName, false, registry.SerializedObjects())
+	return managedresources.CreateForShoot(ctx, c, namespace, managedResourceName, managedresources.LabelValueGardener, false, registry.SerializedObjects())
 }
 
 // DestroyResourceConfigs destroys the provided ResourceConfigs <allResources> based on the ClusterType.

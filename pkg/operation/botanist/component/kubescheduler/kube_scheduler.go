@@ -480,7 +480,7 @@ func (k *kubeScheduler) reconcileShootResources(ctx context.Context, serviceAcco
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {

@@ -76,8 +76,11 @@ func New(client client.Client, namespace, name, class string, keepObjects *bool,
 	return mr
 }
 
-// NewForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
-func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
+// NewForShoot constructs a new ManagedResource object for the shoot's gardener-resource-manager.
+// The origin is used to identify the creator of the managed resource. Gardener acts on resources
+// with "origin=gardener" label. External callers (extension controllers or other components)
+// of this function should provide their own unique origin value.
+func NewForShoot(c client.Client, namespace, name, origin string, keepObjects bool) *builder.ManagedResource {
 	var (
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
@@ -86,7 +89,7 @@ func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *bui
 	return New(c, namespace, name, "", &keepObjects, labels, injectedLabels, nil)
 }
 
-// NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
+// NewForSeed constructs a new ManagedResource object for the seed's gardener-resource-manager.
 func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
 	var labels map[string]string
 	if !strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix) {
@@ -159,10 +162,13 @@ func CreateForSeed(ctx context.Context, client client.Client, namespace, name st
 }
 
 // CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
-func CreateForShoot(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
+// The origin is used to identify the creator of the managed resource. Gardener acts on resources
+// with "origin=gardener" label. External callers (extension controllers or other components)
+// of this function should provide their own unique origin value.
+func CreateForShoot(ctx context.Context, client client.Client, namespace, name, origin string, keepObjects bool, data map[string][]byte) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForShoot(client, namespace, name, keepObjects).WithSecretRef(secretName)
+		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)

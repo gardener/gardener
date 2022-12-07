@@ -118,7 +118,7 @@ func (m *metricsServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (m *metricsServer) Destroy(ctx context.Context) error {

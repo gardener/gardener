@@ -292,7 +292,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceTargetName, false, data); err != nil {
+	if err := managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data); err != nil {
 		return err
 	}
 

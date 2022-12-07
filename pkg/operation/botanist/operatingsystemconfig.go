@@ -152,7 +152,7 @@ var (
 // 2. A secret containing some shared RBAC policies for downloading the cloud config execution script
 func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Context) error {
 	var (
-		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, false)
+		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, managedresources.LabelValueGardener, false)
 		managedResourceSecretsCount      = len(b.Shoot.GetInfo().Spec.Provider.Workers) + 1
 		managedResourceSecretLabels      = map[string]string{SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName}
 		managedResourceSecretNamesWanted = sets.NewString()
