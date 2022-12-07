@@ -73,11 +73,13 @@ global:
     insecureSkipTLSVerify: false
     groupPriorityMinimum: 10000
     versionPriority: 20
-    tlsSecretName:
+  # BEGIN gardener-apiserver TLS configuration (CA and server certificate)
+  # - specify 'caBundle' and ('tlsSecretName' or 'tls')
     caBundle: |
       -----BEGIN CERTIFICATE-----
       ...
       -----END CERTIFICATE-----
+  # tlsSecretName: gardener-apiserver-tls-secrets # must contain 'tls.crt', 'tls.key' keys
     tls:
       crt: |
         -----BEGIN CERTIFICATE-----
@@ -87,6 +89,7 @@ global:
         -----BEGIN RSA PRIVATE KEY-----
         ...
         -----END RSA PRIVATE KEY-----
+  # END gardener-apiserver TLS configuration (CA and server certificate)
     featureGates: {}
   # enableAdmissionPlugins: [] # List of admission plugins to be enabled in addition to default enabled ones.
   # disableAdmissionPlugins: [] # List of admission plugins that should be disabled although they are in the default enabled plugins list.
