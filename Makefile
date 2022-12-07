@@ -291,8 +291,6 @@ gardener-extensions-up gardener-extensions-down: export SEED_NAME = $(GARDENER_E
 
 gardener-extensions-up gardener-extensions-down: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
 
-gardener-extensions-up gardener-extensions-down: export SEED_HOST = $(shell kubectl get configmaps -n kube-system shoot-info --kubeconfig $(GARDENER_EXTENSIONS_SEED_KUBECONFIG) -o yaml | yq '.data.domain')
-
 kind-up: $(KIND) $(KUBECTL) $(HELM)
 	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind-down: $(KIND)

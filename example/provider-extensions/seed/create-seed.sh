@@ -55,7 +55,7 @@ default-if-initial() {
 }
 
 ingress_domain=$(yq -e '.ingressDomain' "$SCRIPT_DIR"/seed-config.yaml)
-
+zones=$(yq -e '.zones | (.[] |= sub("(.*)", "\"${1}\"")) | join(",")' "$SCRIPT_DIR"/seed-config.yaml)
 registry_domain=$(yq '.registryDomain' "$SCRIPT_DIR"/seed-config.yaml)
 pods_cidr=$(yq '.podNetwork' "$SCRIPT_DIR"/seed-config.yaml)
 nodes_cidr=$(yq '.nodeNetwork' "$SCRIPT_DIR"/seed-config.yaml)
@@ -77,18 +77,22 @@ if [[ $(yq '.useGardenerShootInfo' "$SCRIPT_DIR"/seed-config.yaml) == "true" ]];
   type=$(default-if-initial "$type" "$temp_shoot_info" ".data.provider")
 fi
 
+yq -e -i "
+  .config.seedConfig.metadata.name = \"$seed_name\" |
+  .config.seedConfig.spec.ingress.domain = \"$ingress_domain\" |
+  .config.seedConfig.spec.networks.pods = \"$pods_cidr\" |
+  .config.seedConfig.spec.networks.nodes = \"$nodes_cidr\" |
+  .config.seedConfig.spec.networks.services = \"$services_cidr\" |
+  .config.seedConfig.spec.dns.provider.secretRef.name = \"$internal_dns_secret\" |
+  .config.seedConfig.spec.dns.provider.type = \"$dns_provider_type\" |
+  .config.seedConfig.spec.provider.region = \"$region\" |
+  .config.seedConfig.spec.provider.type = \"$type\" |
+  .config.seedConfig.spec.provider.zones = [$zones]
+" "$SCRIPT_DIR"/../../provider-extensions/gardenlet/values.yaml
+
 echo "Skaffolding seed"
 GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
-  SEED_NAME=$seed_name \
   SKAFFOLD_DEFAULT_REPO=$registry_domain \
   REGISTRY_DOMAIN=$registry_domain \
-  PODS_CIDR=$pods_cidr \
-  NODES_CIDR=$nodes_cidr \
-  SERVICES_CIDR=$services_cidr \
-  REGION=$region \
-  TYPE=$type \
-  INTERNAL_DNS_SECRET=$internal_dns_secret \
-  DNS_PROVIDER_TYPE=$dns_provider_type \
-  INGRESS_DOMAIN=$ingress_domain \
   SKAFFOLD_PUSH=true \
   skaffold run -m gardenlet -p extensions --kubeconfig="$seed_kubeconfig"

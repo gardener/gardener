@@ -34,8 +34,8 @@ echo "Configure seed cluster"
 "$SCRIPT_DIR"/../example/provider-extensions/seed/configure-seed.sh "$PATH_GARDEN_KUBECONFIG" "$PATH_SEED_KUBECONFIG"
 echo "Start bootstrapping Gardener"
 SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true skaffold run -m etcd,controlplane,extensions-env -p extensions
-echo "Creating controller-registrations"
-kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" --server-side=true apply -f "$SCRIPT_DIR"/../example/provider-extensions/garden/controller-registrations
-echo "Creating cloud-profiles"
-kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" --server-side=true apply -f "$SCRIPT_DIR"/../example/provider-extensions/garden/cloud-profiles
+echo "Registering controllers"
+kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" --server-side=true apply -f "$SCRIPT_DIR"/../example/provider-extensions/garden/controllerregistrations
+echo "Creating CloudProfiles"
+kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" --server-side=true apply -f "$SCRIPT_DIR"/../example/provider-extensions/garden/cloudprofiles
 "$SCRIPT_DIR"/../example/provider-extensions/seed/create-seed.sh "$PATH_GARDEN_KUBECONFIG" "$PATH_SEED_KUBECONFIG" "$SEED_NAME"

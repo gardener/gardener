@@ -1,6 +1,6 @@
-# Deploying Gardener locally and enable provider-extensions
+# Deploying Gardener locally and enabling provider-extensions
 
-This document will walk you through deploying Gardener on your local machine and bootstrap your own seed clusters on a existing Kubernetes cluster.
+This document will walk you through deploying Gardener on your local machine and bootstrapping your own seed clusters on an existing Kubernetes cluster.
 It is supposed to run your local Gardener developments on a real infrastructure. For running Gardener only entirely local, please check the [getting started locally](getting_started_locally.md) docs.
 If you encounter difficulties, please open an issue so that we can make this process easier.
 
@@ -14,13 +14,13 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 ## Prerequisites
 
 - Make sure that you have prepared your setup and checked out Gardener sources as described by the [Local Setup guide](../development/local_setup.md).
-- Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
+- Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see [here](https://docs.docker.com/desktop/settings/mac/) how to configure the resources for Docker for Mac).
   > Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
-  > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
+  > Tip: With `docker system df` and `docker system prune -a` you can clean up unused data.
 - Make sure that you have access to a Kubernetes cluster you can use as a seed cluster in this setup.
   - The seed cluster requires at least 16 CPUs in total to run one shoot cluster
   - You could use any Kubernetes cluster for your seed cluster. However, using a Gardener shoot cluster for your seed simplifies some configuration steps.
-  - When bootstrapping `gardenlet` to the cluster your new seed will have the same provider type as the shoot cluster you use...an AWS shoot will become an AWS seed, an GCP shoot will become an GCP seed etc. (only relevant when using a Gardener shoot as seed).
+  - When bootstrapping `gardenlet` to the cluster your new seed will have the same provider type as the shoot cluster you use - an AWS shoot will become an AWS seed, an GCP shoot will become an GCP seed etc. (only relevant when using a Gardener shoot as seed).
 
 ## Provide Infrastructure Credentials And Configuration
 
@@ -37,8 +37,8 @@ You can find a template for the file at `./example/provider-extensions/garden/co
 
 ### Infrastructure
 Infrastructure secrets and the corresponding secret bindings should be maintained at:
--  `./example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`
--  `./example/provider-extensions/garden/project/credentials/secret-bindings.yaml`
+- `./example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`
+- `./example/provider-extensions/garden/project/credentials/secretbindings.yaml`
 
 There are templates with `.tmpl` suffixes for the files in the same folder.
 
@@ -50,8 +50,13 @@ Using a Gardener cluster as seed simplifies the process, because some configurat
 
 However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `seed-config.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up` , which is explained later, will pause and tell you what to do.
 
+`seed-config.yaml` offers a simple way to configure you seed cluster. After you ran `make gardener-extensions-up` for the first time, you find the resulting seed configuration at `./example/provider-extensions/gardenlet/values.yaml` where you change your seed configuration (and other gardenlet settings). Similarly to seed configuration file its template `values.yaml.tmpl` is in the same directory.
+
+### External Controllers
+You might plan to deploy and register external controllers for networking, operating system, providers, etc.. Please put `ControllerDeployment`s and `ControllerRegistration`s into `./example/provider-extensions/garden/controllerregistrations` directory. The whole content of this folder will be applied to your KinD cluster.
+
 ### `CloudProfile`s
-There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from another landscape to `./example/provider-extensions/garden/cloud-profiles/profiles` or create your own `CloudProfiles` based on the [gardener examples](../../example/30-cloudprofile.yaml). Please check the GitHub repository of your desired provider-extension. Most of them include example `CloudProfile`s.
+There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from another landscape to `./example/provider-extensions/garden/cloudprofiles` directory or create your own `CloudProfiles` based on the [gardener examples](../../example/30-cloudprofile.yaml). Please check the GitHub repository of your desired provider-extension. Most of them include example `CloudProfile`s. All files you place in this folder will be applied to your KinD cluster.
 
 ## Setting Up The KinD Cluster
 
@@ -62,7 +67,7 @@ make kind-extensions-up
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/provider-extensions/garden/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config` since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind-extensions/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind-extensions/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/extensions/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/extensions/kubeconfig`.
 
 All following steps assume that you are using this kubeconfig.
 

@@ -1192,30 +1192,14 @@ profiles:
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/provider-extensions/gardenlet/values.yaml
     # for the provider-extensions profile only 2 images are built: gardenlet and resource-manager
     # so the imageVectorOverwrite must be patched to specify the correct tags
   - op: replace
     path: /deploy/helm/releases/0/setValueTemplates
     value:
-      config:
-        seedConfig:
-          metadata:
-            name: "{{.SEED_NAME}}"
-          spec:
-            dns:
-              provider:
-                secretRef:
-                  name: "{{.INTERNAL_DNS_SECRET}}"
-                type:  "{{.DNS_PROVIDER_TYPE}}"
-            ingress:
-              domain: "{{.INGRESS_DOMAIN}}"
-            networks:
-              pods: "{{.PODS_CIDR}}"
-              nodes: "{{.NODES_CIDR}}"
-              services: "{{.SERVICES_CIDR}}"
-            provider:
-              region: "{{.REGION}}"
-              type: "{{.TYPE}}"
       imageVectorOverwrite: |
         images:
         - name: gardenlet
@@ -1224,10 +1208,6 @@ profiles:
         - name: gardener-resource-manager
           repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_resource-manager
           tag: "{{.IMAGE_TAG2}}"
-  # Optional values.yaml for a custom config
-  - op: add
-    path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/provider-extensions/gardenlet/values.yaml
 
 - name: ha-single-zone
   patches:

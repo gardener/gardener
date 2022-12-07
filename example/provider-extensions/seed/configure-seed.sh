@@ -61,7 +61,7 @@ check-not-initial() {
   else
     local yqResult
     yqResult=$(yq "${yqArg}" "$file")
-    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]]; then
+    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]] || [[  $yqResult == "[]" ]]; then
       echo "\"$yqArg\" in file \"$file\" is empty or does not exist. Please check your config."
       exit 1
     fi
@@ -95,19 +95,19 @@ ensure-gardener-dns-annotations() {
     cert.gardener.cloud/dnsnames="$domain" \
     cert.gardener.cloud/purpose=managed \
     cert.gardener.cloud/secretname=tls
-
 }
 
 echo "Ensuring config files"
 ensure-config-file "$SCRIPT_DIR"/seed-config.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secret-bindings.yaml
-touch -a "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
 
 echo "Check if essential config options are initialized"
 check-not-initial "$SCRIPT_DIR"/kubeconfig ""
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".ingressDomain"
+check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".zones"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.domain"
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootInfo"
 check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootDNS"
@@ -155,7 +155,7 @@ echo "Create host and client keys for SSH reverse tunnel"
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$relay_domain" 6222
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$relay_domain" provider-extensions
 
-echo "Deploying kyverno, quic-relay and container registry"
+echo "Deploying kyverno, SSH reverse tunnel and container registry"
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno
 until kubectl --kubeconfig "$seed_kubeconfig" get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno-policies

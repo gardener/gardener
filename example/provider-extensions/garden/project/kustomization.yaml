@@ -4,4 +4,4 @@ kind: Kustomization
 resources:
 - project.yaml
 - credentials/infrastructure-secrets.yaml
-- credentials/secret-bindings.yaml
+- credentials/secretbindings.yaml

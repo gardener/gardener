@@ -1,0 +1,58 @@
+config:
+  seedConfig:
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: Seed
+    metadata:
+      # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+      name: ""
+    spec:
+      backup: null
+      secretRef: null
+      dns:
+        provider:
+          secretRef:
+            # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+            name: ""
+            namespace: garden
+          # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+          type: ""
+      ingress:
+        controller:
+          kind: nginx
+        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        domain: ""
+      networks:
+        blockCIDRs:
+        - 169.254.169.254/32
+        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        pods: ""
+        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        nodes: ""
+        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        services: ""
+        shootDefaults:
+          pods: 100.80.0.0/12
+          services: 100.112.0.0/13
+      provider:
+        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        region: ""
+        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        type: ""
+        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        zones: []
+      settings:
+        dependencyWatchdog:
+          endpoint:
+            enabled: true
+          probe:
+            enabled: true
+        excessCapacityReservation:
+          enabled: false
+        ownerChecks:
+          enabled: true
+        scheduling:
+          visible: true
+        shootDNS:
+          enabled: true
+        verticalPodAutoscaler:
+          enabled: true
