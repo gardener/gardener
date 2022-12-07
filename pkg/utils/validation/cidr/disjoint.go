@@ -38,8 +38,8 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 	if shootNodes != nil && NetworksIntersect(*shootNodes, seedServices) {
 		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, "shoot node network intersects with seed service network"))
 	}
-	if shootNodes != nil && NetworksIntersect(*shootNodes, v1beta1constants.DefaultVpnRange) {
-		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, fmt.Sprintf("shoot node network intersects with default vpn network (%s)", v1beta1constants.DefaultVpnRange)))
+	if shootNodes != nil && NetworksIntersect(*shootNodes, v1beta1constants.DefaultVPNRange) {
+		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, fmt.Sprintf("shoot node network intersects with default vpn network (%s)", v1beta1constants.DefaultVPNRange)))
 	}
 
 	if shootServices != nil {
@@ -52,8 +52,8 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 		if seedNodes != nil && NetworksIntersect(*seedNodes, *shootServices) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *seedNodes, "shoot service network intersects with seed node network"))
 		}
-		if NetworksIntersect(v1beta1constants.DefaultVpnRange, *shootServices) {
-			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, fmt.Sprintf("shoot service network intersects with default vpn network (%s)", v1beta1constants.DefaultVpnRange)))
+		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootServices) {
+			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, fmt.Sprintf("shoot service network intersects with default vpn network (%s)", v1beta1constants.DefaultVPNRange)))
 		}
 	} else {
 		allErrs = append(allErrs, field.Required(pathServices, "services is required"))
@@ -69,8 +69,8 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 		if seedNodes != nil && NetworksIntersect(*seedNodes, *shootPods) {
 			allErrs = append(allErrs, field.Invalid(pathPods, *seedNodes, "shoot pod network intersects with seed node network"))
 		}
-		if NetworksIntersect(v1beta1constants.DefaultVpnRange, *shootPods) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, fmt.Sprintf("shoot pod network intersects with default vpn network (%s)", v1beta1constants.DefaultVpnRange)))
+		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootPods) {
+			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, fmt.Sprintf("shoot pod network intersects with default vpn network (%s)", v1beta1constants.DefaultVPNRange)))
 		}
 	} else {
 		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))

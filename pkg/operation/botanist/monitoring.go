@@ -594,6 +594,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 		"nodeLocalDNS": map[string]interface{}{
 			"enabled": b.Shoot.NodeLocalDNSEnabled,
 		},
+		"reversedVPN": map[string]interface{}{
+			"highAvailabilityEnabled": b.Shoot.VPNHighAvailabilityEnabled,
+		},
 	}, images.ImageNameGrafana)
 	if err != nil {
 		return err

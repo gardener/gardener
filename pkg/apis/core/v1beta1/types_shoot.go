@@ -380,7 +380,7 @@ type ControlPlane struct {
 	// HighAvailability holds the configuration settings for high availability of the
 	// control plane of a shoot.
 	// +optional
-	HighAvailability *HighAvailability `json:"highAvailability" protobuf:"bytes,1,name=highAvailability"`
+	HighAvailability *HighAvailability `json:"highAvailability,omitempty" protobuf:"bytes,1,name=highAvailability"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////

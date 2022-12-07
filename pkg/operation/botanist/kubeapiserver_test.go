@@ -138,6 +138,7 @@ var _ = Describe("KubeAPIServer", func() {
 					{Name: "apiserver-proxy-pod-webhook"},
 					{Name: "kube-apiserver"},
 					{Name: "vpn-seed"},
+					{Name: "vpn-shoot-client"},
 				},
 				APIServerAddress:   apiServerAddress,
 				APIServerClusterIP: apiServerClusterIP,

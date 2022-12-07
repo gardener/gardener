@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/Masterminds/semver"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -30,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver/mock"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -81,6 +83,9 @@ var _ = Describe("VPNSeedServer", func() {
 					},
 				},
 			})
+			botanist.Seed = &seed.Seed{
+				KubernetesVersion: semver.MustParse("1.22.3"),
+			}
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{

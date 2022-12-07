@@ -355,7 +355,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployVPNSeedServer = g.Add(flow.Task{
 			Name:         "Deploying vpn-seed-server",
 			Fn:           flow.TaskFn(botanist.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace, waitUntilKubeAPIServerIsReady),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",

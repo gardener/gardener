@@ -85,6 +85,8 @@ const (
 	ServicePortName = "kube-apiserver"
 	// UserNameVPNSeed is the user name for the vpn-seed components (used as common name in its client certificate)
 	UserNameVPNSeed = "vpn-seed"
+	// UserNameVPNSeedClient is the user name for the HA vpn-seed-client components (used as common name in its client certificate)
+	UserNameVPNSeedClient = "vpn-seed-client"
 
 	userName = "system:kube-apiserver:kubelet"
 )
@@ -213,6 +215,8 @@ type Images struct {
 	KubeAPIServer string
 	// VPNSeed is the container image for the vpn-seed.
 	VPNSeed string
+	// VPNClient is the container image for the vpn-seed-client.
+	VPNClient string
 }
 
 // VPNConfig contains information for configuring the VPN settings for the kube-apiserver.
@@ -225,6 +229,12 @@ type VPNConfig struct {
 	ServiceNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
 	NodeNetworkCIDR *string
+	// HighAvailabilityEnabled states if VPN uses HA configuration (only works together with ReversedVPNEnabled=true)
+	HighAvailabilityEnabled bool
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	HighAvailabilityNumberOfSeedServers int
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	HighAvailabilityNumberOfShootClients int
 }
 
 // ServerCertificateConfig contains configuration for the server certificate.
@@ -402,6 +412,37 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretHAVPNSeedClient, err := k.reconcileSecretHAVPNSeedClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretHAVPNClientSeedTLSAuth, err := k.reconcileSecretHAVPNSeedClientTLSAuth(ctx)
+	if err != nil {
+		return err
+	}
+
+	if k.values.VPN.HighAvailabilityEnabled {
+		if err := k.reconcileServiceAccount(ctx); err != nil {
+			return err
+		}
+		if err := k.reconcileRoleHAVPN(ctx); err != nil {
+			return err
+		}
+		if err := k.reconcileRoleBindingHAVPN(ctx); err != nil {
+			return err
+		}
+	} else {
+		err = kutil.DeleteObjects(ctx, k.client.Client(),
+			k.emptyServiceAccount(),
+			k.emptyRoleHAVPN(),
+			k.emptyRoleBindingHAVPN(),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := k.reconcileDeployment(
 		ctx,
 		deployment,
@@ -419,6 +460,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretHTTPProxy,
 		secretLegacyVPNSeed,
 		secretLegacyVPNSeedTLSAuth,
+		secretHAVPNSeedClient,
+		secretHAVPNClientSeedTLSAuth,
 	); err != nil {
 		return err
 	}
@@ -458,6 +501,9 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer),
+		k.emptyServiceAccount(),
+		k.emptyRoleHAVPN(),
+		k.emptyRoleBindingHAVPN(),
 	)
 }
 

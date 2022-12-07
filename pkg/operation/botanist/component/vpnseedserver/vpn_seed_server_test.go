@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -28,7 +29,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -41,6 +41,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,26 +58,34 @@ var _ = Describe("VpnSeedServer", func() {
 		sm            secretsmanager.Interface
 		vpnSeedServer Interface
 
-		ctx                     = context.TODO()
-		fakeErr                 = fmt.Errorf("fake error")
-		namespace               = "shoot--foo--bar"
-		vpnImage                = "eu.gcr.io/gardener-project/gardener/vpn-seed-server:v1.2.3"
-		envoyImage              = "envoyproxy/envoy:v4.5.6"
-		kubeAPIServerHost       = "foo.bar"
-		serviceNetwork          = "10.0.0.0/24"
-		podNetwork              = "10.0.1.0/24"
-		nodeNetwork             = "10.0.2.0/24"
-		replicas          int32 = 1
-		vpaUpdateMode           = vpaautoscalingv1.UpdateModeAuto
-		controlledValues        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-
-		namespaceUID        = types.UID("123456")
-		istioLabels         = map[string]string{"foo": "bar"}
-		istioNamespace      = "istio-foo"
-		istioIngressGateway = IstioIngressGateway{
-			Namespace: istioNamespace,
-			Labels:    istioLabels,
+		ctx            = context.TODO()
+		fakeErr        = fmt.Errorf("fake error")
+		namespace      = "shoot--foo--bar"
+		vpnImage       = "eu.gcr.io/gardener-project/gardener/vpn-seed-server:v1.2.3"
+		istioNamespace = "istio-foo"
+		values         = Values{
+			ImageAPIServerProxy: "envoyproxy/envoy:v4.5.6",
+			ImageVPNSeedServer:  vpnImage,
+			KubeAPIServerHost:   pointer.String("foo.bar"),
+			Network: NetworkValues{
+				PodCIDR:     "10.0.1.0/24",
+				ServiceCIDR: "10.0.0.0/24",
+				NodeCIDR:    "10.0.2.0/24",
+			},
+			Replicas: 1,
+			IstioIngressGateway: IstioIngressGateway{
+				Namespace: istioNamespace,
+				Labels:    map[string]string{"foo": "bar"},
+			},
+			HighAvailabilityEnabled:              false,
+			HighAvailabilityNumberOfSeedServers:  2,
+			HighAvailabilityNumberOfShootClients: 1,
+			SeedVersion:                          semver.MustParse("1.22.1"),
 		}
+
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		namespaceUID     = types.UID("123456")
 
 		secretNameDH     = "vpn-seed-server-dh"
 		secretChecksumDH = "9012"
@@ -245,22 +254,345 @@ admin:
 	Expect(kutil.MakeUnique(secretDH)).To(Succeed())
 
 	var (
-		deployment = func(nodeNetwork *string) *appsv1.Deployment {
-			maxSurge := intstr.FromInt(100)
-			maxUnavailable := intstr.FromInt(0)
+		deploymentObjectMeta = &metav1.ObjectMeta{
+			Name:      DeploymentName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleControlPlane,
+				v1beta1constants.LabelApp:                        DeploymentName,
+				"networking.gardener.cloud/from-shoot-apiserver": "allowed",
+			},
+		}
+
+		template = func(nodeNetwork string, highAvailability bool) *corev1.PodTemplateSpec {
 			hostPathCharDev := corev1.HostPathCharDev
-			deploy := &appsv1.Deployment{
+			template := &corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      DeploymentName,
-					Namespace: namespace,
 					Labels: map[string]string{
-						v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleControlPlane,
-						v1beta1constants.LabelApp:                        DeploymentName,
-						"networking.gardener.cloud/from-shoot-apiserver": "allowed",
+						v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
+						v1beta1constants.LabelApp:                            DeploymentName,
+						v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
+				Spec: corev1.PodSpec{
+					AutomountServiceAccountToken: pointer.Bool(false),
+					PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
+					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
+					Containers: []corev1.Container{
+						{
+							Name:            DeploymentName,
+							Image:           vpnImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "tcp-tunnel",
+									ContainerPort: 1194,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{
+										"NET_ADMIN",
+									},
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "SERVICE_NETWORK",
+									Value: values.Network.ServiceCIDR,
+								},
+								{
+									Name:  "POD_NETWORK",
+									Value: values.Network.PodCIDR,
+								},
+								{
+									Name:  "NODE_NETWORK",
+									Value: nodeNetwork,
+								},
+								{
+									Name: "LOCAL_NODE_IP",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "status.hostIP",
+										},
+									},
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(1194),
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(1194),
+									},
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "dev-net-tun",
+									MountPath: "/dev/net/tun",
+								},
+								{
+									Name:      "certs",
+									MountPath: "/srv/secrets/vpn-server",
+								},
+								{
+									Name:      "tlsauth",
+									MountPath: "/srv/secrets/tlsauth",
+								},
+								{
+									Name:      "dh",
+									MountPath: "/srv/secrets/dh",
+								},
+							},
+						},
+					},
+					TerminationGracePeriodSeconds: pointer.Int64(30),
+					Volumes: []corev1.Volume{
+						{
+							Name: "dev-net-tun",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/dev/net/tun",
+									Type: &hostPathCharDev,
+								},
+							},
+						},
+						{
+							Name: "certs",
+							VolumeSource: corev1.VolumeSource{
+								Projected: &corev1.ProjectedVolumeSource{
+									DefaultMode: pointer.Int32(420),
+									Sources: []corev1.VolumeProjection{
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: "ca-vpn",
+												},
+												Items: []corev1.KeyToPath{{
+													Key:  "bundle.crt",
+													Path: "ca.crt",
+												}},
+											},
+										},
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: "vpn-seed-server",
+												},
+												Items: []corev1.KeyToPath{
+													{
+														Key:  "tls.crt",
+														Path: "tls.crt",
+													},
+													{
+														Key:  "tls.key",
+														Path: "tls.key",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						{
+							Name: "tlsauth",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  "vpn-seed-server-tlsauth-a1d0aa00",
+									DefaultMode: pointer.Int32(0400),
+								},
+							},
+						},
+						{
+							Name: "dh",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretDH.Name,
+									DefaultMode: pointer.Int32(0400),
+								},
+							},
+						},
+					},
+				},
+			}
+			if highAvailability {
+				mount := corev1.VolumeMount{
+					Name:      "openvpn-status",
+					MountPath: "/srv/status",
+				}
+				template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, []corev1.EnvVar{
+					{
+						Name:  "OPENVPN_STATUS_PATH",
+						Value: "/srv/status/openvpn.status",
+					},
+					{
+						Name:  "CLIENT_TO_CLIENT",
+						Value: "true",
+					},
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
+					{
+						Name:  "HA_VPN_CLIENTS",
+						Value: "2",
+					},
+				}...)
+				template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
+				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+					Name:            "openvpn-exporter",
+					Image:           vpnImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command: []string{
+						"/openvpn-exporter",
+						"-openvpn.status_paths",
+						"/srv/status/openvpn.status",
+						"-web.listen-address",
+						":15000",
+					},
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          "metrics",
+							ContainerPort: 15000,
+							Protocol:      corev1.ProtocolTCP,
+						},
+					},
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							TCPSocket: &corev1.TCPSocketAction{
+								Port: intstr.FromInt(15000),
+							},
+						},
+					},
+					LivenessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							TCPSocket: &corev1.TCPSocketAction{
+								Port: intstr.FromInt(15000),
+							},
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{
+								"all",
+							},
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("20m"),
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{mount},
+				})
+				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
+					Name: "openvpn-status",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				})
+			} else {
+				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+					Name:            "envoy-proxy",
+					Image:           values.ImageAPIServerProxy,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{
+								"all",
+							},
+						},
+					},
+					Command: []string{
+						"envoy",
+						"--concurrency",
+						"2",
+						"-c",
+						"/etc/envoy/envoy.yaml",
+					},
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							TCPSocket: &corev1.TCPSocketAction{
+								Port: intstr.FromInt(9443),
+							},
+						},
+					},
+					LivenessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							TCPSocket: &corev1.TCPSocketAction{
+								Port: intstr.FromInt(9443),
+							},
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("20m"),
+							corev1.ResourceMemory: resource.MustParse("20Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("850M"),
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "certs",
+							MountPath: "/srv/secrets/vpn-server",
+						},
+						{
+							Name:      "envoy-config",
+							MountPath: "/etc/envoy",
+						},
+					},
+				})
+				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
+					Name: "envoy-config",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: configMap.Name,
+							},
+						},
+					},
+				})
+			}
+			return template
+		}
+
+		deployment = func(nodeNetwork string) *appsv1.Deployment {
+			maxSurge := intstr.FromInt(100)
+			maxUnavailable := intstr.FromInt(0)
+			deploy := &appsv1.Deployment{
+				ObjectMeta: *deploymentObjectMeta,
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(replicas),
+					Replicas:             pointer.Int32(values.Replicas),
 					RevisionHistoryLimit: pointer.Int32(1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: DeploymentName,
@@ -272,277 +604,77 @@ admin:
 						},
 						Type: appsv1.RollingUpdateDeploymentStrategyType,
 					},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{
-								v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
-								v1beta1constants.LabelApp:                            DeploymentName,
-								v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
-								v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-								v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-								v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
-							},
-						},
-						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: pointer.Bool(false),
-							PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
-							DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
-							Containers: []corev1.Container{
-								{
-									Name:            DeploymentName,
-									Image:           vpnImage,
-									ImagePullPolicy: corev1.PullIfNotPresent,
-									Ports: []corev1.ContainerPort{
-										{
-											Name:          "tcp-tunnel",
-											ContainerPort: 1194,
-											Protocol:      corev1.ProtocolTCP,
-										},
-									},
-									SecurityContext: &corev1.SecurityContext{
-										Capabilities: &corev1.Capabilities{
-											Add: []corev1.Capability{
-												"NET_ADMIN",
-											},
-										},
-									},
-									Env: []corev1.EnvVar{
-										{
-											Name:  "SERVICE_NETWORK",
-											Value: serviceNetwork,
-										},
-										{
-											Name:  "POD_NETWORK",
-											Value: podNetwork,
-										},
-										{
-											Name: "LOCAL_NODE_IP",
-											ValueFrom: &corev1.EnvVarSource{
-												FieldRef: &corev1.ObjectFieldSelector{
-													FieldPath: "status.hostIP",
-												},
-											},
-										},
-									},
-									ReadinessProbe: &corev1.Probe{
-										ProbeHandler: corev1.ProbeHandler{
-											TCPSocket: &corev1.TCPSocketAction{
-												Port: intstr.FromInt(1194),
-											},
-										},
-									},
-									LivenessProbe: &corev1.Probe{
-										ProbeHandler: corev1.ProbeHandler{
-											TCPSocket: &corev1.TCPSocketAction{
-												Port: intstr.FromInt(1194),
-											},
-										},
-									},
-									Resources: corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("100m"),
-											corev1.ResourceMemory: resource.MustParse("100Mi"),
-										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("100Mi"),
-										},
-									},
-									VolumeMounts: []corev1.VolumeMount{
-										{
-											Name:      "dev-net-tun",
-											MountPath: "/dev/net/tun",
-										},
-										{
-											Name:      "certs",
-											MountPath: "/srv/secrets/vpn-server",
-										},
-										{
-											Name:      "tlsauth",
-											MountPath: "/srv/secrets/tlsauth",
-										},
-										{
-											Name:      "dh",
-											MountPath: "/srv/secrets/dh",
-										},
-									},
-								},
-								{
-									Name:            "envoy-proxy",
-									Image:           envoyImage,
-									ImagePullPolicy: corev1.PullIfNotPresent,
-									SecurityContext: &corev1.SecurityContext{
-										Capabilities: &corev1.Capabilities{
-											Drop: []corev1.Capability{
-												"all",
-											},
-										},
-									},
-									Command: []string{
-										"envoy",
-										"--concurrency",
-										"2",
-										"-c",
-										"/etc/envoy/envoy.yaml",
-									},
-									ReadinessProbe: &corev1.Probe{
-										ProbeHandler: corev1.ProbeHandler{
-											TCPSocket: &corev1.TCPSocketAction{
-												Port: intstr.FromInt(9443),
-											},
-										},
-									},
-									LivenessProbe: &corev1.Probe{
-										ProbeHandler: corev1.ProbeHandler{
-											TCPSocket: &corev1.TCPSocketAction{
-												Port: intstr.FromInt(9443),
-											},
-										},
-									},
-									Resources: corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("20m"),
-											corev1.ResourceMemory: resource.MustParse("20Mi"),
-										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("850M"),
-										},
-									},
-									VolumeMounts: []corev1.VolumeMount{
-										{
-											Name:      "certs",
-											MountPath: "/srv/secrets/vpn-server",
-										},
-										{
-											Name:      "envoy-config",
-											MountPath: "/etc/envoy",
-										},
-									},
-								},
-							},
-							TerminationGracePeriodSeconds: pointer.Int64(30),
-							Volumes: []corev1.Volume{
-								{
-									Name: "dev-net-tun",
-									VolumeSource: corev1.VolumeSource{
-										HostPath: &corev1.HostPathVolumeSource{
-											Path: "/dev/net/tun",
-											Type: &hostPathCharDev,
-										},
-									},
-								},
-								{
-									Name: "certs",
-									VolumeSource: corev1.VolumeSource{
-										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: pointer.Int32(420),
-											Sources: []corev1.VolumeProjection{
-												{
-													Secret: &corev1.SecretProjection{
-														LocalObjectReference: corev1.LocalObjectReference{
-															Name: "ca-vpn",
-														},
-														Items: []corev1.KeyToPath{{
-															Key:  "bundle.crt",
-															Path: "ca.crt",
-														}},
-													},
-												},
-												{
-													Secret: &corev1.SecretProjection{
-														LocalObjectReference: corev1.LocalObjectReference{
-															Name: "vpn-seed-server",
-														},
-														Items: []corev1.KeyToPath{
-															{
-																Key:  "tls.crt",
-																Path: "tls.crt",
-															},
-															{
-																Key:  "tls.key",
-																Path: "tls.key",
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-								{
-									Name: "tlsauth",
-									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName:  "vpn-seed-server-tlsauth-a1d0aa00",
-											DefaultMode: pointer.Int32(0400),
-										},
-									},
-								},
-								{
-									Name: "dh",
-									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName:  secretDH.Name,
-											DefaultMode: pointer.Int32(0400),
-										},
-									},
-								},
-								{
-									Name: "envoy-config",
-									VolumeSource: corev1.VolumeSource{
-										ConfigMap: &corev1.ConfigMapVolumeSource{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: configMap.Name,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
+					Template: *template(nodeNetwork, false),
 				},
-			}
-
-			if nodeNetwork != nil {
-				deploy.Spec.Template.Spec.Containers[0].Env = append(deploy.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "NODE_NETWORK", Value: *nodeNetwork})
 			}
 
 			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy
 		}
 
-		destinationRule = &networkingv1beta1.DestinationRule{
-			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-			Spec: istionetworkingv1beta1.DestinationRule{
-				ExportTo: []string{"*"},
-				Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
-				TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
-					ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
-						Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
-							MaxConnections: 5000,
-							TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-								Interval: &durationpb.Duration{
-									Seconds: 75,
-								},
-								Time: &durationpb.Duration{
-									Seconds: 7200,
+		statefulSet = func(nodeNetwork string) *appsv1.StatefulSet {
+			sts := &appsv1.StatefulSet{
+				ObjectMeta: *deploymentObjectMeta,
+				Spec: appsv1.StatefulSetSpec{
+					PodManagementPolicy:  appsv1.ParallelPodManagement,
+					Replicas:             pointer.Int32(3),
+					RevisionHistoryLimit: pointer.Int32(1),
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						v1beta1constants.LabelApp: DeploymentName,
+					}},
+					UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+						Type: appsv1.RollingUpdateStatefulSetStrategyType,
+					},
+					Template: *template(nodeNetwork, true),
+				},
+			}
+
+			Expect(references.InjectAnnotations(sts)).To(Succeed())
+			return sts
+		}
+
+		destinationRule = func() *networkingv1beta1.DestinationRule {
+			return &networkingv1beta1.DestinationRule{
+				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
+				Spec: istionetworkingv1beta1.DestinationRule{
+					ExportTo: []string{"*"},
+					Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
+					TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
+						ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
+							Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
+								MaxConnections: 5000,
+								TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+									Interval: &durationpb.Duration{
+										Seconds: 75,
+									},
+									Time: &durationpb.Duration{
+										Seconds: 7200,
+									},
 								},
 							},
 						},
-					},
-					LoadBalancer: &istionetworkingv1beta1.LoadBalancerSettings{
-						LocalityLbSetting: &istionetworkingv1beta1.LocalityLoadBalancerSetting{
-							Enabled:          &wrapperspb.BoolValue{Value: true},
-							FailoverPriority: []string{"topology.kubernetes.io/zone"},
+						LoadBalancer: &istionetworkingv1beta1.LoadBalancerSettings{
+							LocalityLbSetting: &istionetworkingv1beta1.LocalityLoadBalancerSetting{
+								Enabled:          &wrapperspb.BoolValue{Value: true},
+								FailoverPriority: []string{"topology.kubernetes.io/zone"},
+							},
+						},
+						OutlierDetection: &istionetworkingv1beta1.OutlierDetection{
+							MinHealthPercent: 0,
+						},
+						Tls: &istionetworkingv1beta1.ClientTLSSettings{
+							Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
 						},
 					},
-					OutlierDetection: &istionetworkingv1beta1.OutlierDetection{
-						MinHealthPercent: 0,
-					},
-					Tls: &istionetworkingv1beta1.ClientTLSSettings{
-						Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
-					},
 				},
-			},
+			}
+		}
+
+		indexedDestinationRule = func(idx int) *networkingv1beta1.DestinationRule {
+			destRule := destinationRule()
+			destRule.Name = fmt.Sprintf("%s-%d", DeploymentName, idx)
+			destRule.Spec.Host = fmt.Sprintf("%s.%s.svc.cluster.local", destRule.Name, namespace)
+			return destRule
 		}
 
 		networkPolicy = &networkingv1.NetworkPolicy{
@@ -623,6 +755,25 @@ admin:
 			},
 		}
 
+		maxUnavailable      = intstr.FromInt(1)
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      DeploymentName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "vpn-seed-server",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "vpn-seed-server",
+					},
+				},
+			},
+		}
+
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ServiceName,
@@ -654,6 +805,15 @@ admin:
 					v1beta1constants.LabelApp: DeploymentName,
 				},
 			},
+		}
+
+		indexedService = func(idx int) *corev1.Service {
+			svc := *service
+			svc.Name = fmt.Sprintf("%s-%d", ServiceName, idx)
+			svc.Spec.Selector = map[string]string{
+				"statefulset.kubernetes.io/pod-name": svc.Name,
+			}
+			return &svc
 		}
 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -699,7 +859,7 @@ admin:
 		By("expecting secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		c.EXPECT().Get(ctx, kutil.Key(namespace, "ca-vpn"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
-		vpnSeedServer = New(c, namespace, sm, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, nil, replicas, istioIngressGateway)
+		vpnSeedServer = New(c, namespace, sm, values)
 	})
 
 	AfterEach(func() {
@@ -824,6 +984,8 @@ admin:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).Return(fakeErr),
 				)
@@ -845,8 +1007,6 @@ admin:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).Return(fakeErr),
 				)
@@ -868,10 +1028,17 @@ admin:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()),
+
+					c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Return(fakeErr),
 				)
@@ -880,52 +1047,9 @@ admin:
 			})
 
 			It("should successfully deploy all resources (w/o node network)", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server"))
-					}),
-					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server-tlsauth"))
-					}),
-					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
-							Expect(obj).To(DeepEqual(configMap))
-						}),
-					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
-							Expect(obj).To(DeepEqual(secretDH))
-						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(networkPolicy))
-						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(deployment(nil)))
-						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(BeComparableTo(destinationRule, test.CmpOptsForDestinationRule()))
-						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(service))
-						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(vpa))
-						}),
-				)
-				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
-			})
-
-			It("should successfully deploy all resources (w/ node network)", func() {
-				vpnSeedServer = New(c, namespace, sm, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, &nodeNetwork, replicas, istioIngressGateway)
+				copy := values
+				copy.Network.NodeCIDR = ""
+				vpnSeedServer = New(c, namespace, sm, copy)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -952,18 +1076,167 @@ admin:
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(deployment(&nodeNetwork)))
-						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(BeComparableTo(destinationRule, test.CmpOptsForDestinationRule()))
+							Expect(obj).To(DeepEqual(deployment("")))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(service))
 						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(BeComparableTo(destinationRule(), test.CmpOptsForDestinationRule()))
+						}),
+
+					c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+				)
+				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
+			})
+
+			It("should successfully deploy all resources (w/o node network and high availability)", func() {
+				haValues := values
+				haValues.Network.NodeCIDR = ""
+				haValues.Replicas = 3
+				haValues.HighAvailabilityEnabled = true
+				haValues.HighAvailabilityNumberOfSeedServers = 3
+				haValues.HighAvailabilityNumberOfShootClients = 2
+
+				vpnSeedServer = New(c, namespace, sm, haValues)
+				vpnSeedServer.SetSecrets(secrets)
+				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
+
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server"))
+					}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server-tlsauth"))
+					}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(secretDH))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(networkPolicy))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.StatefulSet{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(statefulSet("")))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(podDisruptionBudget))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName+"-0"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(indexedService(0)))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-0"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(BeComparableTo(indexedDestinationRule(0), test.CmpOptsForDestinationRule()))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName+"-1"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(indexedService(1)))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-1"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(BeComparableTo(indexedDestinationRule(1), test.CmpOptsForDestinationRule()))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName+"-2"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(indexedService(2)))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-2"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(BeComparableTo(indexedDestinationRule(2), test.CmpOptsForDestinationRule()))
+						}),
+
+					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+				)
+				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
+			})
+
+			It("should successfully deploy all resources (w/ node network)", func() {
+				vpnSeedServer = New(c, namespace, sm, values)
+				vpnSeedServer.SetSecrets(secrets)
+				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
+
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server"))
+					}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server-tlsauth"))
+					}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(secretDH))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(networkPolicy))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(deployment(values.Network.NodeCIDR)))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(service))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(BeComparableTo(destinationRule(), test.CmpOptsForDestinationRule()))
+						}),
+
+					c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -994,10 +1267,21 @@ admin:
 			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail because the statefulset cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
+			)
+
+			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail because the destinationRule cannot be deleted", func() {
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
 			)
 
@@ -1008,6 +1292,7 @@ admin:
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}).Return(fakeErr),
 			)
@@ -1019,6 +1304,7 @@ admin:
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}).Return(fakeErr),
@@ -1031,6 +1317,7 @@ admin:
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
@@ -1044,10 +1331,41 @@ admin:
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
 				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName + "-0"}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName + "-1"}}),
+			)
+			Expect(vpnSeedServer.Destroy(ctx)).To(Succeed())
+		})
+
+		It("should successfully destroy all resources (w/ high availability)", func() {
+			haValues := values
+			haValues.Replicas = 2
+			haValues.HighAvailabilityEnabled = true
+			haValues.HighAvailabilityNumberOfSeedServers = 2
+			haValues.HighAvailabilityNumberOfShootClients = 1
+			vpnSeedServer = New(c, namespace, sm, haValues)
+
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
+				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName + "-0"}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName + "-1"}}),
 			)
 
 			Expect(vpnSeedServer.Destroy(ctx)).To(Succeed())

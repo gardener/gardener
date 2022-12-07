@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	monitoringPrometheusJobName = "reversed-vpn-envoy-side-car"
+	monitoringPrometheusJobName   = "reversed-vpn-envoy-side-car"
+	monitoringPrometheusJobNameHA = "openvpn-server-exporter"
 
 	monitoringMetricEnvoyClusterExternalUpstreamRq                             = "envoy_cluster_external_upstream_rq"
 	monitoringMetricEnvoyClusterExternalUpstreamRqCompleted                    = "envoy_cluster_external_upstream_rq_completed"
@@ -76,6 +77,12 @@ const (
 	monitoringMetricEnvoyClusterUpstreamCxLengthMsSum                          = "envoy_cluster_upstream_cx_length_ms_sum"
 	monitoringMetricEnvoyHttpDownstreamCxLengthMsBucket                        = "envoy_http_downstream_cx_length_ms_bucket"
 	monitoringMetricEnvoyHttpDownstreamCxLengthMsSum                           = "envoy_http_downstream_cx_length_ms_sum"
+
+	monitoringMetricOpenvpnServerClientReceivedBytesTotal      = "openvpn_server_client_received_bytes_total"
+	monitoringMetricOpenvpnServerClientSendBytesTotal          = "openvpn_server_client_sent_bytes_total"
+	monitoringMetricOpenvpnServerRouteLastReferenceTimeSeconds = "openvpn_server_route_last_reference_time_seconds"
+	monitoringMetricOpenvpnStatusUpdateTimeSeconds             = "openvpn_status_update_time_seconds"
+	monitoringMetricOpenvpnUp                                  = "openvpn_up"
 )
 
 var (
@@ -133,6 +140,14 @@ var (
 		monitoringMetricEnvoyHttpDownstreamCxLengthMsSum,
 	}
 
+	monitoringAllowedMetricsHA = []string{
+		monitoringMetricOpenvpnServerClientReceivedBytesTotal,
+		monitoringMetricOpenvpnServerClientSendBytesTotal,
+		monitoringMetricOpenvpnServerRouteLastReferenceTimeSeconds,
+		monitoringMetricOpenvpnStatusUpdateTimeSeconds,
+		monitoringMetricOpenvpnUp,
+	}
+
 	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
 kubernetes_sd_configs:
 - role: service
@@ -143,13 +158,43 @@ relabel_configs:
   - __meta_kubernetes_service_name
   - __meta_kubernetes_service_port_name
   action: keep
-  regex: ` + ServiceName + `;` + envoyMetricsPortName + `
+  regex: ` + ServiceName + `;` + metricsPortName + `
 metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
   regex: ^(` + strings.Join(monitoringAllowedMetrics, "|") + `)$
 `
 	monitoringScrapeConfigTemplate *template.Template
+
+	monitoringScrapeConfigTmplHA = `job_name: ` + monitoringPrometheusJobNameHA + `
+kubernetes_sd_configs:
+- role: service
+  namespaces:
+    names: [{{ .namespace }}]
+relabel_configs:
+- source_labels:
+  - __meta_kubernetes_service_name
+  - __meta_kubernetes_service_port_name
+  action: keep
+  regex: ` + ServiceName + `-[0-2];` + metricsPortName + `
+metric_relabel_configs:
+- source_labels: [ __name__ ]
+  action: keep
+  regex: ^(` + strings.Join(monitoringAllowedMetricsHA, "|") + `)$
+- source_labels: [instance] 
+  action: replace
+  regex: ([^.]+).+ 
+  target_label: service 
+  replacement: $1
+- source_labels: [real_address]
+  action: replace
+  regex: ([^:]+).+ 
+  target_label: real_ip 
+  replacement: $1
+- regex: "username"
+  action: labeldrop
+`
+	monitoringScrapeConfigTemplateHA *template.Template
 )
 
 func init() {
@@ -157,13 +202,19 @@ func init() {
 
 	monitoringScrapeConfigTemplate, err = template.New("monitoring-scrape-config").Parse(monitoringScrapeConfigTmpl)
 	utilruntime.Must(err)
+	monitoringScrapeConfigTemplateHA, err = template.New("monitoring-scrape-config").Parse(monitoringScrapeConfigTmplHA)
+	utilruntime.Must(err)
 }
 
 // ScrapeConfigs returns the scrape configurations for Prometheus.
 func (v *vpnSeedServer) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": v.namespace}); err != nil {
+	scrapeTemplate := monitoringScrapeConfigTemplate
+	if v.values.HighAvailabilityEnabled {
+		scrapeTemplate = monitoringScrapeConfigTemplateHA
+	}
+	if err := scrapeTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": v.namespace}); err != nil {
 		return nil, err
 	}
 

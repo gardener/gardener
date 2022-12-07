@@ -1502,7 +1502,7 @@ var _ = Describe("validator", func() {
 
 				It("update should pass because validation of network disjointedness should not be executed", func() {
 					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
+					shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVPNRange)
 					oldShoot.Spec.SeedName = shoot.Spec.SeedName
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1517,7 +1517,7 @@ var _ = Describe("validator", func() {
 
 				It("update should fail because validation of network disjointedness is executed", func() {
 					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
+					shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVPNRange)
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())

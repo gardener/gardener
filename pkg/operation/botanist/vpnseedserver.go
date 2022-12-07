@@ -72,26 +72,38 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		return nil, err
 	}
 
-	var kubeAPIServerHost *string
+	values := vpnseedserver.Values{
+		ImageAPIServerProxy: imageAPIServerProxy.String(),
+		ImageVPNSeedServer:  imageVPNSeedServer.String(),
+		Network: vpnseedserver.NetworkValues{
+			PodCIDR:     b.Shoot.Networks.Pods.String(),
+			ServiceCIDR: b.Shoot.Networks.Services.String(),
+			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
+		},
+		Replicas:                             1,
+		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
+		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
+		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+		IstioIngressGateway: vpnseedserver.IstioIngressGateway{
+			Namespace: *b.Config.SNI.Ingress.Namespace,
+			Labels:    b.Config.SNI.Ingress.Labels,
+		},
+		SeedVersion: b.Seed.KubernetesVersion,
+	}
+
 	if b.APIServerSNIEnabled() {
-		kubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
+		values.KubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
+	}
+
+	if b.Shoot.VPNHighAvailabilityEnabled {
+		values.Replicas = int32(b.Shoot.VPNHighAvailabilityNumberOfSeedServers)
 	}
 
 	return vpnseedserver.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
-		imageAPIServerProxy.String(),
-		imageVPNSeedServer.String(),
-		kubeAPIServerHost,
-		b.Shoot.Networks.Services.String(),
-		b.Shoot.Networks.Pods.String(),
-		b.Shoot.GetInfo().Spec.Networking.Nodes,
-		b.Shoot.GetReplicas(1),
-		vpnseedserver.IstioIngressGateway{
-			Namespace: *b.Config.SNI.Ingress.Namespace,
-			Labels:    b.Config.SNI.Ingress.Labels,
-		},
+		values,
 	), nil
 }
 
