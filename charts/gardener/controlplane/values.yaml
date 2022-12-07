@@ -51,28 +51,35 @@ global:
     etcd:
       useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
       servers: https://etcd:2379
-      tlsSecretName:
-      # caBundle: |
-      #   -----BEGIN CERTIFICATE-----
-      #   ...
-      #   -----END CERTIFICATE-----
-      # tls:
-      #   crt: |
-      #     -----BEGIN CERTIFICATE-----
-      #     ...
-      #     -----END CERTIFICATE-----
-      #   key: |
-      #     -----BEGIN RSA PRIVATE KEY-----
-      #     ...
-      #     -----END RSA PRIVATE KEY-----
+  #   BEGIN etcd TLS configuration (CA and client certificate)
+  #   - either specify 'tlsSecretName' or ('caBundleSecretName' and 'clientCertSecretName') or ('caBundle' and 'tls')
+  #   tlsSecretName: etcd-tls-secrets # must contain 'ca.crt', 'tls.crt', 'tls.key' keys
+  #   caBundleSecretName: etcd-ca-bundle # must contain 'bundle.crt' key
+  #   clientCertSecretName: etcd-client-cert # must contain 'tls.crt', 'tls.key' keys
+  #   caBundle: |
+  #     -----BEGIN CERTIFICATE-----
+  #     ...
+  #     -----END CERTIFICATE-----
+  #   tls:
+  #     crt: |
+  #       -----BEGIN CERTIFICATE-----
+  #       ...
+  #       -----END CERTIFICATE-----
+  #     key: |
+  #       -----BEGIN RSA PRIVATE KEY-----
+  #       ...
+  #       -----END RSA PRIVATE KEY-----
+  #   END etcd TLS configuration (CA and client certificate)
     insecureSkipTLSVerify: false
     groupPriorityMinimum: 10000
     versionPriority: 20
-    tlsSecretName:
+  # BEGIN gardener-apiserver TLS configuration (CA and server certificate)
+  # - specify 'caBundle' and ('tlsSecretName' or 'tls')
     caBundle: |
       -----BEGIN CERTIFICATE-----
       ...
       -----END CERTIFICATE-----
+  # tlsSecretName: gardener-apiserver-tls-secrets # must contain 'tls.crt', 'tls.key' keys
     tls:
       crt: |
         -----BEGIN CERTIFICATE-----
@@ -82,6 +89,7 @@ global:
         -----BEGIN RSA PRIVATE KEY-----
         ...
         -----END RSA PRIVATE KEY-----
+  # END gardener-apiserver TLS configuration (CA and server certificate)
     featureGates: {}
   # enableAdmissionPlugins: [] # List of admission plugins to be enabled in addition to default enabled ones.
   # disableAdmissionPlugins: [] # List of admission plugins that should be disabled although they are in the default enabled plugins list.
