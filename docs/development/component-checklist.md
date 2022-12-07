@@ -9,26 +9,32 @@ This document provides a checklist for them which you can walk through.
 1. **Avoid usage of Helm charts** ([example](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver))
 
    Nowadays, we use [Golang components](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/interfaces.go) instead of Helm charts for deploying components to a cluster.
+   Please find a typical structure of such components [here](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L80-L97) (configuration values are typically managed in a `Values` structure).
    There are a few exceptions (e.g., [Istio](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/istio)) still using charts, however the default should be using a Golang-based implementation.
+   For the exceptional cases, use Golang's [embed](https://pkg.go.dev/embed) package to embed the Helm chart directory ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/istio/istiod.go#L51-L52), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/istio/istiod.go#L257-L273)). 
 
 2. **Choose the proper deployment way** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L210-L225), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L442-L484), [example 3](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubestatemetrics/kube_state_metrics.go#L116))
 
    For historic reasons, resources related to shoot control plane components are applied directly with the client.
-   All other resources (seed or shoot system components) are deployed via `gardener-resource-manager`'s [Resource controller](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#managedresource-controller) (`ManagedResource`s).
+   All other resources (seed or shoot system components) are deployed via `gardener-resource-manager`'s [Resource controller](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#managedresource-controller) (`ManagedResource`s) since it performs health checks out-of-the-box and has a lot of other features (see its documentation for more information).
    Components which can run as both seed system component or shoot control plane component (e.g., VPA or `kube-state-metrics`) can make use of [these utility functions](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/resourceconfig.go).
 
 3. **Do not hard-code container image references** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml#L130-L133), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/metricsserver.go#L28-L31), [example 3](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L82-L83))
 
    We define all image references centrally in the [`charts/images.yaml`](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml) file.
-   Hence, the image references must not be hard-coded in the pod template spec but read from this so-called "image vector" instead.
+   Hence, the image references must not be hard-coded in the pod template spec but read from this so-called ["image vector"](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/deployment/image_vector.md) instead.
 
 4. **Use unique `ConfigMap`s/`Secret`s** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L181-L188), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L347))
 
    [Unique `ConfigMap`s/`Secret`s](https://kubernetes.io/docs/concepts/configuration/configmap/#configmap-immutable) are immutable for modification and have a unique name.
    This has a couple of benefits, e.g. the `kubelet` doesn't watch these resources, and it is always clear which resource contains which data since it cannot be changed.
+   As a consequence, unique/immutable `ConfigMap`s/`Secret` are superior to checksum annotations on the pod templates.
    Stale/unused `ConfigMap`s/`Secret`s are garbage-collected by `gardener-resource-manager`'s [GarbageCollector](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#garbage-collector-for-immutable-configmapssecrets).
    There are utility functions (see examples above) for using unique `ConfigMap`s/`Secret`s in Golang components.
-   It is essential to inject the annotations into the workload resource to make the garbage-collection work.
+   It is essential to inject the annotations into the workload resource to make the garbage-collection work.\
+   Note that some `ConfigMap`s/`Secret`s should not be unique (e.g., those containing monitoring or logging configuration).
+   The reason is that the old revision stays in the cluster even if unused until the garbage-collector acts.
+   During this time, they would be wrongly aggregated to the full configuration.
 
 5. **Manage certificates/secrets via [secrets manager](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/utils/secrets/manager)** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L100-L109))
 
@@ -126,10 +132,12 @@ This document provides a checklist for them which you can walk through.
 1. **Provide monitoring scrape config and alerting rules** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/coredns/monitoring.go), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/monitoring.go#L97))
 
    Components should provide scrape configuration and alerting rules for Prometheus/Alertmanager if appropriate.
+   This should be done inside a dedicated `monitoring.go` file.
 
 2. **Provide logging parsers and filters** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/coredns/logging.go), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/seed/seed/reconciler_reconcile.go#L563))
 
    Components should provide parsers and filters for fluent-bit if appropriate.
+   This should be done inside a dedicated `logging.go` file.
 
 3. **Set the `revisionHistoryLimit` to `2` for `Deployment`s** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L273))
 
