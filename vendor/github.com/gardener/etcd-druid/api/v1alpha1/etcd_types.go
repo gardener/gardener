@@ -230,6 +230,16 @@ type EtcdConfig struct {
 	// HeartbeatDuration defines the duration for members to send heartbeats. The default value is 10s.
 	// +optional
 	HeartbeatDuration *metav1.Duration `json:"heartbeatDuration,omitempty"`
+	// ClientService defines the parameters of the client service that a user can specify
+	// +optional
+	ClientService *ClientService `json:"clientService,omitempty"`
+}
+
+// ClientService defines the parameters of the client service that a user can specify
+type ClientService struct {
+	// Annotations specify the annotations that should be added to the client service
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // SharedConfig defines parameters shared and used by Etcd as well as backup-restore sidecar.
@@ -430,6 +440,9 @@ type EtcdStatus struct {
 	// Members represents the members of the etcd cluster
 	// +optional
 	Members []EtcdMemberStatus `json:"members,omitempty"`
+	// PeerUrlTLSEnabled captures the state of peer url TLS being enabled for the etcd member(s)
+	// +optional
+	PeerUrlTLSEnabled *bool `json:"peerUrlTLSEnabled,omitempty"`
 }
 
 // +genclient
