@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -57,6 +58,7 @@ func (k *kubeAPIServer) emptyRoleBindingHAVPN() *rbacv1.RoleBinding {
 
 func (k *kubeAPIServer) reconcileServiceAccount(ctx context.Context) error {
 	sa := k.emptyServiceAccount()
+	sa.AutomountServiceAccountToken = pointer.Bool(false)
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), sa, func() error {
 		return nil
 	})
