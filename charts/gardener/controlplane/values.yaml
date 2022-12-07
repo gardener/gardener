@@ -51,20 +51,25 @@ global:
     etcd:
       useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
       servers: https://etcd:2379
-      tlsSecretName:
-      # caBundle: |
-      #   -----BEGIN CERTIFICATE-----
-      #   ...
-      #   -----END CERTIFICATE-----
-      # tls:
-      #   crt: |
-      #     -----BEGIN CERTIFICATE-----
-      #     ...
-      #     -----END CERTIFICATE-----
-      #   key: |
-      #     -----BEGIN RSA PRIVATE KEY-----
-      #     ...
-      #     -----END RSA PRIVATE KEY-----
+  #   BEGIN etcd TLS configuration (CA and client certificate)
+  #   - either specify 'tlsSecretName' or ('caBundleSecretName' and 'clientCertSecretName') or ('caBundle' and 'tls')
+  #   tlsSecretName: etcd-tls-secrets # must contain 'ca.crt', 'tls.crt', 'tls.key' keys
+  #   caBundleSecretName: etcd-ca-bundle # must contain 'bundle.crt' key
+  #   clientCertSecretName: etcd-client-cert # must contain 'tls.crt', 'tls.key' keys
+  #   caBundle: |
+  #     -----BEGIN CERTIFICATE-----
+  #     ...
+  #     -----END CERTIFICATE-----
+  #   tls:
+  #     crt: |
+  #       -----BEGIN CERTIFICATE-----
+  #       ...
+  #       -----END CERTIFICATE-----
+  #     key: |
+  #       -----BEGIN RSA PRIVATE KEY-----
+  #       ...
+  #       -----END RSA PRIVATE KEY-----
+  #   END etcd TLS configuration (CA and client certificate)
     insecureSkipTLSVerify: false
     groupPriorityMinimum: 10000
     versionPriority: 20

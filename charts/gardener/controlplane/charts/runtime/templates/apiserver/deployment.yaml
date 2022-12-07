@@ -207,7 +207,11 @@ spec:
         - --etcd-cafile=/etc/gardener-apiserver/srv/etcd/ca.crt
         - --etcd-certfile=/etc/gardener-apiserver/srv/etcd/tls.crt
         - --etcd-keyfile=/etc/gardener-apiserver/srv/etcd/tls.key
-        {{- else}}
+        {{- else if and .Values.global.apiserver.etcd.caBundleSecretName .Values.global.apiserver.etcd.clientCertSecretName }}
+        - --etcd-cafile=/etc/gardener-apiserver/srv/etcd/ca/bundle.crt
+        - --etcd-certfile=/etc/gardener-apiserver/srv/etcd/client/tls.crt
+        - --etcd-keyfile=/etc/gardener-apiserver/srv/etcd/client/tls.key
+        {{- else }}
         {{- if .Values.global.apiserver.etcd.caBundle }}
         - --etcd-cafile=/etc/gardener-apiserver/srv/etcd-client-ca.crt
         {{- end }}
@@ -314,6 +318,16 @@ spec:
           mountPath: /etc/gardener-apiserver/srv/etcd/
           readOnly: true
         {{- end }}
+        {{- if .Values.global.apiserver.etcd.caBundleSecretName }}
+        - name: gardener-etcd-ca-bundle
+          mountPath: /etc/gardener-apiserver/srv/etcd/ca/
+          readOnly: true
+        {{- end }}
+        {{- if .Values.global.apiserver.etcd.clientCertSecretName }}
+        - name: gardener-etcd-client-cert
+          mountPath: /etc/gardener-apiserver/srv/etcd/client/
+          readOnly: true
+        {{- end }}
         {{- if .Values.global.apiserver.kubeconfig }}
         - name: gardener-apiserver-kubeconfig
           mountPath: /etc/gardener-apiserver/kubeconfig
@@ -401,6 +415,16 @@ spec:
       - name: gardener-etcd-client-tls
         secret:
           secretName: {{ .Values.global.apiserver.etcd.tlsSecretName }}
+      {{- end }}
+      {{- if .Values.global.apiserver.etcd.caBundleSecretName }}
+      - name: gardener-etcd-ca-bundle
+        secret:
+          secretName: {{ .Values.global.apiserver.etcd.caBundleSecretName }}
+      {{- end }}
+      {{- if .Values.global.apiserver.etcd.clientCertSecretName }}
+      - name: gardener-etcd-client-cert
+        secret:
+          secretName: {{ .Values.global.apiserver.etcd.clientCertSecretName }}
       {{- end }}
       {{- if .Values.global.apiserver.kubeconfig }}
       - name: gardener-apiserver-kubeconfig
