@@ -21,6 +21,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -536,6 +537,74 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 		})
 
+		Describe("Keep garbage-collectable object", func() {
+			var node *corev1.Node
+
+			BeforeEach(func() {
+				configMap.SetLabels(map[string]string{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable})
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
+
+				node = &corev1.Node{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Node",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "node",
+						Labels: map[string]string{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable},
+					},
+				}
+				secretForManagedResource.Data["node.yaml"] = jsonDataForObject(node)
+			})
+
+			JustBeforeEach(func() {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
+			})
+
+			JustAfterEach(func() {
+				Expect(testClient.Delete(ctx, configMap)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, node)).To(Or(Succeed(), BeNotFoundError()))
+			})
+
+			It("should keep the garbage-collectable objects in case it is removed from the MangedResource", func() {
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{}
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
+
+				Consistently(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(BeNotFoundError())
+				}).Should(Succeed())
+			})
+
+			It("should keep the garbage-collectable objects even after deletion of ManagedResource", func() {
+				By("deleting ManagedResource")
+				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				}).Should(Succeed())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(BeNotFoundError())
+			})
+		})
+
 		Describe("Ignore on Resource", func() {
 			BeforeEach(func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
@@ -669,6 +738,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						"foo": "bar",
 					}
 				})
+
 				It("should confirm that the managed-by label is set", func() {
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -906,7 +976,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 })
 
 func secretDataForObject(obj runtime.Object, key string) map[string][]byte {
+	return map[string][]byte{key: jsonDataForObject(obj)}
+}
+
+func jsonDataForObject(obj runtime.Object) []byte {
 	jsonObject, err := json.Marshal(obj)
-	Expect(err).NotTo(HaveOccurred())
-	return map[string][]byte{key: jsonObject}
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return jsonObject
 }

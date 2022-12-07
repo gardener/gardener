@@ -125,6 +125,7 @@ var _ = BeforeSuite(func() {
 		},
 		ClassFilter:                   filter,
 		RequeueAfterOnDeletionPending: pointer.Duration(50 * time.Millisecond),
+		GarbageCollectorActivated:     true,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")
