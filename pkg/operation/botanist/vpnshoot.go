@@ -33,7 +33,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 		Endpoint:    b.outOfClusterAPIServerFQDN(),
 		OpenVPNPort: 8132,
-		}
+	}
 
 	image, err := b.ImageVector.FindImage(imageName, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {

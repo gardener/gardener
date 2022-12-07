@@ -102,13 +102,12 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameServer                  = "kube-apiserver"
 		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
 		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
-		secretNameVPNSeed                 = "vpn-seed"
-		secretNameVPNSeedTLSAuth          = "vpn-seed-tlsauth-de1d12a3"
 		secretNameVPNSeedClient           = "vpn-seed-client"
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
+		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscalerV2beta1       *autoscalingv2beta1.HorizontalPodAutoscaler
@@ -1499,12 +1498,15 @@ rules:
 				deployAndRead()
 
 				Expect(deployment.Annotations).To(Equal(map[string]string{
+					"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+					"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
+					"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
-					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
 					"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
 					"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
@@ -1512,8 +1514,6 @@ rules:
 					"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 					"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 					"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
-					"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
-					"reference.resources.gardener.cloud/secret-2fb65543":    secretNameVPNSeedTLSAuth,
 					"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
 					"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 				}))
@@ -1545,7 +1545,7 @@ rules:
 				}))
 			})
 
-			It("should have the expected pod template metadata with reversed vpn enabled", func() {
+			It("should have the expected pod template metadata", func() {
 				kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version})
 				deployAndRead()
 
@@ -1561,10 +1561,11 @@ rules:
 					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 					"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-					"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
-					"reference.resources.gardener.cloud/secret-2fb65543":    secretNameVPNSeedTLSAuth,
 					"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 					"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+					"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+					"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+					"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
 					"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
 					"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 				}))
@@ -1590,7 +1591,7 @@ rules:
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
 			})
 
-			It("should have no init containers when reversed vpn is enabled", func() {
+			It("should have no init containers", func() {
 				kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version})
 
 				deployAndRead()
@@ -1598,169 +1599,7 @@ rules:
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 			})
 
-			It("should have one init container and the vpn-seed sidecar container when reversed vpn is disabled", func() {
-				var (
-					images    = Images{AlpineIPTables: "some-image:latest", VPNSeed: "some-other-image:really-latest"}
-					vpnConfig = VPNConfig{
-						ReversedVPNEnabled: false,
-						PodNetworkCIDR:     "1.2.3.4/5",
-						ServiceNetworkCIDR: "6.7.8.9/10",
-						NodeNetworkCIDR:    pointer.String("11.12.13.14/15"),
-					}
-				)
-
-				kapi = New(kubernetesInterface, namespace, sm, Values{VPN: vpnConfig, Images: images, Version: version})
-				deployAndRead()
-
-				Expect(deployment.Spec.Template.Spec.InitContainers).To(ConsistOf(corev1.Container{
-					Name:  "set-iptable-rules",
-					Image: images.AlpineIPTables,
-					Command: []string{
-						"/bin/sh",
-						"-c",
-						"iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP",
-					},
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: &corev1.Capabilities{
-							Add: []corev1.Capability{"NET_ADMIN"},
-						},
-						Privileged: pointer.Bool(true),
-					},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "modules",
-						MountPath: "/lib/modules",
-					}},
-				}))
-				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
-					Name: "modules",
-					VolumeSource: corev1.VolumeSource{
-						HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
-					},
-				}))
-
-				Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
-					Name:            "vpn-seed",
-					Image:           images.VPNSeed,
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Env: []corev1.EnvVar{
-						{
-							Name:  "MAIN_VPN_SEED",
-							Value: "true",
-						},
-						{
-							Name:  "OPENVPN_PORT",
-							Value: "4314",
-						},
-						{
-							Name:  "APISERVER_AUTH_MODE",
-							Value: "client-cert",
-						},
-						{
-							Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
-							Value: "/srv/kubernetes/ca/bundle.crt",
-						},
-						{
-							Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
-							Value: "/srv/secrets/vpn-seed/tls.crt",
-						},
-						{
-							Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_KEY",
-							Value: "/srv/secrets/vpn-seed/tls.key",
-						},
-						{
-							Name:  "SERVICE_NETWORK",
-							Value: vpnConfig.ServiceNetworkCIDR,
-						},
-						{
-							Name:  "POD_NETWORK",
-							Value: vpnConfig.PodNetworkCIDR,
-						},
-						{
-							Name:  "NODE_NETWORK",
-							Value: *vpnConfig.NodeNetworkCIDR,
-						},
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("100m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-					},
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: &corev1.Capabilities{
-							Add: []corev1.Capability{"NET_ADMIN"},
-						},
-						Privileged: pointer.Bool(true),
-					},
-					TerminationMessagePath:   "/dev/termination-log",
-					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "vpn-seed",
-							MountPath: "/srv/secrets/vpn-seed",
-						},
-						{
-							Name:      "vpn-seed-tlsauth",
-							MountPath: "/srv/secrets/tlsauth",
-						},
-						{
-							Name:      "ca",
-							MountPath: "/srv/kubernetes/ca",
-						},
-					},
-				}))
-				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
-					corev1.Volume{
-						Name: "vpn-seed",
-						VolumeSource: corev1.VolumeSource{
-							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: pointer.Int32(400),
-								Sources: []corev1.VolumeProjection{
-									{
-										Secret: &corev1.SecretProjection{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: secretNameCAClient,
-											},
-											Items: []corev1.KeyToPath{{
-												Key:  "bundle.crt",
-												Path: "ca.crt",
-											}},
-										},
-									},
-									{
-										Secret: &corev1.SecretProjection{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: secretNameVPNSeed,
-											},
-											Items: []corev1.KeyToPath{
-												{
-													Key:  "tls.crt",
-													Path: "tls.crt",
-												},
-												{
-													Key:  "tls.key",
-													Path: "tls.key",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					corev1.Volume{
-						Name: "vpn-seed-tlsauth",
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeedTLSAuth},
-						},
-					},
-				))
-			})
-
-			It("should have no init container and three vpn-seed-client sidecar containers when reversed vpn and vpn high availability are enabled", func() {
+			It("should have no init container and three vpn-seed-client sidecar containers when vpn high availability are enabled", func() {
 				values := Values{
 					Images: Images{VPNClient: "vpn-client-image:really-latest"},
 					VPN: VPNConfig{
@@ -2149,6 +1988,7 @@ rules:
 						"--tls-cipher-suites="+strings.Join(tlscipherSuites, ","),
 						"--vmodule=httplog=3",
 						"--v=3",
+						"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
 					))
 					Expect(issuerIdx).To(BeNumerically(">=", 0))
 					Expect(issuerIdx).To(BeNumerically("<", issuerIdx1))
@@ -2242,6 +2082,21 @@ rules:
 							Name:      "usr-share-cacerts",
 							MountPath: "/usr/share/ca-certificates",
 							ReadOnly:  true,
+						},
+						corev1.VolumeMount{
+							Name:      "ca-vpn",
+							MountPath: "/srv/kubernetes/ca-vpn",
+							ReadOnly:  false,
+						},
+						corev1.VolumeMount{
+							Name:      "http-proxy",
+							MountPath: "/etc/srv/kubernetes/envoy",
+							ReadOnly:  false,
+						},
+						corev1.VolumeMount{
+							Name:      "egress-selection-config",
+							MountPath: "/etc/kubernetes/egress",
+							ReadOnly:  false,
 						},
 					))
 					Expect(deployment.Spec.Template.Spec.Volumes).To(ConsistOf(
@@ -2405,10 +2260,11 @@ rules:
 								},
 							},
 						},
-						//VPN-related secrets (will be asserted in detail later)
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("modules")}),
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed")}),
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed-tlsauth")}),
+
+						// VPN-related secrets (will be asserted in detail later)
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("ca-vpn")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-selection-config")}),
 					))
 
 					secret := &corev1.Secret{}

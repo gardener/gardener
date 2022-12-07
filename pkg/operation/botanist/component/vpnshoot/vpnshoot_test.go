@@ -292,7 +292,6 @@ status: {}
 					MountPath: "/srv/secrets/tlsauth",
 				})
 
-
 				env = append(env,
 					corev1.EnvVar{
 						Name:  "ENDPOINT",
@@ -322,7 +321,6 @@ status: {}
 						MountPath: "/dev/net/tun",
 					},
 				)
-
 
 				if vpaEnabled {
 					limits = corev1.ResourceList{
@@ -482,7 +480,6 @@ status: {}
 					annotations[references.AnnotationKey(references.KindSecret, item)] = item
 				}
 
-
 				annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuth)] = secretNameTLSAuth
 
 				hostPathCharDev := corev1.HostPathCharDev
@@ -535,7 +532,6 @@ status: {}
 					}
 				}
 
-
 				if highAvailable {
 					reversedVPNInitContainers[0].Env = append(reversedVPNInitContainers[0].Env, []corev1.EnvVar{
 						{
@@ -553,7 +549,6 @@ status: {}
 					}...)
 				}
 				obj.Spec.InitContainers = reversedVPNInitContainers
-			
 
 				return obj
 			}

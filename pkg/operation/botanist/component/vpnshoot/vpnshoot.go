@@ -424,7 +424,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			kind = "StatefulSet"
 		}
 		containerNames := []string{containerName}
-		if v.values.VPNHighAvailabilityEnabled {
+		if v.values.HighAvailabilityEnabled {
 			containerNames = nil
 			for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 				containerNames = append(containerNames, fmt.Sprintf("%s-s%d", containerName, i))
