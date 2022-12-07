@@ -58,8 +58,8 @@ func (k *kubeAPIServer) emptyRoleBindingHAVPN() *rbacv1.RoleBinding {
 
 func (k *kubeAPIServer) reconcileServiceAccount(ctx context.Context) error {
 	sa := k.emptyServiceAccount()
-	sa.AutomountServiceAccountToken = pointer.Bool(false)
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), sa, func() error {
+		sa.AutomountServiceAccountToken = pointer.Bool(false)
 		return nil
 	})
 	return err
