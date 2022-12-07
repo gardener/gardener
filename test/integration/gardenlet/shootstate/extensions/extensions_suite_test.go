@@ -22,8 +22,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -42,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestShootStateExtensionsController(t *testing.T) {
@@ -61,8 +58,7 @@ var (
 	testClient client.Client
 	mgrClient  client.Client
 
-	testNamespace *corev1.Namespace
-	testRunID     string
+	testRunID string
 )
 
 var _ = BeforeSuite(func() {
@@ -104,22 +100,6 @@ var _ = BeforeSuite(func() {
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
-
-	By("creating test namespace")
-	testNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: "garden-",
-		},
-	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
-	testRunID = testNamespace.Name
-
-	DeferCleanup(func() {
-		By("deleting test namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
