@@ -632,8 +632,9 @@ func keepObject(meta metav1.Object) bool {
 	return keyExistsAndValueTrue(meta.GetAnnotations(), resourcesv1alpha1.KeepObject)
 }
 
-func isGarbageCollectableResource(meta metav1.Object) bool {
-	return keyExistsAndValueTrue(meta.GetLabels(), references.LabelKeyGarbageCollectable)
+func isGarbageCollectableResource(obj *unstructured.Unstructured) bool {
+	return keyExistsAndValueTrue(obj.GetLabels(), references.LabelKeyGarbageCollectable) &&
+		obj.GetAPIVersion() == "v1" && sets.NewString("ConfigMap", "Secret").Has(obj.GetKind())
 }
 
 func keyExistsAndValueTrue(kv map[string]string, key string) bool {
