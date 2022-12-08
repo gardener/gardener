@@ -297,7 +297,7 @@ func (h *Handler) mutateNodeAffinity(
 	zones []string,
 	podTemplateSpec *corev1.PodTemplateSpec,
 ) {
-	if nodeSelectorTerms := kutil.GetNodeAffinitySelectorTermsForZones(failureToleranceType, zones); nodeSelectorTerms != nil {
+	if nodeSelectorRequirement := kutil.GetNodeSelectorRequirementForZones(failureToleranceType, zones); nodeSelectorRequirement != nil {
 		if podTemplateSpec.Spec.Affinity == nil {
 			podTemplateSpec.Spec.Affinity = &corev1.Affinity{}
 		}
@@ -320,8 +320,15 @@ func (h *Handler) mutateNodeAffinity(
 				}
 			}
 		}
+		podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = filteredNodeSelectorTerms
 
-		podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = append(filteredNodeSelectorTerms, nodeSelectorTerms...)
+		if len(podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms) == 0 {
+			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = []corev1.NodeSelectorTerm{{}}
+		}
+
+		for i := range podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
+			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[i].MatchExpressions = append(podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[i].MatchExpressions, *nodeSelectorRequirement)
+		}
 	}
 }
 
