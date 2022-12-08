@@ -396,6 +396,13 @@ var _ = Describe("Seed controller tests", func() {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 						}).Should(BeNotFoundError())
+
+						// There can be case when CRD is marked for deletion but still not gone from cluster. Because of this
+						// test in which CRD is created manually can flake.
+						By("Verify that CRD has been deleted")
+						Eventually(func(g Gomega) error {
+							return testClient.Get(ctx, client.ObjectKey{Name: "managedresources.resources.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})
+						}).Should(BeNotFoundError())
 					}
 
 					By("Ensure Seed is gone")
