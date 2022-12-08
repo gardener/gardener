@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +66,7 @@ const (
 	Local = "Local"
 	// ECS is a constant for the EMC storage provider.
 	ECS = "ECS"
-	// OSC is a constant for the OpenShift storage provider.
+	// OCS is a constant for the OpenShift storage provider.
 	OCS = "OCS"
 )
 
@@ -152,9 +154,10 @@ func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, nam
 
 // Key creates a new client.ObjectKey from the given parameters.
 // There are only two ways to call this function:
-// - If only namespaceOrName is set, then a client.ObjectKey with name set to namespaceOrName is returned.
-// - If namespaceOrName and one nameOpt is given, then a client.ObjectKey with namespace set to namespaceOrName
-//   and name set to nameOpt[0] is returned.
+//   - If only namespaceOrName is set, then a client.ObjectKey with name set to namespaceOrName is returned.
+//   - If namespaceOrName and one nameOpt is given, then a client.ObjectKey with namespace set to namespaceOrName
+//     and name set to nameOpt[0] is returned.
+//
 // For all other cases, this method panics.
 func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 	namespace, name := nameAndNamespace(namespaceOrName, nameOpt...)
@@ -162,7 +165,7 @@ func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 }
 
 // GetStoreValues converts the values in the StoreSpec to a map, or returns an error if the storage provider is unsupported.
-func GetStoreValues(ctx context.Context, client client.Client, store *druidv1alpha1.StoreSpec, namespace string) (map[string]interface{}, error) {
+func GetStoreValues(ctx context.Context, client client.Client, logger logr.Logger, store *druidv1alpha1.StoreSpec, namespace string) (map[string]interface{}, error) {
 	storageProvider, err := StorageProviderFromInfraProvider(store.Provider)
 	if err != nil {
 		return nil, err
@@ -172,7 +175,7 @@ func GetStoreValues(ctx context.Context, client client.Client, store *druidv1alp
 		"storageProvider": storageProvider,
 	}
 	if strings.EqualFold(string(*store.Provider), Local) {
-		mountPath, err := getHostMountPathFromSecretRef(ctx, client, store, namespace)
+		mountPath, err := GetHostMountPathFromSecretRef(ctx, client, logger, store, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +190,13 @@ func GetStoreValues(ctx context.Context, client client.Client, store *druidv1alp
 	return storeValues, nil
 }
 
-func getHostMountPathFromSecretRef(ctx context.Context, client client.Client, store *druidv1alpha1.StoreSpec, namespace string) (string, error) {
+// GetHostMountPathFromSecretRef returns the hostPath configured for the given store.
+func GetHostMountPathFromSecretRef(ctx context.Context, client client.Client, logger logr.Logger, store *druidv1alpha1.StoreSpec, namespace string) (string, error) {
+	if store.SecretRef == nil {
+		logger.Info("secretRef is not defined for store, using default hostPath")
+		return LocalProviderDefaultMountPath, nil
+	}
+
 	secret := &corev1.Secret{}
 	if err := client.Get(ctx, Key(namespace, store.SecretRef.Name), secret); err != nil {
 		return "", err

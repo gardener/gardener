@@ -9,7 +9,7 @@ require (
 	github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/gardener/dependency-watchdog v0.7.0
-	github.com/gardener/etcd-druid v0.12.3
+	github.com/gardener/etcd-druid v0.15.0
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.45.0
 	github.com/ghodss/yaml v1.0.0
