@@ -210,9 +210,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
-			"reversedVPN": map[string]interface{}{
-				"enabled": true,
-			},
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,
 				"authSecretName": credentialsSecret.Name,
