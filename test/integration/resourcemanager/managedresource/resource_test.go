@@ -429,9 +429,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 					ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
 				)
 
-				Consistently(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
-				}).Should(Succeed())
+				Consistently(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(BeNotFoundError())
 			})
 		})
 
@@ -520,8 +520,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 					ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
 				)
 
-				Consistently(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				Consistently(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 				}).Should(Succeed())
 			})
 
@@ -529,9 +529,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 				By("deleting ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-				}).Should(Succeed())
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				}).Should(BeNotFoundError())
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 			})
@@ -583,22 +583,22 @@ var _ = Describe("ManagedResource controller tests", func() {
 					ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
 				)
 
-				Consistently(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				Consistently(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 				}).Should(Succeed())
 
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(BeNotFoundError())
-				}).Should(Succeed())
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(node), node)
+				}).Should(BeNotFoundError())
 			})
 
 			It("should keep the garbage-collectable objects even after deletion of ManagedResource", func() {
 				By("deleting ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-				}).Should(Succeed())
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				}).Should(BeNotFoundError())
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(BeNotFoundError())
