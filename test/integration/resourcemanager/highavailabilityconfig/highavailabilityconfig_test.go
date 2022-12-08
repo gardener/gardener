@@ -408,6 +408,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 														Values:   []string{"some", "other", "zones"},
 													}},
 												},
+												{
+													MatchExpressions: []corev1.NodeSelectorRequirement{{
+														Key:      "foo",
+														Operator: corev1.NodeSelectorOpNotIn,
+														Values:   []string{"bar"},
+													}},
+												},
 											},
 										},
 									},
@@ -421,17 +428,31 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
 										NodeSelectorTerms: []corev1.NodeSelectorTerm{
 											{
-												MatchExpressions: []corev1.NodeSelectorRequirement{{
-													Key:      corev1.LabelHostname,
-													Operator: corev1.NodeSelectorOpExists,
-												}},
+												MatchExpressions: []corev1.NodeSelectorRequirement{
+													{
+														Key:      corev1.LabelHostname,
+														Operator: corev1.NodeSelectorOpExists,
+													},
+													{
+														Key:      corev1.LabelTopologyZone,
+														Operator: corev1.NodeSelectorOpIn,
+														Values:   zones,
+													},
+												},
 											},
 											{
-												MatchExpressions: []corev1.NodeSelectorRequirement{{
-													Key:      corev1.LabelTopologyZone,
-													Operator: corev1.NodeSelectorOpIn,
-													Values:   zones,
-												}},
+												MatchExpressions: []corev1.NodeSelectorRequirement{
+													{
+														Key:      "foo",
+														Operator: corev1.NodeSelectorOpNotIn,
+														Values:   []string{"bar"},
+													},
+													{
+														Key:      corev1.LabelTopologyZone,
+														Operator: corev1.NodeSelectorOpIn,
+														Values:   zones,
+													},
+												},
 											},
 										},
 									},

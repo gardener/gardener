@@ -43,14 +43,14 @@ var _ = Describe("HighAvailability", func() {
 
 	zones := []string{"a", "b", "c"}
 
-	DescribeTable("#GetNodeAffinitySelectorTermsForZones",
+	DescribeTable("#GetNodeSelectorRequirementForZones",
 		func(failureToleranceType *gardencorev1beta1.FailureToleranceType, zones []string, matcher gomegatypes.GomegaMatcher) {
-			Expect(GetNodeAffinitySelectorTermsForZones(failureToleranceType, zones)).To(matcher)
+			Expect(GetNodeSelectorRequirementForZones(failureToleranceType, zones)).To(matcher)
 		},
 
 		Entry("no zones", nil, nil, BeNil()),
 		Entry("no failure-tolerance-type", nil, zones, BeNil()),
-		Entry("zones and failure-tolerance-type set", failureToleranceTypePtr(""), zones, ConsistOf(corev1.NodeSelectorTerm{MatchExpressions: []corev1.NodeSelectorRequirement{{Key: corev1.LabelTopologyZone, Operator: corev1.NodeSelectorOpIn, Values: zones}}})),
+		Entry("zones and failure-tolerance-type set", failureToleranceTypePtr(""), zones, Equal(&corev1.NodeSelectorRequirement{Key: corev1.LabelTopologyZone, Operator: corev1.NodeSelectorOpIn, Values: zones})),
 	)
 
 	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
