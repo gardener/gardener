@@ -306,16 +306,19 @@ var _ = Describe("Seed controller tests", func() {
 						}).Should(Succeed())
 					} else {
 						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
-						// ManagedResources. However, it is not really running, so we have to fake its behaviour here.
+						// ManagedResources and VerticalPodAutoscaler. However, it is not really running, so we have to fake its behaviour here.
 						By("Create CustomResourceDefinition for ManagedResources")
 						var (
 							applier = kubernetes.NewApplier(testClient, testClient.RESTMapper())
-							obj     = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+							mrCRD   = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+							vpaCRD  = kubernetes.NewManifestReader([]byte(verticalPodAutoscalerCRD))
 						)
 
-						Expect(applier.ApplyManifest(ctx, obj, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						Expect(applier.ApplyManifest(ctx, mrCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						Expect(applier.ApplyManifest(ctx, vpaCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						DeferCleanup(func() {
-							Expect(applier.DeleteManifest(ctx, obj)).To(Succeed())
+							Expect(applier.DeleteManifest(ctx, mrCRD)).To(Succeed())
+							Expect(applier.DeleteManifest(ctx, vpaCRD)).To(Succeed())
 						})
 					}
 
