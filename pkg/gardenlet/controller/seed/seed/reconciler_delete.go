@@ -180,10 +180,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 	var (
 		dnsRecord        = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
 		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
-		hvpa             = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
 		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity  = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
 		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
@@ -215,14 +213,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:           ensureNoControllerInstallations(r.GardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
 		})
-		destroyEtcdDruid = g.Add(flow.Task{
-			Name: "Destroying etcd druid",
-			Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
-			// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start up
-			// again (e.g. after being evicted by VPA)
-			// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
-			Dependencies: flow.NewTaskIDs(noControllerInstallations),
-		})
 		destroyClusterIdentity = g.Add(flow.Task{
 			Name: "Destroying cluster-identity",
 			Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
@@ -247,10 +237,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy dependency-watchdog-probe",
 			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
 		})
-		destroyHVPA = g.Add(flow.Task{
-			Name: "Destroy HVPA controller",
-			Fn:   component.OpDestroyAndWait(hvpa).Destroy,
-		})
 		destroyKubeStateMetrics = g.Add(flow.Task{
 			Name: "Destroy kube-state-metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
@@ -274,13 +260,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyNginxIngress,
-			destroyEtcdDruid,
 			destroyClusterIdentity,
 			destroyClusterAutoscaler,
 			destroyNetworkPolicies,
 			destroyDWDEndpoint,
 			destroyDWDProbe,
-			destroyHVPA,
 			destroyKubeStateMetrics,
 			destroyVPNAuthzServer,
 			destroyIstio,
@@ -297,36 +281,56 @@ func (r *Reconciler) runDeleteSeedFlow(
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 	if !seedIsGarden {
 		var (
+			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
+			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 			verticalPodAutoscaler = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
 			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{Version: kubernetesVersion})
+
+			destroyEtcdDruid = g.Add(flow.Task{
+				Name: "Destroying etcd druid",
+				Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
+				// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start up
+				// again (e.g. after being evicted by VPA)
+				// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
+				Dependencies: flow.NewTaskIDs(noControllerInstallations),
+			})
+			destroyVPA = g.Add(flow.Task{
+				Name: "Destroy Kubernetes vertical pod autoscaler",
+				Fn:   component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
+			})
+			destroyHVPA = g.Add(flow.Task{
+				Name: "Destroy HVPA controller",
+				Fn:   component.OpDestroyAndWait(hvpa).Destroy,
+			})
 		)
 
-		destroyVPA := g.Add(flow.Task{
-			Name: "Destroy Kubernetes vertical pod autoscaler",
-			Fn:   component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
-		})
-		syncPointCleanedUp.Insert(destroyVPA)
+		syncPointCleanedUp.Insert(
+			destroyEtcdDruid,
+			destroyHVPA,
+			destroyVPA,
+		)
 
-		ensureNoManagedResourcesExist := g.Add(flow.Task{
-			Name: "Ensuring all ManagedResources are gone",
-			Fn: func(ctx context.Context) error {
-				managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
-				if err != nil {
-					return err
-				}
-				if managedResourcesStillExist {
-					return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
-				}
-				return nil
-			},
-			Dependencies: flow.NewTaskIDs(destroySystemResources),
-		})
-
-		_ = g.Add(flow.Task{
-			Name:         "Destroying gardener-resource-manager",
-			Fn:           resourceManager.Destroy,
-			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
-		})
+		var (
+			ensureNoManagedResourcesExist = g.Add(flow.Task{
+				Name: "Ensuring all ManagedResources are gone",
+				Fn: func(ctx context.Context) error {
+					managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
+					if err != nil {
+						return err
+					}
+					if managedResourcesStillExist {
+						return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
+					}
+					return nil
+				},
+				Dependencies: flow.NewTaskIDs(destroySystemResources),
+			})
+			_ = g.Add(flow.Task{
+				Name:         "Destroying gardener-resource-manager",
+				Fn:           resourceManager.Destroy,
+				Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
+			})
+		)
 	}
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
