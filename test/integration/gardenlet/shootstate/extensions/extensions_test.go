@@ -32,12 +32,28 @@ import (
 
 var _ = Describe("ShootState Extensions controller tests", func() {
 	var (
+		testNamespace  *corev1.Namespace
 		shootState     *gardencorev1alpha1.ShootState
 		cluster        *extensionsv1alpha1.Cluster
 		infrastructure *extensionsv1alpha1.Infrastructure
 	)
 
 	BeforeEach(func() {
+		By("creating test namespace")
+		testNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+				GenerateName: "garden-",
+			},
+		}
+		Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+		DeferCleanup(func() {
+			By("deleting test namespace")
+			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
 		shootState = &gardencorev1alpha1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "shoot-",
@@ -68,6 +84,11 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 		By("Create ShootState")
 		Expect(testClient.Create(ctx, shootState)).To(Succeed())
 		log.Info("Created ShootState", "shootState", client.ObjectKeyFromObject(shootState))
+
+		By("Wait until manager has observed ShootState")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)
+		}).Should(Succeed())
 
 		By("Create Cluster")
 		cluster.Spec.Shoot.Object = &gardencorev1beta1.Shoot{
