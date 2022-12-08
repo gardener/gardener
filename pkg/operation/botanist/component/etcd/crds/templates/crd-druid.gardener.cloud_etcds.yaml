@@ -1,3 +1,6 @@
+# Source: https://github.com/gardener/etcd-druid/blob/253edbd6a7818126c1485b87b3ad1ed740d02097/charts/druid/charts/crds/templates/10-crd-druid.gardener.cloud_etcds.yaml
+# TODO(ialidzhikov): The commit SHA is taken from PR https://github.com/gardener/etcd-druid/pull/462.
+# Switch back to a tagged version once the CRD definition is in sync for a given tag.
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -299,6 +302,17 @@ spec:
                   clientPort:
                     format: int32
                     type: integer
+                  clientService:
+                    description: ClientService defines the parameters of the client
+                      service that a user can specify
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations specify the annotations that should
+                          be added to the client service
+                        type: object
+                    type: object
                   clientUrlTls:
                     description: ClientUrlTLS contains the ca, server TLS and client
                       TLS secrets for client communication to ETCD cluster
@@ -1687,6 +1701,10 @@ spec:
                   for this resource.
                 format: int64
                 type: integer
+              peerUrlTLSEnabled:
+                description: PeerUrlTLSEnabled captures the state of peer url TLS
+                  being enabled for the etcd member(s)
+                type: boolean
               ready:
                 description: Ready is `true` if all etcd replicas are ready.
                 type: boolean
