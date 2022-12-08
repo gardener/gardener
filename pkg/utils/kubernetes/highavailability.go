@@ -38,20 +38,21 @@ func GetReplicaCount(failureToleranceType *gardencorev1beta1.FailureToleranceTyp
 	return pointer.Int32(2)
 }
 
-// GetNodeAffinitySelectorTermsForZones adds a node affinity to ensure all pods are scheduled only on nodes in the provided zones. If
-// no zones are provided then nothing is done.
-func GetNodeAffinitySelectorTermsForZones(failureToleranceType *gardencorev1beta1.FailureToleranceType, zones []string) []corev1.NodeSelectorTerm {
+// GetNodeSelectorRequirementForZones returns a node selector requirement to ensure all pods are scheduled only on
+// nodes in the provided zones. If no zones are provided then nothing is done.
+// Note that the returned requirement should be added to all existing node selector terms in the
+// spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms field of pods because
+// the various node selector terms are evaluated with the OR operator.
+func GetNodeSelectorRequirementForZones(failureToleranceType *gardencorev1beta1.FailureToleranceType, zones []string) *corev1.NodeSelectorRequirement {
 	if len(zones) == 0 || failureToleranceType == nil {
 		return nil
 	}
 
-	return []corev1.NodeSelectorTerm{{
-		MatchExpressions: []corev1.NodeSelectorRequirement{{
-			Key:      corev1.LabelTopologyZone,
-			Operator: corev1.NodeSelectorOpIn,
-			Values:   zones,
-		}},
-	}}
+	return &corev1.NodeSelectorRequirement{
+		Key:      corev1.LabelTopologyZone,
+		Operator: corev1.NodeSelectorOpIn,
+		Values:   zones,
+	}
 }
 
 // GetTopologySpreadConstraints adds topology spread constraints based on the passed `failureToleranceType`. This is
