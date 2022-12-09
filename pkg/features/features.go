@@ -67,7 +67,7 @@ const (
 	// owner: @ScheererJ @DockToFuture
 	// alpha: v1.22.0
 	// beta: v1.42.0
-	// deprecated: v1.61.0
+	// GA: v1.63.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
 	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
