@@ -344,8 +344,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestARM64MachineImage.Name, Version: highestARM64MachineImage.Version}))
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal(
-					"Machine image of worker-pool \"cpu-worker1\" from \"foo-image\" version \"0.0.1-beta\" to version \"1.1.1\". Reason: AutoUpdate of MachineImage configured" + ", " +
-						"Machine image of worker-pool \"cpu-worker2\" from \"foo-image\" version \"0.0.1-beta\" to version \"1.2.0\". Reason: AutoUpdate of MachineImage configured"))
+					"Machine image of worker-pool \"cpu-worker1\" upgraded from \"foo-image\" version \"0.0.1-beta\" to version \"1.1.1\". Reason: AutoUpdate of MachineImage configured" + ", " +
+						"Machine image of worker-pool \"cpu-worker2\" upgraded from \"foo-image\" version \"0.0.1-beta\" to version \"1.2.0\". Reason: AutoUpdate of MachineImage configured"))
 			}).Should(Succeed())
 		})
 
@@ -364,8 +364,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestARM64MachineImage.Name, Version: highestARM64MachineImage.Version}))
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal(
-					"Machine image of worker-pool \"cpu-worker1\" from \"foo-image\" version \"0.0.1-beta\" to version \"1.1.1\". Reason: MachineImage expired - force update required" + ", " +
-						"Machine image of worker-pool \"cpu-worker2\" from \"foo-image\" version \"0.0.1-beta\" to version \"1.2.0\". Reason: MachineImage expired - force update required"))
+					"Machine image of worker-pool \"cpu-worker1\" upgraded from \"foo-image\" version \"0.0.1-beta\" to version \"1.1.1\". Reason: MachineImage expired - force update required" + ", " +
+						"Machine image of worker-pool \"cpu-worker2\" upgraded from \"foo-image\" version \"0.0.1-beta\" to version \"1.2.0\". Reason: MachineImage expired - force update required"))
 			}).Should(Succeed())
 		})
 	})
@@ -391,7 +391,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured"))
+				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("For \"Shoot\": Kubernetes version upgraded \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured"))
 				return shoot.Spec.Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
@@ -408,7 +408,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required"))
+				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("For \"Shoot\": Kubernetes version upgraded \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required"))
 				return shoot.Spec.Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
@@ -431,7 +431,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("Shoot Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required"))
+				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("For \"Shoot\": Kubernetes version upgraded \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required"))
 				return shoot.Spec.Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 		})
@@ -460,8 +460,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal(
-					"Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured" + ", " +
-						"For worker pool cpu-worker1: Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured"))
+					"For \"Shoot\": Kubernetes version upgraded \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured" + ", " +
+						"For \"Worker Pool cpu-worker1\": Kubernetes version upgraded \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured"))
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
@@ -484,8 +484,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal(
-					"Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required" + ", " +
-						"For worker pool cpu-worker1: Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required"))
+					"For \"Shoot\": Kubernetes version upgraded \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required" + ", " +
+						"For \"Worker Pool cpu-worker1\": Kubernetes version upgraded \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required"))
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
@@ -511,8 +511,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal(
-					"Shoot Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required" + ", " +
-						"For worker pool cpu-worker1: Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required"))
+					"For \"Shoot\": Kubernetes version upgraded \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required" + ", " +
+						"For \"Worker Pool cpu-worker1\": Kubernetes version upgraded \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required"))
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 		})
@@ -537,7 +537,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("For worker pool cpu-worker1: Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required"))
+				g.Expect(shoot.Status.LastMaintenance.Description).To(Equal("For \"Worker Pool cpu-worker1\": Kubernetes version upgraded \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required"))
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionLowPatchConsecutiveMinor.Version))
 		})

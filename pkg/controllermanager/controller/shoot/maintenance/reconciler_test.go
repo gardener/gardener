@@ -29,8 +29,9 @@ import (
 
 var _ = Describe("Shoot Maintenance", func() {
 	var (
-		log logr.Logger
-		now time.Time
+		log  logr.Logger
+		now  time.Time
+		name = "test"
 
 		expirationDateInTheFuture, expirationDateInThePast metav1.Time
 	)
@@ -492,7 +493,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.0.2"))
@@ -510,7 +511,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.0.1"))
@@ -524,7 +525,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.1.2"))
@@ -538,7 +539,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.1.2"))
@@ -559,7 +560,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.1.2"))
@@ -577,7 +578,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).To(HaveOccurred())
 		})
@@ -589,7 +590,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.0.2"))
@@ -603,7 +604,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.0.1"))
@@ -617,7 +618,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.0.2"))
@@ -631,7 +632,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.1.2"))
@@ -645,7 +646,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
-			})
+			}, name)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.1.2"))

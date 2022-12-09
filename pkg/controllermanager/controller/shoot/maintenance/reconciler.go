@@ -119,13 +119,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	reasonForKubernetesUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 		maintainedShoot.Spec.Kubernetes.Version = v
 		return nil
-	})
+	}, "Shoot")
 	if err != nil {
 		// continue execution to allow the machine image version update
 		log.Error(err, "Failed to maintain Shoot kubernetes version")
-	}
-	if reasonForKubernetesUpdate != "" {
-		operations = append(operations, "Shoot "+reasonForKubernetesUpdate)
 	}
 
 	shootKubernetesVersion, err := semver.NewVersion(maintainedShoot.Spec.Kubernetes.Version)
@@ -134,14 +131,13 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	// Now it's time to update worker pool kubernetes version if specified
-	var reasonsForWorkerPoolKubernetesUpdate = make(map[string]string)
 	for i, w := range maintainedShoot.Spec.Provider.Workers {
 		if w.Kubernetes == nil || w.Kubernetes.Version == nil {
 			continue
 		}
 
 		workerLog := log.WithValues("worker", w.Name)
-
+		name := "Worker Pool " + w.Name
 		reasonForWorkerPoolKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *w.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 			workerPoolSemver, err := semver.NewVersion(v)
 			if err != nil {
@@ -154,20 +150,15 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			v = workerPoolSemver.String()
 			maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version = &v
 			return nil
-		})
+		}, name)
 		if err != nil {
 			// continue execution to allow the machine image version update
 			workerLog.Error(err, "Could not maintain kubernetes version for worker pool")
 		}
-		reasonsForWorkerPoolKubernetesUpdate[w.Name] = reasonForWorkerPoolKubernetesUpdate
-	}
 
-	for workerPool, reason := range reasonsForWorkerPoolKubernetesUpdate {
-		if reason != "" {
-			operation := fmt.Sprintf("For worker pool %s: %s", workerPool, reason)
-			operations = append(operations, operation)
-		}
+		reasonForKubernetesUpdate = append(reasonForKubernetesUpdate, reasonForWorkerPoolKubernetesUpdate...)
 	}
+	operations = append(operations, reasonForKubernetesUpdate...)
 
 	operation := maintainOperation(maintainedShoot)
 	if operation != "" {
@@ -234,14 +225,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			fmt.Sprintf("Updated %s.", reason))
 	}
 
-	if reasonForKubernetesUpdate != "" {
-		r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
-			fmt.Sprintf("Updated %s.", reasonForKubernetesUpdate))
-	}
-
-	for name, reason := range reasonsForWorkerPoolKubernetesUpdate {
-		r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
-			fmt.Sprintf("Updated worker pool %q %s.", name, reason))
+	for _, reason := range reasonForKubernetesUpdate {
+		r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s", reason)
 	}
 
 	log.Info("Shoot maintenance completed")
@@ -321,37 +306,40 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		shoot.Spec.Provider.Workers[i].Machine.Image = updatedMachineImage
 
 		workerLog.Info("MachineImage will be updated", "newVersion", *updatedMachineImage.Version, "reason", reason)
-		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Machine image of worker-pool %q from %q version %q to version %q. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, reason))
+		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Machine image of worker-pool %q upgraded from %q version %q to version %q. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, reason))
 	}
 
 	return reasonsForUpdate, nil
 }
 
 // maintainKubernetesVersion updates a Shoot's Kubernetes version if necessary and returns the reason why an update was done
-func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) error) (string, error) {
+func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) error, name string) ([]string, error) {
+	var reasonsForUpdate []string
 	shouldBeUpdated, reason, isExpired, err := shouldKubernetesVersionBeUpdated(kubernetesVersion, autoUpdate, profile)
 	if err != nil {
-		return "", err
+		return reasonsForUpdate, err
 	}
 	if !shouldBeUpdated {
-		return "", nil
+		return reasonsForUpdate, nil
 	}
 
 	updatedKubernetesVersion, err := determineKubernetesVersion(kubernetesVersion, profile, isExpired)
 	if err != nil {
-		return "", err
+		return reasonsForUpdate, err
 	}
 	if updatedKubernetesVersion == "" {
-		return "", nil
+		return reasonsForUpdate, nil
 	}
 
 	err = updateFunc(updatedKubernetesVersion)
 	if err != nil {
-		return "", err
+		return reasonsForUpdate, err
 	}
 
+	reason = fmt.Sprintf("For %q: Kubernetes version upgraded %q to version %q. Reason: %s", name, kubernetesVersion, updatedKubernetesVersion, reason)
+	reasonsForUpdate = append(reasonsForUpdate, reason)
 	log.Info("Kubernetes version will be updated", "version", kubernetesVersion, "newVersion", updatedKubernetesVersion, "reason", reason)
-	return fmt.Sprintf("Kubernetes version %q to version %q. Reason: %s", kubernetesVersion, updatedKubernetesVersion, reason), err
+	return reasonsForUpdate, err
 }
 
 func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1beta1.CloudProfile, isExpired bool) (string, error) {
