@@ -33,14 +33,14 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc: func() map[string]string { return b.Shoot.Components.IstioConfig.LoadBalancerAnnotations() },
+			AnnotationsFunc: func() map[string]string { return b.IstioLoadBalancerAnnotations() },
 			SNIPhase:        sniPhase,
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}
 		},
 		func() client.ObjectKey {
-			return client.ObjectKey{Name: b.Shoot.Components.IstioConfig.ServiceName(), Namespace: b.Shoot.Components.IstioConfig.Namespace()}
+			return client.ObjectKey{Name: b.IstioServiceName(), Namespace: b.IstioNamespace()}
 		},
 		nil,
 		b.setAPIServerServiceClusterIP,
@@ -76,8 +76,8 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
-					Namespace: b.Shoot.Components.IstioConfig.Namespace(),
-					Labels:    b.Shoot.Components.IstioConfig.Labels(),
+					Namespace: b.IstioNamespace(),
+					Labels:    b.IstioLabels(),
 				},
 				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}
@@ -141,8 +141,8 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 					gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
-					Namespace: b.Shoot.Components.IstioConfig.Namespace(),
-					Labels:    b.Shoot.Components.IstioConfig.Labels(),
+					Namespace: b.IstioNamespace(),
+					Labels:    b.IstioLabels(),
 				},
 				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}

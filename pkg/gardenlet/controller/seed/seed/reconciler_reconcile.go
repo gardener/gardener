@@ -54,6 +54,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
@@ -1125,7 +1126,7 @@ func cleanupOrphanExposureClassHandlerResources(
 
 	zoneSet := sets.NewString(zones...)
 	for _, namespace := range zonalExposureClassHandlerNamespaces.Items {
-		if ok, zone := istio.IsZonalIstioExtension(namespace.Labels); ok {
+		if ok, zone := operation.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, true, func() bool {
 				if !zoneSet.Has(zone) {
 					return false
@@ -1145,13 +1146,13 @@ func cleanupOrphanExposureClassHandlerResources(
 	// Remove zonal, orphaned istio default namespaces
 	zonalIstioNamespaces := &corev1.NamespaceList{}
 	if err := c.List(ctx, zonalIstioNamespaces, client.MatchingLabelsSelector{
-		Selector: labels.NewSelector().Add(utils.MustNewRequirement(istio.DefaultZoneKey, selection.Exists)),
+		Selector: labels.NewSelector().Add(utils.MustNewRequirement(operation.IstioDefaultZoneKey, selection.Exists)),
 	}); err != nil {
 		return err
 	}
 
 	for _, namespace := range zonalIstioNamespaces.Items {
-		if ok, zone := istio.IsZonalIstioExtension(namespace.Labels); ok {
+		if ok, zone := operation.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, false, func() bool {
 				return zoneSet.Has(zone)
 			}); err != nil {
@@ -1201,8 +1202,8 @@ func cleanupOrphanIstioNamespace(
 				return nil
 			}
 		} else {
-			_, zone := istio.IsZonalIstioExtension(namespace.Labels)
-			if value, ok := gateway.Spec.Selector[istio.DefaultZoneKey]; ok && strings.HasSuffix(value, zone) {
+			_, zone := operation.IsZonalIstioExtension(namespace.Labels)
+			if value, ok := gateway.Spec.Selector[operation.IstioDefaultZoneKey]; ok && strings.HasSuffix(value, zone) {
 				log.Info("Resources of default zonal istio handler cannot be deleted as they are still in use", "zone", zone)
 				return nil
 			}

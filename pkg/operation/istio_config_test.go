@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package istio_test
+package operation_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -25,9 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
+	. "github.com/gardener/gardener/pkg/operation"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -52,12 +50,12 @@ var _ = Describe("istioconfig", func() {
 			Expect(GetIstioZoneLabels(labels, zone)).To(matcher)
 		},
 
-		Entry("no zone, but istio label", map[string]string{DefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{DefaultZoneKey: "istio-value"})),
+		Entry("no zone, but istio label", map[string]string{IstioDefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{IstioDefaultZoneKey: "istio-value"})),
 		Entry("no zone, but gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, nil, Equal(map[string]string{"gardener.cloud/role": "gardener-role"})),
-		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", DefaultZoneKey: "ingressgateway"})),
-		Entry("zone and istio label", map[string]string{DefaultZoneKey: "istio-value"}, pointer.String("my-zone"), Equal(map[string]string{DefaultZoneKey: "istio-value--zone--my-zone"})),
+		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", IstioDefaultZoneKey: "ingressgateway"})),
+		Entry("zone and istio label", map[string]string{IstioDefaultZoneKey: "istio-value"}, pointer.String("my-zone"), Equal(map[string]string{IstioDefaultZoneKey: "istio-value--zone--my-zone"})),
 		Entry("zone and gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, pointer.String("my-zone"), Equal(map[string]string{"gardener.cloud/role": "gardener-role--zone--my-zone"})),
-		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, pointer.String("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", DefaultZoneKey: "ingressgateway--zone--my-zone"})),
+		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, pointer.String("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", IstioDefaultZoneKey: "ingressgateway--zone--my-zone"})),
 	)
 
 	DescribeTable("#IsZonalIstioExtension",
@@ -68,18 +66,17 @@ var _ = Describe("istioconfig", func() {
 		},
 
 		Entry("no zonal extension", map[string]string{"key1": "value1", "key2": "value2"}, BeFalse(), Equal("")),
-		Entry("no zone, but istio label", map[string]string{DefaultZoneKey: "istio-value"}, BeFalse(), Equal("")),
+		Entry("no zone, but istio label", map[string]string{IstioDefaultZoneKey: "istio-value"}, BeFalse(), Equal("")),
 		Entry("no zone, but gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role"}, BeFalse(), Equal("")),
 		Entry("no zone, but gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),
-		Entry("zone and istio label", map[string]string{DefaultZoneKey: "istio-value--zone--my-zone"}, BeTrue(), Equal("my-zone")),
+		Entry("zone and istio label", map[string]string{IstioDefaultZoneKey: "istio-value--zone--my-zone"}, BeTrue(), Equal("my-zone")),
 		Entry("zone and gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone"}, BeFalse(), Equal("")),
 		Entry("zone and gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeTrue(), Equal("some-zone")),
 		Entry("zone and incorrect gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),
 	)
 
-	Describe("component.IstioConfigInterface", func() {
+	Describe("Istio related configuration functions", func() {
 		var (
-			istioConfig                component.IstioConfigInterface
 			defaultServiceName         = "default-service"
 			defaultNamespaceName       = "default-namespace"
 			defaultLabels              = map[string]string{"default": "label", "istio": "gateway"}
@@ -131,7 +128,7 @@ var _ = Describe("istioconfig", func() {
 				},
 			}
 			shoot     = &gardencorev1beta1.Shoot{}
-			operation = &operation.Operation{
+			operation = &Operation{
 				Config: gardenletConfig,
 				Seed:   &seedpkg.Seed{},
 				Shoot:  &shootpkg.Shoot{},
@@ -144,7 +141,6 @@ var _ = Describe("istioconfig", func() {
 		)
 
 		BeforeEach(func() {
-			istioConfig = NewConfig(operation)
 			operation.Seed.SetInfo(seed)
 			operation.Shoot.SetInfo(shoot)
 		})
@@ -160,10 +156,10 @@ var _ = Describe("istioconfig", func() {
 					operation.Shoot.SetInfo(shootCopy)
 				}
 
-				Expect(istioConfig.ServiceName()).To(matcherService)
-				Expect(istioConfig.Namespace()).To(matcherNamespace)
-				Expect(istioConfig.Labels()).To(matchLabels)
-				Expect(istioConfig.LoadBalancerAnnotations()).To(matchAnnotations)
+				Expect(operation.IstioServiceName()).To(matcherService)
+				Expect(operation.IstioNamespace()).To(matcherNamespace)
+				Expect(operation.IstioLabels()).To(matchLabels)
+				Expect(operation.IstioLoadBalancerAnnotations()).To(matchAnnotations)
 			},
 
 			Entry("non-pinned control plane without exposure class", nil, false,
@@ -222,10 +218,10 @@ var _ = Describe("istioconfig", func() {
 						operation.Shoot.SetInfo(shootCopy)
 					}
 
-					Expect(istioConfig.ServiceName()).To(matcherService)
-					Expect(istioConfig.Namespace()).To(matcherNamespace)
-					Expect(istioConfig.Labels()).To(matchLabels)
-					Expect(istioConfig.LoadBalancerAnnotations()).To(matchAnnotations)
+					Expect(operation.IstioServiceName()).To(matcherService)
+					Expect(operation.IstioNamespace()).To(matcherNamespace)
+					Expect(operation.IstioLabels()).To(matchLabels)
+					Expect(operation.IstioLoadBalancerAnnotations()).To(matchAnnotations)
 				},
 
 				Entry("pinned control plane (single zone) without exposure class", &zoneName, false,

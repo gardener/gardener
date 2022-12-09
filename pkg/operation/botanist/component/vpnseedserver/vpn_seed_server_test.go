@@ -51,18 +51,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type istioConfig struct {
-	serviceNameFunc func() string
-	namespaceFunc   func() string
-	annotationsFunc func() map[string]string
-	labelsFunc      func() map[string]string
-}
-
-func (i *istioConfig) ServiceName() string                        { return i.serviceNameFunc() }
-func (i *istioConfig) Namespace() string                          { return i.namespaceFunc() }
-func (i *istioConfig) LoadBalancerAnnotations() map[string]string { return i.annotationsFunc() }
-func (i *istioConfig) Labels() map[string]string                  { return i.labelsFunc() }
-
 var _ = Describe("VpnSeedServer", func() {
 	var (
 		ctrl          *gomock.Controller
@@ -90,16 +78,10 @@ var _ = Describe("VpnSeedServer", func() {
 			SeedVersion:                          semver.MustParse("1.22.1"),
 		}
 
-		istioLabels     = map[string]string{"foo": "bar"}
-		istioNamespace  = "istio-foo"
-		istioConfigFunc = func() component.IstioConfigInterface {
-			return &istioConfig{
-				serviceNameFunc: func() string { return "" },
-				namespaceFunc:   func() string { return istioNamespace },
-				annotationsFunc: func() map[string]string { return map[string]string{} },
-				labelsFunc:      func() map[string]string { return istioLabels },
-			}
-		}
+		istioLabels        = map[string]string{"foo": "bar"}
+		istioNamespace     = "istio-foo"
+		istioNamespaceFunc = func() string { return istioNamespace }
+		istioLabelsFunc    = func() map[string]string { return istioLabels }
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -875,7 +857,7 @@ admin:
 		By("expecting secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		c.EXPECT().Get(ctx, kutil.Key(namespace, "ca-vpn"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
-		vpnSeedServer = New(c, namespace, sm, istioConfigFunc, values)
+		vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, values)
 	})
 
 	AfterEach(func() {
@@ -1065,7 +1047,7 @@ admin:
 			It("should successfully deploy all resources (w/o node network)", func() {
 				copy := values
 				copy.Network.NodeCIDR = ""
-				vpnSeedServer = New(c, namespace, sm, istioConfigFunc, copy)
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, copy)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1128,7 +1110,7 @@ admin:
 				haValues.HighAvailabilityNumberOfSeedServers = 3
 				haValues.HighAvailabilityNumberOfShootClients = 2
 
-				vpnSeedServer = New(c, namespace, sm, istioConfigFunc, haValues)
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, haValues)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1207,7 +1189,7 @@ admin:
 			})
 
 			It("should successfully deploy all resources (w/ node network)", func() {
-				vpnSeedServer = New(c, namespace, sm, istioConfigFunc, values)
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, values)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1367,7 +1349,7 @@ admin:
 			haValues.HighAvailabilityEnabled = true
 			haValues.HighAvailabilityNumberOfSeedServers = 2
 			haValues.HighAvailabilityNumberOfShootClients = 1
-			vpnSeedServer = New(c, namespace, sm, istioConfigFunc, haValues)
+			vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, haValues)
 
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),

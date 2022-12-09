@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -116,7 +117,7 @@ func defaultIstio(
 		MaxReplicas:           maxReplicas,
 		Ports:                 []corev1.ServicePort{},
 		LoadBalancerIP:        conf.SNI.Ingress.ServiceExternalIP,
-		Labels:                istio.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
+		Labels:                operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
 	}
 
 	// even if SNI is being disabled, the existing ports must stay the same
@@ -137,7 +138,7 @@ func defaultIstio(
 
 	istioProxyGateway := []istio.ProxyProtocol{{
 		Values: istio.ProxyValues{
-			Labels: istio.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
+			Labels: operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
 		},
 		Namespace: *conf.SNI.Ingress.Namespace,
 	}}
@@ -145,7 +146,7 @@ func defaultIstio(
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
 	if len(gardenSeed.Spec.Provider.Zones) > 1 {
 		for _, zone := range gardenSeed.Spec.Provider.Zones {
-			namespace := istio.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
+			namespace := operation.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
 
 			istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
 				Values: istio.IngressValues{
@@ -156,7 +157,7 @@ func defaultIstio(
 					ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 					Ports:                 defaultIngressGatewayConfig.Ports,
 					// LoadBalancerIP can currently not be provided for automatic ingress gateways
-					Labels: istio.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
+					Labels: operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
 					Zones:  []string{zone},
 				},
 				Namespace: namespace,
@@ -164,7 +165,7 @@ func defaultIstio(
 
 			istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 				Values: istio.ProxyValues{
-					Labels: istio.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
+					Labels: operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
 				},
 				Namespace: namespace,
 			})
@@ -184,14 +185,14 @@ func defaultIstio(
 				MaxReplicas:           maxReplicas,
 				Ports:                 defaultIngressGatewayConfig.Ports,
 				LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
-				Labels:                istio.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+				Labels:                operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
 
 		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 			Values: istio.ProxyValues{
-				Labels: istio.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+				Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
@@ -199,7 +200,7 @@ func defaultIstio(
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
 		if len(gardenSeed.Spec.Provider.Zones) > 1 {
 			for _, zone := range gardenSeed.Spec.Provider.Zones {
-				namespace := istio.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
+				namespace := operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
 
 				istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
 					Values: istio.IngressValues{
@@ -210,7 +211,7 @@ func defaultIstio(
 						ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 						Ports:                 defaultIngressGatewayConfig.Ports,
 						// LoadBalancerIP can currently not be provided for automatic ingress gateways
-						Labels: istio.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+						Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 						Zones:  []string{zone},
 					},
 					Namespace: namespace,
@@ -218,7 +219,7 @@ func defaultIstio(
 
 				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 					Values: istio.ProxyValues{
-						Labels: istio.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+						Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					},
 					Namespace: namespace,
 				})

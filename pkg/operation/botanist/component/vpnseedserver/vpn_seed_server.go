@@ -144,26 +144,29 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	istioConfigFunc func() component.IstioConfigInterface,
+	istioNamespaceFunc func() string,
+	istioLabelsFunc func() map[string]string,
 	values Values,
 ) Interface {
 	return &vpnSeedServer{
-		client:          client,
-		namespace:       namespace,
-		secretsManager:  secretsManager,
-		values:          values,
-		istioConfigFunc: istioConfigFunc,
+		client:             client,
+		namespace:          namespace,
+		secretsManager:     secretsManager,
+		values:             values,
+		istioNamespaceFunc: istioNamespaceFunc,
+		istioLabelsFunc:    istioLabelsFunc,
 	}
 }
 
 type vpnSeedServer struct {
-	client          client.Client
-	namespace       string
-	secretsManager  secretsmanager.Interface
-	namespaceUID    types.UID
-	values          Values
-	secrets         Secrets
-	istioConfigFunc func() component.IstioConfigInterface
+	client             client.Client
+	namespace          string
+	secretsManager     secretsmanager.Interface
+	namespaceUID       types.UID
+	values             Values
+	secrets            Secrets
+	istioNamespaceFunc func() string
+	istioLabelsFunc    func() map[string]string
 }
 
 func (v *vpnSeedServer) GetValues() Values {
@@ -974,11 +977,11 @@ func (v *vpnSeedServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
-	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioConfigFunc().Namespace()}}
+	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioNamespaceFunc()}}
 }
 
 func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
-	return v.istioConfigFunc().Labels()
+	return v.istioLabelsFunc()
 }
 
 // GetLabels returns the labels for the vpn-seed-server

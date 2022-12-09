@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
@@ -167,7 +168,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	istioIngressGateway := []istio.IngressGateway{{Namespace: *r.Config.SNI.Ingress.Namespace}}
 	if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 		for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-			istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: istio.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
+			istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: operation.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
 		}
 	}
 	// Add for each ExposureClass handler in the config an own Ingress Gateway.
@@ -175,7 +176,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: *handler.SNI.Ingress.Namespace})
 		if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 			for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-				istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: istio.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
+				istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
 			}
 		}
 	}

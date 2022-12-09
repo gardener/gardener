@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -140,8 +141,8 @@ func (i *istiod) Deploy(ctx context.Context) error {
 				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.LabelExposureClassHandlerName, value)
 			}
 
-			if value, ok := istioIngressGateway.Values.Labels[DefaultZoneKey]; ok {
-				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, DefaultZoneKey, value)
+			if value, ok := istioIngressGateway.Values.Labels[operation.IstioDefaultZoneKey]; ok {
+				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, operation.IstioDefaultZoneKey, value)
 			}
 
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
