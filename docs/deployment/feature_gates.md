@@ -108,7 +108,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootSARotation                              |         | `Removed`    | `1.60` |        |
 | ReversedVPN                                  | `false` | `Alpha`      | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`       | `1.42` | `1.61` |
-| ReversedVPN                                  | `true`  | `Deprecated` | `1.61` |        |
+| ReversedVPN                                  | `true`  | `GA`         | `1.61` |        |
 
 ## Using a feature
 

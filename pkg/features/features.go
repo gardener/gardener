@@ -107,7 +107,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated},
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
-	ReversedVPN:        {Default: true, PreRelease: featuregate.Deprecated},
+	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:          {Default: false, PreRelease: featuregate.Alpha},
 	HAControlPlanes:       {Default: false, PreRelease: featuregate.Alpha},
