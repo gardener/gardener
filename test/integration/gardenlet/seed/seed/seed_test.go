@@ -397,8 +397,8 @@ var _ = Describe("Seed controller tests", func() {
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 						}).Should(BeNotFoundError())
 
-						// There can be case when CRD is marked for deletion but still not gone from cluster. Because of this
-						// test in which CRD is created manually can flake.
+						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
+						// with other test cases.
 						By("Verify that CRD has been deleted")
 						Eventually(func(g Gomega) error {
 							return testClient.Get(ctx, client.ObjectKey{Name: "managedresources.resources.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})
