@@ -9,10 +9,14 @@ PATH_CLUSTER_VALUES=""
 PATH_KUBECONFIG=""
 ENVIRONMENT="skaffold"
 DEPLOY_REGISTRY=true
+CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 
 parse_flags() {
   while test $# -gt 0; do
     case "$1" in
+    --chart)
+      shift; CHART="$1"
+      ;;
     --cluster-name)
       shift; CLUSTER_NAME="$1"
       ;;
@@ -42,7 +46,7 @@ mkdir -m 0755 -p \
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --config <(helm template $(dirname "$0")/../example/gardener-local/kind/cluster --values "$PATH_CLUSTER_VALUES" --set "environment=$ENVIRONMENT")
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" --set "environment=$ENVIRONMENT")
 
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 kubectl get nodes -o name |\
