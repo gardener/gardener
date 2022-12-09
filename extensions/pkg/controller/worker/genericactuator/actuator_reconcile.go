@@ -69,7 +69,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 			return 0
 		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0 if there are no existing machine deployments with positive replica count
 		case extensionscontroller.IsHibernationEnabled(cluster) && extensionscontroller.IsCreationInProcess(cluster):
-			return isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments)
+			if isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments) {
+				return 1
+			}
+			return 0
 		// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
 		case extensionscontroller.IsHibernatingOrWakingUp(cluster):
 			return 1
@@ -528,13 +531,13 @@ func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.Ma
 	return nil
 }
 
-func isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments *machinev1alpha1.MachineDeploymentList) int32 {
+func isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments *machinev1alpha1.MachineDeploymentList) bool {
 	for _, machineDeployment := range existingMachineDeployments.Items {
 		if machineDeployment.Status.Replicas > 0 {
-			return 1
+			return true
 		}
 	}
-	return 0
+	return false
 }
 
 // ReadMachineConfiguration reads the configuration from worker-pool and returns the corresponding configuration of machine-deployment.
