@@ -129,18 +129,19 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				// Allow connection to shoot's etcd instances.
-				To: []networkingv1.NetworkPolicyPeer{{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: etcd.GetLabels(),
-					},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{{
-					Protocol: &protocol,
-					Port:     &portEtcd,
-				}},
-			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					// Allow connection to shoot's etcd instances.
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{
+							MatchLabels: etcd.GetLabels(),
+						},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{{
+						Protocol: &protocol,
+						Port:     &portEtcd,
+					}},
+				},
 				{
 					To: []networkingv1.NetworkPolicyPeer{{
 						PodSelector: &metav1.LabelSelector{
@@ -186,7 +187,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 			},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 		}
-
 		return nil
 	})
 	return err
