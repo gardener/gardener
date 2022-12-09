@@ -160,6 +160,11 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 			Expect(testClient.Create(ctx, managedSeed)).To(Succeed())
 			log.Info("Created ManagedSeed for test", "managedSeed", client.ObjectKeyFromObject(managedSeed))
 
+			By("Wait until manager cache has observed ManagedSeed")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)
+			}).Should(Succeed())
+
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
 			log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
 
