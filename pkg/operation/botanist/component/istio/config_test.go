@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -120,10 +120,10 @@ var _ = Describe("istioconfig", func() {
 					Settings: &gardencorev1beta1.SeedSettings{
 						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
 							Annotations: defaultAnnotations,
-							ZoneSettings: []gardencorev1beta1.SeedSettingLoadBalancerServicesZoneSettings{
+							Zones: []gardencorev1beta1.SeedSettingLoadBalancerServicesZones{
 								{
 									Annotations: zoneAnnotations,
-									ZoneName:    zoneName,
+									Name:        zoneName,
 								},
 							},
 						},
@@ -135,7 +135,7 @@ var _ = Describe("istioconfig", func() {
 				Config: gardenletConfig,
 				Seed:   &seedpkg.Seed{},
 				Shoot:  &shootpkg.Shoot{},
-				SeedNamespaceObject: &v1.Namespace{
+				SeedNamespaceObject: &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{},
 					},
@@ -144,7 +144,7 @@ var _ = Describe("istioconfig", func() {
 		)
 
 		BeforeEach(func() {
-			istioConfig = NewIstioConfig(operation)
+			istioConfig = NewConfig(operation)
 			operation.Seed.SetInfo(seed)
 			operation.Shoot.SetInfo(shoot)
 		})

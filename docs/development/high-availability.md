@@ -237,7 +237,11 @@ The `gardenlet` performs the following changes on all namespaces running seed sy
 - add label `high-availability-config.resources.gardener.cloud/consider=true`.
 - add annotation `high-availability-config.resources.gardener.cloud/zones=<zones>` where `<zones>` is the list provided in `.spec.provider.zones[]` in the `Seed` specification.
 
-Note that the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is not set, hence the node affinity would never be touched by the webhook.
+Note that neither the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` nor the `high-availability-config.resources.gardener.cloud/zone-pinning` annotations are set, hence the node affinity would never be touched by the webhook.
+
+The only exception to this rule are the istio ingress gateway namespaces. This includes the default istio ingress gateway when SNI is enabled as well as analogous namespaces for exposure classes and zone-specific istio ingress gateways. Those namespaces
+will additionally be annotated with `high-availability-config.resources.gardener.cloud/zone-pinning` set to `true` resulting in the node affinities and the topology spread constraints being set. The replicas are not touched as the istio ingress gateways
+are scaled by a horizontal autoscaler instance.
 
 ### `Shoot` Controller
 
@@ -258,4 +262,4 @@ The `gardenlet` performs the following changes on all namespaces running shoot s
 - add label `high-availability-config.resources.gardener.cloud/consider=true`. This makes the webhook mutate the replica count and the topology spread constraints.
 - add annotation `high-availability-config.resources.gardener.cloud/zones=<zones>` where `<zones>` is the merged list of zones provided in `.zones[]` with `systemComponents.allow=true` for all worker pools in `.spec.provider.workers[]` in the `Shoot` specification.
 
-Note that the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is not set, hence the node affinity would never be touched by the webhook.
+Note that neither the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` nore the `high-availability-config.resources.gardener.cloud/zone-pinning` annotations are set, hence the node affinity would never be touched by the webhook.

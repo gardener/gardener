@@ -44,7 +44,11 @@ if [[ "$1" != "operator" ]]; then
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     for shoot in "${shoot_names[@]}" ; do
       if [ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" = "zone" -a "$shoot" = "e2e-upgrade-zone.local" ]; then
-        # Do not add the entry for the e2e-upgrade-zone test as the target ip is dynamic
+        # Do not add the entry for the e2e-upgrade-zone test as the target ip is dynamic.
+        # The shoot cluster in e2e-upgrade-zone is created as single-zone control plane and afterwards upgraded to a multi-zone control plane.
+        # This means that the external loadbalancer IP will change from a zone-specific istio ingress gateway to the default istio ingress gateway.
+        # A static mapping (to the default istio ingress gateway) as done here will not work in this scenario.
+        # The e2e-upgrade-zone test uses the in-cluster coredns for name resolution and can therefore resolve the api endpoint.
         continue
       fi
       printf "\n127.0.0.1 api.%s.external.local.gardener.cloud\n127.0.0.1 api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts

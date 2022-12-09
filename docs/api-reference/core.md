@@ -8235,29 +8235,29 @@ Defaults to &ldquo;Cluster&rdquo;.</p>
 </tr>
 <tr>
 <td>
-<code>zoneSettings</code></br>
+<code>zones</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServicesZoneSettings">
-[]SeedSettingLoadBalancerServicesZoneSettings
+<a href="#core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServicesZones">
+[]SeedSettingLoadBalancerServicesZones
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ZoneSettings controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
+<p>Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
 Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.</p>
 </td>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServicesZoneSettings">SeedSettingLoadBalancerServicesZoneSettings
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServicesZones">SeedSettingLoadBalancerServicesZones
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServices">SeedSettingLoadBalancerServices</a>)
 </p>
 <p>
-<p>SeedSettingLoadBalancerServicesZoneSettings controls settings, which are specific to the single-zone load balancers in a
+<p>SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
 multi-zonal setup.</p>
 </p>
 <table>
@@ -8270,13 +8270,13 @@ multi-zonal setup.</p>
 <tbody>
 <tr>
 <td>
-<code>zoneName</code></br>
+<code>name</code></br>
 <em>
 string
 </em>
 </td>
 <td>
-<p>ZoneName is the name of the zone as specified in seed.spec.provider.zones.</p>
+<p>Name is the name of the zone as specified in seed.spec.provider.zones.</p>
 </td>
 </tr>
 <tr>

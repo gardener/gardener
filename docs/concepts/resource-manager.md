@@ -543,7 +543,7 @@ The webhook performs the following actions:
      - the replicas are already set to `0` (hibernation case), or
      - when the resource is scaled horizontally by `HorizontalPodAutoscaler` or `Hvpa`, and the current replica count is higher than what was computed above.
 
-2. When the `high-availability-config.resources.gardener.cloud/zones` annotation is NOT empty and the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set, then it adds a [node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to the pod template spec:
+2. When the `high-availability-config.resources.gardener.cloud/zones` annotation is NOT empty and either the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set or the `high-availability-config.resources.gardener.cloud/zone-pinning` annotation is set to `true`, then it adds a [node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to the pod template spec:
 
    ```yaml
    spec:

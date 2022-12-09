@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -466,7 +467,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 					errorList := ValidateSeed(seed)
 
-					Expect(errorList).To(BeEmpty())
+					Expect(errorList).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with load balancer service traffic policy '%s' and have no errors", p))
 				}
 			})
 
@@ -495,8 +496,8 @@ var _ = Describe("Seed Validation Tests", func() {
 					seed.Spec.Provider.Zones = []string{zoneName}
 					seed.Spec.Settings = &core.SeedSettings{
 						LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
-							ZoneSettings: []core.SeedSettingLoadBalancerServicesZoneSettings{{
-								ZoneName: zoneName,
+							Zones: []core.SeedSettingLoadBalancerServicesZones{{
+								Name: zoneName,
 								Annotations: map[string]string{
 									"simple":                          "bar",
 									"now-with-dashes":                 "bar",
@@ -519,7 +520,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 					errorList := ValidateSeed(seed)
 
-					Expect(errorList).To(BeEmpty())
+					Expect(errorList).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with valid zonal load balancer traffic policy '%s' and have no errors", p))
 				}
 			})
 
@@ -530,9 +531,9 @@ var _ = Describe("Seed Validation Tests", func() {
 				seed.Spec.Provider.Zones = []string{zoneName}
 				seed.Spec.Settings = &core.SeedSettings{
 					LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
-						ZoneSettings: []core.SeedSettingLoadBalancerServicesZoneSettings{
+						Zones: []core.SeedSettingLoadBalancerServicesZones{
 							{
-								ZoneName: incorrectZoneName,
+								Name: incorrectZoneName,
 								Annotations: map[string]string{
 									"nospecialchars^=@":      "bar",
 									"cantendwithadash-":      "bar",
@@ -542,7 +543,7 @@ var _ = Describe("Seed Validation Tests", func() {
 								ExternalTrafficPolicy: &policy,
 							},
 							{
-								ZoneName: incorrectZoneName,
+								Name: incorrectZoneName,
 							},
 						},
 					},
@@ -553,35 +554,35 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[0].annotations"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[0].annotations"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[0].annotations"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[0].annotations"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[0].externalTrafficPolicy"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].externalTrafficPolicy"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotFound),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[0].zoneName"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].name"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotFound),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[1].zoneName"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[1].name"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeDuplicate),
-						"Field": Equal("spec.settings.loadBalancerServices.zoneSettings[1].zoneName"),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[1].name"),
 					})),
 				))
 			})

@@ -1117,10 +1117,9 @@ func cleanupOrphanExposureClassHandlerResources(
 
 	// Remove zonal, orphaned istio exposure class namespaces
 	zonalExposureClassHandlerNamespaces := &corev1.NamespaceList{}
-	labelSelector := client.MatchingLabelsSelector{
+	if err := c.List(ctx, zonalExposureClassHandlerNamespaces, client.MatchingLabelsSelector{
 		Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)).Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
-	}
-	if err := c.List(ctx, zonalExposureClassHandlerNamespaces, labelSelector); err != nil {
+	}); err != nil {
 		return err
 	}
 
@@ -1145,10 +1144,9 @@ func cleanupOrphanExposureClassHandlerResources(
 
 	// Remove zonal, orphaned istio default namespaces
 	zonalIstioNamespaces := &corev1.NamespaceList{}
-	labelSelector = client.MatchingLabelsSelector{
+	if err := c.List(ctx, zonalIstioNamespaces, client.MatchingLabelsSelector{
 		Selector: labels.NewSelector().Add(utils.MustNewRequirement(istio.DefaultZoneKey, selection.Exists)),
-	}
-	if err := c.List(ctx, zonalIstioNamespaces, labelSelector); err != nil {
+	}); err != nil {
 		return err
 	}
 

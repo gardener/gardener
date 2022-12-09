@@ -282,17 +282,17 @@ type SeedSettingLoadBalancerServices struct {
 	// Defaults to "Cluster".
 	// +optional
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,2,opt,name=externalTrafficPolicy"`
-	// ZoneSettings controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
+	// Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
 	// Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.
 	// +optional
-	ZoneSettings []SeedSettingLoadBalancerServicesZoneSettings `json:"zoneSettings" protobuf:"bytes,3,rep,name=zoneSettings"`
+	Zones []SeedSettingLoadBalancerServicesZones `json:"zones,omitempty" protobuf:"bytes,3,rep,name=zones"`
 }
 
-// SeedSettingLoadBalancerServicesZoneSettings controls settings, which are specific to the single-zone load balancers in a
+// SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
 // multi-zonal setup.
-type SeedSettingLoadBalancerServicesZoneSettings struct {
-	// ZoneName is the name of the zone as specified in seed.spec.provider.zones.
-	ZoneName string `json:"zoneName" protobuf:"bytes,1,opt,name=zoneName"`
+type SeedSettingLoadBalancerServicesZones struct {
+	// Name is the name of the zone as specified in seed.spec.provider.zones.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,2,rep,name=annotations"`

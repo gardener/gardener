@@ -188,16 +188,16 @@ var _ = Describe("seed", func() {
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{
 						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
-							ZoneSettings: []gardencorev1beta1.SeedSettingLoadBalancerServicesZoneSettings{
+							Zones: []gardencorev1beta1.SeedSettingLoadBalancerServicesZones{
 								{
-									ZoneName: zone1,
+									Name: zone1,
 									Annotations: map[string]string{
 										annotationKey1: annotationValue1,
 										annotationKey2: annotationValue2,
 									},
 								},
 								{
-									ZoneName: zone2,
+									Name: zone2,
 									Annotations: map[string]string{
 										annotationKey1: annotationValue1,
 									},
@@ -221,8 +221,8 @@ var _ = Describe("seed", func() {
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{
 						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
-							ZoneSettings: []gardencorev1beta1.SeedSettingLoadBalancerServicesZoneSettings{{
-								ZoneName:    zone1,
+							Zones: []gardencorev1beta1.SeedSettingLoadBalancerServicesZones{{
+								Name:        zone1,
 								Annotations: map[string]string{},
 							}},
 						},
@@ -257,13 +257,13 @@ var _ = Describe("seed", func() {
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{
 						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
-							ZoneSettings: []gardencorev1beta1.SeedSettingLoadBalancerServicesZoneSettings{
+							Zones: []gardencorev1beta1.SeedSettingLoadBalancerServicesZones{
 								{
-									ZoneName:              zone1,
+									Name:                  zone1,
 									ExternalTrafficPolicy: &policy1,
 								},
 								{
-									ZoneName:              zone2,
+									Name:                  zone2,
 									ExternalTrafficPolicy: &policy2,
 								},
 							},

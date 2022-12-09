@@ -23,7 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
@@ -37,54 +37,54 @@ const (
 	zoneInfix          = "--zone--"
 )
 
-// NewIstioConfig creates a new instance of the istio configuration.
-func NewIstioConfig(operation *operation.Operation) component.IstioConfigInterface {
-	return &istioConfig{
+// NewConfig creates a new instance of the istio configuration.
+func NewConfig(operation *operation.Operation) component.IstioConfigInterface {
+	return &config{
 		operation: operation,
 	}
 }
 
-type istioConfig struct {
+type config struct {
 	operation *operation.Operation
 }
 
 // ServiceName is the currently used name of the istio ingress service, which is responsible for the shoot cluster.
-func (i *istioConfig) ServiceName() string {
-	return *i.sniConfig().Ingress.ServiceName
+func (c *config) ServiceName() string {
+	return *c.sniConfig().Ingress.ServiceName
 }
 
 // Namespace is the currently used namespace of the istio ingress gateway, which is responsible for the shoot cluster.
-func (i *istioConfig) Namespace() string {
-	return i.addZonePinningIfRequired(*i.sniConfig().Ingress.Namespace)
+func (c *config) Namespace() string {
+	return c.addZonePinningIfRequired(*c.sniConfig().Ingress.Namespace)
 }
 
 // LoadBalancerAnnotations contain the annotation to be used for the istio ingress service load balancer.
-func (i *istioConfig) LoadBalancerAnnotations() map[string]string {
-	zone := i.singleZoneIfPinned()
-	if exposureClassHandler := i.exposureClassHandler(); exposureClassHandler != nil {
+func (c *config) LoadBalancerAnnotations() map[string]string {
+	zone := c.singleZoneIfPinned()
+	if exposureClassHandler := c.exposureClassHandler(); exposureClassHandler != nil {
 		if zone != nil {
-			return utils.MergeStringMaps(exposureClassHandler.LoadBalancerService.Annotations, i.operation.Seed.GetZonalLoadBalancerServiceAnnotations(*zone))
+			return utils.MergeStringMaps(exposureClassHandler.LoadBalancerService.Annotations, c.operation.Seed.GetZonalLoadBalancerServiceAnnotations(*zone))
 		}
-		return utils.MergeStringMaps(i.operation.Seed.GetLoadBalancerServiceAnnotations(), exposureClassHandler.LoadBalancerService.Annotations)
+		return utils.MergeStringMaps(c.operation.Seed.GetLoadBalancerServiceAnnotations(), exposureClassHandler.LoadBalancerService.Annotations)
 	}
 	if zone != nil {
-		return i.operation.Seed.GetZonalLoadBalancerServiceAnnotations(*zone)
+		return c.operation.Seed.GetZonalLoadBalancerServiceAnnotations(*zone)
 	}
-	return i.operation.Seed.GetLoadBalancerServiceAnnotations()
+	return c.operation.Seed.GetLoadBalancerServiceAnnotations()
 }
 
 // Labels contain the labels to be used for the istio ingress gateway entities.
-func (i *istioConfig) Labels() map[string]string {
-	zone := i.singleZoneIfPinned()
-	if exposureClassHandler := i.exposureClassHandler(); exposureClassHandler != nil {
+func (c *config) Labels() map[string]string {
+	zone := c.singleZoneIfPinned()
+	if exposureClassHandler := c.exposureClassHandler(); exposureClassHandler != nil {
 		return GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(exposureClassHandler.SNI.Ingress.Labels, exposureClassHandler.Name), zone)
 	}
-	return GetIstioZoneLabels(i.sniConfig().Ingress.Labels, zone)
+	return GetIstioZoneLabels(c.sniConfig().Ingress.Labels, zone)
 }
 
-func (i *istioConfig) exposureClassHandler() *config.ExposureClassHandler {
-	if exposureClassName := i.operation.Shoot.GetInfo().Spec.ExposureClassName; exposureClassName != nil {
-		for _, handler := range i.operation.Config.ExposureClassHandlers {
+func (c *config) exposureClassHandler() *gardenletconfig.ExposureClassHandler {
+	if exposureClassName := c.operation.Shoot.GetInfo().Spec.ExposureClassName; exposureClassName != nil {
+		for _, handler := range c.operation.Config.ExposureClassHandlers {
 			if *exposureClassName == handler.Name {
 				return &handler
 			}
@@ -93,30 +93,30 @@ func (i *istioConfig) exposureClassHandler() *config.ExposureClassHandler {
 	return nil
 }
 
-func (i *istioConfig) sniConfig() *config.SNI {
-	if exposureClassHandler := i.exposureClassHandler(); exposureClassHandler != nil {
+func (c *config) sniConfig() *gardenletconfig.SNI {
+	if exposureClassHandler := c.exposureClassHandler(); exposureClassHandler != nil {
 		return exposureClassHandler.SNI
 	}
-	return i.operation.Config.SNI
+	return c.operation.Config.SNI
 }
 
-func (i *istioConfig) addZonePinningIfRequired(namespace string) string {
+func (c *config) addZonePinningIfRequired(namespace string) string {
 	// Only clusters pinned to exactly one zone are exposed via zonal istio ingress gateway.
 	// All other clusters, i.e. true HA and legacy/accidental multi-zonal clusters, are exposed
 	// via the default multi-zonal istio ingress gateway.
-	zone := i.singleZoneIfPinned()
+	zone := c.singleZoneIfPinned()
 	if zone != nil {
 		return GetIstioNamespaceForZone(namespace, *zone)
 	}
 	return namespace
 }
 
-func (i *istioConfig) singleZoneIfPinned() *string {
+func (c *config) singleZoneIfPinned() *string {
 	// Zone-specific istio ingress gateways are only deployed with more than one zone
-	if len(i.operation.Seed.GetInfo().Spec.Provider.Zones) <= 1 {
+	if len(c.operation.Seed.GetInfo().Spec.Provider.Zones) <= 1 {
 		return nil
 	}
-	if v, ok := i.operation.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
+	if v, ok := c.operation.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
 		zones := sets.NewString(strings.Split(v, ",")...).Delete("").List()
 		if len(zones) == 1 {
 			return &zones[0]

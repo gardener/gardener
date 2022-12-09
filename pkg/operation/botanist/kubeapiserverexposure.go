@@ -33,7 +33,7 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc: func() map[string]string { return b.getKubeAPIServerServiceAnnotations(sniPhase) },
+			AnnotationsFunc: func() map[string]string { return b.Shoot.Components.IstioConfig.LoadBalancerAnnotations() },
 			SNIPhase:        sniPhase,
 		},
 		func() client.ObjectKey {
@@ -61,10 +61,6 @@ func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.
 	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
 }
 
-func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
-	return b.Shoot.Components.IstioConfig.LoadBalancerAnnotations()
-}
-
 // APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and the shoot uses internal and external
 // DNS.
 func (b *Botanist) APIServerSNIEnabled() bool {
@@ -79,7 +75,10 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				IstioIngressGateway:      b.getIngressGatewayConfig(),
+				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
+					Namespace: b.Shoot.Components.IstioConfig.Namespace(),
+					Labels:    b.Shoot.Components.IstioConfig.Labels(),
+				},
 				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}
 		},
@@ -89,13 +88,6 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 // DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
 func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
-}
-
-func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressGateway {
-	return kubeapiserverexposure.IstioIngressGateway{
-		Namespace: b.Shoot.Components.IstioConfig.Namespace(),
-		Labels:    b.Shoot.Components.IstioConfig.Labels(),
-	}
 }
 
 // SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
@@ -148,7 +140,10 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 					gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 					gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				},
-				IstioIngressGateway:      b.getIngressGatewayConfig(),
+				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
+					Namespace: b.Shoot.Components.IstioConfig.Namespace(),
+					Labels:    b.Shoot.Components.IstioConfig.Labels(),
+				},
 				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}
 		},

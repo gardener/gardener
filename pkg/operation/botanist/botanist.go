@@ -203,7 +203,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 	o.Shoot.Components.HVPA = hvpa.New(nil, b.Shoot.SeedNamespace, hvpa.Values{})
-	o.Shoot.Components.IstioConfig = istio.NewIstioConfig(o)
+	o.Shoot.Components.IstioConfig = istio.NewConfig(o)
 
 	// Logging
 	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)

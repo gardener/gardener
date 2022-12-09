@@ -76,8 +76,8 @@ spec:
   #   annotations:
   #     foo: bar
   #   externalTrafficPolicy: Local
-  #   zoneSettings:
-  #   - zoneName: europe-1a
+  #   zones:
+  #   - name: europe-1a
   #     annotations:
   #       foo: bar
   #     externalTrafficPolicy: Local

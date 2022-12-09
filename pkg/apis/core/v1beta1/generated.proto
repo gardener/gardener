@@ -2010,17 +2010,17 @@ message SeedSettingLoadBalancerServices {
   // +optional
   optional string externalTrafficPolicy = 2;
 
-  // ZoneSettings controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
+  // Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
   // Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.
   // +optional
-  repeated SeedSettingLoadBalancerServicesZoneSettings zoneSettings = 3;
+  repeated SeedSettingLoadBalancerServicesZones zones = 3;
 }
 
-// SeedSettingLoadBalancerServicesZoneSettings controls settings, which are specific to the single-zone load balancers in a
+// SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
 // multi-zonal setup.
-message SeedSettingLoadBalancerServicesZoneSettings {
-  // ZoneName is the name of the zone as specified in seed.spec.provider.zones.
-  optional string zoneName = 1;
+message SeedSettingLoadBalancerServicesZones {
+  // Name is the name of the zone as specified in seed.spec.provider.zones.
+  optional string name = 1;
 
   // Annotations is a map of annotations that will be injected/merged into every load balancer service object.
   // +optional

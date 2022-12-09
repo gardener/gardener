@@ -190,19 +190,19 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		zones := sets.NewString(seedSpec.Provider.Zones...)
 		specifiedZones := sets.NewString()
 
-		for i, zoneSettings := range seedSpec.Settings.LoadBalancerServices.ZoneSettings {
-			if !zones.Has(zoneSettings.ZoneName) {
-				allErrs = append(allErrs, field.NotFound(fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("zoneName"), zoneSettings.ZoneName))
+		for i, zoneSettings := range seedSpec.Settings.LoadBalancerServices.Zones {
+			if !zones.Has(zoneSettings.Name) {
+				allErrs = append(allErrs, field.NotFound(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("name"), zoneSettings.Name))
 			}
-			if specifiedZones.Has(zoneSettings.ZoneName) {
-				allErrs = append(allErrs, field.Duplicate(fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("zoneName"), zoneSettings.ZoneName))
+			if specifiedZones.Has(zoneSettings.Name) {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("name"), zoneSettings.Name))
 			}
-			specifiedZones.Insert(zoneSettings.ZoneName)
+			specifiedZones.Insert(zoneSettings.Name)
 
-			allErrs = append(allErrs, apivalidation.ValidateAnnotations(zoneSettings.Annotations, fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("annotations"))...)
+			allErrs = append(allErrs, apivalidation.ValidateAnnotations(zoneSettings.Annotations, fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("annotations"))...)
 
 			if policy := zoneSettings.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "zoneSettings").Index(i).Child("externalTrafficPolicy"), *policy, availableExternalTrafficPolicies.List()))
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("externalTrafficPolicy"), *policy, availableExternalTrafficPolicies.List()))
 			}
 		}
 	}
