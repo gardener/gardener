@@ -84,9 +84,9 @@ var _ = Describe("Shoot", func() {
 			BeFalse()),
 	)
 
-	DescribeTable("#IsShootFailed",
+	DescribeTable("#IsShootFailedAndUpToDate",
 		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
-			Expect(IsShootFailed(shoot)).To(match)
+			Expect(IsShootFailedAndUpToDate(shoot)).To(match)
 		},
 
 		Entry("no last operation",

@@ -15,8 +15,10 @@
 package shoot
 
 import (
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -29,6 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -43,8 +46,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.Recorder == nil {
 		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
 	}
-	if r.ReconciliationDueTracker == nil {
-		r.ReconciliationDueTracker = newReconciliationDueTracker()
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
@@ -64,20 +67,35 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
-		r.EventHandler(),
+		r.EventHandler(c.GetLogger()),
 		predicateutils.SeedNamePredicate(r.Config.SeedConfig.Name, gutil.GetShootSeedNames),
 		&predicate.GenerationChangedPredicate{},
 	)
 }
 
+// CalculateControllerInfos is exposed for testing
+var CalculateControllerInfos = helper.CalculateControllerInfos
+
 // EventHandler returns an event handler.
-func (r *Reconciler) EventHandler() handler.EventHandler {
+func (r *Reconciler) EventHandler(log logr.Logger) handler.EventHandler {
 	return &handler.Funcs{
 		CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
-			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return
+			}
+
+			enqueueAfter := CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot).EnqueueAfter
+			nextReconciliation := r.Clock.Now().UTC().Add(enqueueAfter)
+
+			log.Info("Scheduling next reconciliation for Shoot",
+				"namespace", shoot.Namespace, "name", shoot.Name,
+				"enqueueAfter", enqueueAfter, "nextReconciliation", nextReconciliation)
+
+			q.AddAfter(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.Object.GetName(),
 				Namespace: e.Object.GetNamespace(),
-			}})
+			}}, enqueueAfter)
 		},
 		UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 			req := reconcile.Request{NamespacedName: types.NamespacedName{

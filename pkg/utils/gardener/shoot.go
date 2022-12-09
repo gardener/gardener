@@ -32,6 +32,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -64,8 +65,8 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1
 	return ignore
 }
 
-// IsShootFailed checks if a Shoot is failed.
-func IsShootFailed(shoot *gardencorev1beta1.Shoot) bool {
+// IsShootFailedAndUpToDate checks if a Shoot is failed and the observed generation and gardener version are up-to-date.
+func IsShootFailedAndUpToDate(shoot *gardencorev1beta1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 
 	return lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed &&
@@ -75,21 +76,21 @@ func IsShootFailed(shoot *gardencorev1beta1.Shoot) bool {
 
 // IsNowInEffectiveShootMaintenanceTimeWindow checks if the current time is in the effective
 // maintenance time window of the Shoot.
-func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
-	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
+func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot, clock clock.Clock) bool {
+	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(clock.Now())
 }
 
 // LastReconciliationDuringThisTimeWindow returns true if <now> is contained in the given effective maintenance time
 // window of the shoot and if the <lastReconciliation> did not happen longer than the longest possible duration of a
 // maintenance time window.
-func LastReconciliationDuringThisTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
+func LastReconciliationDuringThisTimeWindow(shoot *gardencorev1beta1.Shoot, clock clock.Clock) bool {
 	if shoot.Status.LastOperation == nil {
 		return false
 	}
 
 	var (
 		timeWindow         = EffectiveShootMaintenanceTimeWindow(shoot)
-		now                = time.Now()
+		now                = clock.Now()
 		lastReconciliation = shoot.Status.LastOperation.LastUpdateTime.Time
 	)
 
