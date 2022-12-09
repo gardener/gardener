@@ -238,17 +238,13 @@ func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
 
 func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNShoot []vpnSecret) (map[string][]byte, error) {
 	var (
-		secretNameTLSAuth string
-
 		secretVPNSeedServerTLSAuth *corev1.Secret
 		found                      bool
 	)
 
-	secretNameTLSAuth = vpnseedserver.SecretNameTLSAuth
-
-	secretVPNSeedServerTLSAuth, found = v.secretsManager.Get(secretNameTLSAuth)
+	secretVPNSeedServerTLSAuth, found = v.secretsManager.Get(vpnseedserver.SecretNameTLSAuth)
 	if !found {
-		return nil, fmt.Errorf("secret %q not found", secretNameTLSAuth)
+		return nil, fmt.Errorf("secret %q not found", vpnseedserver.SecretNameTLSAuth)
 	}
 
 	var (
