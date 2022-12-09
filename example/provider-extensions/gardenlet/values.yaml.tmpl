@@ -3,7 +3,7 @@ config:
     apiVersion: core.gardener.cloud/v1beta1
     kind: Seed
     metadata:
-      # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+      # Automatically set
       name: ""
     spec:
       backup: null
@@ -11,34 +11,34 @@ config:
       dns:
         provider:
           secretRef:
-            # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+            # Automatically set when using a Gardener shoot
             name: ""
             namespace: garden
-          # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+          # Automatically set when using a Gardener shoot
           type: ""
       ingress:
         controller:
           kind: nginx
-        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        # Enter ingress domain of your seed
         domain: ""
       networks:
         blockCIDRs:
         - 169.254.169.254/32
-        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        # Automatically set when using a Gardener shoot
         pods: ""
-        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        # Automatically set when using a Gardener shoot
         nodes: ""
-        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        # Automatically set when using a Gardener shoot
         services: ""
         shootDefaults:
           pods: 100.80.0.0/12
           services: 100.112.0.0/13
       provider:
-        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        # Automatically set when using a Gardener shoot
         region: ""
-        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        # Automatically set when using a Gardener shoot
         type: ""
-        # Automatically set via create-seed.sh - change values in ./example/provider-extensions/seed/seed-config.yaml
+        # Enter zones of your seed
         zones: []
       settings:
         dependencyWatchdog:

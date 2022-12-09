@@ -21,20 +21,22 @@ REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR"/../../..)"
 
 usage() {
   echo "Usage:"
-  echo "> configure-seed.sh [ -h | <garden-kubeconfig> <seed-kubeconfig> ]"
+  echo "> configure-seed.sh [ -h | <garden-kubeconfig> <seed-kubeconfig> <seed-name> ]"
   echo
   echo ">> For example: configure-seed.sh ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml provider-extensions"
 
   exit 0
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
+if [ "$1" == "-h" ] || [ "$#" -ne 3 ]; then
   usage
 fi
 
 garden_kubeconfig=$1
 seed_kubeconfig=$2
+seed_name=$3
 
+use_shoot_info="false"
 temp_shoot_info=$(mktemp)
 cleanup-shoot-info() {
   rm -f "$temp_shoot_info"
@@ -69,19 +71,6 @@ check-not-initial() {
 
 }
 
-default-if-initial() {
-  local var=$1
-  local file=$2
-  local yqArg=$3
-  local prefix=$4
-
-  if [[  $var  == "" ]] || [[  $var  == "null" ]]; then
-    echo "${prefix}$(yq "${yqArg}" "$file")"
-  else
-    echo "$var"
-  fi
-}
-
 ensure-gardener-dns-annotations() {
   local namespace=$1
   local name=$2
@@ -98,7 +87,6 @@ ensure-gardener-dns-annotations() {
 }
 
 echo "Ensuring config files"
-ensure-config-file "$SCRIPT_DIR"/seed-config.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
@@ -106,35 +94,76 @@ ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values
 
 echo "Check if essential config options are initialized"
 check-not-initial "$SCRIPT_DIR"/kubeconfig ""
-check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".ingressDomain"
-check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".zones"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.domain"
-check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootInfo"
-check-not-initial "$SCRIPT_DIR"/seed-config.yaml ".useGardenerShootDNS"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.provider"
 
-registry_domain=$(yq '.registryDomain' "$SCRIPT_DIR"/seed-config.yaml)
-relay_domain=$(yq '.relayDomain' "$SCRIPT_DIR"/seed-config.yaml)
-type=$(yq '.provider' "$SCRIPT_DIR"/seed-config.yaml)
+registry_domain=
+relay_domain=
 
-if [[ $(yq '.useGardenerShootInfo' "$SCRIPT_DIR"/seed-config.yaml) == "true" ]]; then
+internal_dns_secret=$(yq -e '.global.internalDomain.domain' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
+dns_provider_type=$(yq -e '.global.internalDomain.provider' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml)
+
+if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconfig" -o yaml > "$temp_shoot_info"; then
+  use_shoot_info="true"
   echo "Getting config from shoot"
-  kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconfig" -o yaml > "$temp_shoot_info"
+  registry_domain=reg.$(yq -e '.data.domain' "$temp_shoot_info")
+  relay_domain=relay.$(yq -e '.data.domain' "$temp_shoot_info")
+  pods_cidr=$(yq -e '.data.podNetwork' "$temp_shoot_info")
+  nodes_cidr=$(yq -e '.data.nodeNetwork' "$temp_shoot_info")
+  services_cidr=$(yq -e '.data.serviceNetwork' "$temp_shoot_info")
+  region=$(yq -e '.data.region' "$temp_shoot_info")
+  type=$(yq -e '.data.provider' "$temp_shoot_info")
 
-  registry_domain=$(default-if-initial "$registry_domain" "$temp_shoot_info" ".data.domain" "reg.")
-  relay_domain=$(default-if-initial "$relay_domain" "$temp_shoot_info" ".data.domain" "relay.")
-  type=$(default-if-initial "$type" "$temp_shoot_info" ".data.provider")
+  yq -e -i "
+    .config.seedConfig.metadata.name = \"$seed_name\" |
+    .config.seedConfig.spec.networks.pods = \"$pods_cidr\" |
+    .config.seedConfig.spec.networks.nodes = \"$nodes_cidr\" |
+    .config.seedConfig.spec.networks.services = \"$services_cidr\" |
+    .config.seedConfig.spec.dns.provider.secretRef.name = \"$internal_dns_secret\" |
+    .config.seedConfig.spec.dns.provider.type = \"$dns_provider_type\" |
+    .config.seedConfig.spec.provider.region = \"$region\" |
+    .config.seedConfig.spec.provider.type = \"$type\"
+  " "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
+else
+  echo "######################################################################################"
+  echo "Please enter domain names for registry and relay domains on the seed"
+  echo "######################################################################################"
+  echo "Registry domain:"
+  read -er registry_domain
+  echo "Relay domain:"
+  read -er relay_domain
+  echo "######################################################################################"
+
+  yq -e -i "
+    .config.seedConfig.metadata.name = \"$seed_name\" |
+    .config.seedConfig.spec.dns.provider.secretRef.name = \"$internal_dns_secret\" |
+    .config.seedConfig.spec.dns.provider.type = \"$dns_provider_type\"
+  " "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
 fi
 
 if [[ $registry_domain == "$relay_domain" ]]; then
   echo "registry and relay domains must not be equal"
   exit 1
 fi
+echo "$registry_domain" > "$SCRIPT_DIR"/registrydomain
+
+echo "Check if gardenlet values.yaml is complete"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.metadata.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.ingress.domain"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.networks.pods"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.networks.nodes"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.networks.services"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.dns.provider.secretRef.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.dns.provider.type"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.provider.region"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.provider.type"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.provider.zones"
 
 echo "Deploying load-balancer services"
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../registry-seed/load-balancer/base
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../ssh-reverse-tunnel/load-balancer
 
-if [[ $(yq '.useGardenerShootDNS' "$SCRIPT_DIR"/seed-config.yaml) == "true" ]]; then
+if [[ $use_shoot_info == "true" ]]; then
   ensure-gardener-dns-annotations registry registry "$registry_domain"
   ensure-gardener-dns-annotations relay gardener-apiserver-tunnel "$relay_domain"
 else
