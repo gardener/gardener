@@ -1119,7 +1119,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (r *resourceManager) ensureNetworkPolicy(ctx context.Context) error {

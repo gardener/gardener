@@ -35,7 +35,7 @@ Some extensions might not only create resources in the seed cluster itself but a
 However, there are no credentials for the shoot for every extension.
 
 Extensions are supposed to use [`ManagedResources`](../concepts/resource-manager.md#ManagedResource-controller) to manage resources in shoot clusters.
-gardenlet deploys gardener-resource-manager instances into all shoot control planes, that will reconcile `ManagedResources` without a specified class (`spec.class=null`) in shoot clusters.
+gardenlet deploys gardener-resource-manager instances into all shoot control planes, that will reconcile `ManagedResources` without a specified class (`spec.class=null`) in shoot clusters. Mind that Gardener acts on `ManagedResources` with the `origin=gardener` label. In order to prevent unwanted behavior extensions should omit the `origin` label or provide their own unique value for it when creating such resources.
 
 If you need to deploy a non-DaemonSet resource you need to ensure that it only runs on nodes that are allowed to host system components and extensions.
 To do that you need to configure a `nodeSelector` as following:

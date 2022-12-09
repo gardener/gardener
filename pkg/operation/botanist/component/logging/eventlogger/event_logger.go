@@ -202,7 +202,7 @@ func (l *eventLogger) reconcileRBACForShoot(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, l.client, l.namespace, managedResourceName, false, resources)
+	return managedresources.CreateForShoot(ctx, l.client, l.namespace, managedResourceName, managedresources.LabelValueGardener, false, resources)
 }
 
 func (l *eventLogger) reconcileRBACForSeed(ctx context.Context) error {

@@ -477,7 +477,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, k.client.Client(), k.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, k.client.Client(), k.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {

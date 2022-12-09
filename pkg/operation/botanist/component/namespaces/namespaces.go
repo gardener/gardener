@@ -60,7 +60,7 @@ func (n *namespaces) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, n.client, n.namespace, managedResourceName, true, data)
+	return managedresources.CreateForShoot(ctx, n.client, n.namespace, managedResourceName, managedresources.LabelValueGardener, true, data)
 }
 
 func (n *namespaces) Destroy(ctx context.Context) error {

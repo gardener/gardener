@@ -226,7 +226,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (v *vpnShoot) Destroy(ctx context.Context) error {

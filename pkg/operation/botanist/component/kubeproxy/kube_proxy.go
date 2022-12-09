@@ -140,7 +140,7 @@ func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[strin
 	var (
 		mrName             = managedResourceName(pool)
 		secretName, secret = managedresources.NewSecret(k.client, k.namespace, mrName, data, true)
-		managedResource    = managedresources.NewForShoot(k.client, k.namespace, mrName, false).WithSecretRef(secretName)
+		managedResource    = managedresources.NewForShoot(k.client, k.namespace, mrName, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 	)
 
 	secret = secret.WithLabels(getManagedResourceLabels(pool))

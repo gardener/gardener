@@ -78,7 +78,7 @@ var _ = Describe("managedresources", func() {
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
 
-			Expect(CreateForShoot(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+			Expect(CreateForShoot(ctx, c, namespace, name, LabelValueGardener, keepObjects, data)).To(MatchError(fakeErr))
 		})
 
 		It("should return the error of the managed resource reconciliation", func() {
@@ -89,7 +89,7 @@ var _ = Describe("managedresources", func() {
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
-			Expect(CreateForShoot(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+			Expect(CreateForShoot(ctx, c, namespace, name, LabelValueGardener, keepObjects, data)).To(MatchError(fakeErr))
 		})
 
 		It("should successfully create secret and managed resource", func() {
@@ -118,7 +118,7 @@ var _ = Describe("managedresources", func() {
 				}),
 			)
 
-			Expect(CreateForShoot(ctx, c, namespace, name, keepObjects, data)).To(Succeed())
+			Expect(CreateForShoot(ctx, c, namespace, name, LabelValueGardener, keepObjects, data)).To(Succeed())
 		})
 	})
 

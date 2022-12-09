@@ -96,7 +96,7 @@ func (c *nodeProblemDetector) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, c.client, c.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, c.client, c.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (c *nodeProblemDetector) Destroy(ctx context.Context) error {
