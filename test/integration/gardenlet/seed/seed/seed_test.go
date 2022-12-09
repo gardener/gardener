@@ -306,16 +306,19 @@ var _ = Describe("Seed controller tests", func() {
 						}).Should(Succeed())
 					} else {
 						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
-						// ManagedResources. However, it is not really running, so we have to fake its behaviour here.
+						// ManagedResources and VerticalPodAutoscaler. However, it is not really running, so we have to fake its behaviour here.
 						By("Create CustomResourceDefinition for ManagedResources")
 						var (
 							applier = kubernetes.NewApplier(testClient, testClient.RESTMapper())
-							obj     = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+							mrCRD   = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+							vpaCRD  = kubernetes.NewManifestReader([]byte(verticalPodAutoscalerCRD))
 						)
 
-						Expect(applier.ApplyManifest(ctx, obj, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						Expect(applier.ApplyManifest(ctx, mrCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						Expect(applier.ApplyManifest(ctx, vpaCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						DeferCleanup(func() {
-							Expect(applier.DeleteManifest(ctx, obj)).To(Succeed())
+							Expect(applier.DeleteManifest(ctx, mrCRD)).To(Succeed())
+							Expect(applier.DeleteManifest(ctx, vpaCRD)).To(Succeed())
 						})
 					}
 
@@ -392,6 +395,13 @@ var _ = Describe("Seed controller tests", func() {
 						Eventually(func(g Gomega) error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
+						}).Should(BeNotFoundError())
+
+						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
+						// with other test cases.
+						By("Verify that CRD has been deleted")
+						Eventually(func(g Gomega) error {
+							return testClient.Get(ctx, client.ObjectKey{Name: "managedresources.resources.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})
 						}).Should(BeNotFoundError())
 					}
 
