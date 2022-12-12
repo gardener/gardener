@@ -86,14 +86,14 @@ clamp_mss_to_pmtu() {
   fi
 }
 
-set_gardener_version_env_variables() {
+set_gardener_upgrade_version_env_variables() {
   export VERSION="$(cat VERSION)"
-  if [[ -z $GARDENER_PREVIOUS_RELEASE ]]; then
-    export GARDENER_PREVIOUS_RELEASE=$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)
+  if [[ -z "$GARDENER_PREVIOUS_RELEASE" ]]; then
+    export GARDENER_PREVIOUS_RELEASE="$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)"
   fi
 
-  if [[ -z $GARDENER_NEXT_RELEASE ]]; then
-    export GARDENER_NEXT_RELEASE=$VERSION
+  if [[ -z "$GARDENER_NEXT_RELEASE" ]]; then
+    export GARDENER_NEXT_RELEASE="$VERSION"
   fi
 }
 
