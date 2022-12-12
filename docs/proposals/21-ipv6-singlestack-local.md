@@ -79,13 +79,11 @@ Once this enhancement has been implemented and IPv6 single-stack networking in l
 - support changing the networking setup of shoots from IPv4 to IPv6 single-stack or vice-versa
 - host IPv6 single-stack shoots on IPv4 single-stack seeds or vice-versa
 - propose changes API types defined outside of gardener/gardener and their implementations, e.g., the `NetworkConfig` APIs (`providerConfig`) of networking extensions
-- support the legacy VPN tunnel (`ReversedVPN` feature gate is disabled)
 
 ## Proposal
 
 A new feature gate `IPv6SingleStack` is added to gardener-apiserver.
 The IPv6-related fields and values can only be used if the feature gate is enabled.
-The feature gate cannot be enabled if the `ReversedVPN` feature gate is disabled (the legacy VPN tunnel solution is [not supported by provider-local](https://github.com/gardener/gardener/blob/83de074f1bc1c009f92e97a08289340591377af6/docs/extensions/provider-local.md#current-limitations) anyway).
 
 The feature gate serves the purpose of disabling the feature in productive Gardener installations and prevents users from configuring IPv6 networking for their shoot clusters, while it is still under development and not supported on cloud infrastructure.
 As part of this enhancement, the feature gate is supposed to be enabled only in the local environment.
