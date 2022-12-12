@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -45,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -158,7 +161,7 @@ func (r *Reconciler) migrateShoot(ctx context.Context, log logr.Logger, shoot *g
 		return reconcile.Result{}, err
 	}
 
-	if err := r.isSeedReadyForMigration(destinationSeed); err != nil {
+	if err := helper.IsSeedReadyForMigration(destinationSeed, r.Identity); err != nil {
 		return reconcile.Result{}, fmt.Errorf("destination Seed is not available to host the control plane of Shoot %s: %w", shoot.GetName(), err)
 	}
 
@@ -420,15 +423,40 @@ func (r *Reconciler) finalizeShootDeletion(ctx context.Context, log logr.Logger,
 	return reconcile.Result{}, r.removeFinalizerFromShoot(ctx, log, shoot)
 }
 
-func (r *Reconciler) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error {
-	if seed.DeletionTimestamp != nil {
-		return fmt.Errorf("seed is set for deletion")
-	}
-	return health.CheckSeedForMigration(seed, r.Identity)
+// deleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
+func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: shoot.Status.TechnicalID}}
+	return client.IgnoreNotFound(r.SeedClientSet.Client().Delete(ctx, cluster))
 }
 
-func (r *Reconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	return kutil.ResourcesExist(ctx, r.GardenClient, operationsv1alpha1.SchemeGroupVersion.WithKind("BastionList"), client.MatchingFields{operations.BastionShootName: shoot.Name})
+func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
+	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
+		return err
+	}
+
+	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
+	}
+
+	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
+	// operations (sometimes the cache is not synced fast enough).
+	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (bool, error) {
+		err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		if apierrors.IsNotFound(err) {
+			return retryutils.Ok()
+		}
+		if err != nil {
+			return retryutils.SevereError(err)
+		}
+		lastOperation := shoot.Status.LastOperation
+		if !sets.NewString(shoot.Finalizers...).Has(gardencorev1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+			return retryutils.Ok()
+		}
+		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1beta1.GardenerName))
+	})
 }
 
 func (r *Reconciler) newProgressReporter(reporterFn flow.ProgressReporterFn) flow.ProgressReporter {
@@ -745,6 +773,10 @@ func (r *Reconciler) patchShootStatusOperationError(
 	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
 }
 
+func (r *Reconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	return kutil.ResourcesExist(ctx, r.GardenClient, operationsv1alpha1.SchemeGroupVersion.WithKind("BastionList"), client.MatchingFields{operations.BastionShootName: shoot.Name})
+}
+
 // isHibernationActive uses the Cluster resource in the Seed to determine whether the Shoot is hibernated
 // The Cluster contains the actual or "active" spec of the Shoot resource for this reconciliation
 // as the Shoot resources field `spec.hibernation.enabled` might have changed during the reconciliation
@@ -764,20 +796,6 @@ func (r *Reconciler) isHibernationActive(ctx context.Context, shootSeedNamespace
 	}
 
 	return v1beta1helper.HibernationIsEnabled(shoot), nil
-}
-
-// deleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
-func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: shoot.Status.TechnicalID}}
-	return client.IgnoreNotFound(r.SeedClientSet.Client().Delete(ctx, cluster))
-}
-
-func (r *Reconciler) reconcileInMaintenanceOnly() bool {
-	return pointer.BoolDeref(r.Config.Controllers.Shoot.ReconcileInMaintenanceOnly, false)
-}
-
-func (r *Reconciler) respectSyncPeriodOverwrite() bool {
-	return pointer.BoolDeref(r.Config.Controllers.Shoot.RespectSyncPeriodOverwrite, false)
 }
 
 func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.LastError, err error) []gardencorev1beta1.LastError {

@@ -24,6 +24,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 var _ = Describe("ShouldPrepareShootForMigration", func() {
@@ -158,5 +160,38 @@ var _ = Describe("ComputeOperationType", func() {
 		shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
 		shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
 		Expect(ComputeOperationType(shoot)).To(Equal(gardencorev1beta1.LastOperationTypeDelete))
+	})
+})
+
+var _ = Describe("GetEtcdDeployTimeout", func() {
+	var (
+		s              *shoot.Shoot
+		defaultTimeout time.Duration
+	)
+
+	BeforeEach(func() {
+		s = &shoot.Shoot{}
+		s.SetInfo(&gardencorev1beta1.Shoot{})
+		defaultTimeout = 30 * time.Second
+	})
+
+	It("HAControlPlanes feature is not enabled", func() {
+		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
+	})
+
+	It("HAControlPlanes feature is enabled but shoot is not marked to have HA control plane", func() {
+		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
+	})
+
+	It("HAControlPlanes feature is enabled, shoot spec has empty ControlPlane", func() {
+		s.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
+	})
+
+	It("HAControlPlanes feature is enabled and s is marked as multi-zonal", func() {
+		s.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+			HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
+		}
+		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(etcd.DefaultTimeout))
 	})
 })

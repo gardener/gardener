@@ -15,8 +15,14 @@
 package helper
 
 import (
+	"fmt"
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // ShouldPrepareShootForMigration determines whether the controller should prepare the shoot control plane for migration
@@ -38,4 +44,22 @@ func ComputeOperationType(shoot *gardencorev1beta1.Shoot) gardencorev1beta1.Last
 	}
 
 	return v1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
+}
+
+// GetEtcdDeployTimeout returns the timeout for the etcd deployment task of the reconcile flow.
+func GetEtcdDeployTimeout(shoot *shoot.Shoot, defaultDuration time.Duration) time.Duration {
+	timeout := defaultDuration
+	if v1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo()) {
+		timeout = etcd.DefaultTimeout
+	}
+	return timeout
+}
+
+// IsSeedReadyForMigration checks if the seed can be used as a target seed for migrating a shoot control plane.
+// If the seed is ready, it returns nil. Otherwise, it returns an error with a description.
+func IsSeedReadyForMigration(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardener) error {
+	if seed.DeletionTimestamp != nil {
+		return fmt.Errorf("seed is marked to be deleted")
+	}
+	return health.CheckSeedForMigration(seed, identity)
 }
