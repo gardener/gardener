@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1670821622526,
+  "id": 16,
+  "iteration": 1670841148023,
   "links": [],
   "panels": [
     {
@@ -296,8 +296,8 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -305,7 +305,7 @@
             },
             "lineInterpolation": "smooth",
             "lineWidth": 1,
-            "pointSize": 4,
+            "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -342,8 +342,9 @@
         "graph": {},
         "legend": {
           "calcs": [
+            "max",
             "mean",
-            "lastNotNull"
+            "last"
           ],
           "displayMode": "table",
           "placement": "right"
@@ -387,7 +388,7 @@
               "legend": false,
               "tooltip": false
             },
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -437,7 +438,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(controller_runtime_reconcile_time_seconds_count{job=\"gardener-resource-manager\"}[$__rate_interval])) by(controller)",
+          "expr": "sum(rate(controller_runtime_reconcile_time_seconds_count{job=\"$job\",controller=~\"$controller\"}[$__rate_interval])) by(controller)",
           "interval": "",
           "legendFormat": "{{controller}}",
           "refId": "A"
@@ -541,8 +542,8 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -1305,8 +1306,8 @@
         "legend": {
           "calcs": [
             "max",
-            "lastNotNull",
-            "mean"
+            "mean",
+            "last"
           ],
           "displayMode": "table",
           "placement": "right"
@@ -1319,7 +1320,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(workqueue_work_duration_seconds_count{job=\"gardener-resource-manager\"}[$__rate_interval])) by(name)",
+          "expr": "sum(rate(workqueue_work_duration_seconds_count{job=\"$job\",name=~\"$controller\"}[$__rate_interval])) by(name)",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -1594,9 +1595,9 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "gardener-resource-manager",
-          "value": "gardener-resource-manager"
+          "selected": true,
+          "text": "gardenlet",
+          "value": "gardenlet"
         },
         "datasource": "seed-prometheus",
         "definition": "label_values(controller_runtime_reconcile_total{}, job)",
@@ -1625,7 +1626,47 @@
       {
         "allValue": null,
         "current": {
+          "isNone": true,
           "selected": true,
+          "text": "None",
+          "value": ""
+        },
+        "datasource": "seed-prometheus",
+        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"},app_kubernetes_io_instance)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "name",
+        "multi": false,
+        "name": "instance_name",
+        "options": [
+          {
+            "isNone": true,
+            "selected": true,
+            "text": "None",
+            "value": ""
+          }
+        ],
+        "query": {
+          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"},app_kubernetes_io_instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "tags": [],
           "text": [
             "All"
           ],
@@ -1634,7 +1675,7 @@
           ]
         },
         "datasource": "seed-prometheus",
-        "definition": "label_values(controller_runtime_reconcile_total, controller)",
+        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\",app_kubernetes_io_instance=\"$instance_name\"}, controller)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1644,10 +1685,10 @@
         "name": "controller",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_reconcile_total, controller)",
+          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\",app_kubernetes_io_instance=\"$instance_name\"}, controller)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,

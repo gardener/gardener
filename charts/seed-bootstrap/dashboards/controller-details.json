@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 11,
-  "iteration": 1670819706517,
+  "id": 8,
+  "iteration": 1670841124253,
   "links": [],
   "panels": [
     {
@@ -946,28 +946,25 @@
     },
     {
       "datasource": "seed-prometheus",
-      "description": "Seconds an item stays in workqueue before being requested.",
+      "description": "Shows how many items of the workqueue are processed.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "",
+            "axisLabel": "ops/sec",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
+            "fillOpacity": 10,
+            "gradientMode": "none",
             "hideFrom": {
               "graph": false,
               "legend": false,
               "tooltip": false
             },
             "lineInterpolation": "smooth",
-            "lineStyle": {
-              "fill": "solid"
-            },
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -976,6 +973,7 @@
             "showPoints": "auto",
             "spanNulls": false
           },
+          "decimals": 3,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -986,7 +984,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -996,7 +994,7 @@
         "x": 0,
         "y": 45
       },
-      "id": 21,
+      "id": 25,
       "options": {
         "graph": {},
         "legend": {
@@ -1012,29 +1010,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.5, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "expr": "sum(rate(workqueue_work_duration_seconds_count{job=\"$job\",name=~\"$controller\"}[$__rate_interval])) by(pod)",
           "interval": "",
-          "legendFormat": "P50",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "histogram_quantile(0.9, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "P90",
-          "refId": "B"
-        },
-        {
-          "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "P99",
-          "refId": "C"
         }
       ],
-      "title": "Queue Duration (P50, P90, P99)",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Work Rate",
       "type": "timeseries"
     },
     {
@@ -1131,6 +1115,99 @@
       "type": "timeseries"
     },
     {
+      "datasource": "seed-prometheus",
+      "description": "Seconds an item stays in workqueue before being requested.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false
+            },
+            "lineInterpolation": "smooth",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 53
+      },
+      "id": 21,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltipOptions": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.5, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "interval": "",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.9, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "P90",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "P99",
+          "refId": "C"
+        }
+      ],
+      "title": "Queue Duration (P50, P90, P99)",
+      "type": "timeseries"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -1148,7 +1225,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 53
       },
       "hiddenSeries": false,
@@ -1241,9 +1318,9 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "gardener-resource-manager",
-          "value": "gardener-resource-manager"
+          "selected": true,
+          "text": "gardenlet",
+          "value": "gardenlet"
         },
         "datasource": "seed-prometheus",
         "definition": "label_values(controller_runtime_reconcile_total{}, job)",
@@ -1272,12 +1349,51 @@
       {
         "allValue": null,
         "current": {
+          "isNone": true,
           "selected": false,
-          "text": "health-progressing",
-          "value": "health-progressing"
+          "text": "None",
+          "value": ""
         },
         "datasource": "seed-prometheus",
-        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
+        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"},app_kubernetes_io_instance)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "name",
+        "multi": false,
+        "name": "instance_name",
+        "options": [
+          {
+            "isNone": true,
+            "selected": true,
+            "text": "None",
+            "value": ""
+          }
+        ],
+        "query": {
+          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"},app_kubernetes_io_instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "backupbucket",
+          "value": "backupbucket"
+        },
+        "datasource": "seed-prometheus",
+        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\",app_kubernetes_io_instance=\"$instance_name\"}, controller)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1287,7 +1403,7 @@
         "name": "controller",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
+          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\",app_kubernetes_io_instance=\"$instance_name\"}, controller)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -1303,13 +1419,9 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": "seed-prometheus",
         "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\",controller=\"$controller\"}, pod)",
