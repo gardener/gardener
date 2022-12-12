@@ -324,6 +324,7 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshddisabler
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/extensions/worker
@@ -938,6 +939,7 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshddisabler
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/extensions/worker

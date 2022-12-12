@@ -717,6 +717,14 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
 		})
 
+		It("should set the workers settings field", func() {
+			obj.Spec.Provider.WorkersSettings = nil
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{EnsureSSHAccessDisabled: pointer.Bool(false)}))
+		})
+
 		It("should set the system components and coredns autoscaling fields", func() {
 			obj.Spec.SystemComponents = nil
 

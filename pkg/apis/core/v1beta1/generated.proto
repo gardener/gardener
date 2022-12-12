@@ -1742,6 +1742,10 @@ message Provider {
   // +patchMergeKey=name
   // +patchStrategy=merge
   repeated Worker workers = 4;
+
+  // WorkersSettings contains settings for all workers.
+  // +optional
+  optional WorkersSettings workersSettings = 5;
 }
 
 // Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.
@@ -2794,5 +2798,12 @@ message WorkerKubernetes {
 message WorkerSystemComponents {
   // Allow determines whether the pool should be allowed to host system components or not (defaults to true)
   optional bool allow = 1;
+}
+
+// WorkersSettings contains settings for all workers.
+message WorkersSettings {
+  // EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.
+  // +optional
+  optional bool ensureSSHAccessDisabled = 1;
 }
 

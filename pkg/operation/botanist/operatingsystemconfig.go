@@ -62,6 +62,8 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		promtailEnabled, lokiIngressHost = true, b.ComputeLokiHost()
 	}
 
+	ensureSSHAccessDisabled := b.IsWorkersEnsureSSHAccessDisabled()
+
 	return operatingsystemconfig.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -71,14 +73,15 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			OriginalValues: operatingsystemconfig.OriginalValues{
-				ClusterDNSAddress:   clusterDNSAddress,
-				ClusterDomain:       gardencorev1beta1.DefaultDomain,
-				Images:              oscImages,
-				KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
-				MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
-				PromtailEnabled:     promtailEnabled,
-				LokiIngressHostName: lokiIngressHost,
-				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
+				ClusterDNSAddress:       clusterDNSAddress,
+				ClusterDomain:           gardencorev1beta1.DefaultDomain,
+				Images:                  oscImages,
+				KubeletConfig:           b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
+				MachineTypes:            b.Shoot.CloudProfile.Spec.MachineTypes,
+				EnsureSSHAccessDisabled: ensureSSHAccessDisabled,
+				PromtailEnabled:         promtailEnabled,
+				LokiIngressHostName:     lokiIngressHost,
+				NodeLocalDNSEnabled:     v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 			},
 		},
 		operatingsystemconfig.DefaultInterval,

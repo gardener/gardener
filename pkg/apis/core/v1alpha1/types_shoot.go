@@ -1275,6 +1275,9 @@ type Provider struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Workers []Worker `json:"workers" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,rep,name=workers"`
+	// WorkersSettings contains settings for all workers.
+	// +optional
+	WorkersSettings *WorkersSettings `json:"workersSettings,omitempty" protobuf:"bytes,5,opt,name=workersSettings"`
 }
 
 // Worker is the base definition of a worker group.
@@ -1457,6 +1460,13 @@ type ContainerRuntime struct {
 	// ProviderConfig is the configuration passed to the ContainerRuntime resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+}
+
+// WorkersSettings contains settings for all workers.
+type WorkersSettings struct {
+	// EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.
+	// +optional
+	EnsureSSHAccessDisabled *bool `json:"ensureSSHAccessDisabled,omitempty" protobuf:"varint,1,opt,name=ensureSSHAccessDisabled"`
 }
 
 var (

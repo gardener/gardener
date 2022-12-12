@@ -197,6 +197,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker":                                 schema_pkg_apis_core_v1alpha1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes":                       schema_pkg_apis_core_v1alpha1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents":                 schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkersSettings":                        schema_pkg_apis_core_v1alpha1_WorkersSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                   schema_pkg_apis_core_v1beta1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons":                                  schema_pkg_apis_core_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin":                         schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref),
@@ -351,6 +352,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                  schema_pkg_apis_core_v1beta1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes":                        schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents":                  schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings":                         schema_pkg_apis_core_v1beta1_WorkersSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion":                          schema_pkg_apis_operations_v1alpha1_Bastion(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy":             schema_pkg_apis_operations_v1alpha1_BastionIngressPolicy(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionList":                      schema_pkg_apis_operations_v1alpha1_BastionList(ref),
@@ -5502,12 +5504,18 @@ func schema_pkg_apis_core_v1alpha1_Provider(ref common.ReferenceCallback) common
 							},
 						},
 					},
+					"workersSettings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkersSettings contains settings for all workers.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkersSettings"),
+						},
+					},
 				},
 				Required: []string{"type", "workers"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkersSettings", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -8371,6 +8379,26 @@ func schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref common.ReferenceCa
 					},
 				},
 				Required: []string{"allow"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_WorkersSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkersSettings contains settings for all workers.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ensureSSHAccessDisabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -12816,12 +12844,18 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 							},
 						},
 					},
+					"workersSettings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkersSettings contains settings for all workers.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings"),
+						},
+					},
 				},
 				Required: []string{"type", "workers"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -15564,6 +15598,26 @@ func schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref common.ReferenceCal
 					},
 				},
 				Required: []string{"allow"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_WorkersSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkersSettings contains settings for all workers.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ensureSSHAccessDisabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}

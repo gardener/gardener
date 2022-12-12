@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshddisabler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount"
 )
 
@@ -63,6 +64,7 @@ func Components(criName extensionsv1alpha1.CRIName) []components.Component {
 		kernelconfig.New(),
 		kubelet.New(),
 		gardeneruser.New(),
+		sshddisabler.New(),
 	}
 
 	if criName == extensionsv1alpha1.CRINameContainerD {

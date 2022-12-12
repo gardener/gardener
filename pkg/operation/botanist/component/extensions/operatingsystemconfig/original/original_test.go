@@ -121,6 +121,7 @@ var _ = Describe("Original", func() {
 				"kernel-config",
 				"kubelet",
 				"gardener-user",
+				"sshddisabler",
 			}))
 		})
 
@@ -139,6 +140,7 @@ var _ = Describe("Original", func() {
 				"kernel-config",
 				"kubelet",
 				"gardener-user",
+				"sshddisabler",
 				"containerd-initializer",
 			}))
 		})

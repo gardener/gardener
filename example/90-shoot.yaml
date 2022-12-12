@@ -136,6 +136,8 @@ spec:
     #   - ReadonlyFilesystem
     #   - KernelDeadlock
     #   - DiskPressure
+    workersSettings:
+  #   ensureSSHAccessDisabled: true
   kubernetes:
     version: 1.20.1
   # enableStaticTokenKubeconfig: true

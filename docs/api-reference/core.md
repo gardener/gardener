@@ -7450,6 +7450,20 @@ definition in the documentation of your provider extension.</p>
 <p>Workers is a list of worker groups.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>workersSettings</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.WorkersSettings">
+WorkersSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WorkersSettings contains settings for all workers.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ProxyMode">ProxyMode
@@ -11383,6 +11397,37 @@ bool
 </td>
 <td>
 <p>Allow determines whether the pool should be allowed to host system components or not (defaults to true)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.WorkersSettings">WorkersSettings
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>)
+</p>
+<p>
+<p>WorkersSettings contains settings for all workers.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ensureSSHAccessDisabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.</p>
 </td>
 </tr>
 </tbody>
