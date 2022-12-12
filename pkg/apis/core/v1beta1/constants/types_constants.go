@@ -557,8 +557,6 @@ const (
 	AnnotationShootCloudConfigExecutionMaxDelaySeconds = "shoot.gardener.cloud/cloud-config-execution-max-delay-seconds"
 	// AnnotationShootForceRestore is a key for an annotation on a Shoot or BackupEntry resource to trigger a forceful restoration to a different seed.
 	AnnotationShootForceRestore = "shoot.gardener.cloud/force-restore"
-	// AnnotationReversedVPN moves the vpn-server to the seed.
-	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
 	// AnnotationNodeLocalDNS enables a per node dns cache on the shoot cluster.
 	AnnotationNodeLocalDNS = "alpha.featuregates.shoot.gardener.cloud/node-local-dns"
 	// AnnotationNodeLocalDNSForceTcpToClusterDns enforces upgrade to tcp connections for communication between node local and cluster dns.

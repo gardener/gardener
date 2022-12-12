@@ -511,7 +511,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deployVPNShoot = g.Add(flow.Task{
 			Name:         "Deploying vpn-shoot system component",
-			Fn:           flow.TaskFn(botanist.DeployVPNShoot).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.VPNShoot.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployKubeScheduler, deployVPNSeedServer, waitUntilShootNamespacesReady),
 		})
 		deployNodeProblemDetector = g.Add(flow.Task{

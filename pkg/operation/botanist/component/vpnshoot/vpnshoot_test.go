@@ -68,8 +68,6 @@ var _ = Describe("VPNShoot", func() {
 		reversedVPNHeader               = "outbound|1194||vpn-seed-server.shoot--project--shoot-name.svc.cluster.local"
 		reversedVPNHeaderTemplate       = "outbound|1194||vpn-seed-server-%d.shoot--project--shoot-name.svc.cluster.local"
 
-		secrets = Secrets{}
-
 		values = Values{
 			Image: image,
 			ReversedVPN: ReversedVPNValues{
@@ -644,10 +642,7 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
-
-			vpnShoot.SetSecrets(secrets)
 			Expect(vpnShoot.Deploy(ctx)).To(Succeed())
-
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 
 			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{

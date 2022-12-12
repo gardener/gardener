@@ -418,11 +418,6 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 		return kubeapiserver.Images{}, err
 	}
 
-	imageVPNSeed, err := b.ImageVector.FindImage(images.ImageNameVpnSeed, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-
 	vpnClient := ""
 	if b.Shoot.VPNHighAvailabilityEnabled {
 		imageVPNClient, err := b.ImageVector.FindImage(images.ImageNameVpnShootClient, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
@@ -436,7 +431,6 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 		AlpineIPTables:           imageAlpineIPTables.String(),
 		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
 		KubeAPIServer:            imageKubeAPIServer.String(),
-		VPNSeed:                  imageVPNSeed.String(),
 		VPNClient:                vpnClient,
 	}, nil
 }

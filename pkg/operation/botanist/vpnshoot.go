@@ -15,8 +15,6 @@
 package botanist
 
 import (
-	"context"
-
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -27,23 +25,19 @@ import (
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 
-	imageName := images.ImageNameVpnShootClient
-
-	reversedVPNValues := vpnshoot.ReversedVPNValues{
-		Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
-		Endpoint:    b.outOfClusterAPIServerFQDN(),
-		OpenVPNPort: 8132,
-	}
-
-	image, err := b.ImageVector.FindImage(imageName, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(images.ImageNameVpnShootClient, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
 	values := vpnshoot.Values{
-		Image:       image.String(),
-		VPAEnabled:  b.Shoot.WantsVerticalPodAutoscaler,
-		ReversedVPN: reversedVPNValues,
+		Image:      image.String(),
+		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
+		ReversedVPN: vpnshoot.ReversedVPNValues{
+			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
+			Endpoint:    b.outOfClusterAPIServerFQDN(),
+			OpenVPNPort: 8132,
+		},
 		Network: vpnshoot.NetworkValues{
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
@@ -62,13 +56,4 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		b.SecretsManager,
 		values,
 	), nil
-}
-
-// DeployVPNShoot deploys the VPNShoot system component.
-func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
-	secrets := vpnshoot.Secrets{}
-
-	b.Shoot.Components.SystemComponents.VPNShoot.SetSecrets(secrets)
-
-	return b.Shoot.Components.SystemComponents.VPNShoot.Deploy(ctx)
 }

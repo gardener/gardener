@@ -115,12 +115,8 @@ const (
 	ImageNameVpaRecommender = "vpa-recommender"
 	// ImageNameVpaUpdater is a constant for an image in the image vector with name 'vpa-updater'.
 	ImageNameVpaUpdater = "vpa-updater"
-	// ImageNameVpnSeed is a constant for an image in the image vector with name 'vpn-seed'.
-	ImageNameVpnSeed = "vpn-seed"
 	// ImageNameVpnSeedServer is a constant for an image in the image vector with name 'vpn-seed-server'.
 	ImageNameVpnSeedServer = "vpn-seed-server"
-	// ImageNameVpnShoot is a constant for an image in the image vector with name 'vpn-shoot'.
-	ImageNameVpnShoot = "vpn-shoot"
 	// ImageNameVpnShootClient is a constant for an image in the image vector with name 'vpn-shoot-client'.
 	ImageNameVpnShootClient = "vpn-shoot-client"
 )

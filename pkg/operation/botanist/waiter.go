@@ -43,14 +43,6 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 	return nil
 }
 
-// WaitUntilVpnShootServiceIsReady waits until the external load balancer of the VPN has been created.
-func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
-	const timeout = 10 * time.Minute
-
-	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.ShootClientSet.Client(), metav1.NamespaceSystem, "vpn-shoot", timeout)
-	return err
-}
-
 // WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot) in the kube-system
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {

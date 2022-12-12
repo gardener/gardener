@@ -77,10 +77,11 @@ var _ = Describe("CoreDNS", func() {
 				CoreDNS: net.ParseIP("18.19.20.21"),
 				Pods:    &net.IPNet{IP: net.ParseIP("22.23.24.25")},
 			}
+			botanist.Garden = &garden.Garden{}
 		})
 
 		It("should successfully create a coredns interface", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, false)()
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
 
 			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: "coredns"}}
@@ -117,7 +118,7 @@ var _ = Describe("CoreDNS", func() {
 			})
 
 			It("should successfully create a coredns interface with cluster-proportional autoscaling enabled", func() {
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, false)()
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
 
 				kubernetesClient.EXPECT().Client()
 				botanist.ImageVector = imagevector.ImageVector{{Name: "coredns"}, {Name: "cluster-proportional-autoscaler"}}
@@ -130,7 +131,6 @@ var _ = Describe("CoreDNS", func() {
 			It("should return an error because the cluster-proportional autoscaler image cannot be found", func() {
 				botanist.ImageVector = imagevector.ImageVector{{Name: "coredns"}}
 				botanist.APIServerAddress = "coredns-test"
-				botanist.Garden = &garden.Garden{}
 
 				coreDNS, err := botanist.DefaultCoreDNS()
 				Expect(coreDNS).To(BeNil())

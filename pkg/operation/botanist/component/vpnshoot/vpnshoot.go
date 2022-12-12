@@ -81,8 +81,6 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
 }
 
 // ReversedVPNValues contains the configuration values for the ReversedVPN.
@@ -181,12 +179,11 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		mountPath := volumeMountPathSecret
 
 		secrets = append(secrets, vpnSecret{
 			name:       config.Name,
 			volumeName: volumeName,
-			mountPath:  mountPath,
+			mountPath:  volumeMountPathSecret,
 			secret:     secret,
 		})
 	} else {
