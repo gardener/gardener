@@ -55,14 +55,23 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("pre worker reconciliation hook failed: %w", err)
 	}
 
+	// Get the list of all existing machine deployments.
+	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
+	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		return err
+	}
+
 	// mcmReplicaFunc returns the desired replicas for machine controller manager
 	var mcmReplicaFunc = func() int32 {
 		switch {
 		// If the cluster is hibernated then there is no further need of MCM and therefore its desired replicas is 0
 		case extensionscontroller.IsHibernated(cluster):
 			return 0
-		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0
+		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0 if there are no existing machine deployments with positive replica count
 		case extensionscontroller.IsHibernationEnabled(cluster) && extensionscontroller.IsCreationInProcess(cluster):
+			if isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments) {
+				return 1
+			}
 			return 0
 		// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
 		case extensionscontroller.IsHibernatingOrWakingUp(cluster):
@@ -128,12 +137,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	// Update the machine images in the worker provider status.
 	if err := workerDelegate.UpdateMachineImagesStatus(ctx); err != nil {
 		return fmt.Errorf("failed to update the machine image status: %w", err)
-	}
-
-	// Get the list of all existing machine deployments.
-	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-		return err
 	}
 
 	existingMachineDeploymentNames := sets.String{}
@@ -526,6 +529,15 @@ func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.Ma
 		}
 	}
 	return nil
+}
+
+func isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments *machinev1alpha1.MachineDeploymentList) bool {
+	for _, machineDeployment := range existingMachineDeployments.Items {
+		if machineDeployment.Status.Replicas > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // ReadMachineConfiguration reads the configuration from worker-pool and returns the corresponding configuration of machine-deployment.
