@@ -1,6 +1,7 @@
 # Shoot Maintenance
 
-Shoots configure a maintenance time window in which Gardener performs certain operations that may restart the control plane, roll out the nodes, result in higher network traffic, etc.
+Shoots configure a maintenance time window in which Gardener performs certain operations that may restart the control plane, roll out the nodes, result in higher network traffic, etc. A summary of what was changed in the last maintenance time window in shoot specification is kept in shoot status `.status.lastMaintenance` field.
+
 This document outlines what happens during a shoot maintenance.
 
 ## Time Window
