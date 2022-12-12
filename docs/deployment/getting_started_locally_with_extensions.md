@@ -44,13 +44,11 @@ There are templates with `.tmpl` suffixes for the files in the same folder.
 
 ### Seed Cluster Preparation
 The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.
-Additionally, please maintain the configuration of your seed in `./example/provider-extensions/seed/seed-config.yaml`. You can use `seed-config.yaml.tmpl` in the same directory as a template. This file also includes explanations of the settings.
+Additionally, please maintain the configuration of your seed in `./example/provider-extensions/gardenlet/values.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
 
 Using a Gardener cluster as seed simplifies the process, because some configuration options can be taken from `shoot-info` and creating DNS entries and TLS certificates is automated.
 
-However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `seed-config.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up` , which is explained later, will pause and tell you what to do.
-
-`seed-config.yaml` offers a simple way to configure you seed cluster. After you ran `make gardener-extensions-up` for the first time, you find the resulting seed configuration at `./example/provider-extensions/gardenlet/values.yaml` where you change your seed configuration (and other gardenlet settings). Similarly to seed configuration file its template `values.yaml.tmpl` is in the same directory.
+However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `./example/provider-extensions/gardenlet/values.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up` , which is explained later, will pause and tell you what to do.
 
 ### External Controllers
 You might plan to deploy and register external controllers for networking, operating system, providers, etc.. Please put `ControllerDeployment`s and `ControllerRegistration`s into `./example/provider-extensions/garden/controllerregistrations` directory. The whole content of this folder will be applied to your KinD cluster.
