@@ -16,20 +16,20 @@ This document provides a checklist for them which you can walk through.
 2. **Choose the proper deployment way** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L210-L225), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L442-L484), [example 3](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubestatemetrics/kube_state_metrics.go#L116))
 
    For historic reasons, resources related to shoot control plane components are applied directly with the client.
-   All other resources (seed or shoot system components) are deployed via `gardener-resource-manager`'s [Resource controller](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#managedresource-controller) (`ManagedResource`s) since it performs health checks out-of-the-box and has a lot of other features (see its documentation for more information).
+   All other resources (seed or shoot system components) are deployed via `gardener-resource-manager`'s [Resource controller](../concepts/resource-manager.md#managedresource-controller) (`ManagedResource`s) since it performs health checks out-of-the-box and has a lot of other features (see its documentation for more information).
    Components which can run as both seed system component or shoot control plane component (e.g., VPA or `kube-state-metrics`) can make use of [these utility functions](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/resourceconfig.go).
 
 3. **Do not hard-code container image references** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml#L130-L133), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/metricsserver.go#L28-L31), [example 3](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L82-L83))
 
    We define all image references centrally in the [`charts/images.yaml`](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml) file.
-   Hence, the image references must not be hard-coded in the pod template spec but read from this so-called ["image vector"](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/deployment/image_vector.md) instead.
+   Hence, the image references must not be hard-coded in the pod template spec but read from this so-called [image vector](../deployment/image_vector.md) instead.
 
 4. **Use unique `ConfigMap`s/`Secret`s** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L181-L188), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L347))
 
    [Unique `ConfigMap`s/`Secret`s](https://kubernetes.io/docs/concepts/configuration/configmap/#configmap-immutable) are immutable for modification and have a unique name.
    This has a couple of benefits, e.g. the `kubelet` doesn't watch these resources, and it is always clear which resource contains which data since it cannot be changed.
    As a consequence, unique/immutable `ConfigMap`s/`Secret` are superior to checksum annotations on the pod templates.
-   Stale/unused `ConfigMap`s/`Secret`s are garbage-collected by `gardener-resource-manager`'s [GarbageCollector](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#garbage-collector-for-immutable-configmapssecrets).
+   Stale/unused `ConfigMap`s/`Secret`s are garbage-collected by `gardener-resource-manager`'s [GarbageCollector](../concepts/resource-manager.md#garbage-collector-for-immutable-configmapssecrets).
    There are utility functions (see examples above) for using unique `ConfigMap`s/`Secret`s in Golang components.
    It is essential to inject the annotations into the workload resource to make the garbage-collection work.\
    Note that some `ConfigMap`s/`Secret`s should not be unique (e.g., those containing monitoring or logging configuration).
@@ -57,11 +57,11 @@ This document provides a checklist for them which you can walk through.
 1. **Use a [dedicated `ServiceAccount`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) and disable auto-mount** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L145-L151))
 
    Components which need to talk to the API server of their runtime cluster must always use a dedicated `ServiceAccount` (do not use `default`) which `automountServiceAccountToken` set to `false`.
-   This makes `gardener-resource-manager`'s [TokenInvalidator](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#tokeninvalidator) invalidating the static token secret and its [`ProjectedTokenMount` webhook](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens) injecting a projected token automatically.
+   This makes `gardener-resource-manager`'s [TokenInvalidator](../concepts/resource-manager.md#tokeninvalidator) invalidating the static token secret and its [`ProjectedTokenMount` webhook](../concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens) injecting a projected token automatically.
 
 2. **Use shoot access tokens instead of a client certificates** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L227-L229))
 
-   Components which need to talk to a target cluster different from their runtime cluster (e.g., running in seed cluster but talking to shoot) then the `gardener-resource-manager`'s [TokenRequestor](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#tokenrequestor) should be used to manage a so-called "shoot access token".
+   Components which need to talk to a target cluster different from their runtime cluster (e.g., running in seed cluster but talking to shoot) then the `gardener-resource-manager`'s [TokenRequestor](../concepts/resource-manager.md#tokenrequestor) should be used to manage a so-called "shoot access token".
 
 3. **Define RBAC roles with minimal privileges** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L153-L223))
 
@@ -73,7 +73,7 @@ This document provides a checklist for them which you can walk through.
 4. **Use [`NetworkPolicy`s](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to restrict network traffic** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/etcd/etcd.go#L293-L339))
 
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
-   Gardener provides a few default policies for typical usage scenarios, please see [this document for seed clusters](../development/seed_network_policies.md) and [this document for shoot clusters](../usage/shoot_network_policies.md).
+   Gardener provides a few default policies for typical usage scenarios, please see [this document for seed clusters](seed_network_policies.md) and [this document for shoot clusters](../usage/shoot_network_policies.md).
 
 5. **Do not run components in privileged mode** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/nodelocaldns/nodelocaldns.go#L329-L333), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/nodelocaldns/nodelocaldns.go#L507))
 
@@ -94,8 +94,8 @@ This document provides a checklist for them which you can walk through.
 
 1. **Specify the component type label for high availability** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L234))
 
-   To support high-availability deployments, `gardener-resource-manager`s [HighAvailabilityConfig](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/docs/concepts/resource-manager.md#high-availability-config) webhook injects the proper specification like replica or topology spread constraints.
-   You only need to specify the type label, see also [this document](../development/high-availability.md) for more information.
+   To support high-availability deployments, `gardener-resource-manager`s [HighAvailabilityConfig](../concepts/resource-manager.md#high-availability-config) webhook injects the proper specification like replica or topology spread constraints.
+   You only need to specify the type label, see also [this document](high-availability.md) for more information.
 
 2. **Define a `PodDisruptionBudget`** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L398-L422))
 
@@ -104,7 +104,7 @@ This document provides a checklist for them which you can walk through.
 3. **Choose the right `PriorityClass`** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L301))
 
    Each cluster runs many components with different priorities.
-   Gardener provides a set of default [`PriorityClass`es](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/#priorityclass), see [this document](../development/priority-classes.md) for more information.
+   Gardener provides a set of default [`PriorityClass`es](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/#priorityclass), see [this document](priority-classes.md) for more information.
 
 4. **Consider defining liveness and readiness probes** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L335-L358))
 
@@ -133,11 +133,13 @@ This document provides a checklist for them which you can walk through.
 
    Components should provide scrape configuration and alerting rules for Prometheus/Alertmanager if appropriate.
    This should be done inside a dedicated `monitoring.go` file.
+   Extensions should follow [this document](../extensions/logging-and-monitoring.md#extensions-monitoring-integration).
 
 2. **Provide logging parsers and filters** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/coredns/logging.go), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/seed/seed/reconciler_reconcile.go#L563))
 
    Components should provide parsers and filters for fluent-bit if appropriate.
    This should be done inside a dedicated `logging.go` file.
+   Extensions should follow [this document](../extensions/logging-and-monitoring.md#fluent-bit-log-parsers-and-filters).
 
 3. **Set the `revisionHistoryLimit` to `2` for `Deployment`s** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L273))
 
