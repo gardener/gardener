@@ -103,7 +103,13 @@ func defaultIstio(
 	var minReplicas *int
 	var maxReplicas *int
 	if len(gardenSeed.Spec.Provider.Zones) > 1 {
+		// Each availability zone should have at least 2 replicas as on some infrastructures each
+		// zonal load balancer is exposed individually via its own IP address. Therefore, having
+		// just one replica may negatively affect availability.
 		minReplicas = pointer.Int(len(gardenSeed.Spec.Provider.Zones) * 2)
+		// The default configuration without availability zones has 5 as the maximum amount of
+		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
+		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
 		maxReplicas = pointer.Int(len(gardenSeed.Spec.Provider.Zones) * 4)
 	}
 
