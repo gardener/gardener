@@ -119,7 +119,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	reasonForKubernetesUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 		maintainedShoot.Spec.Kubernetes.Version = v
 		return nil
-	}, "Shoot")
+	}, "Control Plane")
 	if err != nil {
 		// continue execution to allow the machine image version update
 		log.Error(err, "Failed to maintain Shoot kubernetes version")
@@ -131,14 +131,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	// Now it's time to update worker pool kubernetes version if specified
-	for i, w := range maintainedShoot.Spec.Provider.Workers {
-		if w.Kubernetes == nil || w.Kubernetes.Version == nil {
+	for i, pool := range maintainedShoot.Spec.Provider.Workers {
+		if pool.Kubernetes == nil || pool.Kubernetes.Version == nil {
 			continue
 		}
 
-		workerLog := log.WithValues("worker", w.Name)
-		name := "Worker Pool " + w.Name
-		reasonForWorkerPoolKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *w.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+		workerLog := log.WithValues("worker", pool.Name)
+		name := "Worker Pool " + pool.Name
+		reasonForWorkerPoolKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *pool.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 			workerPoolSemver, err := semver.NewVersion(v)
 			if err != nil {
 				return err
@@ -179,9 +179,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		if err := r.Client.Update(ctx, maintainedShoot, &client.UpdateOptions{
 			DryRun: []string{metav1.DryRunAll},
 		}); err != nil {
-			// If shoot maintenance is triggerd by `gardener.cloud/operation=maintain` annotation and if it fails in dry run
-			// maintain operation annotation need to be removed so that if reason for failure is fixed and maintenance is triggerd
-			// again using maintain operation annotation then it should not fail with the reason that annotation is already present
+			// If shoot maintenance is triggered by `gardener.cloud/operation=maintain` annotation and if it fails in dry run,
+			// `maintain` operation annotation needs to be removed so that if reason for failure is fixed and maintenance is triggered
+			// again via `maintain` operation annotation then it should not fail with the reason that annotation is already present
 			if hasMaintainNowAnnotation(shoot) {
 				delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 			}
@@ -255,11 +255,11 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
 		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
 	}
 
-	if operation != "" && operation != v1beta1constants.GardenerOperationReconcile {
-		return operation
+	if operation == v1beta1constants.GardenerOperationReconcile {
+		return ""
 	}
 
-	return ""
+	return operation
 }
 
 func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) {

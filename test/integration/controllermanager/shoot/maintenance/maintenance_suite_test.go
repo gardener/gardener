@@ -114,7 +114,7 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("registering controller")
-	fakeClock = testclock.NewFakeClock(time.Now())
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 	Expect((&maintenance.Reconciler{
 		Config: config.ShootMaintenanceControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
