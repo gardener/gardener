@@ -42,7 +42,11 @@ SEED_NAME                                  := ""
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
 PARALLEL_E2E_TESTS                         := 5
-GARDENER_RELEASE_DOWNLOAD_PATH                              := $(REPO_ROOT)/dev
+GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
+
+ifndef ARTIFACTS
+	export ARTIFACTS=$(REPO_ROOT)/dev/artifacts
+endif
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty

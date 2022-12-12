@@ -38,10 +38,6 @@ parse_flags() {
 
 parse_flags "$@"
 
-# TODO (seshachalam-yv): uncomment me once new release v1.60.4 is released.
-# Due to client certificate for gardener-apiserver to talk to ETCD has expired.
-# Fixed in https://github.com/gardener/gardener/pull/7146 and not yet released.
-# curl -sL https://github.com/gardener/gardener/archive/refs/tags/${GARDENER_VERSION}.tar.gz -o /tmp/source_code.tar.gz && mkdir -p ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION} &&
-#   tar -C ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION} -xzf /tmp/source_code.tar.gz --strip-components=1 && rm /tmp/source_code.tar.gz
-
-git clone -b release-v1.60 https://github.com/gardener/gardener.git ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION}
+curl -sL https://codeload.github.com/gardener/gardener/legacy.tar.gz/${GARDENER_VERSION} -o /tmp/source_code.tar.gz && 
+  mkdir -p ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION} &&
+  tar -C ${GARDENER_RELEASE_DOWNLOAD_PATH}/${GARDENER_VERSION} -xzf /tmp/source_code.tar.gz --strip-components=1 && rm /tmp/source_code.tar.gz

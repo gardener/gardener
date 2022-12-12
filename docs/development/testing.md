@@ -463,9 +463,9 @@ Below is a sequence describing how the tests are performed.
 Sometimes, we need to verify/qualify two Gardener releases when we upgrade from one version to another.  
 This can performed by fetching the two Gardener versions from **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)** and set appropriate env variables `GARDENER_PREVIOUS_RELEASE`, `GARDENER_NEXT_RELEASE`.   
 
->**`GARDENER_PREVIOUS_RELEASE`** -- This env variable refers to a source release which has to be installed first and then upgraded to version **`GARDENER_NEXT_RELEASE`**. By default it fetches latest release version from  **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)**.
+>**`GARDENER_PREVIOUS_RELEASE`** -- This env variable refers to a source revision/branch (or a specific release) which has to be installed first and then upgraded to version **`GARDENER_NEXT_RELEASE`**. By default it fetches latest release version from  **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)**.
 
->**`GARDENER_NEXT_RELEASE`** -- This env variable refers to the target version to be upgraded to after successful installation of **`GARDENER_PREVIOUS_RELEASE`**. By default it considers local HEAD revision, builds code and installs gardener from current revision where gardener upgrade tests triggered.
+>**`GARDENER_NEXT_RELEASE`** -- This env variable refers to the target revision/branch (or a specific release) to be upgraded to after successful installation of **`GARDENER_PREVIOUS_RELEASE`**. By default it considers local HEAD revision, builds code and installs gardener from current revision where gardener upgrade tests triggered.
 
 
 - `make ci-e2e-kind-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
