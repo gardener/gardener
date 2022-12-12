@@ -334,7 +334,13 @@ images:
         integrity_requirement: 'high'
         availability_requirement: 'high'
 
-# Horizontal cluster-proportional-autoscaler
+# HPlusVAutoscaler
+- name: prometheus-metrics-adapter
+  sourceRepository: https://github.com/kubernetes-sigs/prometheus-adapter
+  repository: k8s.gcr.io/prometheus-adapter/prometheus-adapter
+  tag: "v0.9.1"
+
+  # Horizontal cluster-proportional-autoscaler
 - name: cluster-proportional-autoscaler
   sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
   repository: registry.k8s.io/cpa/cluster-proportional-autoscaler

@@ -184,6 +184,8 @@ const (
 
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="` + monitoringPrometheusJobName + `"}) by (pod)
+  - record: shoot:` + monitoringMetricApiserverRequestTotal + `:sum
+    expr: sum(rate(` + monitoringMetricApiserverRequestTotal + `[2m])) by (pod)
   ### API failure rate ###
   - alert: ApiserverRequestsFailureRate
     expr: max(sum by(instance,resource,verb) (rate(` + monitoringMetricApiserverRequestTotal + `{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(` + monitoringMetricApiserverRequestTotal + `[10m]))) * 100 > 10

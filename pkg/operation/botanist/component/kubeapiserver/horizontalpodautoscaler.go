@@ -53,7 +53,7 @@ func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() client.Object {
 }
 
 func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, obj client.Object, deployment *appsv1.Deployment) error {
-	if k.values.Autoscaling.HVPAEnabled ||
+	if k.values.Autoscaling.AutoscalingMode != AutoscalingModeHPlusVClashing ||
 		k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
 

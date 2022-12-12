@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/prommetric"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -45,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -375,6 +377,26 @@ func defaultDependencyWatchdogs(
 	}
 
 	return
+}
+
+func defaultPrometheusMetricsAdapter(
+	client client.Client,
+	seedVersion *semver.Version,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	gardenNamespaceName string) (component.DeployWaiter, error) {
+
+	image, err := imageVector.FindImage(images.ImageNamePrometheusMeetricsAdapter, imagevector.TargetVersion(seedVersion.String()))
+	if err != nil {
+		return nil, fmt.Errorf("An error occurred while creating the prometheus metrics adapter component - "+
+			"failed to find the necessary metrics adapter image '%s' for seed version '%s' in the image vector. "+
+			"The error message reported by the underlying operation follows: %w",
+			images.ImageNamePrometheusMeetricsAdapter,
+			seedVersion,
+			err)
+	}
+
+	return prommetric.NewPrometheusMetricsAdapter(gardenNamespaceName, image.String(), gardenletfeatures.FeatureGate.Enabled(features.HPlusVAutoscaling), client, secretsManager), nil
 }
 
 func defaultVPNAuthzServer(

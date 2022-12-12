@@ -40,6 +40,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/hpva"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -174,12 +175,18 @@ type AuditConfig struct {
 	Policy *string
 }
 
+type AutoscalingMode int8
+
+const (
+	AutoscalingModeHPlusV         = 1 + iota // Simultaneous HPA on request rate and VPA on resource usage
+	AutoscalingModeHPlusVClashing            // Simultaneous HPA and VPA both on memory/CPU. Does not work well. Legacy.
+	AutoscalingModeHVPA
+)
+
 // AutoscalingConfig contains information for configuring autoscaling settings for the kube-apiserver.
 type AutoscalingConfig struct {
 	// APIServerResources are the resource requirements for the kube-apiserver container.
 	APIServerResources corev1.ResourceRequirements
-	// HVPAEnabled states whether an HVPA object shall be deployed. If false, HPA and VPA will be used.
-	HVPAEnabled bool
 	// Replicas is the number of pod replicas for the kube-apiserver.
 	Replicas *int32
 	// MinReplicas are the minimum Replicas for horizontal autoscaling.
@@ -192,6 +199,8 @@ type AutoscalingConfig struct {
 	// ScaleDownDisabledForHvpa states whether scale-down shall be disabled when HPA or VPA are configured in an HVPA
 	// resource.
 	ScaleDownDisabledForHvpa bool
+	// AutoscalingMode controls what strategy is used to scale kube-apiserver
+	AutoscalingMode AutoscalingMode
 }
 
 // ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.
@@ -314,6 +323,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileHVPA(ctx, hvpa, deployment); err != nil {
+		return err
+	}
+
+	if err := k.reconcileHPlusVAutoscaler(ctx, deployment.Name); err != nil {
 		return err
 	}
 
@@ -445,6 +458,12 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {
+	deployment := k.emptyDeployment()
+	err := hpva.NewHPlusVAutoscaler(k.namespace, deployment.Name).DeleteFromServer(ctx, k.client.Client())
+	if err != nil {
+		return err
+	}
+
 	return kutil.DeleteObjects(ctx, k.client.Client(),
 		k.emptyManagedResource(),
 		k.emptyManagedResourceSecret(),
@@ -452,7 +471,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyVerticalPodAutoscaler(),
 		k.emptyHVPA(),
 		k.emptyPodDisruptionBudget(),
-		k.emptyDeployment(),
+		deployment,
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer),
@@ -577,4 +596,27 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}
+}
+
+func (k *kubeAPIServer) reconcileHPlusVAutoscaler(ctx context.Context, deploymentName string) error {
+	var desiredValueContainerNameAPIServerProxyPodMutator string
+	if k.values.SNI.PodMutatorEnabled {
+		desiredValueContainerNameAPIServerProxyPodMutator = containerNameAPIServerProxyPodMutator
+	} else {
+		desiredValueContainerNameAPIServerProxyPodMutator = ""
+	}
+
+	return hpva.NewHPlusVAutoscaler(k.namespace, deploymentName).Reconcile(
+		ctx,
+		k.client.Client(),
+		&hpva.DesiredStateParameters{
+			IsEnabled: k.values.Autoscaling.AutoscalingMode == AutoscalingModeHPlusV &&
+				k.values.Autoscaling.Replicas != nil &&
+				*k.values.Autoscaling.Replicas != 0,
+			MinReplicaCount:              k.values.Autoscaling.MinReplicas,
+			MaxReplicaCount:              k.values.Autoscaling.MaxReplicas,
+			ContainerNameProxyPodMutator: desiredValueContainerNameAPIServerProxyPodMutator,
+			ContainerNameApiserver:       ContainerNameKubeAPIServer,
+			ContainerNameVPNSeed:         containerNameVPNSeed,
+		})
 }

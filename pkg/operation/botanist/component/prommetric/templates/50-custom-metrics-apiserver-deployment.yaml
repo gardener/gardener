@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: custom-metrics-apiserver
+  name: {{ .DeploymentName }}
+  namespace: {{ .Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-metrics-apiserver
+  template:
+    metadata:
+      labels:
+        app: custom-metrics-apiserver
+      name: custom-metrics-apiserver
+    spec:
+      serviceAccountName: prometheus-metrics-adapter
+      containers:
+      - name: custom-metrics-apiserver
+        image: {{ .ContainerImageName }}
+        args:
+        - --secure-port=6443
+        - --tls-cert-file=/var/run/serving-cert/tls.crt
+        - --tls-private-key-file=/var/run/serving-cert/tls.key
+        - --logtostderr=true
+        - --prometheus-url=http://aggregate-prometheus-web.garden.svc:80/
+        - --metrics-relist-interval=2m
+        - --v=2
+        - --config=/etc/adapter/config.yaml
+        ports:
+        - containerPort: 6443
+        volumeMounts:
+        - mountPath: /var/run/serving-cert
+          name: volume-serving-cert
+          readOnly: true
+        - mountPath: /etc/adapter/
+          name: config
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp-vol
+      volumes:
+      - name: volume-serving-cert
+        secret:
+          secretName: {{ .ServerSecretName }}
+      - name: config
+        configMap:
+          name: prometheus-metrics-adapter
+      - name: tmp-vol
+        emptyDir: {}

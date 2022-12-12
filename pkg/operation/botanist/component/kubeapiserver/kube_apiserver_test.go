@@ -242,18 +242,18 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2beta1), horizontalPodAutoscalerV2beta1)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2beta1.Name)))
 				},
 
-				Entry("HVPA is enabled", AutoscalingConfig{HVPAEnabled: true}),
-				Entry("replicas is nil", AutoscalingConfig{HVPAEnabled: false, Replicas: nil}),
-				Entry("replicas is 0", AutoscalingConfig{HVPAEnabled: false, Replicas: pointer.Int32(0)}),
+				Entry("HVPA is enabled", AutoscalingConfig{AutoscalingMode: AutoscalingModeHVPA}),
+				Entry("replicas is nil", AutoscalingConfig{AutoscalingMode: AutoscalingModeHPlusVClashing, Replicas: nil}),
+				Entry("replicas is 0", AutoscalingConfig{AutoscalingMode: AutoscalingModeHPlusVClashing, Replicas: pointer.Int32(0)}),
 			)
 
 			Context("Kubernetes version < 1.23", func() {
 				BeforeEach(func() {
 					autoscalingConfig = AutoscalingConfig{
-						HVPAEnabled: false,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 4,
-						MaxReplicas: 6,
+						AutoscalingMode: AutoscalingModeHPlusVClashing,
+						Replicas:        pointer.Int32(2),
+						MinReplicas:     4,
+						MaxReplicas:     6,
 					}
 
 					runtimeVersion = semver.MustParse("1.22.11")
@@ -305,10 +305,10 @@ var _ = Describe("KubeAPIServer", func() {
 			Context("Kubernetes version >=1.23", func() {
 				BeforeEach(func() {
 					autoscalingConfig = AutoscalingConfig{
-						HVPAEnabled: false,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 4,
-						MaxReplicas: 6,
+						AutoscalingMode: AutoscalingModeHPlusVClashing,
+						Replicas:        pointer.Int32(2),
+						MinReplicas:     4,
+						MaxReplicas:     6,
 					}
 
 					runtimeVersion = semver.MustParse("1.23.0")
@@ -367,7 +367,7 @@ var _ = Describe("KubeAPIServer", func() {
 		Describe("VerticalPodAutoscaler", func() {
 			Context("HVPAEnabled = true", func() {
 				BeforeEach(func() {
-					autoscalingConfig = AutoscalingConfig{HVPAEnabled: true}
+					autoscalingConfig = AutoscalingConfig{AutoscalingMode: AutoscalingModeHVPA}
 				})
 
 				It("should delete the VPA resource", func() {
@@ -380,7 +380,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 			Context("HVPAEnabled = false", func() {
 				BeforeEach(func() {
-					autoscalingConfig = AutoscalingConfig{HVPAEnabled: false}
+					autoscalingConfig = AutoscalingConfig{AutoscalingMode: AutoscalingModeHPlusVClashing}
 				})
 
 				It("should successfully deploy the VPA resource", func() {
@@ -429,9 +429,9 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
 				},
 
-				Entry("HVPA disabled", AutoscalingConfig{HVPAEnabled: false}),
-				Entry("HVPA enabled but replicas nil", AutoscalingConfig{HVPAEnabled: true}),
-				Entry("HVPA enabled but replicas zero", AutoscalingConfig{HVPAEnabled: true, Replicas: pointer.Int32(0)}),
+				Entry("HVPA disabled", AutoscalingConfig{AutoscalingMode: AutoscalingModeHPlusVClashing}),
+				Entry("HVPA enabled but replicas nil", AutoscalingConfig{AutoscalingMode: AutoscalingModeHVPA}),
+				Entry("HVPA enabled but replicas zero", AutoscalingConfig{AutoscalingMode: AutoscalingModeHVPA, Replicas: pointer.Int32(0)}),
 			)
 
 			var (
@@ -595,10 +595,10 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("default behaviour",
 					AutoscalingConfig{
-						HVPAEnabled: true,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 5,
-						MaxReplicas: 5,
+						AutoscalingMode: AutoscalingModeHVPA,
+						Replicas:        pointer.Int32(2),
+						MinReplicas:     5,
+						MaxReplicas:     5,
 					},
 					SNIConfig{},
 					defaultExpectedScaleDownUpdateMode,
@@ -608,7 +608,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("UseMemoryMetricForHvpaHPA is true",
 					AutoscalingConfig{
-						HVPAEnabled:               true,
+						AutoscalingMode:           AutoscalingModeHVPA,
 						Replicas:                  pointer.Int32(2),
 						UseMemoryMetricForHvpaHPA: true,
 						MinReplicas:               5,
@@ -637,7 +637,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("scale down is disabled",
 					AutoscalingConfig{
-						HVPAEnabled:              true,
+						AutoscalingMode:          AutoscalingModeHVPA,
 						Replicas:                 pointer.Int32(2),
 						MinReplicas:              5,
 						MaxReplicas:              5,
@@ -651,10 +651,10 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("SNI pod mutator is enabled",
 					AutoscalingConfig{
-						HVPAEnabled: true,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 5,
-						MaxReplicas: 5,
+						AutoscalingMode: AutoscalingModeHVPA,
+						Replicas:        pointer.Int32(2),
+						MinReplicas:     5,
+						MaxReplicas:     5,
 					},
 					SNIConfig{
 						PodMutatorEnabled: true,
@@ -684,10 +684,10 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("max replicas > min replicas",
 					AutoscalingConfig{
-						HVPAEnabled: true,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 3,
-						MaxReplicas: 5,
+						AutoscalingMode: AutoscalingModeHVPA,
+						Replicas:        pointer.Int32(2),
+						MinReplicas:     3,
+						MaxReplicas:     5,
 					},
 					SNIConfig{},
 					defaultExpectedScaleDownUpdateMode,

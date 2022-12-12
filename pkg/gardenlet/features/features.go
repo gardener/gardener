@@ -36,5 +36,6 @@ func RegisterFeatureGates() {
 		features.ForceRestore,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
+		features.HPlusVAutoscaling,
 	)))
 }

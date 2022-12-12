@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/prommetric"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
@@ -198,6 +199,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 		clusterIdentity    = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
 		dwdEndpoint        = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe           = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		prometheusMetricsAdapter = prommetric.NewPrometheusMetricsAdapter(
+			r.GardenNamespace, "", gardenletfeatures.FeatureGate.Enabled(features.HPlusVAutoscaling), seedClient, nil)
 		systemResources    = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
 		vpnAuthzServer     = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
 		istioCRDs          = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
@@ -216,7 +219,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 	}
 
 	var (
-		g                = flow.NewGraph("Seed cluster deletion")
+		g                               = flow.NewGraph("Seed cluster deletion")
+		destroyPrometheusMetricsAdapter = g.Add(flow.Task{
+			Name: "Destroying Prometheus metrics adapter",
+			Fn:   component.OpDestroyAndWait(prometheusMetricsAdapter).Destroy,
+		})
 		destroyDNSRecord = g.Add(flow.Task{
 			Name: "Destroying managed ingress DNS record (if existing)",
 			Fn:   func(ctx context.Context) error { return destroyDNSResources(ctx, dnsRecord) },
@@ -276,6 +283,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:   component.OpDestroyAndWait(fluentOperatorCRDs).Destroy,
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
+			destroyPrometheusMetricsAdapter,
 			destroyNginxIngress,
 			destroyClusterIdentity,
 			destroyClusterAutoscaler,

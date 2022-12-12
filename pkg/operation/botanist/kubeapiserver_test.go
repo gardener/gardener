@@ -806,7 +806,7 @@ usernames: ["admin"]
 					featureGatePtr(features.HVPA), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               false,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHPlusVClashing,
 						MinReplicas:               1,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
@@ -818,7 +818,7 @@ usernames: ["admin"]
 					featureGatePtr(features.HVPA), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               true,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHVPA,
 						MinReplicas:               1,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
@@ -832,7 +832,7 @@ usernames: ["admin"]
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               false,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHPlusVClashing,
 						MinReplicas:               2,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
@@ -846,7 +846,7 @@ usernames: ["admin"]
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               false,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHPlusVClashing,
 						MinReplicas:               4,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
@@ -860,7 +860,7 @@ usernames: ["admin"]
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               false,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHPlusVClashing,
 						MinReplicas:               1,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: true,
@@ -874,7 +874,7 @@ usernames: ["admin"]
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               true,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHVPA,
 						MinReplicas:               1,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: true,
@@ -895,7 +895,7 @@ usernames: ["admin"]
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               true,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHVPA,
 						MinReplicas:               16,
 						MaxReplicas:               32,
 						UseMemoryMetricForHvpaHPA: true,
@@ -921,7 +921,7 @@ usernames: ["admin"]
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 						},
-						HVPAEnabled:               false,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHPlusVClashing,
 						MinReplicas:               16,
 						MaxReplicas:               32,
 						Replicas:                  pointer.Int32(24),
@@ -940,7 +940,7 @@ usernames: ["admin"]
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
-						HVPAEnabled:               false,
+						AutoscalingMode:           kubeapiserver.AutoscalingModeHPlusVClashing,
 						MinReplicas:               3,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
@@ -1297,7 +1297,7 @@ usernames: ["admin"]
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{HVPAEnabled: false},
+				kubeapiserver.AutoscalingConfig{AutoscalingMode: kubeapiserver.AutoscalingModeHPlusVClashing},
 				nil,
 			),
 			Entry("set the existing requirements because deployment found and HVPA enabled",
@@ -1319,7 +1319,7 @@ usernames: ["admin"]
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{HVPAEnabled: true},
+				kubeapiserver.AutoscalingConfig{AutoscalingMode: kubeapiserver.AutoscalingModeHVPA},
 				&apiServerResources,
 			),
 		)

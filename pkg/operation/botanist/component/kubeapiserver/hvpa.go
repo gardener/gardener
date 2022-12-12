@@ -36,7 +36,7 @@ func (k *kubeAPIServer) emptyHVPA() *hvpav1alpha1.Hvpa {
 }
 
 func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hvpa, deployment *appsv1.Deployment) error {
-	if !k.values.Autoscaling.HVPAEnabled ||
+	if k.values.Autoscaling.AutoscalingMode != AutoscalingModeHVPA ||
 		k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
 

@@ -111,6 +111,7 @@ func init() {
 		hvpav1alpha1.AddToScheme,
 		druidv1alpha1.AddToScheme,
 		apiextensionsscheme.AddToScheme,
+		apiregistrationscheme.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
 	)

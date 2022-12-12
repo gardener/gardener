@@ -291,7 +291,7 @@ func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *
 
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.AutoscalingConfig {
 	var (
-		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		autoscalingMode           kubeapiserver.AutoscalingMode
 		useMemoryMetricForHvpaHPA = false
 		scaleDownDisabledForHvpa  = false
 		defaultReplicas           *int32
@@ -299,6 +299,15 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		maxReplicas               int32 = 4
 		apiServerResources        corev1.ResourceRequirements
 	)
+
+	// HVPA and hPlusVAutoscaling are mutually exclusive and hPlusVAutoscaling takes precedence
+	if gardenletfeatures.FeatureGate.Enabled(features.HPlusVAutoscaling) {
+		autoscalingMode = kubeapiserver.AutoscalingModeHPlusV
+	} else if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
+		autoscalingMode = kubeapiserver.AutoscalingModeHVPA
+	} else {
+		autoscalingMode = kubeapiserver.AutoscalingModeHPlusVClashing
+	}
 
 	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
 		minReplicas = 2
@@ -314,20 +323,24 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 	}
 
 	nodeCount := b.Shoot.GetMinNodeCount()
-	if hvpaEnabled {
+	if autoscalingMode == kubeapiserver.AutoscalingModeHVPA {
 		nodeCount = b.Shoot.GetMaxNodeCount()
 	}
 	apiServerResources = resourcesRequirementsForKubeAPIServer(nodeCount, b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
 
 	if b.ManagedSeed != nil {
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		if autoscalingMode != kubeapiserver.AutoscalingModeHPlusV && // HPlusV feature flag has precedence
+			gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed) {
+
+			autoscalingMode = kubeapiserver.AutoscalingModeHVPA
+		}
 		useMemoryMetricForHvpaHPA = true
 
 		if b.ManagedSeedAPIServer != nil {
 			minReplicas = *b.ManagedSeedAPIServer.Autoscaler.MinReplicas
 			maxReplicas = b.ManagedSeedAPIServer.Autoscaler.MaxReplicas
 
-			if !hvpaEnabled {
+			if autoscalingMode == kubeapiserver.AutoscalingModeHPlusVClashing {
 				defaultReplicas = b.ManagedSeedAPIServer.Replicas
 				apiServerResources = corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
@@ -341,7 +354,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 	return kubeapiserver.AutoscalingConfig{
 		APIServerResources:        apiServerResources,
-		HVPAEnabled:               hvpaEnabled,
+		AutoscalingMode:           autoscalingMode,
 		Replicas:                  defaultReplicas,
 		MinReplicas:               minReplicas,
 		MaxReplicas:               maxReplicas,
@@ -568,7 +581,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(b.computeKubeAPIServerReplicas(values.Autoscaling, deployment))
 
-	if deployment != nil && values.Autoscaling.HVPAEnabled {
+	if deployment != nil && values.Autoscaling.AutoscalingMode == kubeapiserver.AutoscalingModeHVPA {
 		for _, container := range deployment.Spec.Template.Spec.Containers {
 			if container.Name == kubeapiserver.ContainerNameKubeAPIServer {
 				// Only set requests to allow limits to be removed

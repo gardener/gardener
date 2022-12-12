@@ -191,6 +191,8 @@ metric_relabel_configs:
 
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="kube-apiserver"}) by (pod)
+  - record: shoot:apiserver_request_total:sum
+    expr: sum(rate(apiserver_request_total[2m])) by (pod)
   ### API failure rate ###
   - alert: ApiserverRequestsFailureRate
     expr: max(sum by(instance,resource,verb) (rate(apiserver_request_total{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(apiserver_request_total[10m]))) * 100 > 10

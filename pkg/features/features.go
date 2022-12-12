@@ -99,6 +99,12 @@ const (
 	// owner: @ScheererJ @DockToFuture
 	// alpha: v1.55.0
 	CoreDNSQueryRewriting featuregate.Feature = "CoreDNSQueryRewriting"
+
+	// HPlusVAutoscaling is applied to a seed cluster and enables simultaneous independent horizontal and vertical scaling.
+	// This feature is incompatible with the HVPA and HVPAForShootedSeed features.
+	// owner @andrerun
+	// alpha: v1.57.0
+	HPlusVAutoscaling featuregate.Feature = "HPlusVAutoscaling"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -113,6 +119,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HAControlPlanes:       {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting: {Default: false, PreRelease: featuregate.Alpha},
+	HPlusVAutoscaling:     {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
