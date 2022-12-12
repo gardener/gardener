@@ -21,6 +21,8 @@ import (
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,12 +32,14 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	shootstatesecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootstate/secret"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -57,9 +61,10 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Client
 
 	testNamespace *corev1.Namespace
-	seedNamespace *corev1.Namespace
+	testRunID     string
 )
 
 var _ = BeforeSuite(func() {
@@ -89,12 +94,15 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	scheme := kubernetes.GardenScheme
-	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
+	testScheme := kubernetes.GardenScheme
+	Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
 
 	By("creating test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
+
+	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+	log.Info("Using test run ID for test", "testRunID", testRunID)
 
 	By("creating project namespace")
 	testNamespace = &corev1.Namespace{
@@ -103,6 +111,7 @@ var _ = BeforeSuite(func() {
 			GenerateName: "garden-",
 			Labels: map[string]string{
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+				testID:                      testRunID,
 			},
 		},
 	}
@@ -114,32 +123,18 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating seed namespace")
-	// name doesn't follow the usual naming scheme (technical ID), but this doesn't matter for this test, as
-	// long as the cluster has the same name
-	seedNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: "shoot-",
-			Labels: map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-			},
-		},
-	}
-	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
-	log.Info("Created seed Namespace for test", "namespaceName", seedNamespace.Name)
-
-	DeferCleanup(func() {
-		By("deleting seed namespace")
-		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
+		Scheme:             testScheme,
 		MetricsBindAddress: "0",
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("registering controller")
 	Expect((&shootstatesecretcontroller.Reconciler{
