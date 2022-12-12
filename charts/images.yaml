@@ -246,31 +246,85 @@ images:
   repository: registry.k8s.io/autoscaling/vpa-admission-controller
   tag: "0.11.0"
   targetVersion: "< 1.21"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'none'
+        availability_requirement: 'high'
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-admission-controller
   tag: "0.12.0"
   targetVersion: ">= 1.21"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'none'
+        availability_requirement: 'high'
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-recommender
   tag: "0.11.0"
   targetVersion: "< 1.21"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'low'
+        availability_requirement: 'high'
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-recommender
   tag: "0.12.0"
   targetVersion: ">= 1.21"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'low'
+        availability_requirement: 'high'
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-updater
   tag: "0.11.0"
   targetVersion: "< 1.21"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'none'
+        availability_requirement: 'high'
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-updater
   tag: "0.12.0"
   targetVersion: ">= 1.21"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'none'
+        availability_requirement: 'high'
 
 # HVPA
 - name: hvpa-controller
