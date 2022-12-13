@@ -116,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	now := r.Clock.Now()
-	if gutil.IsShootFailed(shoot) {
+	if gutil.IsShootFailedAndUpToDate(shoot) {
 		requeueAfter := nextHibernationTimeDuration(parsedSchedules, now)
 		log.Info("Shoot is in Failed state, requeuing shoot hibernation", "requeueAfter", requeueAfter)
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil

@@ -531,6 +531,11 @@ func ShootSchedulingProfile(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.S
 	return nil
 }
 
+// ShootConfinesSpecUpdateRollout returns a bool.
+func ShootConfinesSpecUpdateRollout(maintenance *gardencorev1beta1.Maintenance) bool {
+	return maintenance != nil && maintenance.ConfineSpecUpdateRollout != nil && *maintenance.ConfineSpecUpdateRollout
+}
+
 // SeedSettingVerticalPodAutoscalerEnabled returns true if the 'verticalPodAutoscaler' setting is enabled.
 func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled

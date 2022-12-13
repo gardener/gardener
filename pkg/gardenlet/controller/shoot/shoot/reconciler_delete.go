@@ -20,12 +20,10 @@ import (
 	"strconv"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/errors"
@@ -33,15 +31,11 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // runDeleteShootFlow deletes a Shoot cluster.
@@ -660,34 +654,4 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 	o.Logger.Info("Successfully deleted Shoot cluster")
 	return nil
-}
-
-func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
-		return err
-	}
-
-	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
-		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %w", err)
-		}
-	}
-
-	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
-	// operations (sometimes the cache is not synced fast enough).
-	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (bool, error) {
-		err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-		if apierrors.IsNotFound(err) {
-			return retryutils.Ok()
-		}
-		if err != nil {
-			return retryutils.SevereError(err)
-		}
-		lastOperation := shoot.Status.LastOperation
-		if !sets.NewString(shoot.Finalizers...).Has(gardencorev1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-			return retryutils.Ok()
-		}
-		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1beta1.GardenerName))
-	})
 }

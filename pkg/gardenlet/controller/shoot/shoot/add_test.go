@@ -15,20 +15,47 @@
 package shoot_test
 
 import (
+	"time"
+
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Add", func() {
+	var (
+		log logr.Logger
+		cl  clock.Clock
+		cfg gardenletconfig.GardenletConfiguration
+	)
+
+	BeforeEach(func() {
+		log = logr.Discard()
+
+		cl = testclock.NewFakeClock(time.Now())
+		cfg = gardenletconfig.GardenletConfiguration{
+			Controllers: &gardenletconfig.GardenletControllerConfiguration{
+				Shoot: &gardenletconfig.ShootControllerConfiguration{
+					SyncPeriod: &metav1.Duration{Duration: time.Hour},
+				},
+			},
+		}
+	})
+
 	Describe("#EventHandler", func() {
 		var (
 			hdlr  handler.EventHandler
@@ -38,14 +65,23 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			hdlr = (&Reconciler{}).EventHandler()
+			hdlr = (&Reconciler{
+				Config: cfg,
+				Clock:  cl,
+			}).EventHandler(log)
 			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
 			obj = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
 		})
 
-		It("should enqueue the object for Create events", func() {
-			queue.EXPECT().Add(req)
+		It("should enqueue the object for Create events according to the calculated duration", func() {
+			duration := time.Minute
+			defer test.WithVar(&CalculateControllerInfos, func(*gardencorev1beta1.Shoot, clock.Clock, gardenletconfig.ShootControllerConfiguration) helper.ControllerInfos {
+				return helper.ControllerInfos{
+					EnqueueAfter: duration,
+				}
+			})()
+			queue.EXPECT().AddAfter(req, duration)
 
 			hdlr.Create(event.CreateEvent{Object: obj}, queue)
 		})

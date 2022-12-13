@@ -71,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	requeueAfter, nextMaintenance := requeueAfterDuration(shoot)
 
-	if !mustMaintainNow(shoot) {
+	if !mustMaintainNow(shoot, r.Clock) {
 		log.V(1).Info("Skipping Shoot because it doesn't need to be maintained now")
 		log.V(1).Info("Scheduled next maintenance for Shoot", "duration", requeueAfter.Round(time.Minute), "nextMaintenance", nextMaintenance.Round(time.Minute))
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
@@ -395,8 +395,8 @@ func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool,
 	return false, "", false, nil
 }
 
-func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
-	return hasMaintainNowAnnotation(shoot) || gutil.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
+func mustMaintainNow(shoot *gardencorev1beta1.Shoot, clock clock.Clock) bool {
+	return hasMaintainNowAnnotation(shoot) || gutil.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock)
 }
 
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
