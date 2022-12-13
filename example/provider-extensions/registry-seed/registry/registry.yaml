@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: registry
+  namespace: registry
+  labels:
+    app: registry
+spec:
+  replicas: 1
+  serviceName: registry-svc
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+        projected-token-mount.resources.gardener.cloud/skip: "true"
+        seccompprofile.resources.gardener.cloud/skip: "true"
+        topology-spread-constraints.resources.gardener.cloud/skip: "true"
+    spec:
+      # Registry should not be evicted for gardener pods because these rely on Registry to pull their images
+      priorityClassName: system-cluster-critical
+      automountServiceAccountToken: false
+      containers:
+      - name: registry
+        image: registry:2
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: /certs/tls.crt
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: /certs/tls.key
+        - name: REGISTRY_AUTH
+          value: htpasswd
+        - name: REGISTRY_AUTH_HTPASSWD_PATH
+          value: /htpasswd/auth
+        - name: REGISTRY_AUTH_HTPASSWD_REALM
+          value: Registry Realm
+        ports:
+        - name: registry
+          containerPort: 5000
+        volumeMounts:
+        - name: registry-volume
+          mountPath: /var/lib/registry
+        - name: tls
+          mountPath: /certs
+        - name: htpasswd
+          mountPath: /htpasswd
+      volumes:
+      - name: tls
+        secret:
+          secretName: tls
+      - name: htpasswd
+        secret:
+          secretName: registry-htpasswd
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        app: registry
+      name: registry-volume
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 20Gi
+      volumeMode: Filesystem

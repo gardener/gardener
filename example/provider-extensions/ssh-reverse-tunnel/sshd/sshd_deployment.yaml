@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gardener-apiserver-tunnel-sshd
+  namespace: relay
+  labels:
+    app: gardener-apiserver-tunnel-sshd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gardener-apiserver-tunnel-sshd
+  template:
+    metadata:
+      labels:
+        app: gardener-apiserver-tunnel-sshd
+        projected-token-mount.resources.gardener.cloud/skip: "true"
+        seccompprofile.resources.gardener.cloud/skip: "true"
+        topology-spread-constraints.resources.gardener.cloud/skip: "true"
+    spec:
+      # Relay should not be evicted for gardener pods because gardenlet does not work when it cannot reach the gardener-apiserver
+      priorityClassName: system-cluster-critical
+      containers:
+      - command: ["/gardener_apiserver_sshd/entrypoint.sh"]
+        image: alpine:3.17
+        name: sshd
+        volumeMounts:
+        - name: gardener-apiserver-sshd
+          mountPath: /gardener_apiserver_sshd
+        - name: gardener-apiserver-sshd-keys
+          mountPath: /gardener-apiserver-ssh-keys
+        resources:
+          limits:
+            cpu: 1
+            memory: 128Mi
+          requests:
+            cpu: 20m
+            memory: 64Mi
+        ports:
+        - name: https
+          containerPort: 6443
+        - name: ssh
+          containerPort: 6222
+      volumes:
+      - name: gardener-apiserver-sshd
+        configMap:
+          name: gardener-apiserver-sshd
+          defaultMode: 0700
+      - name: gardener-apiserver-sshd-keys
+        configMap:
+          name: gardener-apiserver-sshd-keys
+          defaultMode: 0600
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  gardener-apiserver
+  namespace: relay
+  labels:
+    app:  gardener-apiserver-tunnel-sshd
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 6443
+    name: https
+  selector:
+    app:  gardener-apiserver-tunnel-sshd
+  type: ClusterIP

@@ -1,0 +1,22 @@
+Port 6222
+ListenAddress 0.0.0.0
+
+HostKey /gardener-apiserver-ssh-keys/ssh_host_rsa_key
+HostKey /gardener-apiserver-ssh-keys/ssh_host_ecdsa_key
+HostKey /gardener-apiserver-ssh-keys/ssh_host_ed25519_key
+
+# Authenticate by certificates only
+PasswordAuthentication no
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+AuthorizedKeysFile /gardener-apiserver-ssh-keys/authorized_keys
+
+# Allow connection to tunneled ports from all hosts
+GatewayPorts yes
+
+# Disable StrictModes that keys can be stored in a configmap
+StrictModes no
+
+# Keep alive ssh connections by sending a packet every 10 seconds
+ClientAliveInterval 10
+UseDNS no

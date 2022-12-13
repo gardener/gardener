@@ -23,7 +23,7 @@
 {{- end -}}
 
 {{- define "extraPortMappings.gardener.seed.nginx" -}}
-{{- if .Values.gardener.controlPlane.deployed -}}
+{{- if and .Values.gardener.controlPlane.deployed .Values.gardener.seed.deployed -}}
 - containerPort: 30448
   hostPort: 8448
 {{- end -}}

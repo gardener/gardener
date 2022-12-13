@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gardener-apiserver-tunnel-ssh
+  namespace: relay
+  labels:
+    app: gardener-apiserver-tunnel-ssh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gardener-apiserver-tunnel-ssh
+  template:
+    metadata:
+      labels:
+        app: gardener-apiserver-tunnel-ssh
+    spec:
+      containers:
+      - command: ["/gardener_apiserver_ssh/entrypoint.sh"]
+        image: alpine:3.17
+        name: ssh
+        volumeMounts:
+        - name: gardener-apiserver-ssh
+          mountPath: /gardener_apiserver_ssh
+        - name: gardener-apiserver-ssh-keys
+          mountPath: /gardener-apiserver-ssh-keys
+        resources:
+          limits:
+            cpu: 1
+            memory: 128Mi
+          requests:
+            cpu: 20m
+            memory: 64Mi
+      volumes:
+      - name: gardener-apiserver-ssh
+        configMap:
+          name: gardener-apiserver-ssh
+          defaultMode: 0700
+      - name: gardener-apiserver-ssh-keys
+        configMap:
+          name: gardener-apiserver-ssh-keys
+          defaultMode: 0600

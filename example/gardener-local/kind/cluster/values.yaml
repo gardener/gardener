@@ -2,6 +2,8 @@ environment: skaffold # skaffold|local
 image: kindest/node:v1.24.7
 
 gardener:
+  apiserverRelay:
+    deployed: false
   controlPlane:
     deployed: true
   seed:

@@ -169,6 +169,7 @@
 ## Deployment
 
 * [Getting started locally](deployment/getting_started_locally.md)
+* [Getting started locally with extensions](deployment/getting_started_locally_with_extensions.md)
 * [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
 * [Version Skew Policy](deployment/version_skew_policy.md)
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)

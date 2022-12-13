@@ -552,6 +552,24 @@ profiles:
     path: /deploy/helm/releases/0/setValues
     value:
       global.apiserver.featureGates.HAControlPlanes: true
+- name: extensions
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValueTemplates
+    value:
+      global:
+        apiserver:
+          clusterIdentity: gardener-extensions
+        scheduler:
+          config:
+            schedulers:
+              shoot:
+                concurrentSyncs: 5
+                candidateDeterminationStrategy: MinimalDistance
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/provider-extensions/garden/controlplane/values.yaml
+
 ---
 apiVersion: skaffold/v2beta29
 kind: Config
@@ -760,6 +778,21 @@ profiles:
     kustomize:
       paths:
       - example/provider-local/seed-kind2/skaffold
+
+---
+apiVersion: skaffold/v2beta29
+kind: Config
+metadata:
+  name: extensions-env
+profiles:
+- name: extensions
+  deploy:
+    kubectl:
+      manifests:
+      - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
+    kustomize:
+      paths:
+      - example/provider-extensions/garden/project
 
 ---
 apiVersion: skaffold/v2beta29
@@ -1138,6 +1171,43 @@ profiles:
         - name: gardener-resource-manager
           repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
           tag: "{{.IMAGE_TAG3}}"
+- name: extensions
+  patches:
+  - op: replace
+    path: /deploy/helm/hooks/after/0/host/command
+    value:
+    - bash
+    - -ec
+    - |
+      echo "Wait until seed is ready"
+      for i in `seq 1 60`;
+      do
+        if kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG get seed $SEED_NAME 2> /dev/null; then
+          break
+        fi
+        echo "Wait until seed gets created by gardenlet"
+        sleep 2
+      done
+      kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=bootstrapped seed $SEED_NAME --timeout=5m
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/gardener-local/gardenlet/values-provider-extensions.yaml
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/provider-extensions/gardenlet/values.yaml
+    # for the provider-extensions profile only 2 images are built: gardenlet and resource-manager
+    # so the imageVectorOverwrite must be patched to specify the correct tags
+  - op: replace
+    path: /deploy/helm/releases/0/setValueTemplates
+    value:
+      imageVectorOverwrite: |
+        images:
+        - name: gardenlet
+          repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_gardenlet
+          tag: "{{.IMAGE_TAG}}"
+        - name: gardener-resource-manager
+          repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_resource-manager
+          tag: "{{.IMAGE_TAG2}}"
 
 - name: ha-single-zone
   patches:
