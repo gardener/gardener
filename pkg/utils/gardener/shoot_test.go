@@ -281,6 +281,79 @@ var _ = Describe("Shoot", func() {
 		Entry("object is not owned by shoot", []metav1.OwnerReference{{Kind: "Foo", Name: "foo"}}, ""),
 	)
 
+	Describe("#NodeLabelsForWorkerPool", func() {
+		var workerPool gardencorev1beta1.Worker
+
+		BeforeEach(func() {
+			workerPool = gardencorev1beta1.Worker{
+				Name: "worker",
+				Machine: gardencorev1beta1.Machine{
+					Architecture: pointer.String("arm64"),
+				},
+				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{
+					Allow: true,
+				},
+			}
+		})
+
+		It("should maintain the common labels", func() {
+			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(And(
+				HaveKeyWithValue("node.kubernetes.io/role", "node"),
+				HaveKeyWithValue("kubernetes.io/arch", "arm64"),
+				HaveKeyWithValue("networking.gardener.cloud/node-local-dns-enabled", "false"),
+				HaveKeyWithValue("worker.gardener.cloud/system-components", "true"),
+				HaveKeyWithValue("worker.gardener.cloud/pool", "worker"),
+				HaveKeyWithValue("worker.garden.sapcloud.io/group", "worker"),
+			))
+		})
+
+		It("should add user-specified labels", func() {
+			workerPool.Labels = map[string]string{
+				"test": "foo",
+				"bar":  "baz",
+			}
+			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(And(
+				HaveKeyWithValue("test", "foo"),
+				HaveKeyWithValue("bar", "baz"),
+			))
+		})
+
+		It("should not add system components label if they are not allowed", func() {
+			workerPool.SystemComponents.Allow = false
+			Expect(NodeLabelsForWorkerPool(workerPool, false)).NotTo(
+				HaveKey("worker.gardener.cloud/system-components"),
+			)
+		})
+
+		It("should correctly handle the node-local-dns label", func() {
+			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(
+				HaveKeyWithValue("networking.gardener.cloud/node-local-dns-enabled", "false"),
+			)
+			Expect(NodeLabelsForWorkerPool(workerPool, true)).To(
+				HaveKeyWithValue("networking.gardener.cloud/node-local-dns-enabled", "true"),
+			)
+		})
+
+		It("should correctly add the CRI labels", func() {
+			workerPool.CRI = &gardencorev1beta1.CRI{
+				Name: "containerd",
+				ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+					{
+						Type: "gvisor",
+					},
+					{
+						Type: "kata",
+					},
+				},
+			}
+			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(And(
+				HaveKeyWithValue("worker.gardener.cloud/cri-name", "containerd"),
+				HaveKeyWithValue("containerruntime.worker.gardener.cloud/gvisor", "true"),
+				HaveKeyWithValue("containerruntime.worker.gardener.cloud/kata", "true"),
+			))
+		})
+	})
+
 	Describe("#GetShootProjectSecretSuffixes", func() {
 		It("should return the expected list", func() {
 			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ca-cluster", "ssh-keypair", "ssh-keypair.old", "monitoring"))
