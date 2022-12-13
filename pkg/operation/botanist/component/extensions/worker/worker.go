@@ -16,9 +16,15 @@ package worker
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 	"time"
+
+	"github.com/Masterminds/semver"
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -29,15 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
-	"github.com/gardener/gardener/pkg/utils"
-
-	"github.com/Masterminds/semver"
-	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -167,35 +165,6 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		// copy labels map
-		labels := utils.MergeStringMaps(workerPool.Labels)
-		if labels == nil {
-			labels = map[string]string{}
-		}
-		labels["node.kubernetes.io/role"] = "node"
-		labels["kubernetes.io/arch"] = *workerPool.Machine.Architecture
-
-		labels[v1beta1constants.LabelNodeLocalDNS] = strconv.FormatBool(w.values.NodeLocalDNSENabled)
-
-		if gardencorev1beta1helper.SystemComponentsAllowed(&workerPool) {
-			labels[v1beta1constants.LabelWorkerPoolSystemComponents] = "true"
-		}
-
-		// worker pool name labels
-		labels[v1beta1constants.LabelWorkerPool] = workerPool.Name
-		labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
-
-		// add CRI labels selected by the RuntimeClass
-		if workerPool.CRI != nil {
-			labels[extensionsv1alpha1.CRINameWorkerLabel] = string(workerPool.CRI.Name)
-			if len(workerPool.CRI.ContainerRuntimes) > 0 {
-				for _, cr := range workerPool.CRI.ContainerRuntimes {
-					key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
-					labels[key] = "true"
-				}
-			}
-		}
-
 		var pConfig *runtime.RawExtension
 		if workerPool.ProviderConfig != nil {
 			pConfig = &runtime.RawExtension{
@@ -237,7 +206,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         labels,
+			Labels:         gutil.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSENabled),
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
