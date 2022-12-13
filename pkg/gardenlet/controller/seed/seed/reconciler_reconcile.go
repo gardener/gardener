@@ -1182,7 +1182,7 @@ func cleanupOrphanIstioNamespace(
 	// Determine the corresponding handler name to the ExposureClass handler resources.
 	handlerName, ok := namespace.Labels[v1beta1constants.LabelExposureClassHandlerName]
 	if !ok && needsHandler {
-		log.Info("Cannot delete ExposureClass handler resources as the corresponging handler is unknown and it is not save to remove them")
+		log.Info("Cannot delete ExposureClass handler resources as the corresponding handler is unknown and it is not save to remove them")
 		return nil
 	}
 

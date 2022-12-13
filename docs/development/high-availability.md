@@ -262,4 +262,4 @@ The `gardenlet` performs the following changes on all namespaces running shoot s
 - add label `high-availability-config.resources.gardener.cloud/consider=true`. This makes the webhook mutate the replica count and the topology spread constraints.
 - add annotation `high-availability-config.resources.gardener.cloud/zones=<zones>` where `<zones>` is the merged list of zones provided in `.zones[]` with `systemComponents.allow=true` for all worker pools in `.spec.provider.workers[]` in the `Shoot` specification.
 
-Note that neither the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` nore the `high-availability-config.resources.gardener.cloud/zone-pinning` annotations are set, hence the node affinity would never be touched by the webhook.
+Note that neither the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` nor the `high-availability-config.resources.gardener.cloud/zone-pinning` annotations are set, hence the node affinity would never be touched by the webhook.
