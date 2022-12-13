@@ -48,6 +48,10 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		)
 
 		shootTest.Namespace = projectNamespace
+		// TODO: (@seshachalam-yv): Remove this once next latest version of gardener is released.
+		// Due to recent PR https://github.com/gardener/gardener/pull/6999, by default we are expecting these Extensions "local-ext-seed", "local-ext-shoot".
+		// Excluding these extensions from the shoot spec and only include them in the next latest version of gardener.
+		shootTest.Spec.Extensions = nil
 		f.Shoot = shootTest
 
 		When("Pre-Upgrade (Gardener version:'"+gardenerPreviousRelease+"')", Ordered, Label("pre-upgrade"), func() {
