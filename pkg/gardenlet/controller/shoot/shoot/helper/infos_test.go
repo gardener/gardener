@@ -350,15 +350,6 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 		})
 
-		XContext("reconciliation has been finished successfully", func() {
-			XContext("other operation types: Create, Restore", func() {
-
-			})
-			XContext("in and outside of time window", func() {
-
-			})
-		})
-
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
 				cfg.RespectSyncPeriodOverwrite = pointer.Bool(true)

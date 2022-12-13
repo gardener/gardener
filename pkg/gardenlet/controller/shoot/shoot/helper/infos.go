@@ -217,7 +217,8 @@ func (i ControllerInfos) requeueAfter() reconcile.Result {
 	// 'Reconcile Succeeded' state).
 
 	// If we do not confine reconciliations (either by the operator or shoot owner) to the maintenance time window then
-	// we allow immediate reconciliations.
+	// we requeue according to the sync period configured in gardenlet configuration (which might have been overwritten on
+	// the shoot via annotation).
 	if !i.reconcileInMaintenanceOnly && !i.confineSpecUpdateRollout {
 		return reconcile.Result{RequeueAfter: i.syncPeriod}
 	}
