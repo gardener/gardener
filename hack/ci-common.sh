@@ -85,22 +85,3 @@ clamp_mss_to_pmtu() {
     iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
   fi
 }
-
-set_gardener_upgrade_version_env_variables() {
-  export VERSION="$(cat VERSION)"
-  if [[ -z "$GARDENER_PREVIOUS_RELEASE" ]]; then
-    export GARDENER_PREVIOUS_RELEASE="$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)"
-  fi
-
-  if [[ -z "$GARDENER_NEXT_RELEASE" ]]; then
-    export GARDENER_NEXT_RELEASE="$VERSION"
-  fi
-}
-
-wait_until_seed_gets_upgraded() {
-  echo "Wait until seed gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  kubectl wait seed $1 --timeout=5m \
-    --for=jsonpath='{.status.gardener.version}'=$GARDENER_NEXT_RELEASE \
-    --for=condition=gardenletready --for=condition=extensionsready \
-    --for=condition=bootstrapped
-}
