@@ -124,6 +124,7 @@
 * [Network Policies in the Seed Cluster](development/seed_network_policies.md)
 * [`PriorityClasses` in Gardener Clusters](development/priority-classes.md)
 * [High Availability Of Deployed Components](development/high-availability.md)
+* [Checklist For Adding New Components](development/component-checklist.md)
 
 ## Extensions
 
