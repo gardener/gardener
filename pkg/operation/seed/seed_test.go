@@ -125,7 +125,7 @@ var _ = Describe("seed", func() {
 			)
 			seed.SetInfo(&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{}})
 
-			Expect(seed.GetLoadBalancerServiceAnnotations()).To(Equal(map[string]string{}))
+			Expect(seed.GetLoadBalancerServiceAnnotations()).To(BeNil())
 		})
 	})
 
@@ -240,7 +240,7 @@ var _ = Describe("seed", func() {
 			)
 			seed.SetInfo(&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{}})
 
-			Expect(seed.GetZonalLoadBalancerServiceAnnotations(zone1)).To(Equal(map[string]string{}))
+			Expect(seed.GetZonalLoadBalancerServiceAnnotations(zone1)).To(BeNil())
 		})
 	})
 

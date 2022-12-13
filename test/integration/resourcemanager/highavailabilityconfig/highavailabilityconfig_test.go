@@ -487,7 +487,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					})
 				})
 
-				Context("when namespace is annotated with with zones, but neither with zone-pinning nor failure-tolerance-type", func() {
+				Context("when namespace is annotated with zones, but neither with zone-pinning nor failure-tolerance-type", func() {
 					BeforeEach(func() {
 						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 					})

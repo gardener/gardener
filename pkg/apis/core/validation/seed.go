@@ -187,6 +187,10 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "externalTrafficPolicy"), *policy, availableExternalTrafficPolicies.List()))
 		}
 
+		if len(seedSpec.Provider.Zones) <= 1 && len(seedSpec.Settings.LoadBalancerServices.Zones) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "loadBalancerServices", "zones"), "zone-specific load balancer settings only allowed with at least two zones in spec.provider.zones"))
+		}
+
 		zones := sets.NewString(seedSpec.Provider.Zones...)
 		specifiedZones := sets.NewString()
 

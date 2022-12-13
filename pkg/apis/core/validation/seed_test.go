@@ -493,7 +493,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				for _, p := range []string{"Cluster", "Local"} {
 					policy := corev1.ServiceExternalTrafficPolicyType(p)
 					zoneName := "a"
-					seed.Spec.Provider.Zones = []string{zoneName}
+					seed.Spec.Provider.Zones = []string{zoneName, "b"}
 					seed.Spec.Settings = &core.SeedSettings{
 						LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
 							Zones: []core.SeedSettingLoadBalancerServicesZones{{
@@ -552,6 +552,10 @@ var _ = Describe("Seed Validation Tests", func() {
 				errorList := ValidateSeed(seed)
 
 				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.settings.loadBalancerServices.zones"),
+					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),

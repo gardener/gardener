@@ -172,7 +172,7 @@ func (s *Seed) GetLoadBalancerServiceAnnotations() map[string]string {
 	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
 		return seed.Spec.Settings.LoadBalancerServices.Annotations
 	}
-	return map[string]string{}
+	return nil
 }
 
 // GetLoadBalancerServiceExternalTrafficPolicy indicates the external traffic policy for the seed if any.
