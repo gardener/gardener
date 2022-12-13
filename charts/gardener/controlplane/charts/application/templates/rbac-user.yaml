@@ -247,6 +247,49 @@ subjects:
   kind: Group
   name: system:authenticated
 
+# Cluster role with cluster role binding allowing all authenticated users create tokenreviews and selfsubjectaccessreviews
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:user-auth
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - selfsubjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: gardener.cloud:system:user-auth
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:system:user-auth
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:authenticated
+
 # Cluster role for allowing creation of projects.
 # IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users/
 #            groups/serviceaccounts to this ClusterRole on your own.
