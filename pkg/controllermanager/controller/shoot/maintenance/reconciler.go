@@ -181,7 +181,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}); err != nil {
 			// If shoot maintenance is triggered by `gardener.cloud/operation=maintain` annotation and if it fails in dry run,
 			// `maintain` operation annotation needs to be removed so that if reason for failure is fixed and maintenance is triggered
-			// again via `maintain` operation annotation then it should not fail with the reason that annotation is already present
+			// again via `maintain` operation annotation then it should not fail with the reason that annotation is already present.
+			// Removal of annotation during shoot status patch is possible cause only spec is kept in original form during status update
+			// https://github.com/gardener/gardener/blob/a2f7de0badaae6170d7b9b84c163b8cab43a84d2/pkg/registry/core/shoot/strategy.go#L258-L267
 			if hasMaintainNowAnnotation(shoot) {
 				delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 			}
