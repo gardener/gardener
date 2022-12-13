@@ -79,6 +79,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				SSHAccessEnabled:    v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
 				PromtailEnabled:     promtailEnabled,
 				LokiIngressHostName: lokiIngressHost,
+				NodeLocalDNSENabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 			},
 		},
 		operatingsystemconfig.DefaultInterval,
