@@ -95,8 +95,8 @@ var _ = Describe("helper", func() {
 		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
 		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
 		Entry("ca nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
-		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.ShootCARotation{}}}, core.CredentialsRotationPhase("")),
-		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.ShootCARotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.CARotation{}}}, core.CredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.CARotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
 
 	DescribeTable("#GetShootServiceAccountKeyRotationPhase",

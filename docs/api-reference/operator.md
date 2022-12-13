@@ -119,7 +119,7 @@ CredentialsRotation
 <td>
 <code>certificateAuthorities</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation
+github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation
 </em>
 </td>
 <td>

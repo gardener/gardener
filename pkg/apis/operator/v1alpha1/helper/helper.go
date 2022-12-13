@@ -29,7 +29,7 @@ func GetCARotationPhase(credentials *operatorv1alpha1.Credentials) gardencorev1b
 
 // MutateCARotation mutates the .status.credentials.rotation.certificateAuthorities field based on the provided
 // mutation function. If the field is nil then it is initialized.
-func MutateCARotation(garden *operatorv1alpha1.Garden, f func(rotation *gardencorev1beta1.ShootCARotation)) {
+func MutateCARotation(garden *operatorv1alpha1.Garden, f func(rotation *gardencorev1beta1.CARotation)) {
 	if garden.Status.Credentials == nil {
 		garden.Status.Credentials = &operatorv1alpha1.Credentials{}
 	}
@@ -37,7 +37,7 @@ func MutateCARotation(garden *operatorv1alpha1.Garden, f func(rotation *gardenco
 		garden.Status.Credentials.Rotation = &operatorv1alpha1.CredentialsRotation{}
 	}
 	if garden.Status.Credentials.Rotation.CertificateAuthorities == nil {
-		garden.Status.Credentials.Rotation.CertificateAuthorities = &gardencorev1beta1.ShootCARotation{}
+		garden.Status.Credentials.Rotation.CertificateAuthorities = &gardencorev1beta1.CARotation{}
 	}
 
 	f(garden.Status.Credentials.Rotation.CertificateAuthorities)

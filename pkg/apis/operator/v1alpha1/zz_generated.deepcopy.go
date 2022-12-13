@@ -69,7 +69,7 @@ func (in *CredentialsRotation) DeepCopyInto(out *CredentialsRotation) {
 	*out = *in
 	if in.CertificateAuthorities != nil {
 		in, out := &in.CertificateAuthorities, &out.CertificateAuthorities
-		*out = new(v1beta1.ShootCARotation)
+		*out = new(v1beta1.CARotation)
 		(*in).DeepCopyInto(*out)
 	}
 	return

@@ -115,7 +115,7 @@ var _ = Describe("Machines", func() {
 					Status: gardencorev1beta1.ShootStatus{
 						Credentials: &gardencorev1beta1.ShootCredentials{
 							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
-								CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+								CertificateAuthorities: &gardencorev1beta1.CARotation{
 									LastInitiationTime: &lastCARotationInitiation,
 								},
 								ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{

@@ -124,5 +124,5 @@ Furthermore, for deletion requests, it is validated that the `Garden` is annotat
 Only if this annotation is present it allows the `DELETE` operation to pass.
 This prevents users from accidental/undesired deletions.
 
-Another validation is to check that there is no only one `Garden` resource at a time.
+Another validation is to check that there is only one `Garden` resource at a time.
 It prevents creating a second `Garden` when there is already one in the system.

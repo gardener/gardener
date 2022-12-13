@@ -79,7 +79,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPreparing,
 							},
 						},
@@ -88,7 +88,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -97,7 +97,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleting,
 							},
 						},
@@ -106,7 +106,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},
@@ -133,7 +133,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPreparing,
 							},
 						},
@@ -142,7 +142,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("all rotation phases are prepared", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -151,7 +151,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleting,
 							},
 						},
@@ -160,7 +160,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completed", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},
@@ -187,7 +187,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPreparing,
 							},
 						},
@@ -196,7 +196,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -205,7 +205,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleting,
 							},
 						},
@@ -214,7 +214,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},
@@ -241,7 +241,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPreparing,
 							},
 						},
@@ -250,7 +250,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is prepared", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -259,7 +259,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleting,
 							},
 						},
@@ -268,7 +268,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("ca rotation phase is completed", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
-							CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},

@@ -233,6 +233,21 @@ message BackupEntryStatus {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 5;
 }
 
+// CARotation contains information about the certificate authority credential rotation.
+message CARotation {
+  // Phase describes the phase of the certificate authority credential rotation.
+  optional string phase = 1;
+
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+}
+
 // CRI contains information about the Container Runtimes.
 message CRI {
   // The name of the CRI library. Supported values are `docker` and `containerd`.
@@ -2300,21 +2315,6 @@ message ShootAdvertisedAddress {
   optional string url = 2;
 }
 
-// ShootCARotation contains information about the certificate authority credential rotation.
-message ShootCARotation {
-  // Phase describes the phase of the certificate authority credential rotation.
-  optional string phase = 1;
-
-  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
-
-  // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
-  // completed.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
-}
-
 // ShootCredentials contains information about the shoot credentials.
 message ShootCredentials {
   // Rotation contains information about the credential rotations.
@@ -2326,7 +2326,7 @@ message ShootCredentials {
 message ShootCredentialsRotation {
   // CertificateAuthorities contains information about the certificate authority credential rotation.
   // +optional
-  optional ShootCARotation certificateAuthorities = 1;
+  optional CARotation certificateAuthorities = 1;
 
   // Kubeconfig contains information about the kubeconfig credential rotation.
   // +optional

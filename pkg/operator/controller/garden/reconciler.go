@@ -168,12 +168,12 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 
 	switch helper.GetCARotationPhase(garden.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
-		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.ShootCARotation) {
+		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 			rotation.Phase = gardencorev1beta1.RotationPrepared
 		})
 
 	case gardencorev1beta1.RotationCompleting:
-		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.ShootCARotation) {
+		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
 		})
@@ -183,14 +183,14 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 }
 
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
-	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.ShootCARotation) {
+	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
 	})
 }
 
 func completeRotationCA(garden *operatorv1alpha1.Garden) {
-	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.ShootCARotation) {
+	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
 	})
 }

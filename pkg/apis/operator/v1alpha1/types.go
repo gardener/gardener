@@ -188,7 +188,7 @@ type Credentials struct {
 type CredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	// +optional
-	CertificateAuthorities *gardencorev1beta1.ShootCARotation `json:"certificateAuthorities,omitempty"`
+	CertificateAuthorities *gardencorev1beta1.CARotation `json:"certificateAuthorities,omitempty"`
 }
 
 const (
