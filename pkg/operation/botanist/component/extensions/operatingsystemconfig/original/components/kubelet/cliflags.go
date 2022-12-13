@@ -16,6 +16,7 @@ package kubelet
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -29,7 +30,7 @@ import (
 )
 
 // CLIFlags returns a list of kubelet CLI flags based on the provided parameters and for the provided Kubernetes version.
-func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags) []string {
+func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags) []string {
 	setCLIFlagsDefaults(&cliFlags)
 
 	var flags []string
@@ -40,6 +41,17 @@ func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIN
 		"--kubeconfig="+PathKubeconfigReal,
 		fmt.Sprintf("--node-labels=%s=%s", v1beta1constants.LabelWorkerKubernetesVersion, kubernetesVersion.String()),
 	)
+
+	// maps are unsorted in go, make sure to output node labels in the exact same order every time
+	labelKeys := make([]string, 0, len(nodeLabels))
+	for key := range nodeLabels {
+		labelKeys = append(labelKeys, key)
+	}
+	sort.Strings(labelKeys)
+
+	for _, key := range labelKeys {
+		flags = append(flags, fmt.Sprintf("--node-labels=%s=%s", key, nodeLabels[key]))
+	}
 
 	if criName == extensionsv1alpha1.CRINameContainerD {
 		flags = append(flags,
