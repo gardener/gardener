@@ -78,7 +78,7 @@ Once this enhancement has been implemented and IPv6 single-stack networking in l
 - use IPv6 prefixes assigned by provider for pod CIDR similar to [provider-assigned node CIDR](https://github.com/gardener/gardener/blob/219d828fcdea81fb3edf13de2736daf81e137923/pkg/operation/botanist/infrastructure.go#L73)
 - support changing the networking setup of shoots from IPv4 to IPv6 single-stack or vice-versa
 - host IPv6 single-stack shoots on IPv4 single-stack seeds or vice-versa
-- propose changes API types defined outside of gardener/gardener and their implementations, e.g., the `NetworkConfig` APIs (`providerConfig`) of networking extensions
+- propose changes to API types defined outside of gardener/gardener and their implementations, e.g., the `NetworkConfig` APIs (`providerConfig`) of networking extensions
 
 ## Proposal
 
@@ -109,7 +109,8 @@ spec:
 
 `ipFamilies` is the central setting for specifying the IP families used for shoot networking.
 This field is inspired by the `Service.spec.ipFamilies` field in Kubernetes ([doc](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services)).
-The default value is `["IPv4"]` (IPv4 single-stack).
+The field is defaulted to `["IPv4"]` (IPv4 single-stack) if not set.
+With this, this field is set to its implicit value for all existing shoots to provide backward-compatibility.
 If the `IPv6SingleStack` feature gate is enabled, `["IPv6"]` can be specified to switch to IPv6 single-stack.
 
 Later on, `["IPv4","IPv6"]` or `["IPv6","IPv4"]` can be supported for dual-stack networking.
@@ -132,6 +133,7 @@ For supporting dual-stack networking setups in the future, the `Shoot` API must 
 Similar to the [`Service` API](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), the `Shoot` API may be extended with list equivalents of `Shoot.spec.networking.{pods,services,nodes}`.
 In this case, the existing CIDR fields may specify the respective CIDR of the primary IP family while the list fields contain CIDRs of both IP families.
 The primary IP family may be determined by the first element of the `ipFamilies` field.
+Similar to the `Service.spec.clusterIPs` field, API validation may enforce that the list only contains two entries with the primary IP family being the first one.
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
