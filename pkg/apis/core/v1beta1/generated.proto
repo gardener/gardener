@@ -2022,7 +2022,7 @@ message SeedSettingLoadBalancerServicesZones {
   // Name is the name of the zone as specified in seed.spec.provider.zones.
   optional string name = 1;
 
-  // Annotations is a map of annotations that will be injected/merged into every load balancer service object.
+  // Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.
   // +optional
   map<string, string> annotations = 2;
 

@@ -293,7 +293,7 @@ type SeedSettingLoadBalancerServices struct {
 type SeedSettingLoadBalancerServicesZones struct {
 	// Name is the name of the zone as specified in seed.spec.provider.zones.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
+	// Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,2,rep,name=annotations"`
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they

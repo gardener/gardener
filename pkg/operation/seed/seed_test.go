@@ -102,7 +102,7 @@ var _ = Describe("seed", func() {
 			Expect(seed.GetLoadBalancerServiceAnnotations()).To(Equal(map[string]string{annotationKey1: annotationValue1, annotationKey2: annotationValue2}))
 		})
 
-		It("should return no annotations if no annoations are available", func() {
+		It("should return no annotations if no annotations are available", func() {
 			var (
 				seed = &Seed{}
 			)

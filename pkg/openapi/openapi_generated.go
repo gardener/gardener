@@ -6459,7 +6459,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServicesZones(ref comm
 					},
 					"annotations": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Annotations is a map of annotations that will be injected/merged into every load balancer service object.",
+							Description: "Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -13741,7 +13741,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref commo
 					},
 					"annotations": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Annotations is a map of annotations that will be injected/merged into every load balancer service object.",
+							Description: "Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,

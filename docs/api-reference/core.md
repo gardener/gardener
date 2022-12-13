@@ -8288,7 +8288,7 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Annotations is a map of annotations that will be injected/merged into every load balancer service object.</p>
+<p>Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.</p>
 </td>
 </tr>
 <tr>

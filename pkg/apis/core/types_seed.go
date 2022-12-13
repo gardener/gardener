@@ -256,7 +256,7 @@ type SeedSettingLoadBalancerServices struct {
 type SeedSettingLoadBalancerServicesZones struct {
 	// Name is the name of the zone as specified in seed.spec.provider.zones.
 	Name string
-	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
+	// Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.
 	Annotations map[string]string
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they
 	// receive on one of the service's "externally-facing" addresses.
