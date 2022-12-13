@@ -2260,33 +2260,49 @@ var _ = Describe("helper", func() {
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{CertificateAuthorities: &gardencorev1beta1.CARotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
-	DescribeTable("#MutateShootCARotation",
-		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
-			MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
-				rotation.Phase = phase
-			})
-			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(phase))
-		},
+	Describe("#MutateShootCARotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			MutateShootCARotation(shoot, nil)
+			Expect(GetShootCARotationPhase(shoot.Status.Credentials)).To(BeEmpty())
+		})
 
-		Entry("credentials nil", &gardencorev1beta1.Shoot{}, gardencorev1beta1.RotationCompleting),
-		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, gardencorev1beta1.RotationCompleting),
-		Entry("certificateAuthorities nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
-		Entry("certificateAuthorities non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{CertificateAuthorities: &gardencorev1beta1.CARotation{}}}}}, gardencorev1beta1.RotationCompleting),
-	)
+		DescribeTable("mutate function not nil",
+			func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
+					rotation.Phase = phase
+				})
+				Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(phase))
+			},
 
-	DescribeTable("#MutateShootKubeconfigRotation",
-		func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
-			MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
-				rotation.LastInitiationTime = &lastInitiationTime
-			})
-			Expect(shoot.Status.Credentials.Rotation.Kubeconfig.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
-		},
+			Entry("credentials nil", &gardencorev1beta1.Shoot{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{CertificateAuthorities: &gardencorev1beta1.CARotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
 
-		Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
-		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
-		Entry("kubeconfig nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
-		Entry("kubeconfig non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{}}}}}, metav1.Now()),
-	)
+	Describe("#MutateShootKubeconfigRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			MutateShootKubeconfigRotation(shoot, nil)
+			Expect(shoot.Status.Credentials).To(BeNil())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
+				MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
+					rotation.LastInitiationTime = &lastInitiationTime
+				})
+				Expect(shoot.Status.Credentials.Rotation.Kubeconfig.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
+			},
+
+			Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
+			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
+			Entry("kubeconfig nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
+			Entry("kubeconfig non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{}}}}}, metav1.Now()),
+		)
+	})
 
 	DescribeTable("#IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime",
 		func(credentials *gardencorev1beta1.ShootCredentials, matcher gomegatypes.GomegaMatcher) {
@@ -2303,19 +2319,27 @@ var _ = Describe("helper", func() {
 		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
 	)
 
-	DescribeTable("#MutateShootSSHKeypairRotation",
-		func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
-			MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
-				rotation.LastInitiationTime = &lastInitiationTime
-			})
-			Expect(shoot.Status.Credentials.Rotation.SSHKeypair.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
-		},
+	Describe("#MutateShootSSHKeypairRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			MutateShootSSHKeypairRotation(shoot, nil)
+			Expect(shoot.Status.Credentials).To(BeNil())
+		})
 
-		Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
-		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
-		Entry("sshKeypair nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
-		Entry("sshKeypair non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{}}}}}, metav1.Now()),
-	)
+		DescribeTable("mutate function not nil",
+			func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
+				MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+					rotation.LastInitiationTime = &lastInitiationTime
+				})
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
+			},
+
+			Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
+			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
+			Entry("sshKeypair nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
+			Entry("sshKeypair non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{}}}}}, metav1.Now()),
+		)
+	})
 
 	DescribeTable("#IsShootSSHKeypairRotationInitiationTimeAfterLastCompletionTime",
 		func(credentials *gardencorev1beta1.ShootCredentials, matcher gomegatypes.GomegaMatcher) {
@@ -2332,19 +2356,27 @@ var _ = Describe("helper", func() {
 		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
 	)
 
-	DescribeTable("#MutateObservabilityRotation",
-		func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
-			MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
-				rotation.LastInitiationTime = &lastInitiationTime
-			})
-			Expect(shoot.Status.Credentials.Rotation.Observability.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
-		},
+	Describe("#MutateObservabilityRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			MutateObservabilityRotation(shoot, nil)
+			Expect(shoot.Status.Credentials).To(BeNil())
+		})
 
-		Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
-		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
-		Entry("observability nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
-		Entry("observability non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{}}}}}, metav1.Now()),
-	)
+		DescribeTable("mutate function not nil",
+			func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
+				MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
+					rotation.LastInitiationTime = &lastInitiationTime
+				})
+				Expect(shoot.Status.Credentials.Rotation.Observability.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
+			},
+
+			Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
+			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
+			Entry("observability nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
+			Entry("observability non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{}}}}}, metav1.Now()),
+		)
+	})
 
 	DescribeTable("#IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime",
 		func(credentials *gardencorev1beta1.ShootCredentials, matcher gomegatypes.GomegaMatcher) {
@@ -2373,19 +2405,27 @@ var _ = Describe("helper", func() {
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
-	DescribeTable("#MutateShootServiceAccountKeyRotation",
-		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
-			MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
-				rotation.Phase = phase
-			})
-			Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase).To(Equal(phase))
-		},
+	Describe("#MutateShootServiceAccountKeyRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			MutateShootServiceAccountKeyRotation(shoot, nil)
+			Expect(GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials)).To(BeEmpty())
+		})
 
-		Entry("credentials nil", &gardencorev1beta1.Shoot{}, gardencorev1beta1.RotationCompleting),
-		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, gardencorev1beta1.RotationCompleting),
-		Entry("serviceAccountKey nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
-		Entry("serviceAccountKey non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
-	)
+		DescribeTable("mutate function not nil",
+			func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+					rotation.Phase = phase
+				})
+				Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase).To(Equal(phase))
+			},
+
+			Entry("credentials nil", &gardencorev1beta1.Shoot{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("serviceAccountKey nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("serviceAccountKey non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
 
 	DescribeTable("#GetShootETCDEncryptionKeyRotationPhase",
 		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
@@ -2399,19 +2439,27 @@ var _ = Describe("helper", func() {
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
-	DescribeTable("#MutateShootETCDEncryptionKeyRotation",
-		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
-			MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
-				rotation.Phase = phase
-			})
-			Expect(shoot.Status.Credentials.Rotation.ETCDEncryptionKey.Phase).To(Equal(phase))
-		},
+	Describe("#MutateShootETCDEncryptionKeyRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			MutateShootETCDEncryptionKeyRotation(shoot, nil)
+			Expect(GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)).To(BeEmpty())
+		})
 
-		Entry("credentials nil", &gardencorev1beta1.Shoot{}, gardencorev1beta1.RotationCompleting),
-		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, gardencorev1beta1.RotationCompleting),
-		Entry("etcdEncryptionKey nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
-		Entry("etcdEncryptionKey non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
-	)
+		DescribeTable("mutate function not nil",
+			func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
+					rotation.Phase = phase
+				})
+				Expect(shoot.Status.Credentials.Rotation.ETCDEncryptionKey.Phase).To(Equal(phase))
+			},
+
+			Entry("credentials nil", &gardencorev1beta1.Shoot{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("etcdEncryptionKey nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("etcdEncryptionKey non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
 
 	Describe("#IsPSPDisabled", func() {
 		var shoot *gardencorev1beta1.Shoot
