@@ -167,39 +167,35 @@ function wait_until_seed_gets_upgraded() {
     --for=condition=bootstrapped
 }
 
-function main() {
-  clamp_mss_to_pmtu
-  set_gardener_upgrade_version_env_variables
-  set_cluster_name
-  set_seed_name
+clamp_mss_to_pmtu
+set_gardener_upgrade_version_env_variables
+set_cluster_name
+set_seed_name
 
-  # download gardener previous release to perform gardener upgrade tests
-  $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
+# download gardener previous release to perform gardener upgrade tests
+$(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
 
-  # test setup
-  kind_up
+# test setup
+kind_up
 
-  # export all container logs and events after test execution
-  trap "
-  ( rm -rf $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases);
-  ( export_logs '$CLUSTER_NAME'; export_events_for_kind '$CLUSTER_NAME'; export_events_for_shoots )
-  ( kind_down;)
-  " EXIT
+# export all container logs and events after test execution
+trap "
+( rm -rf $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases);
+( export_logs '$CLUSTER_NAME'; export_events_for_kind '$CLUSTER_NAME'; export_events_for_shoots )
+( kind_down;)
+" EXIT
 
-  echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
-  install_previous_release
+echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
+install_previous_release
 
-  echo "Running gardener pre-upgrade tests"
-  make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+echo "Running gardener pre-upgrade tests"
+make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
 
-  echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  upgrade_to_next_release
-  wait_until_seed_gets_upgraded "$SEED_NAME"
+echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
+upgrade_to_next_release
+wait_until_seed_gets_upgraded "$SEED_NAME"
 
-  echo "Running gardener post-upgrade tests"
-  make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+echo "Running gardener post-upgrade tests"
+make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
 
-  gardener_down
-}
-
-main
+gardener_down
