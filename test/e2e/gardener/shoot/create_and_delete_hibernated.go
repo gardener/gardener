@@ -20,10 +20,13 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -40,9 +43,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
+		verifyNoPodsRunning(f)
+
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
+
+func verifyNoPodsRunning(f *framework.ShootCreationFramework) {
+	list := &corev1.PodList{}
+	Expect(f.ShootFramework.SeedClient.Client().List(context.Background(), list, client.InNamespace(f.Shoot.Status.TechnicalID))).To(Succeed())
+	Expect(list.Items).To(BeEmpty())
+}
