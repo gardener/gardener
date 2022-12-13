@@ -2590,6 +2590,24 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	DescribeTable("#ShootWantsSSHAccessDisabled",
+		func(workersSettings *gardencorev1beta1.WorkersSettings, expectedResult bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						WorkersSettings: workersSettings,
+					},
+				},
+			}
+			Expect(ShootWantsSSHAccessDisabled(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("should return false when shoot provider has no WorkersSettings", nil, false),
+		Entry("should return false when shoot worker settings has no EnsureSSHAccessDisabled", &gardencorev1beta1.WorkersSettings{}, false),
+		Entry("should return false when shoot worker settings has EnsureSSHAccessDisabled set to false", &gardencorev1beta1.WorkersSettings{EnsureSSHAccessDisabled: pointer.Bool(false)}, false),
+		Entry("should return true when shoot worker settings has EnsureSSHAccessDisabled set to true", &gardencorev1beta1.WorkersSettings{EnsureSSHAccessDisabled: pointer.Bool(true)}, true),
+	)
+
 	Describe("#GetFailureToleranceType", func() {
 		var shoot *gardencorev1beta1.Shoot
 

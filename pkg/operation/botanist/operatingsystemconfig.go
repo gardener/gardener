@@ -62,7 +62,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		promtailEnabled, lokiIngressHost = true, b.ComputeLokiHost()
 	}
 
-	ensureSSHAccessDisabled := b.IsWorkersEnsureSSHAccessDisabled()
+	ensureSSHAccessDisabled := v1beta1helper.ShootWantsSSHAccessDisabled(b.Shoot.GetInfo())
 
 	return operatingsystemconfig.New(
 		b.Logger,

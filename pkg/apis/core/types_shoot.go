@@ -1179,7 +1179,7 @@ var (
 
 // WorkersSettings contains settings for all workers.
 type WorkersSettings struct {
-	// EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.
+	// EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.
 	EnsureSSHAccessDisabled *bool
 }
 

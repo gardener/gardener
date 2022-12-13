@@ -90,7 +90,7 @@ Description=Disable ssh access and kill any currently established ssh connection
 DefaultDependencies=no
 [Service]
 Type=simple
-ExecStart= echo service sshddisabler is disabled in workers settings.
+ExecStart=/bin/echo "service sshddisabler is disabled in workers settings."
 [Install]
 WantedBy=multi-user.target`),
 					},
@@ -104,20 +104,17 @@ WantedBy=multi-user.target`),
 const script = `#!/bin/bash -eu
 set -e
 
-# Stop sshd service if active
-if systemctl is-active --quiet sshd.service ; then
-    systemctl stop sshd.service
-fi
-
 # Disable sshd service if enabled
 if systemctl is-enabled --quiet sshd.service ; then
     systemctl disable sshd.service
 fi
 
+# Stop sshd service if active
+if systemctl is-active --quiet sshd.service ; then
+    systemctl stop sshd.service
+fi
+
 # Disabling the sshd service does not terminate already established connections
 # Kill all currently established ssh connections
-pids=$(pidof sshd || true)
-if [ -n "$pids" ]; then
-    kill $pids
-fi
+pkill sshd || true
 `

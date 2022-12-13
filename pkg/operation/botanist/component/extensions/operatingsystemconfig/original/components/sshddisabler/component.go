@@ -105,7 +105,7 @@ Description=Disable ssh access and kill any currently established ssh connection
 DefaultDependencies=no
 [Service]
 Type=simple
-ExecStart= echo service sshddisabler is disabled in workers settings.
+ExecStart=/bin/echo "service sshddisabler is disabled in workers settings."
 [Install]
 WantedBy=multi-user.target`),
 		},

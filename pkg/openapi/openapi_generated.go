@@ -8393,7 +8393,7 @@ func schema_pkg_apis_core_v1alpha1_WorkersSettings(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"ensureSSHAccessDisabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.",
+							Description: "EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -15612,7 +15612,7 @@ func schema_pkg_apis_core_v1beta1_WorkersSettings(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"ensureSSHAccessDisabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.",
+							Description: "EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

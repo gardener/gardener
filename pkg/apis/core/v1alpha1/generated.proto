@@ -2896,7 +2896,7 @@ message WorkerSystemComponents {
 
 // WorkersSettings contains settings for all workers.
 message WorkersSettings {
-  // EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.
+  // EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.
   // +optional
   optional bool ensureSSHAccessDisabled = 1;
 }

@@ -11427,7 +11427,7 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>EnsureSSHAccessDisabled indicates whether the worker nodes ssh access is disabled.</p>
+<p>EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.</p>
 </td>
 </tr>
 </tbody>
