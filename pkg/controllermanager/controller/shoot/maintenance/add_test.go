@@ -68,7 +68,19 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot})).To(BeFalse())
 			})
 
-			It("should return true because there is maintain-now annotation", func() {
+			It("should return false when there is maintain-now annotation only on old object", func() {
+				oldShoot := shoot.DeepCopy()
+				metav1.SetMetaDataAnnotation(&oldShoot.ObjectMeta, "gardener.cloud/operation", "maintain")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
+			It("should return false when there is maintain-now annotation on old and new object", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "maintain")
+				oldShoot := shoot.DeepCopy()
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
+			It("should return true when there is maintain-now annotation only on new object", func() {
 				oldShoot := shoot.DeepCopy()
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "maintain")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())

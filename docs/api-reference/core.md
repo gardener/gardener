@@ -5741,6 +5741,74 @@ Kubernetes meta/v1.Time
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.LastMaintenance">LastMaintenance
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>LastMaintenance holds information about a maintenance operation on the Shoot.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>description</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>A human-readable message containing details about the operations performed in the last maintenance.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>triggeredTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<p>TriggeredTime is the time when maintenance was triggered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>state</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.LastOperationState">
+LastOperationState
+</a>
+</em>
+</td>
+<td>
+<p>Status of the last maintenance operation, one of Processing, Succeeded, Error.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>failureReason</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FailureReason holds the information about the last maintenance operation failure reason.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.LastOperation">LastOperation
 </h3>
 <p>
@@ -5828,6 +5896,7 @@ LastOperationType
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.LastMaintenance">LastMaintenance</a>, 
 <a href="#core.gardener.cloud/v1beta1.LastOperation">LastOperation</a>)
 </p>
 <p>
@@ -10142,6 +10211,20 @@ Kubernetes meta/v1.Time
 <em>(Optional)</em>
 <p>LastHibernationTriggerTime indicates the last time when the hibernation controller
 managed to change the hibernation settings of the cluster</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastMaintenance</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.LastMaintenance">
+LastMaintenance
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastMaintenance holds information about the last maintenance operations on the Shoot.</p>
 </td>
 </tr>
 </tbody>

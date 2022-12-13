@@ -196,6 +196,22 @@ type ShootStatus struct {
 	// managed to change the hibernation settings of the cluster
 	// +optional
 	LastHibernationTriggerTime *metav1.Time `json:"lastHibernationTriggerTime,omitempty" protobuf:"bytes,16,opt,name=lastHibernationTriggerTime"`
+	// LastMaintenance holds information about the last maintenance operations on the Shoot.
+	// +optional
+	LastMaintenance *LastMaintenance `json:"lastMaintenance,omitempty" protobuf:"bytes,17,opt,name=lastMaintenance"`
+}
+
+// LastMaintenance holds information about a maintenance operation on the Shoot.
+type LastMaintenance struct {
+	// A human-readable message containing details about the operations performed in the last maintenance.
+	Description string `json:"description" protobuf:"bytes,1,opt,name=description"`
+	// TriggeredTime is the time when maintenance was triggered.
+	TriggeredTime metav1.Time `json:"triggeredTime" protobuf:"bytes,2,opt,name=triggeredTime"`
+	// Status of the last maintenance operation, one of Processing, Succeeded, Error.
+	State LastOperationState `json:"state" protobuf:"bytes,3,opt,name=state,casttype=LastOperationState"`
+	// FailureReason holds the information about the last maintenance operation failure reason.
+	// +optional
+	FailureReason *string `json:"failureReason,omitempty" protobuf:"bytes,4,opt,name=failureReason"`
 }
 
 // ShootCredentials contains information about the shoot credentials.

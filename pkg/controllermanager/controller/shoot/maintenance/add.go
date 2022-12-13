@@ -18,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -34,6 +35,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
+
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
 	}
@@ -63,7 +69,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 				return false
 			}
 
-			return hasMaintainNowAnnotation(shoot) ||
+			return (hasMaintainNowAnnotation(shoot) && !hasMaintainNowAnnotation(oldShoot)) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Maintenance.TimeWindow, shoot.Spec.Maintenance.TimeWindow)
 		},
 	}
