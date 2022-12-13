@@ -494,10 +494,8 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	}
 
 	if c.seed != nil {
-		if mustCheckSchedulingConstraints {
-			if err := c.validateSeedSelectionForMultiZonalShoot(); err != nil {
-				return admission.NewForbidden(a, err)
-			}
+		if err := c.validateSeedSelectionForMultiZonalShoot(); err != nil {
+			return admission.NewForbidden(a, err)
 		}
 
 		if c.seed.DeletionTimestamp != nil {
