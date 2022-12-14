@@ -70,9 +70,11 @@ func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, na
 }
 
 // CheckSeed conducts the health checks on all the given conditions.
-func (h *SeedHealth) CheckSeed(ctx context.Context,
+func (h *SeedHealth) CheckSeed(
+	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration) []gardencorev1beta1.Condition {
+	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
+) []gardencorev1beta1.Condition {
 
 	var systemComponentsCondition gardencorev1beta1.Condition
 	for _, cond := range conditions {
@@ -82,7 +84,7 @@ func (h *SeedHealth) CheckSeed(ctx context.Context,
 		}
 	}
 
-	checker := NewHealthChecker(thresholdMappings, nil, nil, nil, nil)
+	checker := NewHealthChecker(h.seedClient, thresholdMappings, nil, nil, nil, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
 	return []gardencorev1beta1.Condition{NewConditionOrError(systemComponentsCondition, newSystemComponentsCondition, err)}
 }
@@ -91,8 +93,10 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	ctx context.Context,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
-) (*gardencorev1beta1.Condition,
-	error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	managedResources := requiredManagedResourcesSeed.List()
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {

@@ -281,13 +281,7 @@ func (h *Health) healthChecks(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
-	var (
-		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion, h.shoot.GardenerVersion)
-		seedDeploymentLister  = makeDeploymentLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
-		seedStatefulSetLister = makeStatefulSetLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
-		seedEtcdLister        = makeEtcdLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace)
-		seedWorkerLister      = makeWorkerLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace)
-	)
+	checker := NewHealthChecker(h.seedClient.Client(), thresholdMappings, healthCheckOutdatedThreshold, h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion, h.shoot.GardenerVersion)
 
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if err != nil || !apiServerRunning {
@@ -302,7 +296,7 @@ func (h *Health) healthChecks(
 		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
-		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
 		controlPlane = NewConditionOrError(controlPlane, newControlPlane, err)
 		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, nodes, systemComponents}
 	}
@@ -313,7 +307,7 @@ func (h *Health) healthChecks(
 		apiserverAvailability = h.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
 		return nil
 	}, func(ctx context.Context) error {
-		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
 		controlPlane = NewConditionOrError(controlPlane, newControlPlane, err)
 		return nil
 	}, func(ctx context.Context) error {
@@ -338,22 +332,18 @@ func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *Health
 
 // checkControlPlane checks whether the control plane of the Shoot cluster is healthy.
 func (h *Health) checkControlPlane(
-	_ context.Context,
+	ctx context.Context,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
-	seedDeploymentLister kutil.DeploymentLister,
-	seedStatefulSetLister kutil.StatefulSetLister,
-	seedEtcdLister kutil.EtcdLister,
-	seedWorkerLister kutil.WorkerLister,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckControlPlane(h.shoot.GetInfo(), h.shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
 	wantsAlertmanager := h.shoot.WantsAlertmanager
 	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
-	if exitCondition, err := checker.CheckMonitoringControlPlane(h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -362,7 +352,7 @@ func (h *Health) checkControlPlane(
 	eventLoggingEnabled := gardenlethelper.IsEventLoggingEnabled(h.gardenletConfiguration)
 
 	if loggingEnabled {
-		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, eventLoggingEnabled, lokiEnabled, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := checker.CheckLoggingControlPlane(ctx, h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, eventLoggingEnabled, lokiEnabled, condition); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}

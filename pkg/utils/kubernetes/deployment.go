@@ -23,7 +23,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,87 +55,6 @@ func ValidDeploymentContainerImageVersion(deploymentToCheck *appsv1.Deployment, 
 	}
 
 	return true, nil
-}
-
-// DeploymentSource is a function that produces a slice of Deployments or an error.
-type DeploymentSource func() ([]*appsv1.Deployment, error)
-
-// DeploymentLister is a lister of Deployments.
-type DeploymentLister interface {
-	// List lists all Deployments that match the given selector.
-	List(selector labels.Selector) ([]*appsv1.Deployment, error)
-	// Deployments yields a DeploymentNamespaceLister for the given namespace.
-	Deployments(namespace string) DeploymentNamespaceLister
-}
-
-// DeploymentNamespaceLister is a lister of deployments for a specific namespace.
-type DeploymentNamespaceLister interface {
-	// List lists all Deployments that match the given selector in the current namespace.
-	List(selector labels.Selector) ([]*appsv1.Deployment, error)
-	// Get retrieves the Deployment with the given name in the current namespace.
-	Get(name string) (*appsv1.Deployment, error)
-}
-
-type deploymentLister struct {
-	source DeploymentSource
-}
-
-type deploymentNamespaceLister struct {
-	source    DeploymentSource
-	namespace string
-}
-
-// NewDeploymentLister creates a new DeploymentLister from the given DeploymentSource.
-func NewDeploymentLister(source DeploymentSource) DeploymentLister {
-	return &deploymentLister{source: source}
-}
-
-func filterDeployments(source DeploymentSource, filter func(*appsv1.Deployment) bool) ([]*appsv1.Deployment, error) {
-	deployments, err := source()
-	if err != nil {
-		return nil, err
-	}
-
-	var out []*appsv1.Deployment
-	for _, deployment := range deployments {
-		if filter(deployment) {
-			out = append(out, deployment)
-		}
-	}
-	return out, nil
-}
-
-func (d *deploymentLister) List(selector labels.Selector) ([]*appsv1.Deployment, error) {
-	return filterDeployments(d.source, func(deployment *appsv1.Deployment) bool {
-		return selector.Matches(labels.Set(deployment.Labels))
-	})
-}
-
-func (d *deploymentLister) Deployments(namespace string) DeploymentNamespaceLister {
-	return &deploymentNamespaceLister{
-		source:    d.source,
-		namespace: namespace,
-	}
-}
-
-func (d *deploymentNamespaceLister) Get(name string) (*appsv1.Deployment, error) {
-	deployments, err := filterDeployments(d.source, func(deployment *appsv1.Deployment) bool {
-		return deployment.Namespace == d.namespace && deployment.Name == name
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(deployments) == 0 {
-		return nil, apierrors.NewNotFound(appsv1.Resource("Deployments"), name)
-	}
-	return deployments[0], nil
-}
-
-func (d *deploymentNamespaceLister) List(selector labels.Selector) ([]*appsv1.Deployment, error) {
-	return filterDeployments(d.source, func(deployment *appsv1.Deployment) bool {
-		return deployment.Namespace == d.namespace && selector.Matches(labels.Set(deployment.Labels))
-	})
 }
 
 // CurrentReplicaCountForDeployment returns the current replicaCount for the given deployment.
