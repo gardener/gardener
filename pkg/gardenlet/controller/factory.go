@@ -16,14 +16,12 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 )
 
 // LegacyControllerFactory starts gardenlet's legacy controllers under leader election of the given manager for
@@ -43,20 +41,9 @@ type LegacyControllerFactory struct {
 func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	log := f.Log.WithName("controller")
 
-	shootController, err := shootcontroller.NewShootController(log, f.GardenCluster, f.Config)
-	if err != nil {
-		return fmt.Errorf("failed initializing Shoot controller: %w", err)
-	}
-
-	controllerCtx, cancel := context.WithCancel(ctx)
-
-	// run controllers
-	go shootController.Run(controllerCtx)
-
 	log.Info("gardenlet initialized")
 
 	// block until shutting down
 	<-ctx.Done()
-	cancel()
 	return nil
 }

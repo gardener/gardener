@@ -67,6 +67,7 @@ import (
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -353,6 +354,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Updating last operation status of processing Shoots to 'Aborted'")
+	if err := g.updateProcessingShootStatusToAborted(ctx, gardenCluster.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -471,6 +477,38 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		}
 		return true, nil
 	})
+}
+
+func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, gardenClient client.Client) error {
+	shoots := &gardencorev1beta1.ShootList{}
+	if err := gardenClient.List(ctx, shoots); err != nil {
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, shoot := range shoots.Items {
+		if specSeedName, statusSeedName := gutil.GetShootSeedNames(&shoot); gutil.GetResponsibleSeedName(specSeedName, statusSeedName) != g.config.SeedConfig.Name {
+			continue
+		}
+
+		// Check if the status indicates that an operation is processing and mark it as "aborted".
+		if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateProcessing {
+			continue
+		}
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(shoot.DeepCopy())
+			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateAborted
+			if err := gardenClient.Status().Patch(ctx, &shoot, patch); err != nil {
+				return fmt.Errorf("failed to set status to 'Aborted' for shoot %q: %w", client.ObjectKeyFromObject(&shoot), err)
+			}
+
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
