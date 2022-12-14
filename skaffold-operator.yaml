@@ -15,6 +15,13 @@ build:
         - charts
         - cmd/gardener-operator/app
         - cmd/utils
+        - extensions/pkg/apis/config
+        - extensions/pkg/controller
+        - extensions/pkg/util
+        - extensions/pkg/webhook
+        - extensions/pkg/webhook/certificates
+        - extensions/pkg/webhook/shoot
+        - pkg/api/extensions
         - pkg/apis/core
         - pkg/apis/core/install
         - pkg/apis/core/v1alpha1
@@ -32,6 +39,8 @@ build:
         - pkg/apis/operations/v1alpha1
         - pkg/apis/operator
         - pkg/apis/operator/v1alpha1
+        - pkg/apis/operator/v1alpha1/helper
+        - pkg/apis/operator/v1alpha1/validation
         - pkg/apis/resources
         - pkg/apis/resources/v1alpha1
         - pkg/apis/seedmanagement
@@ -45,6 +54,7 @@ build:
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
         - pkg/controllerutils
+        - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
         - pkg/extensions
@@ -72,6 +82,8 @@ build:
         - pkg/operator/controller
         - pkg/operator/controller/garden
         - pkg/operator/features
+        - pkg/operator/webhook
+        - pkg/operator/webhook/validation
         - pkg/resourcemanager/apis/config
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references

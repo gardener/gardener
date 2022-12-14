@@ -362,7 +362,7 @@ func ShootWantsVerticalPodAutoscaler(shoot *core.Shoot) bool {
 }
 
 // GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
-func GetShootCARotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
+func GetShootCARotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.CertificateAuthorities != nil {
 		return credentials.Rotation.CertificateAuthorities.Phase
 	}
@@ -371,7 +371,7 @@ func GetShootCARotationPhase(credentials *core.ShootCredentials) core.ShootCrede
 
 // GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
 // string.
-func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
+func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
 		return credentials.Rotation.ServiceAccountKey.Phase
 	}
@@ -380,7 +380,7 @@ func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) 
 
 // GetShootETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
 // string.
-func GetShootETCDEncryptionKeyRotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
+func GetShootETCDEncryptionKeyRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
 		return credentials.Rotation.ETCDEncryptionKey.Phase
 	}

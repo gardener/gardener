@@ -20,13 +20,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook"
-	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +30,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const certificateReconcilerName = "webhook-certificate"
@@ -49,8 +49,8 @@ type reconciler struct {
 	Clock clock.Clock
 	// SyncPeriod is the frequency with which to reload the server cert. Defaults to 5m.
 	SyncPeriod time.Duration
-	// SeedWebhookConfig is the webhook configuration to reconcile in the Seed cluster.
-	SeedWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
+	// SourceWebhookConfig is the webhook configuration to reconcile in the Source cluster.
+	SourceWebhookConfig client.Object
 	// ShootWebhookConfig is the webhook configuration to reconcile in all Shoot clusters.
 	ShootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
 	// AtomicShootWebhookConfig is an atomic value in which this reconciler will store the updated ShootWebhookConfig.
@@ -66,11 +66,11 @@ type reconciler struct {
 	Namespace string
 	// Identity of the secrets manager used for managing the secret.
 	Identity string
-	// Name of the extension.
-	ExtensionName string
-	// ShootWebhookManagedResourceName is the name of the ManagedResource containing the raw extensionswebhookshoot webhook config.
+	// Name of the component.
+	ComponentName string
+	// ShootWebhookManagedResourceName is the name of the ManagedResource containing the raw shoot webhook config.
 	ShootWebhookManagedResourceName string
-	// ShootNamespaceSelector is a label selector for extensionswebhookshoot namespaces relevant to the extension.
+	// ShootNamespaceSelector is a label selector for shoot namespaces relevant to the extension.
 	ShootNamespaceSelector map[string]string
 	// Mode is the webhook client config mode.
 	Mode string
@@ -165,11 +165,11 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 	log.Info("Generated webhook server cert", "serverSecretName", serverSecret.Name)
 
-	if r.SeedWebhookConfig != nil {
-		if err := r.reconcileSeedWebhookConfig(ctx, caBundleSecret); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reconciling seed webhook config: %w", err)
+	if r.SourceWebhookConfig != nil {
+		if err := r.reconcileSourceWebhookConfig(ctx, caBundleSecret); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error reconciling source webhook config: %w", err)
 		}
-		log.Info("Updated seed webhook config with new CA bundle", "webhookConfig", r.SeedWebhookConfig)
+		log.Info("Updated source webhook config with new CA bundle", "webhookConfig", r.SourceWebhookConfig)
 	}
 
 	if r.ShootWebhookConfig != nil {
@@ -181,7 +181,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := extensionswebhookshoot.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ExtensionName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.serverPort, r.ShootWebhookConfig); err != nil {
+		if err := extensionswebhookshoot.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.serverPort, r.ShootWebhookConfig); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
 		log.Info("Updated all shoot webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfig)
@@ -194,9 +194,9 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	return reconcile.Result{RequeueAfter: r.SyncPeriod}, nil
 }
 
-func (r *reconciler) reconcileSeedWebhookConfig(ctx context.Context, caBundleSecret *corev1.Secret) error {
+func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, caBundleSecret *corev1.Secret) error {
 	// copy object so that we don't lose its name on API/client errors
-	config := r.SeedWebhookConfig.DeepCopyObject().(client.Object)
+	config := r.SourceWebhookConfig.DeepCopyObject().(client.Object)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(config), config); err != nil {
 		return err
 	}
@@ -235,6 +235,6 @@ func (r *reconciler) generateWebhookCA(ctx context.Context, sm secretsmanager.In
 
 func (r *reconciler) generateWebhookServerCert(ctx context.Context, sm secretsmanager.Interface) (*corev1.Secret, error) {
 	// use current CA for signing server cert to prevent mismatches when dropping the old CA from the webhook config
-	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ExtensionName, r.Mode, r.URL),
+	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ComponentName, r.Mode, r.URL),
 		secretsmanager.SignedByCA(r.CASecretName, secretsmanager.UseCurrentCA))
 }

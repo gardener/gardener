@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
+	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -40,7 +41,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		v := rotation.Verifiers{
+		v := rotationutils.Verifiers{
 			// basic verifiers checking secrets
 			&rotation.CAVerifier{ShootCreationFramework: f},
 			&rotation.ETCDEncryptionKeyVerifier{ShootCreationFramework: f},
@@ -67,7 +68,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		defer cancel()
 
 		patch := client.MergeFrom(f.Shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCredentialsStart)
+		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateCredentialsStart)
 		Eventually(func() error {
 			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
 		}).Should(Succeed())
@@ -91,7 +92,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		defer cancel()
 
 		patch = client.MergeFrom(f.Shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCredentialsComplete)
+		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateCredentialsComplete)
 		Eventually(func() error {
 			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
 		}).Should(Succeed())

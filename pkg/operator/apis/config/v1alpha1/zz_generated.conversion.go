@@ -231,6 +231,9 @@ func Convert_config_Server_To_v1alpha1_Server(in *config.Server, out *Server, s 
 }
 
 func autoConvert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *ServerConfiguration, out *config.ServerConfiguration, s conversion.Scope) error {
+	if err := Convert_v1alpha1_Server_To_config_Server(&in.Webhooks, &out.Webhooks, s); err != nil {
+		return err
+	}
 	out.HealthProbes = (*config.Server)(unsafe.Pointer(in.HealthProbes))
 	out.Metrics = (*config.Server)(unsafe.Pointer(in.Metrics))
 	return nil
@@ -242,6 +245,9 @@ func Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *Serv
 }
 
 func autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *config.ServerConfiguration, out *ServerConfiguration, s conversion.Scope) error {
+	if err := Convert_config_Server_To_v1alpha1_Server(&in.Webhooks, &out.Webhooks, s); err != nil {
+		return err
+	}
 	out.HealthProbes = (*Server)(unsafe.Pointer(in.HealthProbes))
 	out.Metrics = (*Server)(unsafe.Pointer(in.Metrics))
 	return nil

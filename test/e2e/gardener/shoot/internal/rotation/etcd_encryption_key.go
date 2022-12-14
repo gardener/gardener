@@ -33,14 +33,15 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/utils/rotation"
 )
 
 // ETCDEncryptionKeyVerifier verifies the etcd encryption key rotation.
 type ETCDEncryptionKeyVerifier struct {
 	*framework.ShootCreationFramework
 
-	secretsBefore   secretConfigNamesToSecrets
-	secretsPrepared secretConfigNamesToSecrets
+	secretsBefore   rotation.SecretConfigNamesToSecrets
+	secretsPrepared rotation.SecretConfigNamesToSecrets
 }
 
 const etcdEncryptionKey = "kube-apiserver-etcd-encryption-key"
@@ -66,7 +67,7 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(1), "etcd encryption key should get created, but not rotated yet")
 		v.secretsBefore = grouped
 	}).Should(Succeed())
@@ -76,7 +77,7 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
-		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
+		sort.Sort(sort.Reverse(rotation.AgeSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		g.Expect(runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)).To(Succeed())
@@ -117,7 +118,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(2), "etcd encryption key should get rotated")
 		g.Expect(grouped[etcdEncryptionKey]).To(ContainElement(v.secretsBefore[etcdEncryptionKey][0]), "old etcd encryption key secret should be kept")
 		v.secretsPrepared = grouped
@@ -128,7 +129,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
-		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
+		sort.Sort(sort.Reverse(rotation.AgeSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
@@ -174,7 +175,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(1), "old etcd encryption key should get cleaned up")
 		g.Expect(grouped[etcdEncryptionKey]).To(ContainElement(v.secretsPrepared[etcdEncryptionKey][1]), "new etcd encryption key secret should be kept")
 	}).Should(Succeed())
@@ -184,7 +185,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
-		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
+		sort.Sort(sort.Reverse(rotation.AgeSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)

@@ -225,7 +225,7 @@ type ShootCredentials struct {
 type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	// +optional
-	CertificateAuthorities *ShootCARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
+	CertificateAuthorities *CARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
 	// Kubeconfig contains information about the kubeconfig credential rotation.
 	// +optional
 	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
@@ -243,10 +243,10 @@ type ShootCredentialsRotation struct {
 	ETCDEncryptionKey *ShootETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty" protobuf:"bytes,6,opt,name=etcdEncryptionKey"`
 }
 
-// ShootCARotation contains information about the certificate authority credential rotation.
-type ShootCARotation struct {
+// CARotation contains information about the certificate authority credential rotation.
+type CARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
-	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
@@ -289,7 +289,7 @@ type ShootObservabilityRotation struct {
 // ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
 type ShootServiceAccountKeyRotation struct {
 	// Phase describes the phase of the service account key credential rotation.
-	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
@@ -302,7 +302,7 @@ type ShootServiceAccountKeyRotation struct {
 // ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
 type ShootETCDEncryptionKeyRotation struct {
 	// Phase describes the phase of the ETCD encryption key credential rotation.
-	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
@@ -312,19 +312,19 @@ type ShootETCDEncryptionKeyRotation struct {
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
 }
 
-// ShootCredentialsRotationPhase is a string alias.
-type ShootCredentialsRotationPhase string
+// CredentialsRotationPhase is a string alias.
+type CredentialsRotationPhase string
 
 const (
 	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
-	RotationPreparing ShootCredentialsRotationPhase = "Preparing"
+	RotationPreparing CredentialsRotationPhase = "Preparing"
 	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
-	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
+	RotationPrepared CredentialsRotationPhase = "Prepared"
 	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
 	// completed.
-	RotationCompleting ShootCredentialsRotationPhase = "Completing"
+	RotationCompleting CredentialsRotationPhase = "Completing"
 	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
-	RotationCompleted ShootCredentialsRotationPhase = "Completed"
+	RotationCompleted CredentialsRotationPhase = "Completed"
 )
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
@@ -335,9 +335,9 @@ type ShootAdvertisedAddress struct {
 	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Addons relevant types                                                                        //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
@@ -387,9 +387,9 @@ type NginxIngress struct {
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,4,opt,name=externalTrafficPolicy,casttype=k8s.io/api/core/v1.ServiceExternalTrafficPolicyType"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // ControlPlane relevant types                                                             //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ControlPlane holds information about the general settings for the control plane of a shoot.
 type ControlPlane struct {
@@ -399,9 +399,9 @@ type ControlPlane struct {
 	HighAvailability *HighAvailability `json:"highAvailability,omitempty" protobuf:"bytes,1,name=highAvailability"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // DNS relevant types                                                                           //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
@@ -452,9 +452,9 @@ type DNSIncludeExclude struct {
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
 const DefaultDomain = "cluster.local"
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Extension relevant types                                                                     //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Extension contains type and provider information for Shoot extensions.
 type Extension struct {
@@ -468,9 +468,9 @@ type Extension struct {
 	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // NamedResourceReference relevant types                                                        //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // NamedResourceReference is a named reference to a resource.
 type NamedResourceReference struct {
@@ -480,9 +480,9 @@ type NamedResourceReference struct {
 	ResourceRef autoscalingv1.CrossVersionObjectReference `json:"resourceRef" protobuf:"bytes,2,opt,name=resourceRef"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Hibernation relevant types                                                                   //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
@@ -510,9 +510,9 @@ type HibernationSchedule struct {
 	Location *string `json:"location,omitempty" protobuf:"bytes,3,opt,name=location"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Kubernetes relevant types                                                                    //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {
@@ -1176,9 +1176,9 @@ type KubeletConfigReserved struct {
 	PID *resource.Quantity `json:"pid,omitempty" protobuf:"bytes,4,opt,name=pid"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Networking relevant types                                                                    //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
@@ -1205,9 +1205,9 @@ const (
 	DefaultServiceNetworkCIDR = "100.64.0.0/13"
 )
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Maintenance relevant types                                                                   //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
 	// MaintenanceTimeWindowDurationMinimum is the minimum duration for a maintenance time window.
@@ -1254,9 +1254,9 @@ type MaintenanceTimeWindow struct {
 	End string `json:"end" protobuf:"bytes,2,opt,name=end"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Monitoring relevant types                                                                    //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Monitoring contains information about the monitoring configuration for the shoot.
 type Monitoring struct {
@@ -1272,9 +1272,9 @@ type Alerting struct {
 	EmailReceivers []string `json:"emailReceivers,omitempty" protobuf:"bytes,1,rep,name=emailReceivers"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Provider relevant types                                                                      //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
@@ -1487,9 +1487,9 @@ var (
 	DefaultWorkerSystemComponentsAllow = true
 )
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // System components relevant types                                                             //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 type SystemComponents struct {
@@ -1553,9 +1553,9 @@ type NodeLocalDNS struct {
 	DisableForwardToUpstreamDNS *bool `json:"disableForwardToUpstreamDNS,omitempty" protobuf:"varint,4,opt,name=disableForwardToUpstreamDNS"`
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // Other/miscellaneous constants and types                                                      //
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
 	// ShootMaintenanceFailed indicates that a shoot maintenance operation failed.

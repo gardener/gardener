@@ -168,7 +168,7 @@ type Values struct {
 	StorageCapacity         string
 	StorageClassName        *string
 	DefragmentationSchedule *string
-	CARotationPhase         gardencorev1beta1.ShootCredentialsRotationPhase
+	CARotationPhase         gardencorev1beta1.CredentialsRotationPhase
 	K8sVersion              string
 	BackupConfig            *BackupConfig
 	HvpaConfig              *HVPAConfig

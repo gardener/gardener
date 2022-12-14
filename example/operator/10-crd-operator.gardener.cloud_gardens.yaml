@@ -255,6 +255,39 @@ spec:
                   - type
                   type: object
                 type: array
+              credentials:
+                description: Credentials contains information about the virtual garden
+                  cluster credentials.
+                properties:
+                  rotation:
+                    description: Rotation contains information about the credential
+                      rotations.
+                    properties:
+                      certificateAuthorities:
+                        description: CertificateAuthorities contains information about
+                          the certificate authority credential rotation.
+                        properties:
+                          lastCompletionTime:
+                            description: LastCompletionTime is the most recent time
+                              when the certificate authority credential rotation was
+                              successfully completed.
+                            format: date-time
+                            type: string
+                          lastInitiationTime:
+                            description: LastInitiationTime is the most recent time
+                              when the certificate authority credential rotation was
+                              initiated.
+                            format: date-time
+                            type: string
+                          phase:
+                            description: Phase describes the phase of the certificate
+                              authority credential rotation.
+                            type: string
+                        required:
+                        - phase
+                        type: object
+                    type: object
+                type: object
               gardener:
                 description: Gardener holds information about the Gardener which last
                   acted on the Garden.

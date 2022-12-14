@@ -52,7 +52,7 @@ func (v *SecretEncryptionVerifier) ExpectCompletingStatus(g Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *SecretEncryptionVerifier) AfterCompleted(ctx context.Context) {
-	By("Verifyinging secret encryption after credentials rotation")
+	By("Verifying secret encryption after credentials rotation")
 	v.verifySecretEncryption(ctx)
 }
 

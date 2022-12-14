@@ -46,6 +46,9 @@ config.yaml: |
   logLevel: {{ .Values.config.logLevel | default "info" }}
   logFormat: {{ .Values.config.logFormat | default "json" }}
   server:
+    webhooks:
+      bindAddress: {{ .Values.config.server.webhooks.bindAddress }}
+      port: {{ .Values.config.server.webhooks.port }}
     healthProbes:
       bindAddress: {{ .Values.config.server.healthProbes.bindAddress }}
       port: {{ .Values.config.server.healthProbes.port }}

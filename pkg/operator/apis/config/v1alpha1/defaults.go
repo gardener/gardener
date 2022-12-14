@@ -75,18 +75,25 @@ func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.Le
 
 // SetDefaults_ServerConfiguration sets defaults for the server configuration.
 func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
+	if len(obj.Webhooks.BindAddress) == 0 {
+		obj.Webhooks.BindAddress = "0.0.0.0"
+	}
+	if obj.Webhooks.Port == 0 {
+		obj.Webhooks.Port = 2750
+	}
+
 	if obj.HealthProbes == nil {
 		obj.HealthProbes = &Server{}
 	}
 	if obj.HealthProbes.Port == 0 {
-		obj.HealthProbes.Port = 2750
+		obj.HealthProbes.Port = 2751
 	}
 
 	if obj.Metrics == nil {
 		obj.Metrics = &Server{}
 	}
 	if obj.Metrics.Port == 0 {
-		obj.Metrics.Port = 2751
+		obj.Metrics.Port = 2752
 	}
 }
 

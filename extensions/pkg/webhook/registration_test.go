@@ -36,6 +36,16 @@ import (
 )
 
 var _ = Describe("Registration", func() {
+	Describe("#PrefixedName", func() {
+		It("should return an empty string", func() {
+			Expect(PrefixedName("gardener-foo")).To(Equal("gardener-foo"))
+		})
+
+		It("should return 'gardener-extension-'", func() {
+			Expect(PrefixedName("provider-bar")).To(Equal("gardener-extension-provider-bar"))
+		})
+	})
+
 	Describe("#BuildWebhookConfigs", func() {
 		var (
 			failurePolicyIgnore         = admissionregistrationv1.Ignore

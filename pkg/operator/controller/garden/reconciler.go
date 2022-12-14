@@ -17,10 +17,12 @@ package garden
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -29,12 +31,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -66,15 +71,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
-	conditionReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", "Garden operation is currently being processed.")
+	if err := r.ensureAtMostOneGardenExists(ctx); err != nil {
+		log.Error(err, "Reconciliation prevented without automatic requeue")
+		return reconcile.Result{}, nil
+	}
 
-	patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, conditionReconciled)
-	garden.Status.Gardener = r.Identity
-	garden.Status.ObservedGeneration = garden.Generation
-	if err := r.RuntimeClient.Status().Patch(ctx, garden, patch); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not patch status of %s condition to %s: %w", conditionReconciled.Type, conditionReconciled.Status, err)
+	conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
+	if err := r.updateStatusOperationStart(ctx, garden, conditionReconciled); err != nil {
+		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
 	}
 
 	secretsManager, err := secretsmanager.New(
@@ -84,7 +88,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		r.RuntimeClient,
 		r.GardenNamespace,
 		operatorv1alpha1.SecretManagerIdentityOperator,
-		secretsmanager.Config{CASecretAutoRotation: true},
+		secretsmanager.Config{
+			CASecretAutoRotation: true,
+			SecretNamesToTimes:   lastSecretRotationStartTimes(garden),
+		},
 	)
 	if err != nil {
 		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
@@ -101,7 +108,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
 	}
 
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, conditionReconciled)
+}
+
+func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
+	gardenList := &metav1.PartialObjectMetadataList{}
+	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	if err := r.RuntimeClient.List(ctx, gardenList); err != nil {
+		return err
+	}
+
+	if len(gardenList.Items) <= 1 {
+		return nil
+	}
+
+	return fmt.Errorf("there can be at most one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
 }
 
 func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition) error {
@@ -115,6 +136,121 @@ func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger,
 		log.Error(patchErr, "Could not patch status", "condition", condition)
 	}
 	return err
+}
+
+func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
+	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", "Garden operation is currently being processed."))
+	garden.Status.Gardener = r.Identity
+	garden.Status.ObservedGeneration = garden.Generation
+
+	var (
+		now                           = metav1.NewTime(r.Clock.Now().UTC())
+		mustRemoveOperationAnnotation bool
+	)
+
+	switch garden.Annotations[v1beta1constants.GardenerOperation] {
+	case v1beta1constants.GardenerOperationReconcile:
+		mustRemoveOperationAnnotation = true
+
+	case v1beta1constants.OperationRotateCredentialsStart:
+		mustRemoveOperationAnnotation = true
+		startRotationCA(garden, &now)
+	case v1beta1constants.OperationRotateCredentialsComplete:
+		mustRemoveOperationAnnotation = true
+		completeRotationCA(garden)
+
+	case v1beta1constants.OperationRotateCAStart:
+		mustRemoveOperationAnnotation = true
+		startRotationCA(garden, &now)
+	case v1beta1constants.OperationRotateCAComplete:
+		mustRemoveOperationAnnotation = true
+		completeRotationCA(garden)
+	}
+
+	if err := r.RuntimeClient.Status().Update(ctx, garden); err != nil {
+		return err
+	}
+
+	if mustRemoveOperationAnnotation {
+		patch := client.MergeFrom(garden.DeepCopy())
+		delete(garden.Annotations, v1beta1constants.GardenerOperation)
+		return r.RuntimeClient.Patch(ctx, garden, patch)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
+	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
+
+	now := metav1.NewTime(r.Clock.Now().UTC())
+
+	switch helper.GetCARotationPhase(garden.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+		})
+
+	case gardencorev1beta1.RotationCompleting:
+		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	return r.RuntimeClient.Status().Update(ctx, garden)
+}
+
+func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
+		rotation.LastInitiationTime = now
+	})
+}
+
+func completeRotationCA(garden *operatorv1alpha1.Garden) {
+	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+	})
+}
+
+func caCertConfigurations() []secretutils.ConfigInterface {
+	return append([]secretutils.ConfigInterface{
+		&secretutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
+	}, nonAutoRotatedCACertConfigurations()...)
+}
+
+func nonAutoRotatedCACertConfigurations() []secretutils.ConfigInterface {
+	return []secretutils.ConfigInterface{
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretutils.CACert},
+	}
+}
+
+func caCertGenerateOptionsFor(name string, rotationPhase gardencorev1beta1.CredentialsRotationPhase) []secretsmanager.GenerateOption {
+	options := []secretsmanager.GenerateOption{secretsmanager.Rotate(secretsmanager.KeepOld)}
+
+	if name == operatorv1alpha1.SecretNameCARuntime {
+		options = append(options, secretsmanager.IgnoreOldSecretsAfter(24*time.Hour))
+	} else if rotationPhase == gardencorev1beta1.RotationCompleting {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
+	}
+
+	return options
+}
+
+func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]time.Time {
+	rotation := make(map[string]time.Time)
+
+	if gardenStatus := garden.Status; gardenStatus.Credentials != nil && gardenStatus.Credentials.Rotation != nil {
+		if gardenStatus.Credentials.Rotation.CertificateAuthorities != nil && gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+			for _, config := range nonAutoRotatedCACertConfigurations() {
+				rotation[config.GetName()] = gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
+			}
+		}
+	}
+
+	return rotation
 }
 
 func conditionReasonPrefix(garden *operatorv1alpha1.Garden) string {

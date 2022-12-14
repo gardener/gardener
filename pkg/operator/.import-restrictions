@@ -1,0 +1,7 @@
+rules:
+# override pkg/ import restriction on extensions/ for operator
+- selectorRegexp: github[.]com/gardener/gardener/extensions
+  allowedPrefixes:
+  - github.com/gardener/gardener/extensions/pkg/webhook
+  - github.com/gardener/gardener/extensions/pkg/apis/config
+  - github.com/gardener/gardener/extensions/pkg/util

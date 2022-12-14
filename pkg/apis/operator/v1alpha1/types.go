@@ -18,8 +18,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -170,9 +172,35 @@ type GardenStatus struct {
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// Credentials contains information about the virtual garden cluster credentials.
+	// +optional
+	Credentials *Credentials `json:"credentials,omitempty"`
+}
+
+// Credentials contains information about the virtual garden cluster credentials.
+type Credentials struct {
+	// Rotation contains information about the credential rotations.
+	// +optional
+	Rotation *CredentialsRotation `json:"rotation,omitempty"`
+}
+
+// CredentialsRotation contains information about the rotation of credentials.
+type CredentialsRotation struct {
+	// CertificateAuthorities contains information about the certificate authority credential rotation.
+	// +optional
+	CertificateAuthorities *gardencorev1beta1.CARotation `json:"certificateAuthorities,omitempty"`
 }
 
 const (
 	// GardenReconciled is a constant for a condition type indicating that the garden has been reconciled.
 	GardenReconciled gardencorev1beta1.ConditionType = "Reconciled"
+)
+
+// AvailableOperationAnnotations is the set of available operation annotations for Garden resources.
+var AvailableOperationAnnotations = sets.NewString(
+	v1beta1constants.GardenerOperationReconcile,
+	v1beta1constants.OperationRotateCAStart,
+	v1beta1constants.OperationRotateCAComplete,
+	v1beta1constants.OperationRotateCredentialsStart,
+	v1beta1constants.OperationRotateCredentialsComplete,
 )

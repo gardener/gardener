@@ -156,14 +156,14 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			case v1beta1constants.GardenerOperationReconcile:
 				mustIncrease, mustRemoveOperationAnnotation = true, true
 
-			case v1beta1constants.ShootOperationRotateCredentialsStart,
-				v1beta1constants.ShootOperationRotateCredentialsComplete,
-				v1beta1constants.ShootOperationRotateCAStart,
-				v1beta1constants.ShootOperationRotateCAComplete,
-				v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
-				v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
-				v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
-				v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
+			case v1beta1constants.OperationRotateCredentialsStart,
+				v1beta1constants.OperationRotateCredentialsComplete,
+				v1beta1constants.OperationRotateCAStart,
+				v1beta1constants.OperationRotateCAComplete,
+				v1beta1constants.OperationRotateServiceAccountKeyStart,
+				v1beta1constants.OperationRotateServiceAccountKeyComplete,
+				v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+				v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 				v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 				v1beta1constants.ShootOperationRotateSSHKeypair,
 				v1beta1constants.ShootOperationRotateObservabilityCredentials:

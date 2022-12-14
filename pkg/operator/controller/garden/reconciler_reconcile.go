@@ -18,19 +18,18 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -40,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -84,7 +82,7 @@ func (r *Reconciler) reconcile(
 
 	log.Info("Generating CA certificates for runtime and virtual clusters")
 	for _, config := range caCertConfigurations() {
-		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName(), "")...); err != nil {
+		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName(), helper.GetCARotationPhase(garden.Status.Credentials))...); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -167,7 +165,7 @@ func (r *Reconciler) reconcile(
 		)
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
-			Fn:           r.deployEtcdsFunc(garden, etcdMain, etcdEvents, ""),
+			Fn:           r.deployEtcdsFunc(garden, etcdMain, etcdEvents),
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
 		_ = g.Add(flow.Task{
@@ -184,31 +182,7 @@ func (r *Reconciler) reconcile(
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }
 
-func caCertConfigurations() []secretutils.ConfigInterface {
-	return []secretutils.ConfigInterface{
-		&secretutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
-		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},
-		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretutils.CACert},
-	}
-}
-
-func caCertGenerateOptionsFor(name string, rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase) []secretsmanager.GenerateOption {
-	options := []secretsmanager.GenerateOption{secretsmanager.Rotate(secretsmanager.KeepOld)}
-
-	if name == operatorv1alpha1.SecretNameCARuntime {
-		options = append(options, secretsmanager.IgnoreOldSecretsAfter(24*time.Hour))
-	} else if rotationPhase == gardencorev1beta1.RotationCompleting {
-		options = append(options, secretsmanager.IgnoreOldSecrets())
-	}
-
-	return options
-}
-
-func (r *Reconciler) deployEtcdsFunc(
-	garden *operatorv1alpha1.Garden,
-	etcdMain, etcdEvents etcd.Interface,
-	rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase,
-) func(context.Context) error {
+func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface) func(context.Context) error {
 	return func(ctx context.Context) error {
 		if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil {
 			snapshotSchedule, err := timewindow.DetermineSchedule(
@@ -241,7 +215,7 @@ func (r *Reconciler) deployEtcdsFunc(
 		// Roll out the new peer CA first so that every member in the cluster trusts the old and the new CA.
 		// This is required because peer certificates which are used for client and server authentication at the same time,
 		// are re-created with the new CA in the `Deploy` step.
-		if rotationPhase == gardencorev1beta1.RotationPreparing {
+		if helper.GetCARotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing {
 			if err := flow.Sequential(
 				flow.Parallel(etcdMain.RolloutPeerCA, etcdEvents.RolloutPeerCA),
 				flow.Parallel(etcdMain.Wait, etcdEvents.Wait),

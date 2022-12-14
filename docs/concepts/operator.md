@@ -11,6 +11,7 @@ A lot of production- and enterprise-grade features were built into Gardener for 
 
 There is a [Helm chart](../../charts/gardener/operator) which can be used to deploy the `gardener-operator`.
 Once deployed and ready, you can create a `Garden` resource.
+Note that there can only be one `Garden` resource per system at a time.
 
 > ℹ️ Similar to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
 > By default, `gardener-operator` deploys the VPA components.
@@ -36,6 +37,18 @@ As they were already made available by `gardener-operator`, the `gardenlet` just
 
 ⚠️ Note that such setup requires that you upgrade the versions of `gardener-operator` and `gardenlet` in lock-step.
 Otherwise, you might experience unexpected behaviour or issues with your seed or shoot clusters.
+
+## Credentials Rotation
+
+The credentials rotation works in the same way like it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
+
+For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
+
+**🚨 Hence, it is the responsibility of the operator to regularly perform the credentials rotation.**
+
+Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
+
+- certificate authorities (and related server and client certificates) 
 
 ## Local Development
 
@@ -96,3 +109,20 @@ The virtual garden control plane components are:
 - `virtual-garden-etcd-events`
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
+
+### Webhooks
+
+As of today, the `gardener-operator` only has one webhook handler which is now described in more detail.
+
+#### Validation
+
+This webhook handler validates `CREATE`/`UPDATE`/`DELETE` operations on `Garden` resources.
+Simple validation is performed via [standard CRD validation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation).
+However, more advanced validation is hard to express via these means and is performed by this webhook handler.
+
+Furthermore, for deletion requests, it is validated that the `Garden` is annotated with a deletion confirmation annotation, namely `confirmation.gardener.cloud/deletion=true`.
+Only if this annotation is present it allows the `DELETE` operation to pass.
+This prevents users from accidental/undesired deletions.
+
+Another validation is to check that there is only one `Garden` resource at a time.
+It prevents creating a second `Garden` when there is already one in the system.

@@ -24,16 +24,23 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
@@ -41,6 +48,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
+	"github.com/gardener/gardener/pkg/operator/webhook"
 )
 
 // Name is a const for the name of this component.
@@ -117,6 +125,9 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		Namespace:               v1beta1constants.GardenNamespace,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
+		Host:                   cfg.Server.Webhooks.BindAddress,
+		Port:                   cfg.Server.Webhooks.Port,
+		CertDir:                "/tmp/gardener-operator-cert",
 		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
 		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 
@@ -149,12 +160,62 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
+	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
+		return err
+	}
 
-	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(mgr, cfg); err != nil {
-		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	log.Info("Adding certificate management to manager")
+	mode, url := extensionswebhook.ModeService, os.Getenv("WEBHOOK_URL")
+	if v := os.Getenv("WEBHOOK_MODE"); v != "" {
+		mode = v
+	}
+	validatingWebhookConfiguration := webhook.GetValidatingWebhookConfiguration(mode, url)
+
+	if err := certificates.AddCertificateManagementToManager(
+		ctx,
+		mgr,
+		clock.RealClock{},
+		validatingWebhookConfiguration,
+		nil,
+		nil,
+		nil,
+		"",
+		Name,
+		v1beta1constants.GardenNamespace,
+		mode,
+		url,
+	); err != nil {
+		return fmt.Errorf("failed adding webhook certificate management to manager: %w", err)
+	}
+
+	log.Info("Adding runnables to manager")
+	if err := mgr.Add(&controllerutils.ControlledRunner{
+		Manager: mgr,
+		BootstrapRunnables: []manager.Runnable{
+			reconcileValidatingWebhookConfiguration(ctx, mgr, validatingWebhookConfiguration),
+		},
+		ActualRunnables: []manager.Runnable{
+			manager.RunnableFunc(func(context.Context) error { return webhook.AddToManager(mgr) }),
+			manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(mgr, cfg) }),
+		},
+	}); err != nil {
+		return err
 	}
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func reconcileValidatingWebhookConfiguration(ctx context.Context, mgr manager.Manager, validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration) manager.RunnableFunc {
+	return func(context.Context) error {
+		mgr.GetLogger().Info("Reconciling webhook configuration", "validatingWebhookConfiguration", client.ObjectKeyFromObject(validatingWebhookConfiguration))
+
+		obj := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: validatingWebhookConfiguration.Name}}
+		_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), obj, func() error {
+			obj.Webhooks = validatingWebhookConfiguration.Webhooks
+			return nil
+		})
+		validatingWebhookConfiguration = obj
+		return err
+	}
 }

@@ -179,7 +179,7 @@ type ShootCredentials struct {
 // ShootCredentialsRotation contains information about the rotation of credentials.
 type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
-	CertificateAuthorities *ShootCARotation
+	CertificateAuthorities *CARotation
 	// Kubeconfig contains information about the kubeconfig credential rotation.
 	Kubeconfig *ShootKubeconfigRotation
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
@@ -192,10 +192,10 @@ type ShootCredentialsRotation struct {
 	ETCDEncryptionKey *ShootETCDEncryptionKeyRotation
 }
 
-// ShootCARotation contains information about the certificate authority credential rotation.
-type ShootCARotation struct {
+// CARotation contains information about the certificate authority credential rotation.
+type CARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
-	Phase ShootCredentialsRotationPhase
+	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
@@ -230,7 +230,7 @@ type ShootObservabilityRotation struct {
 // ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
 type ShootServiceAccountKeyRotation struct {
 	// Phase describes the phase of the service account key credential rotation.
-	Phase ShootCredentialsRotationPhase
+	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
@@ -241,7 +241,7 @@ type ShootServiceAccountKeyRotation struct {
 // ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
 type ShootETCDEncryptionKeyRotation struct {
 	// Phase describes the phase of the ETCD encryption key credential rotation.
-	Phase ShootCredentialsRotationPhase
+	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
@@ -249,19 +249,19 @@ type ShootETCDEncryptionKeyRotation struct {
 	LastCompletionTime *metav1.Time
 }
 
-// ShootCredentialsRotationPhase is a string alias.
-type ShootCredentialsRotationPhase string
+// CredentialsRotationPhase is a string alias.
+type CredentialsRotationPhase string
 
 const (
 	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
-	RotationPreparing ShootCredentialsRotationPhase = "Preparing"
+	RotationPreparing CredentialsRotationPhase = "Preparing"
 	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
-	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
+	RotationPrepared CredentialsRotationPhase = "Prepared"
 	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
 	// completed.
-	RotationCompleting ShootCredentialsRotationPhase = "Completing"
+	RotationCompleting CredentialsRotationPhase = "Completing"
 	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
-	RotationCompleted ShootCredentialsRotationPhase = "Completed"
+	RotationCompleted CredentialsRotationPhase = "Completed"
 )
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.

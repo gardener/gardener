@@ -960,7 +960,7 @@ var _ = Describe("validator", func() {
 
 			It("should add deploy infrastructure task because shoot operation annotation to rotate all credentials was set", func() {
 				shoot.Annotations = make(map[string]string)
-				shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationRotateCredentialsStart
+				shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.OperationRotateCredentialsStart
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(ctx, attrs, nil)

@@ -86,7 +86,7 @@ var _ = Describe("Warnings", func() {
 					}
 
 					rotation := &core.ShootCredentialsRotation{
-						CertificateAuthorities: &core.ShootCARotation{},
+						CertificateAuthorities: &core.CARotation{},
 						Kubeconfig:             &core.ShootKubeconfigRotation{},
 						SSHKeypair:             &core.ShootSSHKeypairRotation{},
 						Observability:          &core.ShootObservabilityRotation{},

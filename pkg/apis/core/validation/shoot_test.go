@@ -2809,7 +2809,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -2845,7 +2845,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -2881,7 +2881,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -2917,7 +2917,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -2971,7 +2971,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPreparing,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -2989,7 +2989,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3007,7 +3007,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3025,7 +3025,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3043,7 +3043,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleting,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3061,7 +3061,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3079,7 +3079,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3097,7 +3097,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleted,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3115,7 +3115,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3133,7 +3133,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
@@ -3208,7 +3208,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3220,7 +3220,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3232,7 +3232,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3244,7 +3244,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -3274,7 +3274,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3286,7 +3286,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3298,7 +3298,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3310,7 +3310,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.ShootCARotation{
+							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleted,
 							},
 						},

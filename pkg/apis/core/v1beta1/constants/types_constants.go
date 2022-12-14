@@ -348,41 +348,41 @@ const (
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be
 	// retried.
 	ShootOperationRetry = "retry"
-	// ShootOperationRotateCredentialsStart is a constant for an annotation on a Shoot indicating that the rotation of
-	// all credentials shall be started. This includes CAs, certificates, kubeconfigs, SSH keypairs, observability
-	// credentials, and ServiceAccount signing key.
-	ShootOperationRotateCredentialsStart = "rotate-credentials-start"
-	// ShootOperationRotateCredentialsComplete is a constant for an annotation on a Shoot indicating that the rotation
-	// of the credentials shall be completed.
-	ShootOperationRotateCredentialsComplete = "rotate-credentials-complete"
-	// ShootOperationRotateKubeconfigCredentials is a constant for an annotation on a Shoot indicating that the credentials
-	// contained in the kubeconfig that is handed out to the user shall be rotated.
+	// OperationRotateCredentialsStart is a constant for an annotation indicating that the rotation of all credentials
+	// shall be started. This includes CAs, certificates, kubeconfigs, SSH keypairs, observability credentials, and
+	// ServiceAccount signing key.
+	OperationRotateCredentialsStart = "rotate-credentials-start"
+	// OperationRotateCredentialsComplete is a constant for an annotation indicating that the rotation of the
+	// credentials shall be completed.
+	OperationRotateCredentialsComplete = "rotate-credentials-complete"
+	// ShootOperationRotateKubeconfigCredentials is a constant for an annotation on a Shoot indicating that the
+	// credentialscontained in the kubeconfig that is handed out to the user shall be rotated.
 	ShootOperationRotateKubeconfigCredentials = "rotate-kubeconfig-credentials"
-	// ShootOperationRotateSSHKeypair is a constant for an annotation on a Shoot indicating that the SSH keypair for the shoot
-	// nodes shall be rotated.
+	// ShootOperationRotateSSHKeypair is a constant for an annotation on a Shoot indicating that the SSH keypair for the
+	// shoot nodes shall be rotated.
 	ShootOperationRotateSSHKeypair = "rotate-ssh-keypair"
-	// ShootOperationRotateCAStart is a constant for an annotation on a Shoot indicating that the rotation of the
-	// certificate authorities shall be started.
-	ShootOperationRotateCAStart = "rotate-ca-start"
-	// ShootOperationRotateCAComplete is a constant for an annotation on a Shoot indicating that the rotation of the
-	// certificate authorities shall be completed.
-	ShootOperationRotateCAComplete = "rotate-ca-complete"
-	// ShootOperationRotateObservabilityCredentials is a constant for an annotation on a Shoot indicating that the credentials
-	// for the observability stack secret shall be rotated. Note that this only affects the user credentials
+	// OperationRotateCAStart is a constant for an annotation indicating that the rotation of the certificate
+	// authorities shall be started.
+	OperationRotateCAStart = "rotate-ca-start"
+	// OperationRotateCAComplete is a constant for an annotation indicating that the rotation of the certificate
+	// authorities shall be completed.
+	OperationRotateCAComplete = "rotate-ca-complete"
+	// ShootOperationRotateObservabilityCredentials is a constant for an annotation on a Shoot indicating that the
+	// credentials for the observability stack secret shall be rotated. Note that this only affects the user credentials
 	// since the operator credentials are rotated automatically each `30d`.
 	ShootOperationRotateObservabilityCredentials = "rotate-observability-credentials"
-	// ShootOperationRotateServiceAccountKeyStart is a constant for an annotation on a Shoot indicating that the
+	// OperationRotateServiceAccountKeyStart is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be started.
-	ShootOperationRotateServiceAccountKeyStart = "rotate-serviceaccount-key-start"
-	// ShootOperationRotateServiceAccountKeyComplete is a constant for an annotation on a Shoot indicating that the
+	OperationRotateServiceAccountKeyStart = "rotate-serviceaccount-key-start"
+	// OperationRotateServiceAccountKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be completed.
-	ShootOperationRotateServiceAccountKeyComplete = "rotate-serviceaccount-key-complete"
-	// ShootOperationRotateETCDEncryptionKeyStart is a constant for an annotation on a Shoot indicating that the
+	OperationRotateServiceAccountKeyComplete = "rotate-serviceaccount-key-complete"
+	// OperationRotateETCDEncryptionKeyStart is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be started.
-	ShootOperationRotateETCDEncryptionKeyStart = "rotate-etcd-encryption-key-start"
-	// ShootOperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
+	OperationRotateETCDEncryptionKeyStart = "rotate-etcd-encryption-key-start"
+	// OperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be completed.
-	ShootOperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
+	OperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

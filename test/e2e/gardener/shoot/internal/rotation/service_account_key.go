@@ -26,14 +26,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/utils/rotation"
 )
 
 // ServiceAccountKeyVerifier verifies the service account key rotation.
 type ServiceAccountKeyVerifier struct {
 	*framework.ShootCreationFramework
 
-	secretsBefore   secretConfigNamesToSecrets
-	secretsPrepared secretConfigNamesToSecrets
+	secretsBefore   rotation.SecretConfigNamesToSecrets
+	secretsPrepared rotation.SecretConfigNamesToSecrets
 }
 
 const (
@@ -50,7 +51,7 @@ func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "service account key secret should get created, but not rotated yet")
 		g.Expect(grouped[serviceAccountKeyBundle]).To(HaveLen(1), "service account key bundle secret should get created, but not rotated yet")
 		v.secretsBefore = grouped
@@ -74,7 +75,7 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(2), "service account key secret should get rotated, but old service account key is kept")
 		g.Expect(grouped[serviceAccountKeyBundle]).To(HaveLen(1))
 
@@ -102,7 +103,7 @@ func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		grouped := groupByName(secretList.Items)
+		grouped := rotation.GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "old service account key secret should get cleaned up")
 		g.Expect(grouped[serviceAccountKeyBundle]).To(HaveLen(1))
 
