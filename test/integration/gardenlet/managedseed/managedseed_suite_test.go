@@ -75,10 +75,12 @@ var (
 	shootClientMap clientmap.ClientMap
 	mgrClient      client.Client
 
-	testRunID       string
-	gardenNamespace *corev1.Namespace
-	seed            *gardencorev1beta1.Seed
-	err             error
+	testRunID             string
+	shootName             string
+	gardenNamespaceShoot  string
+	gardenNamespaceGarden *corev1.Namespace
+	seed                  *gardencorev1beta1.Seed
+	err                   error
 )
 
 var _ = BeforeSuite(func() {
@@ -121,7 +123,6 @@ var _ = BeforeSuite(func() {
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "seed-",
-			Labels:       map[string]string{testID: testRunID},
 		},
 		Spec: gardencorev1beta1.SeedSpec{
 			Provider: gardencorev1beta1.SeedProvider{
@@ -147,29 +148,28 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating garden namespace for test")
-	gardenNamespace = &corev1.Namespace{
+	gardenNamespaceGarden = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
 		},
 	}
 
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
+	Expect(testClient.Create(ctx, gardenNamespaceGarden)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", gardenNamespaceGarden.Name)
 
 	DeferCleanup(func() {
 		By("deleting garden namespace")
-		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, gardenNamespaceGarden)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
-		Namespace:          gardenNamespace.Name,
+		Namespace:          gardenNamespaceGarden.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&seedmanagementv1alpha1.ManagedSeed{}: {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
-				&gardencorev1beta1.Seed{}:             {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
 				&gardencorev1beta1.Shoot{}:            {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
 				&gardencorev1beta1.SecretBinding{}:    {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
 				&corev1.Secret{}:                      {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
@@ -183,19 +183,6 @@ var _ = BeforeSuite(func() {
 	// namespace controller.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
-	mgrContext, mgrCancel := context.WithCancel(ctx)
-
-	go func() {
-		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	DeferCleanup(func() {
-		By("stopping manager")
-		mgrCancel()
-	})
-
 	By("creating test clientset")
 	testClientSet, err = kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(mgr.GetConfig()),
@@ -205,12 +192,13 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	By("starting controller")
+	By("registering controller")
 	chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
 	Expect(err).NotTo(HaveOccurred())
 
-	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot" + testRunID, Namespace: gardenNamespace.Name}}), testClientSet).Build()
+	shootName = "shoot-" + testRunID
+	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: gardenNamespaceGarden.Name}}), testClientSet).Build()
 
 	cfg := config.GardenletConfiguration{
 		Controllers: &config.GardenletControllerConfiguration{
@@ -229,11 +217,26 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
+	gardenNamespaceShoot = "test-" + testRunID
 	Expect((&managedseed.Reconciler{
-		Config:          *cfg.Controllers.ManagedSeed,
-		ChartsPath:      chartsPath,
-		GardenNamespace: gardenNamespace.Name,
+		Config:                *cfg.Controllers.ManagedSeed,
+		ChartsPath:            chartsPath,
+		GardenNamespaceGarden: gardenNamespaceGarden.Name,
+		GardenNamespaceShoot:  gardenNamespaceShoot,
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, cfg, mgr, mgr, shootClientMap, imageVector)).To(Succeed())
+
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
+
+	go func() {
+		defer GinkgoRecover()
+		Expect(mgr.Start(mgrContext)).To(Succeed())
+	}()
+
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })
