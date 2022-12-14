@@ -375,38 +375,16 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 	}
 
-	// TODO(rfranzke): Move this to the controller.AddToManager function once legacy controllers relying on
-	//  it have been refactored.
-	seedClientSet, err := kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(g.mgr.GetConfig()),
-		kubernetes.WithRuntimeAPIReader(g.mgr.GetAPIReader()),
-		kubernetes.WithRuntimeClient(g.mgr.GetClient()),
-		kubernetes.WithRuntimeCache(g.mgr.GetCache()),
-	)
-	if err != nil {
-		return fmt.Errorf("failed creating seed clientset: %w", err)
-	}
-
-	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once the shoot legacy controller has
-	//  been refactored.
-	identity, err := gutil.DetermineIdentity()
-	if err != nil {
-		return err
-	}
-
 	log.Info("Adding runnables now that bootstrapping is finished")
 	runnables := []manager.Runnable{
 		g.healthManager,
 		shootClientMap,
 		&controller.LegacyControllerFactory{
-			Log:                   log,
-			Config:                g.config,
-			GardenCluster:         gardenCluster,
-			SeedCluster:           g.mgr,
-			SeedClientSet:         seedClientSet,
-			ShootClientMap:        shootClientMap,
-			GardenClusterIdentity: gardenClusterIdentity,
-			Identity:              identity,
+			Log:            log,
+			Config:         g.config,
+			GardenCluster:  gardenCluster,
+			SeedCluster:    g.mgr,
+			ShootClientMap: shootClientMap,
 		},
 	}
 
@@ -442,12 +420,10 @@ func (g *garden) Start(ctx context.Context) error {
 		g.mgr,
 		gardenCluster,
 		g.mgr,
-		seedClientSet,
 		shootClientMap,
 		g.config,
 		gardenNamespace,
 		gardenClusterIdentity,
-		identity,
 		g.healthManager,
 	); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)

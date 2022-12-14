@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/charts"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -38,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
 	"github.com/gardener/gardener/pkg/healthz"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -46,14 +46,17 @@ func AddToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
-	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
 	cfg *config.GardenletConfiguration,
 	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
-	identity *gardencorev1beta1.Gardener,
 	healthManager healthz.Manager,
 ) error {
+	identity, err := gutil.DetermineIdentity()
+	if err != nil {
+		return err
+	}
+
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed reading image vector override: %w", err)
@@ -65,6 +68,16 @@ func AddToManager(
 		if err != nil {
 			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
 		}
+	}
+
+	seedClientSet, err := kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(seedCluster.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(seedCluster.GetAPIReader()),
+		kubernetes.WithRuntimeClient(seedCluster.GetClient()),
+		kubernetes.WithRuntimeCache(seedCluster.GetCache()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed creating seed clientset: %w", err)
 	}
 
 	if err := (&backupbucket.Reconciler{

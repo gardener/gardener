@@ -17,19 +17,13 @@ package controller
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/go-logr/logr"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
-	"github.com/gardener/gardener/charts"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // LegacyControllerFactory starts gardenlet's legacy controllers under leader election of the given manager for
@@ -38,26 +32,18 @@ import (
 // New controllers should be implemented as native controller-runtime controllers right away and should be added to
 // the manager directly.
 type LegacyControllerFactory struct {
-	GardenCluster         cluster.Cluster
-	SeedCluster           cluster.Cluster
-	SeedClientSet         kubernetes.Interface
-	ShootClientMap        clientmap.ClientMap
-	Log                   logr.Logger
-	Config                *config.GardenletConfiguration
-	GardenClusterIdentity string
-	Identity              *gardencorev1beta1.Gardener
+	GardenCluster  cluster.Cluster
+	SeedCluster    cluster.Cluster
+	ShootClientMap clientmap.ClientMap
+	Log            logr.Logger
+	Config         *config.GardenletConfiguration
 }
 
 // Start starts all legacy controllers.
 func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	log := f.Log.WithName("controller")
 
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
-	if err != nil {
-		return fmt.Errorf("failed reading image vector override: %w", err)
-	}
-
-	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, f.SeedClientSet, f.ShootClientMap, f.Config, f.Identity, f.GardenClusterIdentity, imageVector, clock.RealClock{})
+	shootController, err := shootcontroller.NewShootController(log, f.GardenCluster, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
@@ -65,7 +51,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	controllerCtx, cancel := context.WithCancel(ctx)
 
 	// run controllers
-	go shootController.Run(controllerCtx, *f.Config.Controllers.ShootCare.ConcurrentSyncs)
+	go shootController.Run(controllerCtx)
 
 	log.Info("gardenlet initialized")
 
