@@ -109,6 +109,30 @@ var _ = Describe("VPNSeedServer", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		DescribeTable("should correctly set the deployment replicas",
+			func(hibernated, highAvailable bool, expectedReplicas int) {
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
+				kubernetesClient.EXPECT().Client()
+				kubernetesClient.EXPECT().Version()
+				botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
+				botanist.Shoot.HibernationEnabled = hibernated
+				if highAvailable {
+					botanist.Shoot.VPNHighAvailabilityEnabled = highAvailable
+					botanist.Shoot.VPNHighAvailabilityNumberOfSeedServers = 2
+				}
+
+				vpnSeedServer, err := botanist.DefaultVPNSeedServer()
+				Expect(vpnSeedServer).NotTo(BeNil())
+				Expect(vpnSeedServer.GetValues().Replicas).To(Equal(int32(expectedReplicas)))
+				Expect(err).NotTo(HaveOccurred())
+			},
+
+			Entry("non-HA & awake", false, false, 1),
+			Entry("non-HA & hibernated", true, false, 0),
+			Entry("HA & awake", false, true, 2),
+			Entry("HA & hibernated", true, true, 0),
+		)
+
 		It("should return an error because the images cannot be found", func() {
 			botanist.ImageVector = imagevector.ImageVector{}
 

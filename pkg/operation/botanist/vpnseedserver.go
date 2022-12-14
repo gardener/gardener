@@ -80,7 +80,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
 			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
 		},
-		Replicas:                             1,
+		Replicas:                             b.Shoot.GetReplicas(1),
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
@@ -96,7 +96,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 	}
 
 	if b.Shoot.VPNHighAvailabilityEnabled {
-		values.Replicas = int32(b.Shoot.VPNHighAvailabilityNumberOfSeedServers)
+		values.Replicas = b.Shoot.GetReplicas(int32(b.Shoot.VPNHighAvailabilityNumberOfSeedServers))
 	}
 
 	return vpnseedserver.New(

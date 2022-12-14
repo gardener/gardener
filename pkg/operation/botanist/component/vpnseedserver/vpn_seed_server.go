@@ -104,6 +104,9 @@ type Interface interface {
 
 	// SetSNIConfig set the sni config.
 	SetSNIConfig(*config.SNI)
+
+	// GetValues returns the current configuration values of the deployer.
+	GetValues() Values
 }
 
 // Secrets is collection of secrets for the vpn-seed-server.
@@ -176,6 +179,10 @@ type vpnSeedServer struct {
 	exposureClassHandlerName *string
 	sniConfig                *config.SNI
 	secrets                  Secrets
+}
+
+func (v *vpnSeedServer) GetValues() Values {
+	return v.values
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {

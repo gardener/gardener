@@ -80,6 +80,20 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
+// GetValues mocks base method.
+func (m *MockInterface) GetValues() vpnseedserver.Values {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValues")
+	ret0, _ := ret[0].(vpnseedserver.Values)
+	return ret0
+}
+
+// GetValues indicates an expected call of GetValues.
+func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
+}
+
 // ScrapeConfigs mocks base method.
 func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 	m.ctrl.T.Helper()
