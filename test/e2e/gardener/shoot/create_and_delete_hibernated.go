@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 
@@ -43,7 +44,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		verifyNoPodsRunning(f)
+		verifyNoPodsRunning(ctx, f)
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
@@ -52,8 +53,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	})
 })
 
-func verifyNoPodsRunning(f *framework.ShootCreationFramework) {
-	list := &corev1.PodList{}
-	Expect(f.ShootFramework.SeedClient.Client().List(context.Background(), list, client.InNamespace(f.Shoot.Status.TechnicalID))).To(Succeed())
-	Expect(list.Items).To(BeEmpty())
+func verifyNoPodsRunning(ctx context.Context, f *framework.ShootCreationFramework) {
+	podsAreExisting, err := kutil.ResourcesExist(ctx, f.ShootFramework.SeedClient.Client(), corev1.SchemeGroupVersion.WithKind("PodList"), client.InNamespace(f.Shoot.Status.TechnicalID))
+	Expect(err).To(Succeed())
+	Expect(podsAreExisting).To(BeFalse())
 }
