@@ -75,8 +75,13 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
+  tag: "v1.25.0"
+  targetVersion: ">= 1.25"
+- name: cluster-autoscaler
+  sourceRepository: github.com/gardener/autoscaler
+  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "v1.24.0"
-  targetVersion: ">= 1.24"
+  targetVersion: "1.24.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
@@ -96,7 +101,7 @@ images:
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "v1.20.3"
-  targetVersion: "< 1.21"
+  targetVersion: "1.20.x" #gardener supports K8S version >=1.20 only. See https://github.com/gardener/gardener/blob/master/docs/usage/supported_k8s_versions.md#:~:text=Gardener%20itself%20is%20capable%20of%20spinning%20up%20clusters%20with%20Kubernetes%20versions%201.20%20up%20to%201.25 for reference.
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
