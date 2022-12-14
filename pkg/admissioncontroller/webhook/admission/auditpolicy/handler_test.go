@@ -352,7 +352,7 @@ rules:
 				test(admissionv1.Create, nil, shootv1alpha1, true, statusCodeAllowed, "referenced audit policy is valid", "")
 			})
 
-			It("references a valid auditPolicy/v1alhpa1 (CREATE k8s < 1.24.0)", func() {
+			It("references a valid auditPolicy/v1alpha1 (CREATE k8s < 1.24.0)", func() {
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
@@ -528,7 +528,7 @@ rules:
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "did not find expected key", "")
 			})
 
-			It("references a valid auditPolicy/v1alhpa1 (CREATE k8s >= 1.24.0)", func() {
+			It("references a valid auditPolicy/v1alpha1 (CREATE k8s >= 1.24.0)", func() {
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
@@ -541,7 +541,7 @@ rules:
 				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for kubernetes version >= 1.24.0", "")
 			})
 
-			It("references a valid auditPolicy/v1alhpa1 (UPDATE kubernetes version)", func() {
+			It("references a valid auditPolicy/v1alpha1 (UPDATE kubernetes version)", func() {
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
