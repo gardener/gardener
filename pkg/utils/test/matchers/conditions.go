@@ -54,3 +54,14 @@ func WithMessage(message string) gomegatypes.GomegaMatcher {
 		"Message": Equal(message),
 	})
 }
+
+// WithMessageSubstrings returns a matcher for checking whether a condition's message contains certain substrings.
+func WithMessageSubstrings(messages ...string) gomegatypes.GomegaMatcher {
+	var substringMatchers = make([]gomegatypes.GomegaMatcher, 0, len(messages))
+	for _, message := range messages {
+		substringMatchers = append(substringMatchers, ContainSubstring(message))
+	}
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+		"Message": SatisfyAll(substringMatchers...),
+	})
+}

@@ -189,10 +189,11 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	// Get BackupEntries separately as they are not namespaced i.e., they cannot be narrowed down
 	// to a shoot namespace like other extension resources above.
 	be := &extensionsv1alpha1.BackupEntry{}
-	if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.BackupEntryName), be); client.IgnoreNotFound(err) != nil {
+	if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.BackupEntryName), be); err == nil {
+		allExtensions = append(allExtensions, be)
+	} else if !apierrors.IsNotFound(err) {
 		return nil, err
 	}
-	allExtensions = append(allExtensions, be)
 
 	return allExtensions, nil
 }

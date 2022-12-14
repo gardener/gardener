@@ -17,8 +17,6 @@ package care_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -107,7 +105,7 @@ var _ = Describe("Seed Care controller tests", func() {
 				OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("ResourceNotFound"),
-				withMessageSubstrings("not found"),
+				WithMessageSubstrings("not found"),
 			))
 		})
 	})
@@ -146,7 +144,7 @@ var _ = Describe("Seed Care controller tests", func() {
 				OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("OutdatedStatus"),
-				withMessageSubstrings("observed generation of managed resource"),
+				WithMessageSubstrings("observed generation of managed resource"),
 			))
 		})
 
@@ -163,7 +161,7 @@ var _ = Describe("Seed Care controller tests", func() {
 				OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("OutdatedStatus"),
-				withMessageSubstrings("observed generation of managed resource"),
+				WithMessageSubstrings("observed generation of managed resource"),
 			))
 		})
 
@@ -180,21 +178,11 @@ var _ = Describe("Seed Care controller tests", func() {
 				OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionTrue),
 				WithReason("SystemComponentsRunning"),
-				withMessageSubstrings("All system components are healthy."),
+				WithMessageSubstrings("All system components are healthy."),
 			))
 		})
 	})
 })
-
-func withMessageSubstrings(messages ...string) gomegatypes.GomegaMatcher {
-	var substringMatchers = make([]gomegatypes.GomegaMatcher, 0, len(messages))
-	for _, message := range messages {
-		substringMatchers = append(substringMatchers, ContainSubstring(message))
-	}
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Message": SatisfyAll(substringMatchers...),
-	})
-}
 
 func updateManagedResourceStatusToHealthy(name string) {
 	By("Update status to healthy for ManagedResource " + name)
