@@ -75,7 +75,7 @@ var _ = Describe("Reconciler", func() {
 			WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
 		}
 
-		reconciler = &Reconciler{GardenClient: gardenClient, Actuator: actuator, Config: cfg, GardenNamespace: namespace}
+		reconciler = &Reconciler{GardenClient: gardenClient, Actuator: actuator, Config: cfg}
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}

@@ -35,11 +35,12 @@ import (
 
 // Reconciler reconciles the ManagedSeed.
 type Reconciler struct {
-	GardenClient    client.Client
-	Actuator        Actuator
-	Config          config.ManagedSeedControllerConfiguration
-	ChartsPath      string
-	GardenNamespace string
+	GardenClient          client.Client
+	Actuator              Actuator
+	Config                config.ManagedSeedControllerConfiguration
+	ChartsPath            string
+	GardenNamespaceGarden string
+	GardenNamespaceShoot  string
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter ratelimiter.RateLimiter
 }
@@ -71,7 +72,6 @@ func (r *Reconciler) reconcile(
 	result reconcile.Result,
 	err error,
 ) {
-
 	// Ensure gardener finalizer
 	if !controllerutil.ContainsFinalizer(ms, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")

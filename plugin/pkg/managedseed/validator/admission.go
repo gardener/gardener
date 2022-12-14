@@ -180,6 +180,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 	gk := schema.GroupKind{Group: seedmanagement.GroupName, Kind: "ManagedSeed"}
 
 	// Ensure namespace is garden
+	// Garden namespace validation can be disabled by disabling the ManagedSeed plugin for integration test.
 	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")))
 	}

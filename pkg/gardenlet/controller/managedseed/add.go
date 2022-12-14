@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -67,8 +67,14 @@ func (r *Reconciler) AddToManager(
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
-	if r.GardenNamespace == "" {
-		r.GardenNamespace = v1beta1constants.GardenNamespace
+	if r.GardenNamespaceGarden == "" {
+		r.GardenNamespaceGarden = v1beta1constants.GardenNamespace
+	}
+	if r.GardenNamespaceShoot == "" {
+		r.GardenNamespaceShoot = v1beta1constants.GardenNamespace
+	}
+	if r.ChartsPath == "" {
+		r.ChartsPath = charts.Path
 	}
 
 	valuesHelper := NewValuesHelper(&cfg, imageVector)
@@ -81,7 +87,7 @@ func (r *Reconciler) AddToManager(
 		valuesHelper,
 		gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
 		r.ChartsPath,
-		r.GardenNamespace,
+		r.GardenNamespaceShoot,
 	)
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
@@ -114,22 +120,24 @@ func (r *Reconciler) AddToManager(
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.ManagedSeedFilterPredicate(seedName),
+		r.SeedOfManagedSeedFilterPredicate(seedName),
 	)
 }
 
-// ManagedSeedFilterPredicate returns the predicate for ManagedSeed and Seed events.
+// ManagedSeedFilterPredicate returns the predicate for ManagedSeed events.
 func (r *Reconciler) ManagedSeedFilterPredicate(seedName string) predicate.Predicate {
 	return &managedSeedFilterPredicate{
-		seedName: seedName,
-		reader:   r.GardenClient,
+		reader:          r.GardenClient,
+		gardenNamespace: r.GardenNamespaceGarden,
+		seedName:        seedName,
 	}
 }
 
 type managedSeedFilterPredicate struct {
-	ctx      context.Context
-	reader   client.Reader
-	seedName string
+	ctx             context.Context
+	reader          client.Reader
+	gardenNamespace string
+	seedName        string
 }
 
 func (p *managedSeedFilterPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
@@ -151,18 +159,79 @@ func (p *managedSeedFilterPredicate) Delete(e event.DeleteEvent) bool {
 
 func (p *managedSeedFilterPredicate) Generic(_ event.GenericEvent) bool { return false }
 
-// filterManagedSeed checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible.
+// filterManagedSeed is filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed,
+// for which the gardenlet is responsible.
 func (p *managedSeedFilterPredicate) filterManagedSeed(obj client.Object) bool {
-	var managedSeed *seedmanagementv1alpha1.ManagedSeed
-	switch obj := obj.(type) {
-	case *seedmanagementv1alpha1.ManagedSeed:
-		managedSeed = obj
-	case *gardencorev1beta1.Seed:
-		managedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-		if err := p.reader.Get(p.ctx, kutil.Key(gardencorev1beta1constants.GardenNamespace, obj.Name), managedSeed); err != nil {
-			return false
-		}
-	default:
+	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+	if !ok {
+		return false
+	}
+
+	if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
+		return false
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := p.reader.Get(p.ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		return false
+	}
+
+	if shoot.Spec.SeedName == nil {
+		return false
+	}
+
+	if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
+		return *shoot.Spec.SeedName == p.seedName
+	}
+
+	return *shoot.Status.SeedName == p.seedName
+}
+
+// SeedOfManagedSeedFilterPredicate returns the predicate for Seed events.
+func (r *Reconciler) SeedOfManagedSeedFilterPredicate(seedName string) predicate.Predicate {
+	return &seedOfManagedSeedFilterPredicate{
+		reader:          r.GardenClient,
+		gardenNamespace: r.GardenNamespaceGarden,
+		seedName:        seedName,
+	}
+}
+
+type seedOfManagedSeedFilterPredicate struct {
+	ctx             context.Context
+	reader          client.Reader
+	gardenNamespace string
+	seedName        string
+}
+
+func (p *seedOfManagedSeedFilterPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
+	p.ctx = contextutil.FromStopChannel(stopChan)
+	return nil
+}
+
+func (p *seedOfManagedSeedFilterPredicate) Create(e event.CreateEvent) bool {
+	return p.filterSeedOfManagedSeed(e.Object)
+}
+
+func (p *seedOfManagedSeedFilterPredicate) Update(e event.UpdateEvent) bool {
+	return p.filterSeedOfManagedSeed(e.ObjectNew)
+}
+
+func (p *seedOfManagedSeedFilterPredicate) Delete(e event.DeleteEvent) bool {
+	return p.filterSeedOfManagedSeed(e.Object)
+}
+
+func (p *seedOfManagedSeedFilterPredicate) Generic(_ event.GenericEvent) bool { return false }
+
+// filterSeedOfManagedSeed is filtering func for Seeds that checks if the Seed is owned by a ManagedSeed that references a Shoot
+// scheduled on a Seed, for which the gardenlet is responsible.
+func (p *seedOfManagedSeedFilterPredicate) filterSeedOfManagedSeed(obj client.Object) bool {
+	seed, ok := obj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return false
+	}
+
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := p.reader.Get(p.ctx, kutil.Key(p.gardenNamespace, seed.Name), managedSeed); err != nil {
 		return false
 	}
 
@@ -188,5 +257,5 @@ func (p *managedSeedFilterPredicate) filterManagedSeed(obj client.Object) bool {
 
 // MapSeedToManagedSeed is a mapper.MapFunc for mapping a Seed to the owning ManagedSeed.
 func (r *Reconciler) MapSeedToManagedSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: gardencorev1beta1constants.GardenNamespace, Name: obj.GetName()}}}
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: r.GardenNamespaceGarden, Name: obj.GetName()}}}
 }
