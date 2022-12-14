@@ -38,7 +38,7 @@ func AddCertificateManagementToManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	clock clock.Clock,
-	seedWebhookConfig client.Object,
+	sourceWebhookConfig client.Object,
 	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 	atomicShootWebhookConfig *atomic.Value,
 	shootNamespaceSelector map[string]string,
@@ -59,7 +59,7 @@ func AddCertificateManagementToManager(
 	if err := (&reconciler{
 		Clock:                           clock,
 		SyncPeriod:                      DefaultSyncPeriod,
-		SeedWebhookConfig:               seedWebhookConfig,
+		SourceWebhookConfig:             sourceWebhookConfig,
 		ShootWebhookConfig:              shootWebhookConfig,
 		AtomicShootWebhookConfig:        atomicShootWebhookConfig,
 		CASecretName:                    caSecretName,

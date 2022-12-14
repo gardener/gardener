@@ -71,6 +71,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	if err := r.ensureAtMostOneGardenExists(ctx); err != nil {
+		log.Error(err, "Reconciliation prevented without automatic requeue")
+		return reconcile.Result{}, nil
+	}
+
 	conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
 	if err := r.updateStatusOperationStart(ctx, garden, conditionReconciled); err != nil {
 		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
@@ -104,6 +109,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, conditionReconciled)
+}
+
+func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
+	gardenList := &metav1.PartialObjectMetadataList{}
+	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	if err := r.RuntimeClient.List(ctx, gardenList); err != nil {
+		return err
+	}
+
+	if len(gardenList.Items) <= 1 {
+		return nil
+	}
+
+	return fmt.Errorf("there can be at most one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
 }
 
 func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition) error {

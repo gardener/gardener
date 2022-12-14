@@ -52,7 +52,7 @@ var _ = Describe("Handler", func() {
 			Expect(handler.ValidateCreate(ctx, garden)).To(Succeed())
 		})
 
-		It("should return an error if there are no errors", func() {
+		It("should return an error if there are validation errors", func() {
 			metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
 
 			err := handler.ValidateCreate(ctx, garden)
@@ -80,7 +80,7 @@ var _ = Describe("Handler", func() {
 			Expect(handler.ValidateUpdate(ctx, nil, garden)).To(Succeed())
 		})
 
-		It("should return an error if there are no errors", func() {
+		It("should return an error if there are validation errors", func() {
 			metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
 
 			err := handler.ValidateUpdate(ctx, nil, garden)
