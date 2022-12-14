@@ -19,11 +19,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -34,10 +36,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	"github.com/gardener/gardener/pkg/utils"
 	contextutil "github.com/gardener/gardener/pkg/utils/context"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -110,7 +112,7 @@ func (r *Reconciler) AddToManager(
 
 	if err := c.Watch(
 		source.NewKindWithCache(&seedmanagementv1alpha1.ManagedSeed{}, gardenCluster.GetCache()),
-		controllerutils.EnqueueWithJitterDelay(r.Config),
+		r.EnqueueWithJitterDelay(r.Config),
 		r.ManagedSeedFilterPredicate(seedName),
 		&predicate.GenerationChangedPredicate{},
 	); err != nil {
@@ -258,4 +260,81 @@ func (p *seedOfManagedSeedFilterPredicate) filterSeedOfManagedSeed(obj client.Ob
 // MapSeedToManagedSeed is a mapper.MapFunc for mapping a Seed to the owning ManagedSeed.
 func (r *Reconciler) MapSeedToManagedSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: r.GardenNamespaceGarden, Name: obj.GetName()}}}
+}
+
+func reconcileRequest(obj client.Object) reconcile.Request {
+	return reconcile.Request{NamespacedName: types.NamespacedName{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+	}}
+}
+
+var (
+	// RandomDurationWithMetaDuration is exposed for unit tests.
+	RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
+)
+
+// EnqueueWithJitterDelay returns handler.Funcs which enqueues the object with a random Jitter duration when the JitterUpdate
+// is enabled in ManagedSeed controller configuration.
+// All other events are normally enqueued.
+func (r *Reconciler) EnqueueWithJitterDelay(cfg config.ManagedSeedControllerConfiguration) handler.EventHandler {
+	return &handler.Funcs{
+		CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+			managedSeed, ok := evt.Object.(*seedmanagementv1alpha1.ManagedSeed)
+			if !ok {
+				return
+			}
+
+			generationChanged := managedSeed.Generation != managedSeed.Status.ObservedGeneration
+
+			// Managed seed with deletion timestamp and newly created managed seed will be enqueued immediately.
+			// Generation is 1 for newly created objects.
+			if managedSeed.DeletionTimestamp != nil || managedSeed.Generation == 1 {
+				q.Add(reconcileRequest(evt.Object))
+				return
+			}
+
+			if generationChanged {
+				if *cfg.JitterUpdates {
+					q.AddAfter(reconcileRequest(evt.Object), RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+				} else {
+					q.Add(reconcileRequest(evt.Object))
+				}
+			} else {
+				// Spread reconciliation of managed seeds (including gardenlet updates/rollouts) across the configured sync jitter
+				// period to avoid overloading the gardener-apiserver if all gardenlets in all managed seeds are (re)starting
+				// roughly at the same time
+				q.AddAfter(reconcileRequest(evt.Object), RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+			}
+		},
+		UpdateFunc: func(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+			managedSeed, ok := evt.ObjectNew.(*seedmanagementv1alpha1.ManagedSeed)
+			if !ok {
+				return
+			}
+
+			if managedSeed.Generation == managedSeed.Status.ObservedGeneration {
+				return
+			}
+
+			// Managed seed with deletion timestamp and newly created managed seed will be enqueued immediately.
+			// Generation is 1 for newly created objects.
+			if managedSeed.DeletionTimestamp != nil || managedSeed.Generation == 1 {
+				q.Add(reconcileRequest(evt.ObjectNew))
+				return
+			}
+
+			if *cfg.JitterUpdates {
+				q.AddAfter(reconcileRequest(evt.ObjectNew), RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+			} else {
+				q.Add(reconcileRequest(evt.ObjectNew))
+			}
+		},
+		DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+			if evt.Object == nil {
+				return
+			}
+			q.Add(reconcileRequest(evt.Object))
+		},
+	}
 }

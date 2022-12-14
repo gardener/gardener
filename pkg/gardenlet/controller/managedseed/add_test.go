@@ -16,21 +16,28 @@ package managedseed
 
 import (
 	"context"
+	"time"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {
@@ -282,4 +289,140 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
 		})
 	})
+
+	Describe("#EnqueueWithJitterDelay", func() {
+		var (
+			hdlr  handler.EventHandler
+			queue *mockworkqueue.MockRateLimitingInterface
+			obj   *seedmanagementv1alpha1.ManagedSeed
+			req   reconcile.Request
+			cfg   config.ManagedSeedControllerConfiguration
+		)
+
+		BeforeEach(func() {
+			cfg = config.ManagedSeedControllerConfiguration{
+				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
+			}
+
+			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
+			obj = &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: "managedseed", Namespace: "namespace"}}
+			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
+		})
+
+		It("should enqueue the object without delay for Create events when deletion timestamp is set", func() {
+			queue.EXPECT().Add(req)
+
+			now := metav1.Now()
+			obj.SetDeletionTimestamp(&now)
+			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+		})
+
+		It("should enqueue the object without delay for Create events when generation is set to 1", func() {
+			queue.EXPECT().Add(req)
+
+			obj.Generation = 1
+			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+		})
+
+		It("should enqueue the object without delay for Create events when generation changed and jitterudpates is set to false", func() {
+			queue.EXPECT().Add(req)
+
+			cfg.JitterUpdates = pointer.Bool(false)
+			obj.Generation = 2
+			obj.Status.ObservedGeneration = 1
+			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+		})
+
+		It("should enqueue the object with random delay for Create events when generation changed and  jitterUpdates is set to true", func() {
+			oldRandomDuration := RandomDurationWithMetaDuration
+			defer func() { RandomDurationWithMetaDuration = oldRandomDuration }()
+			RandomDurationWithMetaDuration = func(max *metav1.Duration) time.Duration { return 20 * time.Millisecond }
+
+			queue.EXPECT().AddAfter(req, RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+
+			cfg.JitterUpdates = pointer.Bool(true)
+			obj.Generation = 2
+			obj.Status.ObservedGeneration = 1
+			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+		})
+
+		It("should enqueue the object with random delay for Create events when there is no change in generation", func() {
+			oldRandomDuration := RandomDurationWithMetaDuration
+			defer func() { RandomDurationWithMetaDuration = oldRandomDuration }()
+			RandomDurationWithMetaDuration = func(max *metav1.Duration) time.Duration { return 20 * time.Millisecond }
+
+			queue.EXPECT().AddAfter(req, RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+
+			cfg.JitterUpdates = pointer.Bool(false)
+			obj.Generation = 2
+			obj.Status.ObservedGeneration = 2
+			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+		})
+
+		It("should not enqueue the object for Update events when generation and observedGeneration are equal", func() {
+			obj.Generation = 1
+			obj.Status.ObservedGeneration = 1
+			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+		})
+
+		It("should enqueue the object for Update events when deletion timestamp is set", func() {
+			queue.EXPECT().Add(req)
+
+			obj.Generation = 2
+			obj.Status.ObservedGeneration = 1
+			now := metav1.Now()
+			obj.SetDeletionTimestamp(&now)
+			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+		})
+
+		It("should enqueue the object for Update events when generation is 1", func() {
+			queue.EXPECT().Add(req)
+
+			obj.Generation = 1
+			obj.Status.ObservedGeneration = 0
+			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+		})
+
+		It("should enqueue the object for Update events when jitterUpdates is set to false", func() {
+			queue.EXPECT().Add(req)
+
+			cfg.JitterUpdates = pointer.Bool(false)
+			obj.Generation = 2
+			obj.Status.ObservedGeneration = 1
+			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+		})
+
+		It("should enqueue the object with random delay for Update events when jitterUpdates is set to true", func() {
+			oldRandomDuration := RandomDurationWithMetaDuration
+			defer func() { RandomDurationWithMetaDuration = oldRandomDuration }()
+			RandomDurationWithMetaDuration = func(max *metav1.Duration) time.Duration { return 20 * time.Millisecond }
+
+			queue.EXPECT().AddAfter(req, RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+
+			cfg.JitterUpdates = pointer.Bool(true)
+			obj.Generation = 2
+			obj.Status.ObservedGeneration = 1
+			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+		})
+
+		It("should enqueue the object for Delete events", func() {
+			queue.EXPECT().Add(req)
+
+			hdlr.Delete(event.DeleteEvent{Object: obj}, queue)
+		})
+
+		It("should not enqueue the object for Generic events", func() {
+			hdlr.Generic(event.GenericEvent{Object: obj}, queue)
+		})
+	})
 })
+
+// oldRandomDuration := RandomDuration
+// 			defer func() { RandomDuration = oldRandomDuration }()
+// 			RandomDuration = func(time.Duration) time.Duration { return time.Minute }
