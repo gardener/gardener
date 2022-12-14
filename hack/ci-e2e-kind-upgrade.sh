@@ -162,9 +162,7 @@ function set_seed_name() {
 function wait_until_seed_gets_upgraded() {
   echo "Wait until seed gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
   kubectl wait seed $1 --timeout=5m \
-    --for=jsonpath='{.status.gardener.version}'=$GARDENER_NEXT_RELEASE \
-    --for=condition=gci-coomardenletready --for=condition=extensionsready \
-    --for=condition=bootstrapped
+    --for=jsonpath='{.status.gardener.version}'=$GARDENER_NEXT_RELEASE && condition=gardenletready && condition=extensionsready && condition=bootstrapped
 }
 
 clamp_mss_to_pmtu
