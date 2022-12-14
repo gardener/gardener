@@ -117,7 +117,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return acadmission.Allowed("shoot is already marked for deletion")
 	}
 
-	var oldAuditPolicyConfigMapName, newAuditPolicyConfigMapName string
+	var oldAuditPolicyConfigMapName, newAuditPolicyConfigMapName, oldShootKubernetesVersion, newShootKubernetesVersion string
 
 	if request.Operation == admissionv1.Update {
 		oldShoot := &gardencore.Shoot{}
@@ -131,8 +131,10 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 			return acadmission.Allowed("shoot spec was not changed")
 		}
 
+		oldShootKubernetesVersion = oldShoot.Spec.Kubernetes.Version
 		oldAuditPolicyConfigMapName = gardencorehelper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
 	}
+	newShootKubernetesVersion = shoot.Spec.Kubernetes.Version
 	newAuditPolicyConfigMapName = gardencorehelper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 
 	if newAuditPolicyConfigMapName == "" {
@@ -140,7 +142,9 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	// oldAuditPolicyConfigMapName is empty for CREATE shoot requests that specify audit policy reference
-	if oldAuditPolicyConfigMapName == newAuditPolicyConfigMapName {
+	// if Kubernetes version is changed we need to revalidate if the audit policy API version is compatible with
+	// new Kubernetes version
+	if oldAuditPolicyConfigMapName == newAuditPolicyConfigMapName && oldShootKubernetesVersion == newShootKubernetesVersion {
 		return acadmission.Allowed("audit policy configmap was not changed")
 	}
 
@@ -158,7 +162,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	var errCode int32
-	if request.Operation == admissionv1.Create {
+	if request.Operation == admissionv1.Create || request.Operation == admissionv1.Update {
 		errCode, err = validateAuditPolicySemanticsForKubernetesVersion(auditPolicy, &shoot.Spec.Kubernetes.Version)
 	} else {
 		errCode, err = validateAuditPolicySemantics(auditPolicy)

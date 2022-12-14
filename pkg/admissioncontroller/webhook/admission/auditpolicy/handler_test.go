@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -379,13 +380,13 @@ rules:
 
 			It("referenced auditPolicy name was not changed (UPDATE)", func() {
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.Version = "upgrade"
+				newShoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "audit policy configmap was not changed", "")
 			})
 
 			It("referenced auditPolicy name was not changed (UPDATE/v1alpha1)", func() {
 				newShoot := shootv1alpha1.DeepCopy()
-				newShoot.Spec.Kubernetes.Version = "upgrade"
+				newShoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 				test(admissionv1.Update, shootv1alpha1, newShoot, true, statusCodeAllowed, "audit policy configmap was not changed", "")
 			})
 
@@ -540,6 +541,22 @@ rules:
 				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for kubernetes version >= 1.24.0", "")
 			})
 
+			It("references a valid auditPolicy/v1alhpa1 (UPDATE kubernetes version)", func() {
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": validAuditPolicyV1alpha1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+
+				newShoot := shootv1beta1.DeepCopy()
+				newShoot.Spec.Kubernetes.Version = "1.24.0"
+				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for kubernetes version >= 1.24.0", "")
+			})
+
 			It("references a valid auditPolicy/v1beta1 (CREATE k8s >= 1.24.0)", func() {
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
@@ -551,6 +568,22 @@ rules:
 					return nil
 				})
 				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for kubernetes version >= 1.24.0", "")
+			})
+
+			It("references a valid auditPolicy/v1beta1 (UPDATE kubernetes version)", func() {
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": validAuditPolicyV1beta1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+
+				newShoot := shootv1beta1.DeepCopy()
+				newShoot.Spec.Kubernetes.Version = "1.24.0"
+				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for kubernetes version >= 1.24.0", "")
 			})
 
 		})
