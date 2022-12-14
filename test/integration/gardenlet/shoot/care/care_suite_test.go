@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -45,7 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -177,6 +176,26 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
+	By("registering controller")
+	Expect((&care.Reconciler{
+		SeedClientSet: testClientSet,
+		Config: config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				ShootCare: &config.ShootCareControllerConfiguration{
+					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
+				},
+			},
+			SeedConfig: &config.SeedConfig{
+				SeedTemplate: gardencore.SeedTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: seedName,
+					},
+				},
+			},
+		},
+		SeedName: seedName,
+	}).AddToManager(mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -189,26 +208,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	By("registering controller")
-	c, err := shootcontroller.NewShootController(ctx, mgr.GetLogger(), mgr, testClientSet, nil, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			ShootCare: &config.ShootCareControllerConfiguration{
-				SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			},
-		},
-	}, nil, "", nil, clock.RealClock{})
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
-	}()
 })
