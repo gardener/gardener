@@ -249,11 +249,11 @@ images:
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
-        network_exposure: 'protected'
+        network_exposure: 'private'
         authentication_enforced: false
         user_interaction: 'gardener-operator'
         confidentiality_requirement: 'low'
-        integrity_requirement: 'none'
+        integrity_requirement: 'high'
         availability_requirement: 'high'
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
@@ -263,11 +263,11 @@ images:
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
-        network_exposure: 'protected'
+        network_exposure: 'private'
         authentication_enforced: false
         user_interaction: 'gardener-operator'
         confidentiality_requirement: 'low'
-        integrity_requirement: 'none'
+        integrity_requirement: 'high'
         availability_requirement: 'high'
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
@@ -277,11 +277,11 @@ images:
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
-        network_exposure: 'protected'
+        network_exposure: 'private'
         authentication_enforced: false
         user_interaction: 'gardener-operator'
         confidentiality_requirement: 'low'
-        integrity_requirement: 'low'
+        integrity_requirement: 'high'
         availability_requirement: 'high'
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
@@ -291,11 +291,11 @@ images:
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
-        network_exposure: 'protected'
+        network_exposure: 'private'
         authentication_enforced: false
         user_interaction: 'gardener-operator'
         confidentiality_requirement: 'low'
-        integrity_requirement: 'low'
+        integrity_requirement: 'high'
         availability_requirement: 'high'
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
@@ -305,11 +305,11 @@ images:
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
-        network_exposure: 'protected'
+        network_exposure: 'private'
         authentication_enforced: false
         user_interaction: 'gardener-operator'
         confidentiality_requirement: 'low'
-        integrity_requirement: 'none'
+        integrity_requirement: 'high'
         availability_requirement: 'high'
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
@@ -319,11 +319,11 @@ images:
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
-        network_exposure: 'protected'
+        network_exposure: 'private'
         authentication_enforced: false
         user_interaction: 'gardener-operator'
         confidentiality_requirement: 'low'
-        integrity_requirement: 'none'
+        integrity_requirement: 'high'
         availability_requirement: 'high'
 
 # HVPA
