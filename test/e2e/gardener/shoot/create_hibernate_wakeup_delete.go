@@ -40,6 +40,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		defer cancel()
 		Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
 
+		verifyNoPodsRunning(f)
+
 		By("Wake up Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
