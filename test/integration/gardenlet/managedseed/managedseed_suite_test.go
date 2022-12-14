@@ -217,7 +217,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	gardenNamespaceShoot = "test-" + testRunID
+	gardenNamespaceShoot = "garden-shoot-" + testRunID
 	Expect((&managedseed.Reconciler{
 		Config:                *cfg.Controllers.ManagedSeed,
 		ChartsPath:            chartsPath,

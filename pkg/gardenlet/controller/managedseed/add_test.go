@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Add", func() {
@@ -292,11 +293,12 @@ var _ = Describe("Add", func() {
 
 	Describe("#EnqueueWithJitterDelay", func() {
 		var (
-			hdlr  handler.EventHandler
-			queue *mockworkqueue.MockRateLimitingInterface
-			obj   *seedmanagementv1alpha1.ManagedSeed
-			req   reconcile.Request
-			cfg   config.ManagedSeedControllerConfiguration
+			hdlr           handler.EventHandler
+			queue          *mockworkqueue.MockRateLimitingInterface
+			obj            *seedmanagementv1alpha1.ManagedSeed
+			req            reconcile.Request
+			cfg            config.ManagedSeedControllerConfiguration
+			randomDuration = 10 * time.Millisecond
 		)
 
 		BeforeEach(func() {
@@ -308,6 +310,10 @@ var _ = Describe("Add", func() {
 			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
 			obj = &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: "managedseed", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
+
+			DeferCleanup(func() {
+				test.WithVar(&RandomDurationWithMetaDuration, func(_ *metav1.Duration) time.Duration { return randomDuration })
+			})
 		})
 
 		It("should enqueue the object without delay for Create events when deletion timestamp is set", func() {
@@ -336,11 +342,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object with random delay for Create events when generation changed and  jitterUpdates is set to true", func() {
-			oldRandomDuration := RandomDurationWithMetaDuration
-			defer func() { RandomDurationWithMetaDuration = oldRandomDuration }()
-			RandomDurationWithMetaDuration = func(max *metav1.Duration) time.Duration { return 20 * time.Millisecond }
-
-			queue.EXPECT().AddAfter(req, RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+			queue.EXPECT().AddAfter(req, randomDuration)
 
 			cfg.JitterUpdates = pointer.Bool(true)
 			obj.Generation = 2
@@ -350,11 +352,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object with random delay for Create events when there is no change in generation", func() {
-			oldRandomDuration := RandomDurationWithMetaDuration
-			defer func() { RandomDurationWithMetaDuration = oldRandomDuration }()
-			RandomDurationWithMetaDuration = func(max *metav1.Duration) time.Duration { return 20 * time.Millisecond }
-
-			queue.EXPECT().AddAfter(req, RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+			queue.EXPECT().AddAfter(req, randomDuration)
 
 			cfg.JitterUpdates = pointer.Bool(false)
 			obj.Generation = 2
@@ -398,11 +396,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object with random delay for Update events when jitterUpdates is set to true", func() {
-			oldRandomDuration := RandomDurationWithMetaDuration
-			defer func() { RandomDurationWithMetaDuration = oldRandomDuration }()
-			RandomDurationWithMetaDuration = func(max *metav1.Duration) time.Duration { return 20 * time.Millisecond }
-
-			queue.EXPECT().AddAfter(req, RandomDurationWithMetaDuration(cfg.SyncJitterPeriod))
+			queue.EXPECT().AddAfter(req, randomDuration)
 
 			cfg.JitterUpdates = pointer.Bool(true)
 			obj.Generation = 2
@@ -422,7 +416,3 @@ var _ = Describe("Add", func() {
 		})
 	})
 })
-
-// oldRandomDuration := RandomDuration
-// 			defer func() { RandomDuration = oldRandomDuration }()
-// 			RandomDuration = func(time.Duration) time.Duration { return time.Minute }

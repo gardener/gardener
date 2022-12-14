@@ -320,7 +320,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			reconcileShoot()
 		})
 
-		It("should set the ShootReconciled status to true when the shoot is reconciled successfully", func() {
+		It("should set the ShootReconciled status to true,create seed secrets specified in spec.backup.secretRef and spec.secretRef field of seed template and deploy gardenlet ", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
 				condition := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
@@ -328,13 +328,11 @@ var _ = Describe("ManagedSeed controller test", func() {
 				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
 				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
 			}).Should(Succeed())
-		})
 
-		It("should create seed secrets specified in spec.backup.secretRef and spec.secretRef field of seed template", func() {
+			By("check if seed secrets are created")
 			checkIfSeedSecretsCreated()
-		})
 
-		It("should deploy gardenlet", func() {
+			By("check if gardenlet is deployed")
 			checkIfGardenletWasDeployed()
 		})
 	})

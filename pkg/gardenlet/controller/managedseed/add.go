@@ -169,24 +169,7 @@ func (p *managedSeedFilterPredicate) filterManagedSeed(obj client.Object) bool {
 		return false
 	}
 
-	if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
-		return false
-	}
-
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := p.reader.Get(p.ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
-		return false
-	}
-
-	if shoot.Spec.SeedName == nil {
-		return false
-	}
-
-	if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
-		return *shoot.Spec.SeedName == p.seedName
-	}
-
-	return *shoot.Status.SeedName == p.seedName
+	return filterManagedSeedHelper(p.ctx, p.reader, managedSeed, p.gardenNamespace, p.seedName)
 }
 
 // SeedOfManagedSeedFilterPredicate returns the predicate for Seed events.
@@ -237,12 +220,16 @@ func (p *seedOfManagedSeedFilterPredicate) filterSeedOfManagedSeed(obj client.Ob
 		return false
 	}
 
+	return filterManagedSeedHelper(p.ctx, p.reader, managedSeed, p.gardenNamespace, p.seedName)
+}
+
+func filterManagedSeedHelper(ctx context.Context, reader client.Reader, managedSeed *seedmanagementv1alpha1.ManagedSeed, gardenNamespace, seedName string) bool {
 	if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
 		return false
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := p.reader.Get(p.ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := reader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		return false
 	}
 
@@ -251,10 +238,10 @@ func (p *seedOfManagedSeedFilterPredicate) filterSeedOfManagedSeed(obj client.Ob
 	}
 
 	if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
-		return *shoot.Spec.SeedName == p.seedName
+		return *shoot.Spec.SeedName == seedName
 	}
 
-	return *shoot.Status.SeedName == p.seedName
+	return *shoot.Status.SeedName == seedName
 }
 
 // MapSeedToManagedSeed is a mapper.MapFunc for mapping a Seed to the owning ManagedSeed.
@@ -270,7 +257,7 @@ func reconcileRequest(obj client.Object) reconcile.Request {
 }
 
 var (
-	// RandomDurationWithMetaDuration is exposed for unit tests.
+	// RandomDurationWithMetaDuration is an alias for `utils.RandomDurationWithMetaDuration`.Exposed for unit tests.
 	RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 )
 
