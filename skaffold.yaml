@@ -721,6 +721,9 @@ build:
         - vendor
 deploy:
   helm:
+    flags:
+      upgrade:
+        - --disable-openapi-validation
     releases:
     - name: gardener-extension-provider-local-registration
       chartPath: charts/gardener/provider-local/registration

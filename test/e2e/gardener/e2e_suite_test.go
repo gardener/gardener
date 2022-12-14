@@ -28,6 +28,7 @@ import (
 	_ "github.com/gardener/gardener/test/e2e/gardener/managedseed"
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/shoot"
+	_ "github.com/gardener/gardener/test/e2e/gardener/upgrade"
 )
 
 func TestMain(m *testing.M) {

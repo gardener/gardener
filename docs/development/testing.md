@@ -437,6 +437,55 @@ gsutil cp -r gs://gardener-prow/pr-logs/pull/gardener_gardener/6136/pull-gardene
   - generally, try to use the default settings for `Eventually` specified via the environment variables
   - only set higher timeouts if waiting for long-running reconciliations to be finished
 
+## Gardener Upgrade Tests (using provider-local)
+
+Gardener upgrade tests setup a kind cluster and deploy Gardener version `vX.X.X` before upgrading it to a given version `vY.Y.Y`.
+
+This allows verifying whether the current (unreleased) revision/branch (or a specific release) is compatible with the latest (or a specific other release). The `GARDENER_PREVIOUS_RELEASE` and `GARDENER_NEXT_RELEASE` environment variables are used to specify the respective versions.
+
+This helps understanding what happens or how the system reacts when Gardener upgrades from versions `vX.X.X` to `vY.Y.Y` for existing shoots in different states (`creation`/`hibernation`/`wakeup`/`deletion`). Gardener upgrade tests also help qualifying releases for all flavors (**non-HA** or **HA** with failure tolerance `node`/`zone`). 
+
+Just like E2E tests, upgrade tests also use a [KinD cluster](https://kind.sigs.k8s.io/) and [skaffold](https://skaffold.dev/) for bootstrapping a full Gardener installation based on the current revision/branch, including [provider-local](../extensions/provider-local.md).
+This allows running e2e tests in an isolated test environment, fully locally without any infrastructure interaction.
+The tests perform a set of operations on Shoot clusters, e.g. create, delete, hibernate and wake up.
+
+Below is a sequence describing how the tests are performed.
+
+- Create a `kind` cluster.
+- Install Gardener version `vX.X.X`.
+- Run gardener pre-upgrade tests which are labeled with `pre-upgrade`.
+- Upgrade Gardener version from `vX.X.X` to `vY.Y.Y`.
+- Run gardener post-upgrade tests which are labeled with `post-upgrade`
+- Tear down seed and kind cluster.
+
+### How to run upgrade tests between two Gardener releases
+
+Sometimes, we need to verify/qualify two Gardener releases when we upgrade from one version to another.  
+This can performed by fetching the two Gardener versions from **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)** and set appropriate env variables `GARDENER_PREVIOUS_RELEASE`, `GARDENER_NEXT_RELEASE`.   
+
+>**`GARDENER_PREVIOUS_RELEASE`** -- This env variable refers to a source revision/branch (or a specific release) which has to be installed first and then upgraded to version **`GARDENER_NEXT_RELEASE`**. By default it fetches latest release version from  **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)**.
+
+>**`GARDENER_NEXT_RELEASE`** -- This env variable refers to the target revision/branch (or a specific release) to be upgraded to after successful installation of **`GARDENER_PREVIOUS_RELEASE`**. By default it considers local HEAD revision, builds code and installs gardener from current revision where gardener upgrade tests triggered.
+
+
+- `make ci-e2e-kind-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
+- `make ci-e2e-kind-ha-single-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
+- `make ci-e2e-kind-ha-multi-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
+
+
+### Purpose of upgrade Tests
+
+- tests will ensure that shoot clusters reconciled with the previous version of Gardener work as expected even with the next Gardener version.
+- this will reproduce or catch actual issues faced by end users.
+- one of the test case ensures no downtime faced by end-users for shoots while upgrading Gardener if shoot's control-plane is configured as HA.
+
+### Writing upgrade Tests
+
+- tests are divided into two parts and labeled with `pre-upgrade` and `post-upgrade` labels.
+- Example test case which ensures shoot which was `hibernated` in previous gardener release should `wakeup` as expected in next release. 
+  - Creating a shoot and hibernating a shoot is pre-upgrade test case which should be labeled `pre-upgrade` label.
+  - Then wakeup a shoot and delete a shoot is post-upgrade test case which should be labeled `post-upgrade` label.
+
 ## Test Machinery Tests
 
 Please see [Test Machinery Tests](testmachinery_tests.md).
