@@ -302,7 +302,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
 			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 			verticalPodAutoscaler = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
-			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{Version: kubernetesVersion})
+			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{KubernetesVersion: kubernetesVersion})
 
 			destroyEtcdDruid = g.Add(flow.Task{
 				Name: "Destroying etcd druid",

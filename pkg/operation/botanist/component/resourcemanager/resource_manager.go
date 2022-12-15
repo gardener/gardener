@@ -273,7 +273,7 @@ type Values struct {
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
 	// Version is the Kubernetes version for the Kubernetes components.
-	Version *semver.Version
+	KubernetesVersion *semver.Version
 	// VPA contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
 	VPA *VPAConfig
 	// SchedulingProfile is the kube-scheduler profile configured for the Shoot.
@@ -335,13 +335,8 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {
-	k8sVersionGreaterEqual121, err := version.CompareVersions(r.values.Version.String(), ">=", "1.21")
-	if err != nil {
-		return err
-	}
-
 	objectsToDelete := []client.Object{
-		r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121),
+		r.emptyPodDisruptionBudget(),
 		r.emptyVPA(),
 		r.emptyDeployment(),
 		r.emptyService(),
@@ -982,19 +977,14 @@ func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
-	k8sVersionGreaterEqual121, err := version.CompareVersions(r.values.Version.String(), ">=", "1.21")
-	if err != nil {
-		return err
-	}
-
-	obj := r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121)
+	obj := r.emptyPodDisruptionBudget()
 
 	pdbSelector := &metav1.LabelSelector{
 		MatchLabels: r.getDeploymentTemplateLabels(),
 	}
 	maxUnavailable := intstr.FromInt(1)
 
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, obj, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, obj, func() error {
 		switch pdb := obj.(type) {
 		case *policyv1.PodDisruptionBudget:
 			pdb.Labels = r.getLabels()
@@ -1015,13 +1005,13 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	return err
 }
 
-func (r *resourceManager) emptyPodDisruptionBudget(k8sVersionGreaterEqual121 bool) client.Object {
+func (r *resourceManager) emptyPodDisruptionBudget() client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      "gardener-resource-manager",
 		Namespace: r.namespace,
 	}
 
-	if k8sVersionGreaterEqual121 {
+	if version.ConstraintK8sGreaterEqual121.Check(r.values.KubernetesVersion) {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 		}
