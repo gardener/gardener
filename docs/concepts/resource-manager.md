@@ -668,7 +668,7 @@ Please note, the `gardener-resource-manager` itself as well as pods labelled wit
 
 #### System Components Webhook
 
-If enabled, this webhook handles scheduling concerns for system components `Pod`s (expect those managed by `DaemonSet`s).
+If enabled, this webhook handles scheduling concerns for system components `Pod`s (except those managed by `DaemonSet`s).
 The following tasks are performed by this webhook:
 
 - Add `pod.spec.nodeSelector` as given in the webhook configuration.

@@ -233,7 +233,7 @@ type ResourceManagerWebhookConfiguration struct {
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
 	// SystemComponentsConfig is the configuration for the pod-node-handler webhook.
-	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"podNodeHandler"`
+	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`
 	// PodTopologySpreadConstraints is the configuration for the pod-topology-spread-constraints webhook.
@@ -276,7 +276,7 @@ type SystemComponentsConfigWebhookConfig struct {
 	PodNodeSelector map[string]string `json:"podNodeSelector,omitempty"`
 	// PodTolerations are the tolerations that should be added to pods.
 	// +optional
-	PodTolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	PodTolerations []corev1.Toleration `json:"podTolerations,omitempty"`
 }
 
 // PodSchedulerNameWebhookConfig is the configuration for the pod-scheduler-name webhook.
