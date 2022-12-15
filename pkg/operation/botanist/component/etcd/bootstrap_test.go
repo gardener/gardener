@@ -178,10 +178,20 @@ rules:
   - delete
 - apiGroups:
   - ""
-  - apps
   resources:
   - services
   - configmaps
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - create
+  - delete
+- apiGroups:
+  - apps
+  resources:
   - statefulsets
   verbs:
   - get
@@ -202,15 +212,6 @@ rules:
   - create
   - update
   - patch
-  - delete
-- apiGroups:
-  - batch
-  resources:
-  - cronjobs
-  verbs:
-  - get
-  - list
-  - watch
   - delete
 - apiGroups:
   - druid.gardener.cloud
