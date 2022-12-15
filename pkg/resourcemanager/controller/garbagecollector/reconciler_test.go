@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -57,7 +58,7 @@ var _ = Describe("Collector", func() {
 			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
 			Clock:                   fakeClock,
 			MinimumObjectLifetime:   &minimumObjectLifetime,
-			TargetKubernetesVersion: "1.24.0",
+			TargetKubernetesVersion: semver.MustParse("1.24.0"),
 		}
 	})
 
