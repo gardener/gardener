@@ -69,7 +69,7 @@ func defaultNginxIngress(
 	values := nginxingress.Values{
 		ImageController:     imageController.String(),
 		ImageDefaultBackend: imageDefaultBackend.String(),
-		KubernetesVersion:   kubernetesVersion.String(),
+		KubernetesVersion:   kubernetesVersion,
 		IngressClass:        ingressClass,
 		ConfigData:          config,
 	}
@@ -156,16 +156,8 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 }
 
 func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string, kubernetesVersion *semver.Version) error {
-	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
-	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
-	// custom version suffix.
-	lessEqual121, err := versionutils.CompareVersions(kubernetesVersion.String(), "<=", "1.21.x")
-	if err != nil {
-		return err
-	}
-	if lessEqual121 {
+	if versionutils.ConstraintK8sLessEqual121.Check(kubernetesVersion) {
 		ingress := &extensionsv1beta1.Ingress{}
-
 		if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
@@ -184,7 +176,6 @@ func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKe
 	}
 
 	ingress := &networkingv1.Ingress{}
-
 	if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
