@@ -352,7 +352,10 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	podTemplateSpec *corev1.PodTemplateSpec,
 ) {
 	replicas := pointer.Int32Deref(currentReplicas, 0)
-	if !isHorizontallyScaled {
+
+	// Set maxReplicas to replicas if component is not scaled horizontally or of the replica count is higher than maxReplicas
+	// which can happen if the involved H(V)PA object is not mutated yet.
+	if !isHorizontallyScaled || replicas > maxReplicas {
 		maxReplicas = replicas
 	}
 

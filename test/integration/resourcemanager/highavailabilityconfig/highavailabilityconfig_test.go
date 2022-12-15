@@ -632,6 +632,51 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 						})
 					})
 
+					Context("when max replicas is lower than desired replicas", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+
+							setReplicas(pointer.Int32(2 * int32(len(zones))))
+						})
+
+						test := func() {
+							It("should add topology spread constraints", func() {
+								Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
+									corev1.TopologySpreadConstraint{
+										TopologyKey:       corev1.LabelHostname,
+										MaxSkew:           1,
+										WhenUnsatisfiable: corev1.ScheduleAnyway,
+										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+									},
+									corev1.TopologySpreadConstraint{
+										TopologyKey:       corev1.LabelTopologyZone,
+										MaxSkew:           2,
+										WhenUnsatisfiable: corev1.DoNotSchedule,
+										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+									},
+								))
+							})
+						}
+
+						Context("scaled w/ HPA", func() {
+							BeforeEach(func() {
+								hpa.Spec.ScaleTargetRef.Name = getObj().GetName()
+								hpa.Spec.MaxReplicas = 1
+							})
+
+							test()
+						})
+
+						Context("scaled w/ HVPA", func() {
+							BeforeEach(func() {
+								hvpa.Spec.TargetRef.Name = getObj().GetName()
+								hvpa.Spec.Hpa.Template.Spec.MaxReplicas = 1
+							})
+
+							test()
+						})
+					})
+
 					Context("when max replicas are at least twice the number of zones", func() {
 						BeforeEach(func() {
 							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
