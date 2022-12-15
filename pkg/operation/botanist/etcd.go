@@ -66,7 +66,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			StorageCapacity:         b.Seed.GetValidVolumeSize("10Gi"),
 			DefragmentationSchedule: &defragmentationSchedule,
 			CARotationPhase:         gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
-			K8sVersion:              b.ShootVersion(),
+			KubernetesVersion:       b.Shoot.KubernetesVersion,
 			PriorityClassName:       v1beta1constants.PriorityClassNameShootControlPlane500,
 		},
 	)

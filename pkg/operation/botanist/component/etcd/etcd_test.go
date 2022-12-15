@@ -630,7 +630,6 @@ var _ = Describe("Etcd", func() {
 			StorageClassName:        &storageClassName,
 			DefragmentationSchedule: &defragmentationSchedule,
 			CARotationPhase:         "",
-			K8sVersion:              "1.20.1",
 			PriorityClassName:       priorityClassName,
 		})
 	})
@@ -803,7 +802,6 @@ var _ = Describe("Etcd", func() {
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
-				K8sVersion:              "1.20.1",
 				PriorityClassName:       priorityClassName,
 			})
 			setHVPAConfig()
@@ -874,7 +872,6 @@ var _ = Describe("Etcd", func() {
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
-				K8sVersion:              "1.20.1",
 				PriorityClassName:       priorityClassName,
 			})
 			setHVPAConfig()
@@ -1176,7 +1173,6 @@ var _ = Describe("Etcd", func() {
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         "",
-					K8sVersion:              "1.20.1",
 					PriorityClassName:       priorityClassName,
 				})
 				newSetHVPAConfigFunc(updateMode)()
@@ -1396,7 +1392,6 @@ var _ = Describe("Etcd", func() {
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         rotationPhase,
-					K8sVersion:              "1.20.1",
 					PriorityClassName:       priorityClassName,
 				})
 			})
@@ -1566,7 +1561,6 @@ var _ = Describe("Etcd", func() {
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
-				K8sVersion:              "1.20.1",
 				PriorityClassName:       priorityClassName,
 			})
 		})
@@ -1873,7 +1867,6 @@ var _ = Describe("Etcd", func() {
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
-				K8sVersion:              "1.20.1",
 				PriorityClassName:       priorityClassName,
 			})
 		})

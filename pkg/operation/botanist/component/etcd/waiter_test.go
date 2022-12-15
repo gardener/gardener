@@ -91,7 +91,6 @@ var _ = Describe("#Wait", func() {
 		etcd = New(log, c, testNamespace, sm, Values{
 			Role:            testRole,
 			Class:           ClassNormal,
-			K8sVersion:      "1.20.1",
 			StorageCapacity: "20Gi",
 		})
 		etcd.SetHVPAConfig(&HVPAConfig{

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -169,7 +170,7 @@ type Values struct {
 	StorageClassName        *string
 	DefragmentationSchedule *string
 	CARotationPhase         gardencorev1beta1.CredentialsRotationPhase
-	K8sVersion              string
+	KubernetesVersion       *semver.Version
 	BackupConfig            *BackupConfig
 	HvpaConfig              *HVPAConfig
 	PriorityClassName       string
