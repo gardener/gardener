@@ -891,7 +891,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{code!~\"2..\"}[$__rate_interval]))",
+          "expr": "sum(rate(apiserver_request_total{code=~\"5..\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Error Rate",
