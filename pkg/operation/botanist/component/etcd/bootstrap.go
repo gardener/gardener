@@ -26,7 +26,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -160,19 +159,19 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
-					APIGroups: []string{corev1.GroupName, appsv1.GroupName},
-					Resources: []string{"services", "configmaps", "statefulsets"},
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"services", "configmaps"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
+				},
+				{
+					APIGroups: []string{appsv1.GroupName},
+					Resources: []string{"statefulsets"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
 				},
 				{
 					APIGroups: []string{batchv1.GroupName},
 					Resources: []string{"jobs"},
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-				},
-				{
-					APIGroups: []string{batchv1beta1.GroupName},
-					Resources: []string{"cronjobs"},
-					Verbs:     []string{"get", "list", "watch", "delete"},
 				},
 				{
 					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
