@@ -426,7 +426,7 @@ Please see [this document](../usage/shoot_status.md#constraints) for more detail
 
 ##### Garbage Collection
 
-Stale pods in the shoot namespace in the seed cluster and in the `kube-system` namespace in the shoot cluster are being deleted.
+Stale pods in the shoot namespace in the seed cluster and in the `kube-system` namespace in the shoot cluster are deleted.
 A pod is considered stale when
 
 - it was terminated with reason `Evicted`.
