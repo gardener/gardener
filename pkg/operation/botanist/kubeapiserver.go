@@ -153,6 +153,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			OIDC:                           oidcConfig,
 			Requests:                       requests,
 			RuntimeConfig:                  runtimeConfig,
+			RuntimeVersion:                 b.Seed.KubernetesVersion,
 			StaticTokenKubeconfigEnabled:   b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 			Version:                        b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
