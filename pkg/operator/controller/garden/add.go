@@ -29,7 +29,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ControllerName is the name of this controller.
@@ -61,7 +60,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			return fmt.Errorf("failed getting server version for runtime cluster: %w", err)
 		}
 
-		r.RuntimeVersion, err = semver.NewVersion(versionutils.Normalize(serverVersion.GitVersion))
+		r.RuntimeVersion, err = semver.NewVersion(serverVersion.GitVersion)
 		if err != nil {
 			return fmt.Errorf("failed parsing version %q for runtime cluster: %w", serverVersion.GitVersion, err)
 		}
