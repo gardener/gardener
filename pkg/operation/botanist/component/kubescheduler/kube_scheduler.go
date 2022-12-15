@@ -92,7 +92,7 @@ profiles:
       - name: NodeResourcesBalancedAllocation
       enabled:
       - name: NodeResourcesMostAllocated
-{{- else if or (eq .apiVersion "kubescheduler.config.k8s.io/v1beta2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta3") }}
+{{- else if or (eq .apiVersion "kubescheduler.config.k8s.io/v1beta2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta3") (eq .apiVersion "kubescheduler.config.k8s.io/v1") }}
 - schedulerName: ` + BinPackingSchedulerName + `
   pluginConfig:
   - name: NodeResourcesFit
