@@ -16,142 +16,10 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 17,
-  "iteration": 1671182291283,
+  "id": 18,
+  "iteration": 1671184303124,
   "links": [],
   "panels": [
-    {
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 14,
-      "title": "Headlines (over time range)",
-      "type": "row"
-    },
-    {
-      "datasource": "seed-prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "links": [
-            {
-              "title": "",
-              "url": "/d/webhook-details/controller-runtime-webhook-details?var-datasource=$datasource&var-job=$job&var-webhook=${__series.name}"
-            }
-          ],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 1
-      },
-      "id": 11,
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "text": {}
-      },
-      "pluginVersion": "7.5.17",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(controller_runtime_webhook_requests_total{job=\"$job\",webhook=~\"$webhook\"}[$__range])) by (webhook)",
-          "interval": "",
-          "legendFormat": "{{webhook}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Total requests",
-      "type": "bargauge"
-    },
-    {
-      "datasource": "seed-prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "links": [
-            {
-              "title": "",
-              "url": "/d/webhook-details/controller-runtime-webhook-details?var-datasource=$datasource&var-job=$job&var-webhook=${__series.name}"
-            }
-          ],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 1
-      },
-      "id": 12,
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "text": {}
-      },
-      "pluginVersion": "7.5.17",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(controller_runtime_webhook_latency_seconds_count{job=\"$job\",webhook=~\"$webhook\"}[$__range])) by(webhook)",
-          "interval": "",
-          "legendFormat": "{{webhook}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Request Rate",
-      "type": "bargauge"
-    },
     {
       "collapsed": false,
       "datasource": null,
@@ -159,7 +27,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 0
       },
       "id": 16,
       "panels": [],
@@ -214,7 +82,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 1
       },
       "id": 2,
       "options": {
@@ -236,9 +104,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(controller_runtime_webhook_requests_total{job=\"$job\",webhook=~\"$webhook\"}[$__rate_interval])) by (webhook)",
+          "expr": "sum(rate(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "{{webhook}}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
@@ -294,7 +162,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 10
       },
       "id": 9,
       "options": {
@@ -315,15 +183,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(controller_runtime_webhook_requests_total{job=\"$job\",webhook=~\"$webhook\"}[$__rate_interval])) by (code)",
+          "expr": "sum(rate(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\",code=~\"$code\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "{{code}}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Total Requests by code",
+      "title": "Total Requests per code by pod",
       "type": "timeseries"
     },
     {
@@ -374,7 +242,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 19
       },
       "id": 4,
       "options": {
@@ -395,15 +263,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(controller_runtime_webhook_requests_in_flight{job=\"$job\",webhook=~\"$webhook\"}) by (webhook)",
+          "expr": "sum(controller_runtime_webhook_requests_in_flight{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}) by (pod)",
           "interval": "",
-          "legendFormat": "{{webhook}}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Inflight Requests",
+      "title": "Inflight Requests by pod",
       "type": "timeseries"
     },
     {
@@ -443,10 +311,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -458,7 +322,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 28
       },
       "id": 6,
       "options": {
@@ -480,15 +344,31 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile($percentile/100,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",webhook=~\"$webhook\"}[$__rate_interval])) by(le,webhook))",
+          "expr": "histogram_quantile(0.5,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by(le,webhook))",
           "interval": "",
-          "legendFormat": "{{webhook}}",
+          "legendFormat": "P50",
           "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.9,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by(le,webhook))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "P90",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by(le,webhook))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "P99",
+          "refId": "C"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Latency (${percentile}th Percentile)",
+      "title": "Latency (P50, P90, P99)",
       "type": "timeseries"
     },
     {
@@ -539,7 +419,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 38
       },
       "id": 8,
       "options": {
@@ -561,15 +441,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(controller_runtime_webhook_latency_seconds_count{job=\"$job\",webhook=~\"$webhook\"}[$__rate_interval])) by(webhook)",
+          "expr": "sum(rate(controller_runtime_webhook_latency_seconds_count{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by(pod)",
           "interval": "",
-          "legendFormat": "{{webhook}}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Request Rate",
+      "title": "Request Rate by pod",
       "type": "timeseries"
     }
   ],
@@ -584,7 +464,7 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "gardener-resource-manager",
           "value": "gardener-resource-manager"
         },
@@ -615,125 +495,25 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "selected": false,
+          "text": "/webhooks/high-availability-config",
+          "value": "/webhooks/high-availability-config"
         },
         "datasource": "seed-prometheus",
         "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},webhook)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
-        "multi": true,
+        "multi": false,
         "name": "webhook",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": false,
-            "text": "/validate-druid-gardener-cloud-v1alpha1-etcd",
-            "value": "/validate-druid-gardener-cloud-v1alpha1-etcd"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-backupbucket",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-backupbucket"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-backupentry",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-backupentry"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-bastion",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-bastion"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-containerruntime",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-containerruntime"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-controlplane",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-controlplane"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-dnsrecord",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-dnsrecord"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-extension",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-extension"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-infrastructure",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-infrastructure"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-network",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-network"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"
-          },
-          {
-            "selected": false,
-            "text": "/validate-extensions-gardener-cloud-v1alpha1-worker",
-            "value": "/validate-extensions-gardener-cloud-v1alpha1-worker"
-          },
-          {
-            "selected": false,
-            "text": "/webhooks/high-availability-config",
-            "value": "/webhooks/high-availability-config"
-          },
-          {
-            "selected": false,
-            "text": "/webhooks/invalidate-service-account-token-secret",
-            "value": "/webhooks/invalidate-service-account-token-secret"
-          },
-          {
-            "selected": false,
-            "text": "/webhooks/mount-projected-service-account-token",
-            "value": "/webhooks/mount-projected-service-account-token"
-          },
-          {
-            "selected": false,
-            "text": "/webhooks/pod-topology-spread-constraints",
-            "value": "/webhooks/pod-topology-spread-constraints"
-          },
-          {
-            "selected": false,
-            "text": "/webhooks/seccomp-profile",
-            "value": "/webhooks/seccomp-profile"
-          },
-          {
-            "selected": false,
-            "text": "/webhooks/validate-crd-deletion",
-            "value": "/webhooks/validate-crd-deletion"
-          }
-        ],
+        "options": [],
         "query": {
           "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},webhook)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 0,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -747,37 +527,71 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": "50",
-          "value": "50"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
+        "datasource": "seed-prometheus",
+        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},code)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
-        "multi": false,
-        "name": "percentile",
-        "options": [
-          {
-            "selected": true,
-            "text": "50",
-            "value": "50"
-          },
-          {
-            "selected": false,
-            "text": "90",
-            "value": "90"
-          },
-          {
-            "selected": false,
-            "text": "99",
-            "value": "99"
-          }
-        ],
-        "query": "50,90,99",
-        "queryValue": "",
+        "multi": true,
+        "name": "code",
+        "options": [],
+        "query": {
+          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},code)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
         "skipUrlSync": false,
-        "type": "custom"
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "seed-prometheus",
+        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},pod)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": {
+          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},pod)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -787,7 +601,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Controller Runtime / Webhooks",
-  "uid": "webhooks",
+  "title": "Controller Runtime / Webhook Details",
+  "uid": "webhook-details",
   "version": 1
 }

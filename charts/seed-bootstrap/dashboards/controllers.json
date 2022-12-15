@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 16,
-  "iteration": 1670841148023,
+  "id": 14,
+  "iteration": 1671174853468,
   "links": [],
   "panels": [
     {
@@ -44,7 +44,7 @@
           "links": [
             {
               "title": "",
-              "url": "/d/controller-details/controller-runtime-controllers-controller-details?var-datasource=$datasource&var-job=$job&var-controller=${__data.fields.controller}"
+              "url": "/d/controller-details/controller-runtime-controllers-controller-details?var-datasource=$datasource&var-job=$job&var-controller=${__series.name}"
             }
           ],
           "mappings": [],
@@ -218,10 +218,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -312,7 +308,7 @@
             "showPoints": "auto",
             "spanNulls": false
           },
-          "decimals": 2,
+          "decimals": 4,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1595,7 +1591,7 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "gardenlet",
           "value": "gardenlet"
         },
@@ -1626,47 +1622,7 @@
       {
         "allValue": null,
         "current": {
-          "isNone": true,
           "selected": true,
-          "text": "None",
-          "value": ""
-        },
-        "datasource": "seed-prometheus",
-        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"},app_kubernetes_io_instance)",
-        "description": null,
-        "error": null,
-        "hide": 0,
-        "includeAll": false,
-        "label": "name",
-        "multi": false,
-        "name": "instance_name",
-        "options": [
-          {
-            "isNone": true,
-            "selected": true,
-            "text": "None",
-            "value": ""
-          }
-        ],
-        "query": {
-          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"},app_kubernetes_io_instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 0,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {
-          "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -1675,7 +1631,7 @@
           ]
         },
         "datasource": "seed-prometheus",
-        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\",app_kubernetes_io_instance=\"$instance_name\"}, controller)",
+        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1685,7 +1641,7 @@
         "name": "controller",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\",app_kubernetes_io_instance=\"$instance_name\"}, controller)",
+          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
