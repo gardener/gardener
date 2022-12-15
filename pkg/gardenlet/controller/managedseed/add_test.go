@@ -75,13 +75,13 @@ var _ = Describe("Add", func() {
 		seedNameFromSeedConfig = "test-seed"
 	})
 
-	Describe("#ManagedSeedFilterPredicate", func() {
+	Describe("#ManagedSeedPredicate", func() {
 		var (
 			oldManagedSeed, newManagedSeed *seedmanagementv1alpha1.ManagedSeed
 		)
 
 		BeforeEach(func() {
-			p = reconciler.ManagedSeedFilterPredicate(seedNameFromSeedConfig)
+			p = reconciler.ManagedSeedPredicate(seedNameFromSeedConfig)
 
 			oldManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -173,13 +173,13 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("#SeedOfManagedSeedFilterPredicate", func() {
+	Describe("#SeedOfManagedSeedPredicate", func() {
 		var (
 			oldSeed, newSeed *gardencorev1beta1.Seed
 		)
 
 		BeforeEach(func() {
-			p = reconciler.SeedOfManagedSeedFilterPredicate(seedNameFromSeedConfig)
+			p = reconciler.SeedOfManagedSeedPredicate(seedNameFromSeedConfig)
 
 			oldSeed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -297,16 +297,20 @@ var _ = Describe("Add", func() {
 			queue          *mockworkqueue.MockRateLimitingInterface
 			obj            *seedmanagementv1alpha1.ManagedSeed
 			req            reconcile.Request
-			cfg            config.ManagedSeedControllerConfiguration
+			cfg            config.GardenletConfiguration
 			randomDuration = 10 * time.Millisecond
 		)
 
 		BeforeEach(func() {
-			cfg = config.ManagedSeedControllerConfiguration{
-				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
+			cfg = config.GardenletConfiguration{
+				Controllers: &config.GardenletControllerConfiguration{
+					ManagedSeed: &config.ManagedSeedControllerConfiguration{
+						SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
+					},
+				},
 			}
 
-			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
 			obj = &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: "managedseed", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
@@ -334,30 +338,30 @@ var _ = Describe("Add", func() {
 		It("should enqueue the object without delay for Create events when generation changed and jitterudpates is set to false", func() {
 			queue.EXPECT().Add(req)
 
-			cfg.JitterUpdates = pointer.Bool(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
-			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Create(event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Create events when generation changed and  jitterUpdates is set to true", func() {
 			queue.EXPECT().AddAfter(req, randomDuration)
 
-			cfg.JitterUpdates = pointer.Bool(true)
+			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
-			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Create(event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Create events when there is no change in generation", func() {
 			queue.EXPECT().AddAfter(req, randomDuration)
 
-			cfg.JitterUpdates = pointer.Bool(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 2
-			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Create(event.CreateEvent{Object: obj}, queue)
 		})
 
@@ -388,20 +392,20 @@ var _ = Describe("Add", func() {
 		It("should enqueue the object for Update events when jitterUpdates is set to false", func() {
 			queue.EXPECT().Add(req)
 
-			cfg.JitterUpdates = pointer.Bool(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
-			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Update events when jitterUpdates is set to true", func() {
 			queue.EXPECT().AddAfter(req, randomDuration)
 
-			cfg.JitterUpdates = pointer.Bool(true)
+			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
-			hdlr = (&Reconciler{}).EnqueueWithJitterDelay(cfg)
+			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 

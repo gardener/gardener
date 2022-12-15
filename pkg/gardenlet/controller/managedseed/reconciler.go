@@ -20,8 +20,10 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -29,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -37,12 +38,12 @@ import (
 type Reconciler struct {
 	GardenClient          client.Client
 	Actuator              Actuator
-	Config                config.ManagedSeedControllerConfiguration
+	Config                config.GardenletConfiguration
+	ShootClientMap        clientmap.ClientMap
+	ImageVector           imagevector.ImageVector
 	ChartsPath            string
 	GardenNamespaceGarden string
 	GardenNamespaceShoot  string
-	// RateLimiter allows limiting exponential backoff for testing purposes
-	RateLimiter ratelimiter.RateLimiter
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -98,11 +99,11 @@ func (r *Reconciler) reconcile(
 
 	// If waiting, requeue after WaitSyncPeriod
 	if wait {
-		return reconcile.Result{RequeueAfter: r.Config.WaitSyncPeriod.Duration}, nil
+		return reconcile.Result{RequeueAfter: r.Config.Controllers.ManagedSeed.WaitSyncPeriod.Duration}, nil
 	}
 
 	// Return success result
-	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.ManagedSeed.SyncPeriod.Duration}, nil
 }
 
 func (r *Reconciler) delete(
@@ -140,7 +141,7 @@ func (r *Reconciler) delete(
 
 	// If waiting, requeue after WaitSyncPeriod
 	if wait {
-		return reconcile.Result{RequeueAfter: r.Config.WaitSyncPeriod.Duration}, nil
+		return reconcile.Result{RequeueAfter: r.Config.Controllers.ManagedSeed.WaitSyncPeriod.Duration}, nil
 	}
 
 	// Remove gardener finalizer if requested by the actuator
@@ -155,7 +156,7 @@ func (r *Reconciler) delete(
 	}
 
 	// Return success result
-	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.ManagedSeed.SyncPeriod.Duration}, nil
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, ms *seedmanagementv1alpha1.ManagedSeed, status *seedmanagementv1alpha1.ManagedSeedStatus) error {

@@ -89,8 +89,10 @@ func AddToManager(
 	}
 
 	if err := (&managedseed.Reconciler{
-		Config: *cfg.Controllers.ManagedSeed,
-	}).AddToManager(mgr, *cfg, gardenCluster, seedCluster, shootClientMap, imageVector); err != nil {
+		Config:         *cfg,
+		ImageVector:    imageVector,
+		ShootClientMap: shootClientMap,
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
 	}
 

@@ -50,7 +50,7 @@ var _ = Describe("Reconciler", func() {
 		gardenClient       *mockclient.MockClient
 		gardenStatusWriter *mockclient.MockStatusWriter
 
-		cfg config.ManagedSeedControllerConfiguration
+		cfg config.GardenletConfiguration
 
 		reconciler reconcile.Reconciler
 
@@ -70,9 +70,13 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClient.EXPECT().Status().Return(gardenStatusWriter).AnyTimes()
 
-		cfg = config.ManagedSeedControllerConfiguration{
-			SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
-			WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
+		cfg = config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				ManagedSeed: &config.ManagedSeedControllerConfiguration{
+					SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
+					WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
+				},
+			},
 		}
 
 		reconciler = &Reconciler{GardenClient: gardenClient, Actuator: actuator, Config: cfg}

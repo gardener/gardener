@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,7 +98,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
@@ -219,13 +217,13 @@ var _ = BeforeSuite(func() {
 
 	gardenNamespaceShoot = "garden-shoot-" + testRunID
 	Expect((&managedseed.Reconciler{
-		Config:                *cfg.Controllers.ManagedSeed,
+		Config:                cfg,
 		ChartsPath:            chartsPath,
 		GardenNamespaceGarden: gardenNamespaceGarden.Name,
 		GardenNamespaceShoot:  gardenNamespaceShoot,
-		// limit exponential backoff in tests
-		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
-	}).AddToManager(mgr, cfg, mgr, mgr, shootClientMap, imageVector)).To(Succeed())
+		ImageVector:           imageVector,
+		ShootClientMap:        shootClientMap,
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
