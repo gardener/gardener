@@ -121,7 +121,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 				return false
 			}
 
-			// re-evaluate shoot health status right after a reconciliation operation has finished
+			// re-evaluate shoot health status right after a reconciliation operation has succeeded
 			return shootReconciliationFinishedSuccessful(oldShoot, shoot)
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },

@@ -342,7 +342,7 @@ If at least one `ManagedResource` is unhealthy and there is threshold configurat
 
 - to `Progressing` if it was `True` before.
 - to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
-- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition does exceed the configured threshold duration.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
 
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
@@ -415,7 +415,7 @@ If at least one check fails and there is threshold configuration for the conditi
 
 - to `Progressing` if it was `True` before.
 - to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
-- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition does exceed the configured threshold duration.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
 
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
