@@ -181,16 +181,12 @@ else
 
   echo "Starting gardenlet for seed $SEED_NAME..."
 
-  echo "KUBECONFIG=${SEED_KUBECONFIG_GARDENLET_TOKEN}"
-  echo "GARDEN_KUBECONFIG=$GARDEN_KUBECONFIG"
-  echo "IMAGEVECTOR_OVERWRITE=${IMAGEVECTOR_OVERWRITE:-${file_imagevector_overwrite}}"
-
   KUBECONFIG="${SEED_KUBECONFIG_GARDENLET_TOKEN}" \
   GARDEN_KUBECONFIG="$GARDEN_KUBECONFIG" \
   IMAGEVECTOR_OVERWRITE="${IMAGEVECTOR_OVERWRITE:-${file_imagevector_overwrite}}" \
   GO111MODULE=on \
       go run \
-      -mod=vendor \
+        -mod=vendor \
         -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
         "$REPO_ROOT/cmd/gardenlet/main.go" \
         --config="$configFile"

@@ -100,10 +100,12 @@ const (
 	// alpha: v1.55.0
 	CoreDNSQueryRewriting featuregate.Feature = "CoreDNSQueryRewriting"
 
-	// HPlusVAutoscaling is applied to a seed cluster and enables simultaneous independent horizontal and vertical scaling.
-	// This feature is incompatible with the HVPA and HVPAForShootedSeed features.
+	// HPlusVAutoscaling is applied to a seed cluster. When enabled, kube-apiserver instances in the control planes
+	// of all shoots hosted on that seed are scaled as follows: Simultaneous horizontal and vertical autoscaling are
+	// applied, driven by signals which are sufficiently independent, as to avoid negative mutual interference.
+	// This feature is incompatible with the HVPA and HVPAForShootedSeed features, and takes precedence over them.
 	// owner @andrerun
-	// alpha: v1.57.0
+	// alpha: v1.63.0
 	HPlusVAutoscaling featuregate.Feature = "HPlusVAutoscaling"
 )
 

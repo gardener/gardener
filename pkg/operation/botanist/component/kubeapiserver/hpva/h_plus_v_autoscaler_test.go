@@ -26,7 +26,6 @@ var _ = Describe("HPlusVAutoscaler", func() {
 	const (
 		containerNameApiserver  = "kube-apiserver"
 		containerNamePodMutator = "apiserver-proxy-pod-mutator"
-		containerNameVPNSeed    = "vpn-seed"
 	)
 	var (
 		deploymentName = "test-deployment"
@@ -50,7 +49,6 @@ var _ = Describe("HPlusVAutoscaler", func() {
 					IsEnabled:                    isEnabled,
 					MinReplicaCount:              1,
 					MaxReplicaCount:              4,
-					ContainerNameVPNSeed:         containerNameVPNSeed,
 					ContainerNameApiserver:       containerNameApiserver,
 					ContainerNameProxyPodMutator: containerNamePodMutator,
 				}
@@ -115,12 +113,10 @@ var _ = Describe("HPlusVAutoscaler", func() {
 						Name:       deploymentName,
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						MinReplicas: pointer.Int32(2),
-						UpdateMode:  &updateModeAutoAsLvalue,
+						UpdateMode: &updateModeAutoAsLvalue,
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: getVPAContainerResourcePolicies(
-							containerNameApiserver, containerNamePodMutator, containerNameVPNSeed),
+						ContainerPolicies: getVPAContainerResourcePolicies(containerNameApiserver, containerNamePodMutator),
 					},
 				},
 			}
@@ -173,9 +169,8 @@ var _ = Describe("HPlusVAutoscaler", func() {
 					client.ObjectKey{Namespace: namespaceName, Name: vpaName},
 					&actualVpa),
 				).To(Succeed())
-				Expect(len(actualVpa.Spec.ResourcePolicy.ContainerPolicies)).To(Equal(2))
+				Expect(len(actualVpa.Spec.ResourcePolicy.ContainerPolicies)).To(Equal(1))
 				Expect(actualVpa.Spec.ResourcePolicy.ContainerPolicies[0].ContainerName).To(Equal(containerNameApiserver))
-				Expect(actualVpa.Spec.ResourcePolicy.ContainerPolicies[1].ContainerName).To(Equal(containerNameVPNSeed))
 			})
 		})
 		Context("in disabled state", func() {

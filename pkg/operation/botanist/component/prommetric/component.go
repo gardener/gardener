@@ -43,7 +43,8 @@ type PrometheusMetricsAdapter struct {
 	testIsolation prometheusMetricsAdapterTestIsolation // Provides indirections necessary to isolate the unit during tests
 }
 
-// Creates a new PrometheusMetricsAdapter instance tied to a specific server connection
+// Creates a new PrometheusMetricsAdapter instance tied to a specific server connection.
+// An empty string is acceptable for the containerImageName parameter, if the instance will only be used to effect removal.
 func NewPrometheusMetricsAdapter(
 	namespace string,
 	containerImageName string,

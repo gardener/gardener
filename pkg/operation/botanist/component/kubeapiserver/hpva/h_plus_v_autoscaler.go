@@ -34,7 +34,6 @@ import (
 type DesiredStateParameters struct {
 	ContainerNameProxyPodMutator string // Empty string indicates that pod mutator is disabled
 	ContainerNameApiserver       string
-	ContainerNameVPNSeed         string
 	IsEnabled                    bool
 	MaxReplicaCount              int32
 	MinReplicaCount              int32
@@ -119,8 +118,7 @@ func (hpva *HPlusVAutoscaler) Reconcile(
 		ctx,
 		kubeClient,
 		parameters.ContainerNameProxyPodMutator,
-		parameters.ContainerNameApiserver,
-		parameters.ContainerNameVPNSeed); err != nil {
+		parameters.ContainerNameApiserver); err != nil {
 
 		return fmt.Errorf(baseErrorMessage+
 			" - failed to reconcile the VPA which is part of the HPlusVAutoscaler from the server. "+
@@ -210,8 +208,7 @@ func (hpva *HPlusVAutoscaler) reconcileVPA(
 	ctx context.Context,
 	kubeClient client.Client,
 	containerNameProxyPodMutator string,
-	containerNameApiserver string,
-	containerNameVPNSeed string) error {
+	containerNameApiserver string) error {
 
 	vpa := hpva.makeVPA()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, kubeClient, vpa, func() error {
@@ -223,12 +220,11 @@ func (hpva *HPlusVAutoscaler) reconcileVPA(
 		}
 		updateModeAutoAsLvalue := vpaautoscalingv1.UpdateModeAuto
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			MinReplicas: pointer.Int32(2),
-			UpdateMode:  &updateModeAutoAsLvalue,
+			UpdateMode: &updateModeAutoAsLvalue,
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: getVPAContainerResourcePolicies(
-				containerNameApiserver, containerNameProxyPodMutator, containerNameVPNSeed),
+				containerNameApiserver, containerNameProxyPodMutator),
 		}
 		vpa.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer + "-vpa"}
 
@@ -250,8 +246,7 @@ func (hpva *HPlusVAutoscaler) reconcileVPA(
 // The containerNameAPIServerProxyPodMutator parameter must be empty when the mutator is disabled
 func getVPAContainerResourcePolicies(
 	containerNameApiserver string,
-	containerNameProxyPodMutator string,
-	containerNameVPNSeed string) []vpaautoscalingv1.ContainerResourcePolicy {
+	containerNameProxyPodMutator string) []vpaautoscalingv1.ContainerResourcePolicy {
 
 	containerPolicyAutoAsLvalue := vpaautoscalingv1.ContainerScalingModeAuto
 	containerPolicyOffAsLvalue := vpaautoscalingv1.ContainerScalingModeOff
@@ -269,11 +264,6 @@ func getVPAContainerResourcePolicies(
 				corev1.ResourceCPU:    resource.MustParse("8"),
 				corev1.ResourceMemory: resource.MustParse("25G"),
 			},
-			ControlledValues: &controlledValuesRequestsOnlyAsLvalue,
-		},
-		{
-			ContainerName:    containerNameVPNSeed,
-			Mode:             &containerPolicyOffAsLvalue,
 			ControlledValues: &controlledValuesRequestsOnlyAsLvalue,
 		},
 	}

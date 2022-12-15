@@ -617,6 +617,5 @@ func (k *kubeAPIServer) reconcileHPlusVAutoscaler(ctx context.Context, deploymen
 			MaxReplicaCount:              k.values.Autoscaling.MaxReplicas,
 			ContainerNameProxyPodMutator: desiredValueContainerNameAPIServerProxyPodMutator,
 			ContainerNameApiserver:       ContainerNameKubeAPIServer,
-			ContainerNameVPNSeed:         containerNameVPNSeed,
 		})
 }

@@ -305,7 +305,7 @@ var _ = Describe("PrometheusMetricsAdapter", func() {
 							"--v=2",
 							"--config=/etc/adapter/config.yaml"
 						],
-						"image": "k8s.gcr.io/prometheus-adapter/prometheus-adapter:v0.9.1",
+						"image": "test-image",
 						"name": "custom-metrics-apiserver",
 						"ports": [
 							{
