@@ -140,6 +140,11 @@ The virtual garden control plane components are:
 - `virtual-garden-etcd-main`
 - `virtual-garden-etcd-events`
 
+If the `.spec.virtualCluster.controlPlane.highAvailability={}` is set then these components will be deployed in a "highly available" mode.
+For ETCD, this means that there will be 3 replicas each.
+This works similar like for `Shoot`s (see [this document](../usage/shoot_high_availability.md)) except for the fact that there is no failure tolerance type configurability.
+The `gardener-resource-manager`'s [HighAvailabiltyConfig webhook](resource-manager.md#high-availability-config) makes sure that all pods with multiple replicas are spread on nodes, and if there are at least two zones in `.spec.runtimeCluster.provider.zones` then they also get spread across availability zones.
+
 The `virtual-garden-kube-apiserver` `Deployment` (not yet managed by the operator) is exposed via a `Service` of type `LoadBalancer` with the same name.
 In the future, we might switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
 
