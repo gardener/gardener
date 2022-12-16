@@ -53,11 +53,12 @@ if [[ "$1" != "operator" ]]; then
     e2e-update-node.local
     e2e-update-zone.local
     e2e-upgrade.local
+    e2e-upgrade-ha.local
   )
 
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     for shoot in "${shoot_names[@]}" ; do
-      if [ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" = "zone" -a "$shoot" = "e2e-update-zone.local" ]; then
+      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upgrade-ha.local" || "$shoot" == "e2e-update-zone.local") ]]; then
         # Do not add the entry for the e2e-update-zone test as the target ip is dynamic.
         # The shoot cluster in e2e-update-zone is created as single-zone control plane and afterwards updated to a multi-zone control plane.
         # This means that the external loadbalancer IP will change from a zone-specific istio ingress gateway to the default istio ingress gateway.
