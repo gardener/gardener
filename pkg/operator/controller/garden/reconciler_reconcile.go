@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -229,6 +230,22 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 			)(ctx); err != nil {
 				return err
 			}
+		}
+
+		// Deploy NetworkPolicy allowing ETCD to talk to the runtime cluster's API server.
+		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
+		networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}}
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClient, networkPolicy, func() error {
+			networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
+				To: []networkingv1.NetworkPolicyPeer{{
+					IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"},
+				}},
+			}}
+			networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: etcd.GetLabels()}
+			networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
+			return nil
+		}); err != nil {
+			return err
 		}
 
 		return flow.Parallel(etcdMain.Deploy, etcdEvents.Deploy)(ctx)

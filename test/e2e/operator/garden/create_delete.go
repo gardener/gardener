@@ -47,7 +47,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 	It("Create, Delete", Label("simple"), func() {
 		By("Create Garden")
-		ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
 		defer cancel()
 
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
@@ -82,7 +82,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		}).Should(Succeed())
 
 		By("Delete Garden")
-		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 		defer cancel()
 
 		Expect(gutil.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
@@ -119,7 +119,12 @@ func healthyManagedResource(name string) gomegatypes.GomegaMatcher {
 
 func healthyEtcd(name string) gomegatypes.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
-		"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal(name)}),
-		"Status":     MatchFields(IgnoreExtras, Fields{"Ready": PointTo(BeTrue())}),
+		"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+			"Name": Equal(name),
+		}),
+		"Status": MatchFields(IgnoreExtras, Fields{
+			"Ready":         PointTo(BeTrue()),
+			"ReadyReplicas": Equal(int32(3)),
+		}),
 	})
 }

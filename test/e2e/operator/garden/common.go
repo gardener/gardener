@@ -78,6 +78,9 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 				},
 			},
 			VirtualCluster: operatorv1alpha1.VirtualCluster{
+				ControlPlane: &operatorv1alpha1.ControlPlane{
+					HighAvailability: &operatorv1alpha1.HighAvailability{},
+				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{

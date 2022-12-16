@@ -22,6 +22,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -145,6 +146,11 @@ func (r *Reconciler) newEtcd(
 		return nil, err
 	}
 
+	replicas := pointer.Int32(1)
+	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
+		replicas = pointer.Int32(3)
+	}
+
 	return etcd.New(
 		log,
 		r.RuntimeClient,
@@ -154,16 +160,17 @@ func (r *Reconciler) newEtcd(
 			NamePrefix:              namePrefix,
 			Role:                    role,
 			Class:                   class,
-			Replicas:                pointer.Int32(1),
-			DefragmentationSchedule: &defragmentationSchedule,
+			Replicas:                replicas,
 			StorageCapacity:         storageCapacity,
 			StorageClassName:        storageClassName,
-			PriorityClassName:       v1beta1constants.PriorityClassNameGardenSystem500,
+			DefragmentationSchedule: &defragmentationSchedule,
+			CARotationPhase:         helper.GetCARotationPhase(garden.Status.Credentials),
 			HvpaConfig: &etcd.HVPAConfig{
 				Enabled:               hvpaEnabled(),
 				MaintenanceTimeWindow: garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 				ScaleDownUpdateMode:   hvpaScaleDownUpdateMode,
 			},
+			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem500,
 		},
 	), nil
 }
