@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gardener.cloud:system:gardenlet
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
   labels:
     app: gardener
     role: gardenlet

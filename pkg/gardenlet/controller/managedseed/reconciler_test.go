@@ -50,7 +50,7 @@ var _ = Describe("Reconciler", func() {
 		gardenClient       *mockclient.MockClient
 		gardenStatusWriter *mockclient.MockStatusWriter
 
-		cfg *config.ManagedSeedControllerConfiguration
+		cfg config.GardenletConfiguration
 
 		reconciler reconcile.Reconciler
 
@@ -70,12 +70,16 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClient.EXPECT().Status().Return(gardenStatusWriter).AnyTimes()
 
-		cfg = &config.ManagedSeedControllerConfiguration{
-			SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
-			WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
+		cfg = config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				ManagedSeed: &config.ManagedSeedControllerConfiguration{
+					SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
+					WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
+				},
+			},
 		}
 
-		reconciler = newReconciler(gardenClient, actuator, cfg)
+		reconciler = &Reconciler{GardenClient: gardenClient, Actuator: actuator, Config: cfg}
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}
@@ -137,10 +141,14 @@ var _ = Describe("Reconciler", func() {
 				expectPatchManagedSeed(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(ms.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
 				})
+				actuator.EXPECT().Reconcile(ctx, gomock.AssignableToTypeOf(logr.Logger{}), managedSeed).Return(status, false, nil)
+				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(&ms.Status).To(Equal(status))
+				})
 
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriod}))
 			})
 
 			It("should reconcile the ManagedSeed creation or update, and update the status (no wait)", func() {

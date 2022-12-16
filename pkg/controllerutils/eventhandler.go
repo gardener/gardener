@@ -28,6 +28,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
+func reconcileRequest(obj client.Object) reconcile.Request {
+	return reconcile.Request{NamespacedName: types.NamespacedName{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+	}}
+}
+
 // EnqueueCreateEventsOncePer24hDuration returns handler.Funcs which enqueues the object for Create events only once per 24h.
 // All other events are normally enqueued.
 func EnqueueCreateEventsOncePer24hDuration(clock clock.Clock) handler.Funcs {
@@ -36,28 +43,19 @@ func EnqueueCreateEventsOncePer24hDuration(clock clock.Clock) handler.Funcs {
 			if evt.Object == nil {
 				return
 			}
-			q.AddAfter(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      evt.Object.GetName(),
-				Namespace: evt.Object.GetNamespace(),
-			}}, getDuration(evt.Object, clock))
+			q.AddAfter(reconcileRequest(evt.Object), getDuration(evt.Object, clock))
 		},
 		UpdateFunc: func(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 			if evt.ObjectNew == nil {
 				return
 			}
-			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      evt.ObjectNew.GetName(),
-				Namespace: evt.ObjectNew.GetNamespace(),
-			}})
+			q.Add(reconcileRequest(evt.ObjectNew))
 		},
 		DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 			if evt.Object == nil {
 				return
 			}
-			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      evt.Object.GetName(),
-				Namespace: evt.Object.GetNamespace(),
-			}})
+			q.Add(reconcileRequest(evt.Object))
 		},
 	}
 }

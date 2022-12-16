@@ -3,7 +3,7 @@ apiVersion: {{ include "poddisruptionbudgetversion" .}}
 kind: PodDisruptionBudget
 metadata:
   name: gardenlet
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
   labels:
     app: gardener
     role: gardenlet

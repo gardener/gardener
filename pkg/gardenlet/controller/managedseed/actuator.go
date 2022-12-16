@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -57,13 +56,15 @@ type Actuator interface {
 
 // actuator is a concrete implementation of Actuator.
 type actuator struct {
-	gardenConfig    *rest.Config
-	gardenAPIReader client.Reader
-	gardenClient    client.Client
-	seedClient      client.Client
-	shootClientMap  clientmap.ClientMap
-	vp              ValuesHelper
-	recorder        record.EventRecorder
+	gardenConfig         *rest.Config
+	gardenAPIReader      client.Reader
+	gardenClient         client.Client
+	seedClient           client.Client
+	shootClientMap       clientmap.ClientMap
+	vp                   ValuesHelper
+	recorder             record.EventRecorder
+	chartsPath           string
+	gardenNamespaceShoot string
 }
 
 // newActuator creates a new Actuator with the given clients, ValuesHelper, and logger.
@@ -74,15 +75,19 @@ func newActuator(
 	shootClientMap clientmap.ClientMap,
 	vp ValuesHelper,
 	recorder record.EventRecorder,
+	chartsPath string,
+	gardenNamespaceShoot string,
 ) Actuator {
 	return &actuator{
-		gardenConfig:    gardenConfig,
-		gardenAPIReader: gardenAPIReader,
-		gardenClient:    gardenClient,
-		seedClient:      seedClient,
-		shootClientMap:  shootClientMap,
-		vp:              vp,
-		recorder:        recorder,
+		gardenConfig:         gardenConfig,
+		gardenAPIReader:      gardenAPIReader,
+		gardenClient:         gardenClient,
+		seedClient:           seedClient,
+		shootClientMap:       shootClientMap,
+		vp:                   vp,
+		recorder:             recorder,
+		chartsPath:           chartsPath,
+		gardenNamespaceShoot: gardenNamespaceShoot,
 	}
 }
 
@@ -321,7 +326,7 @@ func (a *actuator) Delete(
 func (a *actuator) ensureGardenNamespace(ctx context.Context, shootClient client.Client) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: v1beta1constants.GardenNamespace,
+			Name: a.gardenNamespaceShoot,
 		},
 	}
 	if err := shootClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace); err != nil {
@@ -336,7 +341,7 @@ func (a *actuator) ensureGardenNamespace(ctx context.Context, shootClient client
 func (a *actuator) deleteGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: v1beta1constants.GardenNamespace,
+			Name: a.gardenNamespaceShoot,
 		},
 	}
 	return client.IgnoreNotFound(shootClient.Client().Delete(ctx, gardenNamespace))
@@ -344,7 +349,7 @@ func (a *actuator) deleteGardenNamespace(ctx context.Context, shootClient kubern
 
 func (a *actuator) getGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
-	if err := shootClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), ns); err != nil {
+	if err := shootClient.Client().Get(ctx, kutil.Key(a.gardenNamespaceShoot), ns); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -399,7 +404,7 @@ func (a *actuator) deployGardenlet(
 	}
 
 	// Apply gardenlet chart
-	if err := shootClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values)); err != nil {
+	if err := shootClient.ChartApplier().Apply(ctx, filepath.Join(a.chartsPath, "gardener", "gardenlet"), a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values)); err != nil {
 		return err
 	}
 
@@ -441,12 +446,12 @@ func (a *actuator) deleteGardenlet(
 	}
 
 	// Delete gardenlet chart
-	return shootClient.ChartApplier().Delete(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
+	return shootClient.ChartApplier().Delete(ctx, filepath.Join(a.chartsPath, "gardener", "gardenlet"), a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 }
 
 func (a *actuator) getGardenletDeployment(ctx context.Context, shootClient kubernetes.Interface) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
-	if err := shootClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.DeploymentNameGardenlet), deployment); err != nil {
+	if err := shootClient.Client().Get(ctx, kutil.Key(a.gardenNamespaceShoot, v1beta1constants.DeploymentNameGardenlet), deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -715,7 +720,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigSecretName,
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: a.gardenNamespaceShoot,
 		}
 	}
 
@@ -751,7 +756,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 	if gcc.BootstrapKubeconfig == nil {
 		gcc.BootstrapKubeconfig = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigBootstrapSecretName,
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: a.gardenNamespaceShoot,
 		}
 	}
 

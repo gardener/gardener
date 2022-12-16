@@ -31,7 +31,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardenlet
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
   labels:
     high-availability-config.resources.gardener.cloud/skip: "true"
 {{ include "gardenlet.deployment.labels" . | indent 4 }}

@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -35,11 +34,6 @@ import (
 // ValidateManagedSeed validates a ManagedSeed object.
 func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	// Ensure namespace is garden
-	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden"))
-	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"), false)...)

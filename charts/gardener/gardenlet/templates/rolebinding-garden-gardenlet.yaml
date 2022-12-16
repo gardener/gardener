@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gardener.cloud:system:gardenlet
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
   labels:
     app: gardener
     role: gardenlet
@@ -17,4 +17,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
