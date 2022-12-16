@@ -170,6 +170,28 @@ function set_seed_name() {
   esac
 }
 
+function run_pre_upgrade_test() {
+  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
+  node | zone)
+    make test-ha-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    ;;
+  *)
+    make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    ;;
+  esac
+}
+
+function run_post_upgrade_test() {
+  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
+  node | zone)
+    make test-ha-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    ;;
+  *)
+    make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    ;;
+  esac
+}
+
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 set_cluster_name
@@ -193,7 +215,7 @@ echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
 install_previous_release
 
 echo "Running gardener pre-upgrade tests"
-make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+run_pre_upgrade_test
 
 echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
 upgrade_to_next_release
@@ -206,6 +228,6 @@ kubectl wait seed $SEED_NAME --timeout=5m --for=jsonpath="{.status.gardener.vers
 TIMEOUT=1200 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 echo "Running gardener post-upgrade tests"
-make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+run_post_upgrade_test
 
 gardener_down

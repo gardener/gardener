@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"context"
-	"net"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -33,9 +32,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 	f.Shoot.Spec.ControlPlane = nil
 
 	It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", func() {
-		setupDNSForTest()
-		DeferCleanup(tearDownDNSForTest)
-
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 		defer cancel()
@@ -54,24 +50,3 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
-
-var defaultResolver *net.Resolver
-
-func setupDNSForTest() {
-	defaultResolver = net.DefaultResolver
-	net.DefaultResolver = &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			dialer := net.Dialer{
-				Timeout: time.Duration(5) * time.Second,
-			}
-			// We use tcp to distinguish easily in-cluster requests (done via udp) and requests from
-			// the tests (using tcp). The result for cluster api names differ depending on the source.
-			return dialer.DialContext(ctx, "tcp", "127.0.0.1:5353")
-		},
-	}
-}
-
-func tearDownDNSForTest() {
-	net.DefaultResolver = defaultResolver
-}
