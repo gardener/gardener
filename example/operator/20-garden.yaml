@@ -26,6 +26,8 @@ spec:
       verticalPodAutoscaler:
         enabled: true
   virtualCluster:
+  # controlPlane:
+  #   highAvailability: {}
     etcd:
       main:
         backup:

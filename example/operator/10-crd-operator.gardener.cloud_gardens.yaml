@@ -101,6 +101,15 @@ spec:
                 description: VirtualCluster contains configuration for the virtual
                   cluster.
                 properties:
+                  controlPlane:
+                    description: ControlPlane holds information about the general
+                      settings for the control plane of the virtual cluster.
+                    properties:
+                      highAvailability:
+                        description: HighAvailability holds the configuration settings
+                          for high availability settings.
+                        type: object
+                    type: object
                   etcd:
                     description: ETCD contains configuration for the etcds of the
                       virtual garden cluster.

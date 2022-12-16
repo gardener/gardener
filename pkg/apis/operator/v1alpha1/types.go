@@ -111,6 +111,9 @@ type SettingVerticalPodAutoscaler struct {
 
 // VirtualCluster contains configuration for the virtual cluster.
 type VirtualCluster struct {
+	// ControlPlane holds information about the general settings for the control plane of the virtual cluster.
+	// +optional
+	ControlPlane *ControlPlane `json:"controlPlane,omitempty"`
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
@@ -174,6 +177,16 @@ type Maintenance struct {
 	// TimeWindow contains information about the time window for maintenance operations.
 	TimeWindow gardencorev1beta1.MaintenanceTimeWindow `json:"timeWindow"`
 }
+
+// ControlPlane holds information about the general settings for the control plane of the virtual garden cluster.
+type ControlPlane struct {
+	// HighAvailability holds the configuration settings for high availability settings.
+	// +optional
+	HighAvailability *HighAvailability `json:"highAvailability,omitempty"`
+}
+
+// HighAvailability specifies the configuration settings for high availability for a resource.
+type HighAvailability struct{}
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {
