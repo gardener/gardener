@@ -445,6 +445,8 @@ status:
 kind: HorizontalPodAutoscaler
 metadata:
   creationTimestamp: null
+  labels:
+    high-availability-config.resources.gardener.cloud/type: server
   name: coredns
   namespace: kube-system
 spec:
