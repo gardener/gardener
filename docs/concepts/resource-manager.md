@@ -527,12 +527,12 @@ Otherwise, once approved, the `kube-controller-manager`'s `csrsigner` controller
 This webhook is used to conveniently apply the configuration to make components deployed to seed or shoot clusters highly available.
 The details and scenarios are described in [High Availability Of Deployed Components](../development/high-availability.md).
 
-The webhook reacts on creation/update of `Deployment`s and `StatefulSet`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
+The webhook reacts on creation/update of `Deployment`s, `StatefulSet`s, `HorizontalPodAutoscaler`s and `HVPA`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
 
 
 The webhook performs the following actions:
 
-1. The `.spec.replicas` field is mutated based on the `high-availability-config.resources.gardener.cloud/type` label of the resource and the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation of the namespace:
+1. The `.spec.replicas` (or `spec.minReplicas` respectively) field is mutated based on the `high-availability-config.resources.gardener.cloud/type` label of the resource and the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation of the namespace:
 
    | Failure Tolerance Type ➡️<br>/<br>⬇️ Component Type️ ️| unset | empty | non-empty |
    | --------------------------------------------------- | ----- | ----- | --------- |

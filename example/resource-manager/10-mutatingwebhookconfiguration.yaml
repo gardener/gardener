@@ -140,6 +140,25 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
+  - apiGroups:
+    - autoscaling
+    apiVersions:
+    - v2beta1
+    - v2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - horizontalpodautoscalers
+  - apiGroups:
+    - autoscaling.k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - hvpas
   namespaceSelector:
     matchLabels:
       high-availability-config.resources.gardener.cloud/consider: "true"

@@ -908,14 +908,32 @@ var _ = Describe("ResourceManager", func() {
 				},
 				{
 					Name: "high-availability-config.resources.gardener.cloud",
-					Rules: []admissionregistrationv1.RuleWithOperations{{
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{"apps"},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"deployments", "statefulsets"},
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"apps"},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"deployments", "statefulsets"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
 						},
-						Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
-					}},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"autoscaling"},
+								APIVersions: []string{"v2beta1", "v2"},
+								Resources:   []string{"horizontalpodautoscalers"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"autoscaling.k8s.io"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"hvpas"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
 							Key:      "gardener.cloud/purpose",
@@ -1142,6 +1160,25 @@ webhooks:
     resources:
     - deployments
     - statefulsets
+  - apiGroups:
+    - autoscaling
+    apiVersions:
+    - v2beta1
+    - v2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - horizontalpodautoscalers
+  - apiGroups:
+    - autoscaling.k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - hvpas
   sideEffects: None
   timeoutSeconds: 10
 - admissionReviewVersions:

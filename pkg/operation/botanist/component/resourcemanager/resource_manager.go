@@ -27,6 +27,8 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -76,6 +78,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 )
 
 var (
@@ -1722,17 +1725,41 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "high-availability-config.resources.gardener.cloud",
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{appsv1.GroupName},
-				APIVersions: []string{appsv1.SchemeGroupVersion.Version},
-				Resources:   []string{"deployments", "statefulsets"},
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{appsv1.GroupName},
+					APIVersions: []string{appsv1.SchemeGroupVersion.Version},
+					Resources:   []string{"deployments", "statefulsets"},
+				},
+				Operations: []admissionregistrationv1.OperationType{
+					admissionregistrationv1.Create,
+					admissionregistrationv1.Update,
+				},
 			},
-			Operations: []admissionregistrationv1.OperationType{
-				admissionregistrationv1.Create,
-				admissionregistrationv1.Update,
+			{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{autoscalingv2.GroupName},
+					APIVersions: []string{autoscalingv2beta1.SchemeGroupVersion.Version, autoscalingv2.SchemeGroupVersion.Version},
+					Resources:   []string{"horizontalpodautoscalers"},
+				},
+				Operations: []admissionregistrationv1.OperationType{
+					admissionregistrationv1.Create,
+					admissionregistrationv1.Update,
+				},
 			},
-		}},
+			{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{hvpav1alpha1.GroupName},
+					APIVersions: []string{hvpav1alpha1.SchemeGroupVersionHvpa.Version},
+					Resources:   []string{"hvpas"},
+				},
+				Operations: []admissionregistrationv1.OperationType{
+					admissionregistrationv1.Create,
+					admissionregistrationv1.Update,
+				},
+			},
+		},
 		NamespaceSelector:       nsSelector,
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, highavailabilityconfig.WebhookPath),

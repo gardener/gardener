@@ -108,6 +108,10 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, isZonePinningEnabled)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
 		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, isZonePinningEnabled)
+	case autoscalingv2.SchemeGroupVersion.WithKind("HorizontalPodAutoscaler").GroupKind():
+		obj, err = h.handleHorizontalPodAutoscaler(req, failureToleranceType)
+	case hvpav1alpha1.SchemeGroupVersionHvpa.WithKind("Hvpa").GroupKind():
+		obj, err = h.handleHvpa(req, failureToleranceType)
 	default:
 		return admission.Allowed(fmt.Sprintf("unexpected resource: %s", requestGK))
 	}
@@ -222,6 +226,78 @@ func (h *Handler) handleStatefulSet(
 	)
 
 	return statefulSet, nil
+}
+
+func (h *Handler) handleHvpa(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
+	hvpa := &hvpav1alpha1.Hvpa{}
+	if err := h.decoder.Decode(req, hvpa); err != nil {
+		return nil, err
+	}
+
+	log := h.Logger.WithValues("hvpa", kutil.ObjectKeyForCreateWebhooks(hvpa, req))
+
+	if err := mutateAutoscalingReplicas(
+		log,
+		failureToleranceType,
+		hvpa,
+		func() *int32 { return hvpa.Spec.Hpa.Template.Spec.MinReplicas },
+		func(n *int32) { hvpa.Spec.Hpa.Template.Spec.MinReplicas = n },
+		func() int32 { return hvpa.Spec.Hpa.Template.Spec.MaxReplicas },
+		func(n int32) { hvpa.Spec.Hpa.Template.Spec.MaxReplicas = n },
+	); err != nil {
+		return nil, err
+	}
+
+	return hvpa, nil
+}
+
+func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
+	switch req.Kind.Version {
+	case autoscalingv2beta1.SchemeGroupVersion.Version:
+		hpa := &autoscalingv2beta1.HorizontalPodAutoscaler{}
+		if err := h.decoder.Decode(req, hpa); err != nil {
+			return nil, err
+		}
+
+		log := h.Logger.WithValues("hpa", kutil.ObjectKeyForCreateWebhooks(hpa, req))
+
+		if err := mutateAutoscalingReplicas(
+			log,
+			failureToleranceType,
+			hpa,
+			func() *int32 { return hpa.Spec.MinReplicas },
+			func(n *int32) { hpa.Spec.MinReplicas = n },
+			func() int32 { return hpa.Spec.MaxReplicas },
+			func(n int32) { hpa.Spec.MaxReplicas = n },
+		); err != nil {
+			return nil, err
+		}
+
+		return hpa, nil
+	case autoscalingv2.SchemeGroupVersion.Version:
+		hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+		if err := h.decoder.Decode(req, hpa); err != nil {
+			return nil, err
+		}
+
+		log := h.Logger.WithValues("hpa", kutil.ObjectKeyForCreateWebhooks(hpa, req))
+
+		if err := mutateAutoscalingReplicas(
+			log,
+			failureToleranceType,
+			hpa,
+			func() *int32 { return hpa.Spec.MinReplicas },
+			func(n *int32) { hpa.Spec.MinReplicas = n },
+			func() int32 { return hpa.Spec.MaxReplicas },
+			func(n int32) { hpa.Spec.MaxReplicas = n },
+		); err != nil {
+			return nil, err
+		}
+
+		return hpa, nil
+	default:
+		return nil, fmt.Errorf("autoscaling version %q in request is not supported", req.Kind.Version)
+	}
 }
 
 func (h *Handler) mutateReplicas(
@@ -371,4 +447,47 @@ func (h *Handler) mutateTopologySpreadConstraints(
 
 		podTemplateSpec.Spec.TopologySpreadConstraints = append(filteredConstraints, constraints...)
 	}
+}
+
+func mutateAutoscalingReplicas(
+	log logr.Logger,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	obj client.Object,
+	getMinReplicas func() *int32,
+	mutateMinReplicas func(*int32),
+	getMaxReplicas func() int32,
+	mutateMaxReplicas func(int32),
+) error {
+	// do not mutate replicas if they are set to 0 (HPA disabled case)
+	if pointer.Int32Deref(getMinReplicas(), 0) == 0 && getMaxReplicas() == 0 {
+		return nil
+	}
+
+	replicas := kutil.GetReplicaCount(failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
+	if replicas == nil {
+		return nil
+	}
+
+	// check if custom replica overwrite is desired
+	if replicasOverwrite := obj.GetAnnotations()[resourcesv1alpha1.HighAvailabilityConfigReplicas]; replicasOverwrite != "" {
+		v, err := strconv.Atoi(replicasOverwrite)
+		if err != nil {
+			return err
+		}
+		replicas = pointer.Int32(int32(v))
+	}
+
+	// For compatibility reasons, only overwrite minReplicas if the current count is lower than the calculated count.
+	// TODO(timuthy): Reconsider if this should be removed in a future version.
+	if pointer.Int32Deref(getMinReplicas(), 0) < *replicas {
+		log.Info("Mutating minReplicas", "minReplicas", replicas)
+		mutateMinReplicas(replicas)
+	}
+
+	if getMaxReplicas() < pointer.Int32Deref(getMinReplicas(), 0) {
+		log.Info("Mutating maxReplicas", "maxReplicas", replicas)
+		mutateMaxReplicas(*replicas)
+	}
+
+	return nil
 }
