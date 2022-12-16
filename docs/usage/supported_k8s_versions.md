@@ -9,11 +9,11 @@ The minimum version of a garden cluster that can be used to run Gardener is **`1
 ## Seed Clusters
 
 The minimum version of a seed cluster that can be connected to Gardener is **`1.20.x`**.
-Please note that Gardener does not support **`1.25`** seeds yet.
+Please note that Gardener does not support seeds with version **>= `1.25`** yet when the `HVPA` or `HVPAForShootedSeed` feature gate is enabled. For more details, see https://github.com/gardener/gardener/issues/6893.
 
 ## Shoot Clusters
 
-Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.20`** up to **`1.25`**.
+Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.20`** up to **`1.26`**.
 However, the concrete versions that can be used for shoot clusters depend on the installed provider extension.
 Consequently, please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.
 
