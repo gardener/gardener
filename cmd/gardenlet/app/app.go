@@ -157,15 +157,14 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
 		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 
-		LeaderElection:             cfg.LeaderElection.LeaderElect,
-		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
-		LeaderElectionID:           cfg.LeaderElection.ResourceName,
-		LeaderElectionNamespace:    cfg.LeaderElection.ResourceNamespace,
-		LeaseDuration:              &cfg.LeaderElection.LeaseDuration.Duration,
-		RenewDeadline:              &cfg.LeaderElection.RenewDeadline.Duration,
-		RetryPeriod:                &cfg.LeaderElection.RetryPeriod.Duration,
-		// TODO: enable this once we have refactored all controllers and added them to this manager
-		// LeaderElectionReleaseOnCancel: true,
+		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
+		LeaderElectionID:              cfg.LeaderElection.ResourceName,
+		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
+		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
+		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
+		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
 
 		ClientDisableCacheFor: []client.Object{
 			&corev1.Event{},
@@ -370,42 +369,17 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to build shoot ClientMap: %w", err)
 	}
 
-	log.Info("Fetching cluster identity and garden namespace from garden cluster")
-	configMap := &corev1.ConfigMap{}
-	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), configMap); err != nil {
-		return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
-	}
-
-	gardenClusterIdentity, ok := configMap.Data[v1beta1constants.ClusterIdentity]
-	if !ok {
-		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
-	}
-
 	log.Info("Adding runnables now that bootstrapping is finished")
 	runnables := []manager.Runnable{
 		g.healthManager,
 		shootClientMap,
-		&controller.LegacyControllerFactory{
-			Log:            log,
-			Config:         g.config,
-			GardenCluster:  gardenCluster,
-			SeedCluster:    g.mgr,
-			ShootClientMap: shootClientMap,
-		},
 	}
 
 	if g.config.GardenClientConnection.KubeconfigSecret != nil {
-		gardenClientSet, err := kubernetes.NewWithConfig(
-			kubernetes.WithRESTConfig(gardenCluster.GetConfig()),
-			kubernetes.WithRuntimeAPIReader(gardenCluster.GetAPIReader()),
-			kubernetes.WithRuntimeClient(gardenCluster.GetClient()),
-			kubernetes.WithRuntimeCache(gardenCluster.GetCache()),
-		)
+		certificateManager, err := certificate.NewCertificateManager(log, gardenCluster, g.mgr.GetClient(), g.config)
 		if err != nil {
-			return fmt.Errorf("failed creating garden clientset: %w", err)
+			return fmt.Errorf("failed to create a new certificate manager: %w", err)
 		}
-
-		certificateManager := certificate.NewCertificateManager(log, gardenClientSet, g.mgr.GetClient(), g.config)
 
 		runnables = append(runnables, manager.RunnableFunc(func(ctx context.Context) error {
 			return certificateManager.ScheduleCertificateRotation(ctx, g.cancel, g.mgr.GetEventRecorderFor("certificate-manager"))
@@ -417,19 +391,13 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Adding controllers to manager")
-	gardenNamespace := &corev1.Namespace{}
-	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
-		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
-	}
-
 	if err := controller.AddToManager(
+		ctx,
 		g.mgr,
 		gardenCluster,
 		g.mgr,
 		shootClientMap,
 		g.config,
-		gardenNamespace,
-		gardenClusterIdentity,
 		g.healthManager,
 	); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)

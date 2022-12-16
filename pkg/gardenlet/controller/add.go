@@ -15,15 +15,18 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/charts"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -39,17 +42,17 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // AddToManager adds all gardenlet controllers to the given manager.
 func AddToManager(
+	ctx context.Context,
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	shootClientMap clientmap.ClientMap,
 	cfg *config.GardenletConfiguration,
-	gardenNamespace *corev1.Namespace,
-	gardenClusterIdentity string,
 	healthManager healthz.Manager,
 ) error {
 	identity, err := gutil.DetermineIdentity()
@@ -68,6 +71,20 @@ func AddToManager(
 		if err != nil {
 			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
 		}
+	}
+
+	configMap := &corev1.ConfigMap{}
+	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), configMap); err != nil {
+		return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
+	}
+	gardenClusterIdentity, ok := configMap.Data[v1beta1constants.ClusterIdentity]
+	if !ok {
+		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
+	}
+
+	gardenNamespace := &corev1.Namespace{}
+	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
+		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
 	}
 
 	seedClientSet, err := kubernetes.NewWithConfig(
