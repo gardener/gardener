@@ -411,7 +411,13 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), hvpa, func() error {
-			hvpa.Labels = getLabels()
+			hvpa.Labels = utils.MergeStringMaps(
+				hvpa.GetLabels(),
+				getLabels(),
+				map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+				},
+			)
 			hvpa.Spec.Replicas = pointer.Int32(1)
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 				Deploy:   false,
