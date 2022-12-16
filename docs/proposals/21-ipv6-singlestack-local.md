@@ -7,7 +7,8 @@ authors:
 - "@einfachnuralex"
 - "@timebertt"
 reviewers:
-- "TBD"
+- "@ScheererJ"
+- "@rfranzke"
 ---
 
 # GEP-21: IPv6 Single-Stack Support in Local Gardener
