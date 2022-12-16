@@ -124,8 +124,8 @@ type OriginalValues struct {
 	PromtailEnabled bool
 	// LokiIngressHostName is the ingress host name of the shoot's Loki.
 	LokiIngressHostName string
-	// NodeLocalDNSENabled indicates whether node local dns is enabled or not.
-	NodeLocalDNSENabled bool
+	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
+	NodeLocalDNSEnabled bool
 }
 
 // New creates a new instance of Interface.
@@ -517,7 +517,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		sshPublicKeys:           o.values.SSHPublicKeys,
 		lokiIngressHostName:     o.values.LokiIngressHostName,
 		promtailEnabled:         o.values.PromtailEnabled,
-		nodeLocalDNSENabled:     o.values.NodeLocalDNSENabled,
+		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
 	}, nil
 }
 
@@ -577,7 +577,7 @@ type deployer struct {
 	sshPublicKeys           []string
 	lokiIngressHostName     string
 	promtailEnabled         bool
-	nodeLocalDNSENabled     bool
+	nodeLocalDNSEnabled     bool
 }
 
 // exposed for testing
@@ -617,7 +617,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			ClusterDomain:           d.clusterDomain,
 			CRIName:                 d.criName,
 			Images:                  d.images,
-			NodeLabels:              gutil.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSENabled),
+			NodeLabels:              gutil.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
 			KubeletCABundle:         d.kubeletCABundle,
 			KubeletConfigParameters: d.kubeletConfigParameters,
 			KubeletCLIFlags:         d.kubeletCLIFlags,

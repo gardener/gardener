@@ -41,7 +41,8 @@ var _ = Describe("CLIFlags", func() {
 		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags, matcher gomegatypes.GomegaMatcher) {
 			v := semver.MustParse(kubernetesVersion)
 			nodeLabels := map[string]string{
-				"test": "foo",
+				"test":  "foo",
+				"test2": "bar",
 			}
 			Expect(kubelet.CLIFlags(v, nodeLabels, criName, image, cliFlags)).To(matcher)
 		},
@@ -61,6 +62,7 @@ var _ = Describe("CLIFlags", func() {
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.20.1",
 				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
 				"--network-plugin=cni",
 				"--pod-infra-container-image=foo.io/hyperkube:version",
 				"--v=2",
@@ -78,6 +80,7 @@ var _ = Describe("CLIFlags", func() {
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.20.1",
 				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
 				"--container-runtime=remote",
 				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
 				"--runtime-cgroups=/system.slice/containerd.service",
@@ -100,6 +103,7 @@ var _ = Describe("CLIFlags", func() {
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.21.1",
 				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
 				"--network-plugin=cni",
 				"--pod-infra-container-image=foo.io/hyperkube:version",
 				"--v=2",
@@ -117,6 +121,7 @@ var _ = Describe("CLIFlags", func() {
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.21.1",
 				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
 				"--container-runtime=remote",
 				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
 				"--runtime-cgroups=/system.slice/containerd.service",
@@ -139,6 +144,7 @@ var _ = Describe("CLIFlags", func() {
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.22.1",
 				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
 				"--network-plugin=cni",
 				"--pod-infra-container-image=foo.io/hyperkube:version",
 				"--v=2",
@@ -156,6 +162,7 @@ var _ = Describe("CLIFlags", func() {
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.22.1",
 				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
 				"--container-runtime=remote",
 				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
 				"--runtime-cgroups=/system.slice/containerd.service",

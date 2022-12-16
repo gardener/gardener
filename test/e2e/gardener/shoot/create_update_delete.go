@@ -31,7 +31,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -89,10 +89,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				expectedNodeLabels["worker.gardener.cloud/kubernetes-version"] = kubernetesVersion
 
 				nodeList := &corev1.NodeList{}
-				g.Expect(shootClient.Client().List(ctx, nodeList, runtimeclient.MatchingLabels{
+				g.Expect(shootClient.Client().List(ctx, nodeList, client.MatchingLabels{
 					"worker.gardener.cloud/pool": workerPool.Name,
 				})).To(Succeed())
-				g.Expect(nodeList.Items).To(HaveLen(1), "worker pool %s should have exactly three Nodes", workerPool.Name)
+				g.Expect(nodeList.Items).To(HaveLen(1), "worker pool %s should have exactly one Node", workerPool.Name)
 
 				for key, value := range expectedNodeLabels {
 					g.Expect(nodeList.Items[0].Labels).To(HaveKeyWithValue(key, value), "worker pool %s should have expected labels", workerPool.Name)

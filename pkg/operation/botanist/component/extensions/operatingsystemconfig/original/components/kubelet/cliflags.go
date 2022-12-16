@@ -43,6 +43,7 @@ func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, c
 	)
 
 	// maps are unsorted in go, make sure to output node labels in the exact same order every time
+	// this ensures deterministic behavior so that tests are stable and the OSC doesn't change on every reconciliation
 	labelKeys := make([]string, 0, len(nodeLabels))
 	for key := range nodeLabels {
 		labelKeys = append(labelKeys, key)
