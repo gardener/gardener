@@ -71,6 +71,7 @@ var admissionPluginsVersionRanges = map[string]*AdmissionPluginVersionRange{
 	"ServiceAccount":                       {},
 	"StorageObjectInUseProtection":         {Required: true},
 	"TaintNodesByCondition":                {},
+	"ValidatingAdmissionPolicy":            {AddedInVersion: "1.26"},
 	"ValidatingAdmissionWebhook":           {Required: true},
 }
 
