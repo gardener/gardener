@@ -84,8 +84,8 @@ type Values struct {
 	InfrastructureProviderStatus *runtime.RawExtension
 	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
 	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
-	// NodeLocalDNSENabled indicates whether node local dns is enabled or not.
-	NodeLocalDNSENabled bool
+	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
+	NodeLocalDNSEnabled bool
 }
 
 // New creates a new instance of Interface.
@@ -206,7 +206,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSENabled),
+			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled),
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
