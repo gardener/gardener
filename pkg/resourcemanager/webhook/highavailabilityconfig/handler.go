@@ -150,7 +150,7 @@ func (h *Handler) handleDeployment(
 
 	log := h.Logger.WithValues("deployment", kutil.ObjectKeyForCreateWebhooks(deployment, req))
 
-	if err := h.mutateReplicas(
+	if err := mutateReplicas(
 		log,
 		failureToleranceType,
 		isHorizontallyScaled,
@@ -198,7 +198,7 @@ func (h *Handler) handleStatefulSet(
 
 	log := h.Logger.WithValues("statefulSet", kutil.ObjectKeyForCreateWebhooks(statefulSet, req))
 
-	if err := h.mutateReplicas(
+	if err := mutateReplicas(
 		log,
 		failureToleranceType,
 		isHorizontallyScaled,
@@ -300,13 +300,13 @@ func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureTo
 	}
 }
 
-func (h *Handler) mutateReplicas(
+func mutateReplicas(
 	log logr.Logger,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	isHorizontallyScaled bool,
 	obj client.Object,
 	currentReplicas *int32,
-	mutateReplicas func(*int32),
+	setReplicas func(*int32),
 ) error {
 	// do not mutate replicas if they are set to 0 (hibernation case)
 	if pointer.Int32Deref(currentReplicas, 0) == 0 {
@@ -331,7 +331,7 @@ func (h *Handler) mutateReplicas(
 	// computed
 	if !isHorizontallyScaled || pointer.Int32Deref(currentReplicas, 0) < *replicas {
 		log.Info("Mutating replicas", "replicas", *replicas)
-		mutateReplicas(replicas)
+		setReplicas(replicas)
 	}
 
 	return nil
