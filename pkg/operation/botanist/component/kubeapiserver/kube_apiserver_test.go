@@ -499,6 +499,9 @@ var _ = Describe("KubeAPIServer", func() {
 							Name:            hvpa.Name,
 							Namespace:       hvpa.Namespace,
 							ResourceVersion: "1",
+							Labels: map[string]string{
+								"high-availability-config.resources.gardener.cloud/type": "server",
+							},
 						},
 						Spec: hvpav1alpha1.HvpaSpec{
 							Replicas: pointer.Int32(1),
