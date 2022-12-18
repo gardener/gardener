@@ -19,22 +19,12 @@ The Shoot status consists of a set of conditions. A [Condition](../api-reference
 Currently the available Shoot condition types are:
 
 - `APIServerAvailable`
-
-  This condition type indicates whether the Shoot's kube-apiserver is available or not. In particular, the `/healthz` endpoint of the kube-apiserver is called, and the expected response code is `HTTP 200`.
-
 - `ControlPlaneHealthy`
-
-  This condition type indicates whether all the control plane components deployed to the Shoot's namespace in the Seed do exist and are running fine.
-
 - `EveryNodeReady`
-
-  This condition type indicates whether at least the requested minimum number of Nodes is present per each worker pool and whether all Nodes are healthy.
-
 - `SystemComponentsHealthy`
 
-  This condition type indicates whether all system components deployed to the `kube-system` namespace in the shoot do exist and are running fine. It also reflects whether the tunnel connection between the control plane and the Shoot networks can be established.
-
-The Shoot conditions are maintained by the [shoot care control](https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/shoot_care_control.go) of gardenlet.
+The Shoot conditions are maintained by the [shoot care reconciler](../../pkg/gardenlet/controller/shoot/care) of gardenlet.
+Find more information in [this document](../concepts/gardenlet.md#shoot-controller).
 
 ### Sync Period
 

@@ -18,16 +18,13 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"sync"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/Masterminds/semver"
@@ -37,7 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -95,6 +91,7 @@ var Now = time.Now
 
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
+	reader                             client.Reader
 	conditionThresholds                map[gardencorev1beta1.ConditionType]time.Duration
 	staleExtensionHealthCheckThreshold *metav1.Duration
 	lastOperation                      *gardencorev1beta1.LastOperation
@@ -104,6 +101,7 @@ type HealthChecker struct {
 
 // NewHealthChecker creates a new health checker.
 func NewHealthChecker(
+	reader client.Reader,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
@@ -111,6 +109,7 @@ func NewHealthChecker(
 	gardenerVersion *semver.Version,
 ) *HealthChecker {
 	return &HealthChecker{
+		reader:                             reader,
 		conditionThresholds:                conditionThresholds,
 		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
 		lastOperation:                      lastOperation,
@@ -128,7 +127,7 @@ func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.C
 	return nil
 }
 
-func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []*appsv1.Deployment) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []appsv1.Deployment) *gardencorev1beta1.Condition {
 	actualNames := sets.NewString()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
@@ -137,9 +136,9 @@ func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Con
 	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "DeploymentMissing", "Missing required deployments")
 }
 
-func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, objects []*appsv1.Deployment) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, objects []appsv1.Deployment) *gardencorev1beta1.Condition {
 	for _, object := range objects {
-		if err := health.CheckDeployment(object); err != nil {
+		if err := health.CheckDeployment(&object); err != nil {
 			c := b.FailedCondition(condition, "DeploymentUnhealthy", fmt.Sprintf("Deployment %q is unhealthy: %v", object.Name, err.Error()))
 			return &c
 		}
@@ -148,7 +147,7 @@ func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, 
 	return nil
 }
 
-func (b *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []*druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
 	actualNames := sets.NewString()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
@@ -157,9 +156,9 @@ func (b *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition
 	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "EtcdMissing", "Missing required etcds")
 }
 
-func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, objects []*druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, objects []druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
 	for _, object := range objects {
-		if err := health.CheckEtcd(object); err != nil {
+		if err := health.CheckEtcd(&object); err != nil {
 			var (
 				message = fmt.Sprintf("Etcd extension resource %q is unhealthy: %v", object.Name, err.Error())
 				codes   []gardencorev1beta1.ErrorCode
@@ -177,7 +176,7 @@ func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 	return nil
 }
 
-func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []*appsv1.StatefulSet) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []appsv1.StatefulSet) *gardencorev1beta1.Condition {
 	actualNames := sets.NewString()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
@@ -186,9 +185,9 @@ func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Co
 	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "StatefulSetMissing", "Missing required stateful sets")
 }
 
-func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition, objects []*appsv1.StatefulSet) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition, objects []appsv1.StatefulSet) *gardencorev1beta1.Condition {
 	for _, object := range objects {
-		if err := health.CheckStatefulSet(object); err != nil {
+		if err := health.CheckStatefulSet(&object); err != nil {
 			c := b.FailedCondition(condition, "StatefulSetUnhealthy", fmt.Sprintf("Stateful set %q is unhealthy: %v", object.Name, err.Error()))
 			return &c
 		}
@@ -307,10 +306,7 @@ func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOpe
 }
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
-func computeRequiredControlPlaneDeployments(
-	shoot *gardencorev1beta1.Shoot,
-	workerLister kutil.WorkerLister,
-) (sets.String, error) {
+func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.String, error) {
 	shootWantsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shoot)
 	if err != nil {
 		return nil, err
@@ -342,38 +338,40 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
 
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
+	ctx context.Context,
 	shoot *gardencorev1beta1.Shoot,
 	namespace string,
 	condition gardencorev1beta1.Condition,
-	deploymentLister kutil.DeploymentLister,
-	etcdLister kutil.EtcdLister,
-	workerLister kutil.WorkerLister,
-) (*gardencorev1beta1.Condition, error) {
-	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot, workerLister)
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot)
 	if err != nil {
 		return nil, err
 	}
 
-	deployments, err := deploymentLister.Deployments(namespace).List(controlPlaneSelector)
-	if err != nil {
+	deploymentList := &appsv1.DeploymentList{}
+	if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: controlPlaneSelector}); err != nil {
 		return nil, err
 	}
 
-	if exitCondition := b.checkRequiredDeployments(condition, requiredControlPlaneDeployments, deployments); exitCondition != nil {
+	etcdList := &druidv1alpha1.EtcdList{}
+	if err := b.reader.List(ctx, etcdList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: controlPlaneSelector}); err != nil {
+		return nil, err
+	}
+
+	if exitCondition := b.checkRequiredDeployments(condition, requiredControlPlaneDeployments, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition := b.checkDeployments(condition, deployments); exitCondition != nil {
+	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 
-	etcds, err := etcdLister.Etcds(namespace).List(controlPlaneSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkRequiredEtcds(condition, requiredControlPlaneEtcds, etcds); exitCondition != nil {
+	if exitCondition := b.checkRequiredEtcds(condition, requiredControlPlaneEtcds, etcdList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition := b.checkEtcds(condition, etcds); exitCondition != nil {
+	if exitCondition := b.checkEtcds(condition, etcdList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -463,87 +461,86 @@ func (b *HealthChecker) CheckClusterNodes(
 
 // CheckMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
 func (b *HealthChecker) CheckMonitoringControlPlane(
+	ctx context.Context,
 	namespace string,
 	shootMonitoringEnabled bool,
 	wantsAlertmanager bool,
 	condition gardencorev1beta1.Condition,
-	deploymentLister kutil.DeploymentLister,
-	statefulSetLister kutil.StatefulSetLister,
-) (*gardencorev1beta1.Condition, error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	if !shootMonitoringEnabled {
 		return nil, nil
 	}
 
-	deploymentList, err := deploymentLister.Deployments(namespace).List(monitoringSelector)
-	if err != nil {
+	deploymentList := &appsv1.DeploymentList{}
+	if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: monitoringSelector}); err != nil {
 		return nil, err
 	}
-	if exitCondition := b.checkRequiredDeployments(condition, requiredMonitoringSeedDeployments, deploymentList); exitCondition != nil {
+
+	statefulSetList := &appsv1.StatefulSetList{}
+	if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: monitoringSelector}); err != nil {
+		return nil, err
+	}
+
+	if exitCondition := b.checkRequiredDeployments(condition, requiredMonitoringSeedDeployments, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
+	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 
-	statefulSetList, err := statefulSetLister.StatefulSets(namespace).List(monitoringSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkRequiredStatefulSets(condition, computeRequiredMonitoringStatefulSets(wantsAlertmanager), statefulSetList); exitCondition != nil {
+	if exitCondition := b.checkRequiredStatefulSets(condition, computeRequiredMonitoringStatefulSets(wantsAlertmanager), statefulSetList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {
+	if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 
 	return nil, nil
 }
 
-var versionConstraintGreaterEqual153 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintGreaterEqual153, err = semver.NewConstraint(">= 1.53")
-	utilruntime.Must(err)
-}
-
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckLoggingControlPlane(
+	ctx context.Context,
 	namespace string,
 	isTestingShoot bool,
 	eventLoggingEnabled bool,
 	lokiEnabled bool,
 	condition gardencorev1beta1.Condition,
-	deploymentSetLister kutil.DeploymentLister,
-	statefulSetLister kutil.StatefulSetLister,
-) (*gardencorev1beta1.Condition, error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	if isTestingShoot {
 		return nil, nil
 	}
 
 	if lokiEnabled {
-		statefulSetList, err := statefulSetLister.StatefulSets(namespace).List(loggingSelector)
-		if err != nil {
+		statefulSetList := &appsv1.StatefulSetList{}
+		if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: loggingSelector}); err != nil {
 			return nil, err
 		}
-		if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList); exitCondition != nil {
+
+		if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList.Items); exitCondition != nil {
 			return exitCondition, nil
 		}
-		if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {
+		if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
 
-	if eventLoggingEnabled && versionConstraintGreaterEqual153.Check(b.gardenerVersion) {
-		deploymentList, err := deploymentSetLister.Deployments(namespace).List(loggingSelector)
-		if err != nil {
+	if eventLoggingEnabled {
+		deploymentList := &appsv1.DeploymentList{}
+		if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: loggingSelector}); err != nil {
 			return nil, err
 		}
-		if exitCondition := b.checkRequiredDeployments(condition, requiredLoggingDeployments, deploymentList); exitCondition != nil {
+
+		if exitCondition := b.checkRequiredDeployments(condition, requiredLoggingDeployments, deploymentList.Items); exitCondition != nil {
 			return exitCondition, nil
 		}
-		if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
+		if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
@@ -580,106 +577,6 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 	}
 
 	return nil
-}
-
-func makeDeploymentLister(ctx context.Context, c client.Client, namespace string, selector labels.Selector) kutil.DeploymentLister {
-	var (
-		once  sync.Once
-		items []*appsv1.Deployment
-		err   error
-	)
-
-	return kutil.NewDeploymentLister(func() ([]*appsv1.Deployment, error) {
-		once.Do(func() {
-			list := &appsv1.DeploymentList{}
-			err = c.List(ctx, list, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: selector})
-			if err != nil {
-				return
-			}
-
-			for _, item := range list.Items {
-				it := item
-				items = append(items, &it)
-			}
-		})
-		return items, err
-	})
-}
-
-func makeStatefulSetLister(ctx context.Context, c client.Client, namespace string, selector labels.Selector) kutil.StatefulSetLister {
-	var (
-		once  sync.Once
-		items []*appsv1.StatefulSet
-		err   error
-
-		onceBody = func() {
-			list := &appsv1.StatefulSetList{}
-			err = c.List(ctx, list, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: selector})
-			if err != nil {
-				return
-			}
-
-			for _, item := range list.Items {
-				it := item
-				items = append(items, &it)
-			}
-		}
-	)
-
-	return kutil.NewStatefulSetLister(func() ([]*appsv1.StatefulSet, error) {
-		once.Do(onceBody)
-		return items, err
-	})
-}
-
-func makeEtcdLister(ctx context.Context, c client.Client, namespace string) kutil.EtcdLister {
-	var (
-		once  sync.Once
-		items []*druidv1alpha1.Etcd
-		err   error
-
-		onceBody = func() {
-			list := &druidv1alpha1.EtcdList{}
-			if err := c.List(ctx, list, client.InNamespace(namespace)); err != nil {
-				return
-			}
-
-			for _, item := range list.Items {
-				it := item
-				items = append(items, &it)
-			}
-		}
-	)
-
-	return kutil.NewEtcdLister(func() ([]*druidv1alpha1.Etcd, error) {
-		once.Do(onceBody)
-		return items, err
-	})
-}
-
-func makeWorkerLister(ctx context.Context, c client.Client, namespace string) kutil.WorkerLister {
-	var (
-		once  sync.Once
-		items []*extensionsv1alpha1.Worker
-		err   error
-
-		onceBody = func() {
-			list := &extensionsv1alpha1.WorkerList{}
-			if err := c.List(ctx, list, client.InNamespace(namespace)); err != nil {
-				return
-			}
-
-			for _, item := range list.Items {
-				it := item
-				items = append(items, &it)
-			}
-		}
-	)
-
-	return kutil.NewWorkerLister(func() ([]*extensionsv1alpha1.Worker, error) {
-		once.Do(onceBody)
-		return items, err
-	})
 }
 
 // NewConditionOrError returns the given new condition or returns an unknown error condition if an error occurred or `newCondition` is nil.

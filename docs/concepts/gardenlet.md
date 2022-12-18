@@ -342,7 +342,7 @@ If at least one `ManagedResource` is unhealthy and there is threshold configurat
 
 - to `Progressing` if it was `True` before.
 - to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
-- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition does exceed the configured threshold duration.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
 
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
@@ -390,6 +390,48 @@ There are a few special cases that overwrite or confine how often and under whic
 - In case, the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), shoots can be marked as "ignored" by setting the `shoot.gardener.cloud/ignore` annotation. In this case, gardenlet does not perform any reconciliation for the shoot.
 - In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). Gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [this doc](../usage/shoot_maintenance.md#cluster-reconciliation)).
 - In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [this doc](../usage/shoot_maintenance.md)).
+
+#### "Care" Reconciler
+
+This reconciler performs three "care" actions related to `Shoot`s.
+
+##### Conditions
+
+It maintains four conditions and performs the following checks:
+
+- `APIServerAvailable`: The `/healthz` endpoint of the shoot's `kube-apiserver` is called and considered healthy when it responds with `200 OK`.
+- `ControlPlaneHealthy`: The control plane is considered healthy when the respective `Deployment`s (for example `kube-apiserver`), `StatefulSet`s (for example `prometheus`), and `Etcd`s (for example `etcd-main`) exist and are healthy.
+- `EveryNodyReady`: The conditions of the worker nodes are checked (e.g., `Ready`, `MemoryPressure`, etc.). Also, it's checked whether the Kubernetes version of the installed `kubelet` matches the desired version specified in the `Shoot` resource.
+- `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g. `ResourcesApplied`, etc.). Also, it is verified whether the VPN tunnel connection is established (which is required for `kube-apiserver` to communicate with the worker nodes).
+
+Each condition can optionally also have error `codes` in order to indicate which type of issue was detected (see [this document](../usage/shoot_status.md) for more details).
+
+Apart from the above, extension controllers can also contribute to the `status` or error `codes` of these conditions (see [this document](../extensions/shoot-health-status-conditions.md) for more details).
+
+If all checks for a certain conditions are succeeded then its `status` will be set to `True`.
+Otherwise, it will be set to `False`.
+
+If at least one check fails and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`) then the status will be set
+
+- to `Progressing` if it was `True` before.
+- to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
+
+The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
+Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
+
+##### Constraints And   Automatic Webhook Remediation
+
+Please see [this document](../usage/shoot_status.md#constraints) for more details.
+
+##### Garbage Collection
+
+Stale pods in the shoot namespace in the seed cluster and in the `kube-system` namespace in the shoot cluster are deleted.
+A pod is considered stale when
+
+- it was terminated with reason `Evicted`.
+- it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
+- it is stuck in termination (i.e., if its `deletionTimestamp` is more than `5m` ago).
 
 #### "Migration" Reconciler
 

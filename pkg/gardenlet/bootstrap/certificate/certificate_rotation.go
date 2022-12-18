@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -56,7 +57,17 @@ type Manager struct {
 }
 
 // NewCertificateManager creates a certificate manager that can be used to rotate gardenlet's client certificate for the Garden cluster
-func NewCertificateManager(log logr.Logger, gardenClientSet kubernetes.Interface, seedClient client.Client, config *config.GardenletConfiguration) *Manager {
+func NewCertificateManager(log logr.Logger, gardenCluster cluster.Cluster, seedClient client.Client, config *config.GardenletConfiguration) (*Manager, error) {
+	gardenClientSet, err := kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(gardenCluster.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(gardenCluster.GetAPIReader()),
+		kubernetes.WithRuntimeClient(gardenCluster.GetClient()),
+		kubernetes.WithRuntimeCache(gardenCluster.GetCache()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating garden clientset: %w", err)
+	}
+
 	seedName := bootstraputil.GetSeedName(config.SeedConfig)
 
 	return &Manager{
@@ -65,7 +76,7 @@ func NewCertificateManager(log logr.Logger, gardenClientSet kubernetes.Interface
 		seedClient:             seedClient,
 		gardenClientConnection: config.GardenClientConnection,
 		seedName:               seedName,
-	}
+	}, nil
 }
 
 // ScheduleCertificateRotation waits until the currently used Garden cluster client certificate approaches expiration.
