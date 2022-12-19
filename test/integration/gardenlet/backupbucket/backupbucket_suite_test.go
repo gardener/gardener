@@ -193,7 +193,6 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
-
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.BackupBucket{}: {

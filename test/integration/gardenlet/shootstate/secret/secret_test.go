@@ -19,6 +19,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -31,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,10 +44,37 @@ var _ = Describe("ShootSecret controller tests", func() {
 		shootState *gardencorev1alpha1.ShootState
 
 		cluster *extensionsv1alpha1.Cluster
+
+		seedNamespace *corev1.Namespace
 	)
 
 	BeforeEach(func() {
-		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
+		By("creating seed namespace")
+		// name doesn't follow the usual naming scheme (technical ID), but this doesn't matter for this test, as
+		// long as the cluster has the same name
+		seedNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "shoot--" + resourceName,
+				Labels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+					testID:                      testRunID,
+				},
+			},
+		}
+		Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+		log.Info("Created seed Namespace for test", "namespaceName", seedNamespace.Name)
+
+		DeferCleanup(func() {
+			By("deleting seed namespace")
+			Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		By("wait until manager has observed seed namespace")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), &corev1.Namespace{})
+		}).Should(Succeed())
 
 		By("build shoot object")
 		shoot = &gardencorev1beta1.Shoot{
@@ -84,9 +113,10 @@ var _ = Describe("ShootSecret controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shoot.Name,
 				Namespace: shoot.Namespace,
+				Labels:    map[string]string{testID: testRunID},
 			},
 		}
-		Expect(testClient.Create(ctx, shootState)).To(Or(Succeed(), BeAlreadyExistsError()))
+		Expect(testClient.Create(ctx, shootState)).To(Succeed())
 		log.Info("Created shootstate for test", "shootState", client.ObjectKeyFromObject(shootState))
 
 		DeferCleanup(func() {
@@ -97,7 +127,8 @@ var _ = Describe("ShootSecret controller tests", func() {
 		By("create cluster")
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: seedNamespace.Name,
+				Name:   seedNamespace.Name,
+				Labels: map[string]string{testID: testRunID},
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{
@@ -114,6 +145,11 @@ var _ = Describe("ShootSecret controller tests", func() {
 		Expect(testClient.Create(ctx, cluster)).To(Succeed())
 		log.Info("Created cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
 
+		By("wait until manager has observed cluster creation")
+		Eventually(func(g Gomega) error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(cluster), &extensionsv1alpha1.Cluster{})
+		}).Should(Succeed())
+
 		DeferCleanup(func() {
 			By("delete cluster")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
@@ -126,6 +162,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resourceName,
 				Namespace: seedNamespace.Name,
+				Labels:    map[string]string{testID: testRunID},
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
@@ -133,6 +170,11 @@ var _ = Describe("ShootSecret controller tests", func() {
 			},
 		}
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+		By("wait until manager has observed secret")
+		Eventually(func(g Gomega) error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})
+		}).Should(Succeed())
 
 		By("verifying secret did not get synced to shootstate")
 		Consistently(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
@@ -222,6 +264,11 @@ var _ = Describe("ShootSecret controller tests", func() {
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, secretsmanager.LabelKeyManagerIdentity, "extension")
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
+		By("wait until manager has observed external secret")
+		Eventually(func(g Gomega) error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})
+		}).Should(Succeed())
+
 		By("verifying secret did get synced to shootstate")
 		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
@@ -245,6 +292,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		nonShootNamespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 		}
 		Expect(testClient.Create(ctx, nonShootNamespace)).To(Succeed())
@@ -277,6 +325,11 @@ var _ = Describe("ShootSecret controller tests", func() {
 		secret := newRelevantSecret(resourceName, seedNamespace.Name)
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
+		By("wait until manager has observed secret creation")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})
+		}).Should(Succeed())
+
 		By("verifying secret gets synced to shootstate")
 		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
@@ -298,6 +351,13 @@ var _ = Describe("ShootSecret controller tests", func() {
 		patch := client.MergeFromWithOptions(cluster.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		cluster.Spec.Shoot.Raw = shootRaw
 		Expect(testClient.Patch(ctx, cluster, patch)).To(Succeed())
+
+		resourceVersion := cluster.GetResourceVersion()
+		By("wait until manager has observed updated cluster")
+		Eventually(func(g Gomega) string {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(Succeed())
+			return (cluster.ResourceVersion)
+		}).Should(Equal(resourceVersion))
 
 		By("deleting secret")
 		Expect(testClient.Delete(ctx, secret)).To(Succeed())
@@ -357,6 +417,7 @@ func newRelevantSecret(name, namespace string) *corev1.Secret {
 				secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 				secretsmanager.LabelKeyManagerIdentity: "test",
 				secretsmanager.LabelKeyPersist:         secretsmanager.LabelValueTrue,
+				testID:                                 testRunID,
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
