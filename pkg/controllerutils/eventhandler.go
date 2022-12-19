@@ -60,8 +60,8 @@ func EnqueueCreateEventsOncePer24hDuration(clock clock.Clock) handler.Funcs {
 	}
 }
 
-func getDuration(obj client.Object, clock clock.Clock) time.Duration {
-	switch obj := obj.(type) {
+func getDuration(o client.Object, clock clock.Clock) time.Duration {
+	switch obj := o.(type) {
 	case *gardencorev1beta1.BackupBucket:
 		return ReconcileOncePer24hDuration(clock, obj.ObjectMeta, obj.Status.ObservedGeneration, obj.Status.LastOperation)
 	case *gardencorev1beta1.BackupEntry:
