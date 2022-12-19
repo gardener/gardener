@@ -76,6 +76,11 @@ spec:
         cpu: 2
         gpu: 0
         memory: 8Gi
+    labels:
+      node.kubernetes.io/role: node
+      worker.gardener.cloud/cri-name: containerd
+      worker.gardener.cloud/pool: cpu-worker
+      worker.gardener.cloud/system-components: "true"
     userData: c29tZSBkYXRhIHRvIGJvb3RzdHJhcCB0aGUgVk0K
     volume:
       size: 20Gi
@@ -100,6 +105,12 @@ Also, as you can see, Gardener copies the output of the infrastructure creation 
 In the `.spec.pools[]` field the desired worker pools are listed.
 In the above example, one pool with machine type `m4.large` and `min=3`, `max=5` machines shall be spread over two availability zones (`eu-west-1b`, `eu-west-1c`).
 This information together with the infrastructure status must be used to determine the proper configuration for the machine classes.
+
+The `spec.pools[].labels` map contains all labels that should be added to all nodes of the corresponding worker pool.
+Gardener configures kubelet's `--node-labels` flag to contain all labels mentioned here.
+This makes sure that kubelet adds all user-specified and gardener-managed labels to the new `Node` object when registering a new machine with the API server.
+Nevertheless, this is only effective when bootstrapping new nodes.
+The provider extension (respectively, machine-controller-manager) is still responsible for updating the labels of existing `Nodes` when the worker specification changes.
 
 The `spec.pools[].nodeTemplate.capacity` field contains the resource information of the machine like `cpu`, `gpu` and `memory`. This info is used by Cluster Autoscaler to generate `nodeTemplate` during scaling the `nodeGroup` from zero.
 

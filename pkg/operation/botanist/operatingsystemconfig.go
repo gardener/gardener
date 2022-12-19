@@ -78,6 +78,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
 				PromtailEnabled:     promtailEnabled,
 				LokiIngressHostName: lokiIngressHost,
+				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 			},
 		},
 		operatingsystemconfig.DefaultInterval,
