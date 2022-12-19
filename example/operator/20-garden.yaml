@@ -18,6 +18,9 @@ spec:
       zones:
       - "0"
     settings:
+    # loadBalancerServices:
+    #   annotations:
+    #     foo: bar
       verticalPodAutoscaler:
         enabled: true
   virtualCluster:

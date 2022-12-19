@@ -168,11 +168,19 @@ func (r *Reconciler) newEtcd(
 	), nil
 }
 
-func (r *Reconciler) newKubeAPIServerService(log logr.Logger) component.DeployWaiter {
+func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden) component.DeployWaiter {
+	var annotations map[string]string
+	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
+		annotations = settings.LoadBalancerServices.Annotations
+	}
+
 	return kubeapiserverexposure.NewService(
 		log,
 		r.RuntimeClient,
-		&kubeapiserverexposure.ServiceValues{AnnotationsFunc: nil, SNIPhase: component.PhaseDisabled},
+		&kubeapiserverexposure.ServiceValues{
+			AnnotationsFunc: func() map[string]string { return annotations },
+			SNIPhase:        component.PhaseDisabled,
+		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
 		},

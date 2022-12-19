@@ -121,7 +121,7 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	kubeAPIServerService := r.newKubeAPIServerService(log)
+	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
 
 	var (
 		g            = flow.NewGraph("Garden reconciliation")

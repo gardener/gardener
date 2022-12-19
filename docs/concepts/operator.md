@@ -13,7 +13,7 @@ There is a [Helm chart](../../charts/gardener/operator) which can be used to dep
 Once deployed and ready, you can create a `Garden` resource.
 Note that there can only be one `Garden` resource per system at a time.
 
-> ℹ️ Similar to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
+> ℹ️ Similar to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), see [this section](#vertical-pod-autoscaler).
 > By default, `gardener-operator` deploys the VPA components.
 > However, when there already is a VPA available, then set `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=false` in the `Garden` resource.
 
@@ -37,6 +37,38 @@ As they were already made available by `gardener-operator`, the `gardenlet` just
 
 ⚠️ Note that such setup requires that you upgrade the versions of `gardener-operator` and `gardenlet` in lock-step.
 Otherwise, you might experience unexpected behaviour or issues with your seed or shoot clusters.
+
+## `Garden` Resources
+
+Please find an exemplary `Garden` resource [here](../../example/operator/20-garden.yaml).
+
+### Settings For Runtime Cluster
+
+The `Garden` resource offers a few settings that are used to control the behaviour of `gardener-operator` in the runtime cluster.
+This section provides an overview over the available settings:
+
+#### Load Balancer Services
+
+`gardener-operator` creates a Kubernetes `Service` object of type `LoadBalancer` in the runtime cluster.
+It is used for exposing the virtual garden control planes, namely the `virtual-garden-kube-apiserver`.
+In most cases, the `cloud-controller-manager` (responsible for managing these load balancers on the respective underlying infrastructure) supports certain customization and settings via annotations.
+[This document](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer) provides a good overview and many examples.
+
+By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
+
+Note that we might switch to exposing the `virtual-garden-kube-apiserver` via Istio in the future (similar to how the `kube-apiservers` of shoot clusters are exposed).
+The load balancer service settings might still be relevant, though.
+
+#### Vertical Pod Autoscaler
+
+`gardener-operator` heavily relies on the Kubernetes [`vertical-pod-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
+By default, the `Garden` controller deploys the VPA components into the `garden` namespace of the respective runtime cluster.
+In case you want to manage the VPA deployment on your own or have a custom one, then you might want to disable the automatic deployment of `gardener-operator`.
+Otherwise, you might end up with two VPAs which will cause erratic behaviour.
+By setting the `.spec.settings.verticalPodAutoscaler.enabled=false` you can disable the automatic deployment.
+
+⚠️ In any case, there must be a VPA available for your runtime cluster.
+Using a runtime cluster without VPA is not supported.
 
 ## Credentials Rotation
 

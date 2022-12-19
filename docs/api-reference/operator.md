@@ -561,6 +561,38 @@ Settings
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.SettingLoadBalancerServices">SettingLoadBalancerServices
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Settings">Settings</a>)
+</p>
+<p>
+<p>SettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
+runtime cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>annotations</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Annotations is a map of annotations that will be injected/merged into every load balancer service object.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.SettingVerticalPodAutoscaler">SettingVerticalPodAutoscaler
 </h3>
 <p>
@@ -613,6 +645,21 @@ disable it, then reconciliation will fail.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>loadBalancerServices</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.SettingLoadBalancerServices">
+SettingLoadBalancerServices
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LoadBalancerServices controls certain settings for services of type load balancer that are created in the runtime
+cluster.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>verticalPodAutoscaler</code></br>

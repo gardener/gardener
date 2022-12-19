@@ -64,6 +64,19 @@ spec:
                   settings:
                     description: Settings contains certain settings for this cluster.
                     properties:
+                      loadBalancerServices:
+                        description: LoadBalancerServices controls certain settings
+                          for services of type load balancer that are created in the
+                          runtime cluster.
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            description: Annotations is a map of annotations that
+                              will be injected/merged into every load balancer service
+                              object.
+                            type: object
+                        type: object
                       verticalPodAutoscaler:
                         description: VerticalPodAutoscaler controls certain settings
                           for the vertical pod autoscaler components deployed in the

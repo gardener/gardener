@@ -42,7 +42,10 @@ import (
 )
 
 var _ = Describe("Garden controller tests", func() {
-	var garden *operatorv1alpha1.Garden
+	var (
+		loadBalancerServiceAnnotations = map[string]string{"foo": "bar"}
+		garden                         *operatorv1alpha1.Garden
+	)
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
@@ -63,6 +66,9 @@ var _ = Describe("Garden controller tests", func() {
 						Zones: []string{"a", "b", "c"},
 					},
 					Settings: &operatorv1alpha1.Settings{
+						LoadBalancerServices: &operatorv1alpha1.SettingLoadBalancerServices{
+							Annotations: loadBalancerServiceAnnotations,
+						},
 						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
 							Enabled: pointer.Bool(true),
 						},
@@ -186,6 +192,12 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-etcd-main")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-etcd-events")})}),
 		))
+
+		Eventually(func(g Gomega) map[string]string {
+			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
+			return service.Annotations
+		}).Should(Equal(loadBalancerServiceAnnotations))
 
 		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in
 		// this test, so let's fake this here.
