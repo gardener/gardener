@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 18,
-  "iteration": 1671184303124,
+  "id": 9,
+  "iteration": 1671506313205,
   "links": [],
   "panels": [
     {
@@ -35,7 +35,7 @@
       "type": "row"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the total number of admission requests being served.",
       "fieldConfig": {
         "defaults": {
@@ -116,7 +116,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the total number of admission requests being served.",
       "fieldConfig": {
         "defaults": {
@@ -195,7 +195,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the current number of admission requests being served.",
       "fieldConfig": {
         "defaults": {
@@ -275,7 +275,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the latency of processing admission requests.",
       "fieldConfig": {
         "defaults": {
@@ -372,7 +372,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the latency of processing admission requests.",
       "fieldConfig": {
         "defaults": {
@@ -462,13 +462,34 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
         "current": {
           "selected": false,
-          "text": "gardener-resource-manager",
-          "value": "gardener-resource-manager"
+          "text": "seed-prometheus",
+          "value": "seed-prometheus"
         },
-        "datasource": "seed-prometheus",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "provider-local",
+          "value": "provider-local"
+        },
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_webhook_requests_total{}, job)",
         "description": null,
         "error": null,
@@ -495,11 +516,11 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "/webhooks/high-availability-config",
-          "value": "/webhooks/high-availability-config"
+          "selected": true,
+          "text": "/networkpolicy",
+          "value": "/networkpolicy"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},webhook)",
         "description": null,
         "error": null,
@@ -534,7 +555,7 @@
             "$__all"
           ]
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},code)",
         "description": null,
         "error": null,
@@ -562,14 +583,15 @@
         "allValue": null,
         "current": {
           "selected": true,
+          "tags": [],
           "text": [
-            "All"
+            "gardener-extension-provider-local-6cbffbbc84-hbnrg"
           ],
           "value": [
-            "$__all"
+            "gardener-extension-provider-local-6cbffbbc84-hbnrg"
           ]
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},pod)",
         "description": null,
         "error": null,

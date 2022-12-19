@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 6,
-  "iteration": 1671092479058,
+  "id": 2,
+  "iteration": 1671505632803,
   "links": [],
   "panels": [
     {
@@ -34,7 +34,7 @@
       "type": "row"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the reconciliation rate for a controller by pod.",
       "fieldConfig": {
         "defaults": {
@@ -108,7 +108,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the reconciliation rate per result per controller by pod.",
       "fieldConfig": {
         "defaults": {
@@ -243,7 +243,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the total number of reconciliation errors per controller by pod.",
       "fieldConfig": {
         "defaults": {
@@ -318,7 +318,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the length per reconciliation per controller by pod.",
       "fieldConfig": {
         "defaults": {
@@ -422,7 +422,7 @@
       "type": "row"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the active workers per controller by pod.",
       "fieldConfig": {
         "defaults": {
@@ -534,7 +534,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the maximum number of concurrent reconciliations per controller by pod.",
       "fieldConfig": {
         "defaults": {
@@ -627,7 +627,7 @@
       "type": "table"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Rate of unfinished work per second not observed in work duration metrics. A constant value of 1 could indicate 1 stuck worker routine.",
       "fieldConfig": {
         "defaults": {
@@ -706,7 +706,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows for how many seconds the longest running worker of a pod for a workqueue has been running.",
       "fieldConfig": {
         "defaults": {
@@ -795,7 +795,7 @@
       "type": "row"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the rate of adds to the work queue. by pod",
       "fieldConfig": {
         "defaults": {
@@ -870,7 +870,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the total number of retries handled by the workqueue by pod.",
       "fieldConfig": {
         "defaults": {
@@ -945,7 +945,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows how many items of the workqueue are processed.",
       "fieldConfig": {
         "defaults": {
@@ -1022,7 +1022,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Seconds processing an item from workqueue takes.",
       "fieldConfig": {
         "defaults": {
@@ -1115,7 +1115,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Seconds an item stays in workqueue before being requested.",
       "fieldConfig": {
         "defaults": {
@@ -1212,7 +1212,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the current length of the workqueue by pod.",
       "fieldConfig": {
         "defaults": {
@@ -1316,13 +1316,34 @@
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": false,
+          "text": "seed-prometheus",
+          "value": "seed-prometheus"
+        },
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "allValue": null,
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "gardenlet",
           "value": "gardenlet"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_reconcile_total{}, job)",
         "description": null,
         "error": null,
@@ -1353,7 +1374,7 @@
           "text": "backupbucket",
           "value": "backupbucket"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
         "description": null,
         "error": null,
@@ -1384,7 +1405,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\",controller=\"$controller\"}, pod)",
         "description": null,
         "error": null,

@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 14,
-  "iteration": 1670824255164,
+  "id": 13,
+  "iteration": 1671506507087,
   "links": [],
   "panels": [
     {
@@ -34,7 +34,7 @@
       "type": "row"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -111,7 +111,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -184,7 +184,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -269,13 +269,34 @@
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": false,
+          "text": "seed-prometheus",
+          "value": "seed-prometheus"
+        },
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "allValue": null,
         "current": {
           "selected": false,
           "text": "gardenlet",
           "value": "gardenlet"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_reconcile_total{}, job)",
         "description": null,
         "error": null,
@@ -310,7 +331,7 @@
             "$__all"
           ]
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, pod)",
         "description": null,
         "error": null,
@@ -345,7 +366,7 @@
             "$__all"
           ]
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(rest_client_requests_total, method)",
         "description": null,
         "error": null,
@@ -380,7 +401,7 @@
             "$__all"
           ]
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(rest_client_requests_total, code)",
         "description": null,
         "error": null,

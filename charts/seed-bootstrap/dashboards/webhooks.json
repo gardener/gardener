@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 17,
-  "iteration": 1671182291283,
+  "id": 12,
+  "iteration": 1671506061734,
   "links": [],
   "panels": [
     {
@@ -33,7 +33,7 @@
       "type": "row"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -93,7 +93,7 @@
       "type": "bargauge"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -167,7 +167,7 @@
       "type": "row"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the total number of admission requests being served.",
       "fieldConfig": {
         "defaults": {
@@ -248,7 +248,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the total number of admission requests being served.",
       "fieldConfig": {
         "defaults": {
@@ -327,7 +327,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the current number of admission requests being served.",
       "fieldConfig": {
         "defaults": {
@@ -407,7 +407,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the latency of processing admission requests.",
       "fieldConfig": {
         "defaults": {
@@ -492,7 +492,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "${datasource}",
       "description": "Shows the latency of processing admission requests.",
       "fieldConfig": {
         "defaults": {
@@ -582,13 +582,34 @@
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": false,
+          "text": "seed-prometheus",
+          "value": "seed-prometheus"
+        },
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "allValue": null,
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "gardener-resource-manager",
           "value": "gardener-resource-manager"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_webhook_requests_total{}, job)",
         "description": null,
         "error": null,
@@ -623,8 +644,8 @@
             "$__all"
           ]
         },
-        "datasource": "seed-prometheus",
-        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},webhook)",
+        "datasource": "${datasource}",
+        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"}, webhook)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -730,7 +751,7 @@
           }
         ],
         "query": {
-          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},webhook)",
+          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"}, webhook)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 0,
@@ -759,12 +780,12 @@
         "name": "percentile",
         "options": [
           {
-            "selected": true,
+            "selected": false,
             "text": "50",
             "value": "50"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "90",
             "value": "90"
           },
