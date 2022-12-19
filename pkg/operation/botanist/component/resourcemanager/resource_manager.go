@@ -272,7 +272,7 @@ type Values struct {
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
-	// Version is the Kubernetes version for the Kubernetes components.
+	// KubernetesVersion is the Kubernetes version for the Kubernetes components.
 	KubernetesVersion *semver.Version
 	// VPA contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
 	VPA *VPAConfig
