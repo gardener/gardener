@@ -42,7 +42,7 @@ func NewActuator() infrastructure.Actuator {
 	return &actuator{}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	networkPolicyAllowToMachinePods := emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace)
 	networkPolicyAllowToMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
@@ -99,6 +99,17 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 			MatchLabels: map[string]string{local.LabelNetworkPolicyToIstioIngressGateway: v1beta1constants.LabelNetworkPolicyAllowed},
 		},
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+	}
+	if len(cluster.Seed.Spec.Provider.Zones) > 1 {
+		for _, zone := range cluster.Seed.Spec.Provider.Zones {
+			networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To = append(networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress--" + zone}},
+				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":   "istio-ingressgateway",
+					"istio": "ingressgateway--zone--" + zone,
+				}},
+			})
+		}
 	}
 
 	networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)

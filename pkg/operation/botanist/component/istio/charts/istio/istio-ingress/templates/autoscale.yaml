@@ -15,8 +15,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: istio-ingressgateway
-  minReplicas: 2
-  maxReplicas: 5
+  minReplicas: {{ .Values.minReplicas }}
+  maxReplicas: {{ .Values.maxReplicas }}
   metrics:
   - type: Resource
     resource:

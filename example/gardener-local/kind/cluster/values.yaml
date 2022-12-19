@@ -9,7 +9,10 @@ gardener:
   seed:
     deployed: true
     istio:
-      listenAddress: 127.0.0.1
+      listenAddressDefault: 127.0.0.1
+      listenAddressZone0: 127.0.0.10
+      listenAddressZone1: 127.0.0.11
+      listenAddressZone2: 127.0.0.12
 
 backupBucket:
   deployed: true

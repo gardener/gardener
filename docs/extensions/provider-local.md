@@ -35,6 +35,10 @@ Please note that all of them are no technical limitations/blockers but simply ad
    _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._\
    _However, given that the `APIServerSNI` feature gate is deprecated and will be removed in the future (see [gardener/gardener#6007](https://github.com/gardener/gardener/pull/6007)), we will probably not invest into this._
 
+5. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in cluster `coredns`.
+
+   _As the different istio ingress gateway loadbalancers have individual external IP addresses, single-zone shoot control planes can end up in a random availability zone. Having the local host use the `coredns` in the cluster as name resolver would form a name resolution cycle. The tests mitigate the issue by adapting the DNS configuration inside the affected test._
+
 ## `ManagedSeed`s
 
 It is possible to deploy [`ManagedSeed`s](../usage/managed_seed.md) with `provider-local` by first creating a [`Shoot` in the `garden` namespace](../../example/provider-local/managedseeds/shoot-managedseed.yaml) and then creating a referencing [`ManagedSeed` object](../../example/provider-local/managedseeds/managedseed.yaml).
@@ -96,6 +100,16 @@ The `/etc/hosts` would be extended as follows:
 # End of gardener-extension-provider-local section
 ```
 
+In addition to that, the controller also adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
+
+```text
+data:
+  api.local.local.external.local.gardener.cloud.override: |
+    rewrite stop name regex api.local.local.external.local.gardener.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
+  api.local.local.internal.local.gardener.cloud.override: |
+    rewrite stop name regex api.local.local.internal.local.gardener.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
+```
+
 #### `Infrastructure`
 
 This controller generates a `NetworkPolicy` which allows the control plane pods (like `kube-apiserver`) to communicate with the worker machine pods (see [`Worker` section](#worker))).
@@ -135,6 +149,8 @@ Since the local Kubernetes clusters used as Seed clusters typically don't suppor
 It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `garden/nginx-ingress-controller`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
 
 If the `--apiserver-sni-enabled` flag is set to `true` (default), `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller. Otherwise, the `kube-apiserver` `Service` in the shoot namespaces in the seed cluster needs to be patched to be exposed on `30443` by the [Control Plane Exposure Webhook](#control-plane-exposure).
+
+In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `127.0.0.10`, `127.0.0.11`, and `127.0.0.12` are used for the zones `0`, `1`, and `2` respectively.
 
 #### ETCD Backups
 This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
@@ -185,6 +201,14 @@ For the shoot clusters, this empty patch trigger is not needed since the `Mutati
 #### Shoot
 
 This webhook reacts on the `ConfigMap` used by the `kube-proxy` and sets the `maxPerCore` field to `0` since other values don't work well in conjunction with the `kindest/node` image which is used as base for the shoot worker machine pods ([ref](https://github.com/kubernetes-sigs/kind/blob/fa7d86470f4c0e924fc4c2e767ec8491c45f4304/pkg/cluster/internal/kubeadm/config.go#L283-L285)).
+
+### DNS Configuration for Multi-Zonal Seeds
+
+In case a seed cluster has multiple availability zones as specified in `.spec.provider.zones`, multiple istio ingress gateways are deployed, one per availability zone in addition to the default deployment. The result is that single-zone shoot control planes, i.e. shoot clusters with `.spec.controlPlane.highAvailability` set or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, may be exposed via any of the zone-specific istio ingress gateways. Previously, the endpoints were statically mapped via `/etc/hosts`. Unfortunately, this is no longer possible due to the aforementioned dynamic in the endpoint selection.
+
+For multi-zonal seed clusters, there is an additional configuration following `coredns`'s [view plugin](https://github.com/coredns/coredns/tree/master/plugin/view) mapping the external IP addresses of the zone-specific loadbalancers to the corresponding internal istio ingress gateway domain names. This configuration is only in place for requests from outside of the seed cluster. Those requests are currently being identified by the protocol. UDP requests are interpreted as originating from within the seed cluster while TCP requests are assumed to come from outside the cluster via the docker hostport mapping.
+
+The corresponding test sets the DNS configuration accordingly so that the name resolution during the test use `coredns` in the cluster.
 
 ## Future Work
 

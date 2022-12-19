@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -57,10 +58,6 @@ func (b *Builder) Build(ctx context.Context) (*Seed, error) {
 		return nil, err
 	}
 	seed.SetInfo(seedObject)
-
-	if seedObject.Spec.Settings != nil && seedObject.Spec.Settings.LoadBalancerServices != nil {
-		seed.LoadBalancerServiceAnnotations = seedObject.Spec.Settings.LoadBalancerServices.Annotations
-	}
 
 	return seed, nil
 }
@@ -167,4 +164,48 @@ func (s *Seed) GetValidVolumeSize(size string) string {
 	}
 
 	return size
+}
+
+// GetLoadBalancerServiceAnnotations returns the load balancer annotations set for the seed if any.
+func (s *Seed) GetLoadBalancerServiceAnnotations() map[string]string {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
+		return seed.Spec.Settings.LoadBalancerServices.Annotations
+	}
+	return nil
+}
+
+// GetLoadBalancerServiceExternalTrafficPolicy indicates the external traffic policy for the seed if any.
+func (s *Seed) GetLoadBalancerServiceExternalTrafficPolicy() *corev1.ServiceExternalTrafficPolicyType {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
+		return seed.Spec.Settings.LoadBalancerServices.ExternalTrafficPolicy
+	}
+	return nil
+}
+
+// GetZonalLoadBalancerServiceAnnotations returns the zonal load balancer annotations set for the seed if any.
+func (s *Seed) GetZonalLoadBalancerServiceAnnotations(zone string) map[string]string {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
+		for _, zoneSettings := range seed.Spec.Settings.LoadBalancerServices.Zones {
+			if zoneSettings.Name == zone {
+				return zoneSettings.Annotations
+			}
+		}
+	}
+	return s.GetLoadBalancerServiceAnnotations()
+}
+
+// GetZonalLoadBalancerServiceExternalTrafficPolicy indicates the zonal external traffic policy for the seed if any.
+func (s *Seed) GetZonalLoadBalancerServiceExternalTrafficPolicy(zone string) *corev1.ServiceExternalTrafficPolicyType {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
+		for _, zoneSettings := range seed.Spec.Settings.LoadBalancerServices.Zones {
+			if zoneSettings.Name == zone {
+				return zoneSettings.ExternalTrafficPolicy
+			}
+		}
+	}
+	return s.GetLoadBalancerServiceExternalTrafficPolicy()
 }

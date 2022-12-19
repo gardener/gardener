@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -58,9 +57,6 @@ func NewBuilder() *Builder {
 		},
 		shootSecretFunc: func(context.Context, string, string) (*corev1.Secret, error) {
 			return nil, fmt.Errorf("shoot secret object is required but not set")
-		},
-		exposureClassFunc: func(context.Context, string) (*gardencorev1alpha1.ExposureClass, error) {
-			return nil, nil
 		},
 	}
 }
@@ -135,19 +131,6 @@ func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
 	return b
 }
 
-// WithExposureClassFrom sets the exposureClassFunc attribute at the Builder after fetching
-// the exposure class with the given reader.
-func (b *Builder) WithExposureClassFrom(c client.Reader) *Builder {
-	b.exposureClassFunc = func(ctx context.Context, exposureClassName string) (*gardencorev1alpha1.ExposureClass, error) {
-		exposureClass := &gardencorev1alpha1.ExposureClass{}
-		if err := c.Get(ctx, kutil.Key(exposureClassName), exposureClass); err != nil {
-			return nil, err
-		}
-		return exposureClass, nil
-	}
-	return b
-}
-
 // WithDisableDNS sets the disableDNS attribute at the Builder.
 func (b *Builder) WithDisableDNS(disableDNS bool) *Builder {
 	b.disableDNS = disableDNS
@@ -193,14 +176,6 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		return nil, err
 	}
 	shoot.Secret = secret
-
-	if shootObject.Spec.ExposureClassName != nil {
-		exposureClass, err := b.exposureClassFunc(ctx, *shootObject.Spec.ExposureClassName)
-		if err != nil {
-			return nil, err
-		}
-		shoot.ExposureClass = exposureClass
-	}
 
 	shoot.DisableDNS = b.disableDNS
 	shoot.HibernationEnabled = gardencorev1beta1helper.HibernationIsEnabled(shootObject)

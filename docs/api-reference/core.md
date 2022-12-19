@@ -8217,6 +8217,96 @@ map[string]string
 <p>Annotations is a map of annotations that will be injected/merged into every load balancer service object.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>externalTrafficPolicy</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExternalTrafficPolicy describes how nodes distribute service traffic they
+receive on one of the service&rsquo;s &ldquo;externally-facing&rdquo; addresses.
+Defaults to &ldquo;Cluster&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServicesZones">
+[]SeedSettingLoadBalancerServicesZones
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
+Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServicesZones">SeedSettingLoadBalancerServicesZones
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServices">SeedSettingLoadBalancerServices</a>)
+</p>
+<p>
+<p>SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
+multi-zonal setup.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the zone as specified in seed.spec.provider.zones.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>annotations</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>externalTrafficPolicy</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExternalTrafficPolicy describes how nodes distribute service traffic they
+receive on one of the service&rsquo;s &ldquo;externally-facing&rdquo; addresses.
+Defaults to &ldquo;Cluster&rdquo;.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">SeedSettingOwnerChecks

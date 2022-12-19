@@ -34,6 +34,5 @@ type Seed struct {
 	info      atomic.Value
 	infoMutex sync.Mutex
 
-	KubernetesVersion              *semver.Version
-	LoadBalancerServiceAnnotations map[string]string
+	KubernetesVersion *semver.Version
 }

@@ -65,25 +65,25 @@ func NewSNI(
 	client client.Client,
 	applier kubernetes.Applier,
 	namespace string,
-	values *SNIValues,
+	valuesFunc func() *SNIValues,
 ) component.DeployWaiter {
-	if values == nil {
-		values = &SNIValues{}
+	if valuesFunc == nil {
+		valuesFunc = func() *SNIValues { return &SNIValues{} }
 	}
 
 	return &sni{
-		client:    client,
-		applier:   applier,
-		namespace: namespace,
-		values:    values,
+		client:     client,
+		applier:    applier,
+		namespace:  namespace,
+		valuesFunc: valuesFunc,
 	}
 }
 
 type sni struct {
-	client    client.Client
-	applier   kubernetes.Applier
-	namespace string
-	values    *SNIValues
+	client     client.Client
+	applier    kubernetes.Applier
+	namespace  string
+	valuesFunc func() *SNIValues
 }
 
 type envoyFilterTemplateValues struct {
@@ -106,7 +106,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	)
 
 	if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
-		SNIValues: s.values,
+		SNIValues: s.valuesFunc(),
 		Name:      envoyFilter.Name,
 		Namespace: envoyFilter.Namespace,
 		Host:      hostName,
@@ -156,9 +156,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, func() error {
 		gateway.Labels = getLabels()
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{
-			Selector: s.values.IstioIngressGateway.Labels,
+			Selector: s.valuesFunc().IstioIngressGateway.Labels,
 			Servers: []*istioapinetworkingv1beta1.Server{{
-				Hosts: s.values.Hosts,
+				Hosts: s.valuesFunc().Hosts,
 				Port: &istioapinetworkingv1beta1.Port{
 					Number:   kubeapiserver.Port,
 					Name:     "tls",
@@ -178,12 +178,12 @@ func (s *sni) Deploy(ctx context.Context) error {
 		virtualService.Labels = getLabels()
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
-			Hosts:    s.values.Hosts,
+			Hosts:    s.valuesFunc().Hosts,
 			Gateways: []string{gateway.Name},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
 					Port:     kubeapiserver.Port,
-					SniHosts: s.values.Hosts,
+					SniHosts: s.valuesFunc().Hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{
@@ -220,7 +220,7 @@ func (s *sni) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
 }
 
 func (s *sni) emptyEnvoyFilter() *istionetworkingv1alpha3.EnvoyFilter {
-	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace, Namespace: s.values.IstioIngressGateway.Namespace}}
+	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace, Namespace: s.valuesFunc().IstioIngressGateway.Namespace}}
 }
 
 func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {

@@ -346,7 +346,6 @@ func (r *Reconciler) initializeOperation(
 		WithCloudProfileObject(cloudProfile).
 		WithShootSecretFrom(r.GardenClient).
 		WithProjectName(project.Name).
-		WithExposureClassFrom(r.GardenClient).
 		WithDisableDNS(!seed.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
@@ -361,7 +360,6 @@ func (r *Reconciler) initializeOperation(
 		WithConfig(&r.Config).
 		WithGardenerInfo(r.Identity).
 		WithGardenClusterIdentity(r.GardenClusterIdentity).
-		WithExposureClassHandlerFromConfig(&r.Config).
 		WithSecrets(gardenSecrets).
 		WithImageVector(r.ImageVector).
 		WithGarden(gardenObj).

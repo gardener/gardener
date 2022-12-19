@@ -75,6 +75,12 @@ spec:
   # loadBalancerServices:
   #   annotations:
   #     foo: bar
+  #   externalTrafficPolicy: Local
+  #   zones:
+  #   - name: europe-1a
+  #     annotations:
+  #       foo: bar
+  #     externalTrafficPolicy: Local
     verticalPodAutoscaler:
       enabled: true # a Gardener-managed VPA deployment is enabled
     ownerChecks:

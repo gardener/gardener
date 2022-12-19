@@ -26,6 +26,12 @@ type ControllerOptions struct {
 	MaxConcurrentReconciles int
 	// HostIP is the host ip.
 	HostIP string
+	// Zone0IP is the IP address to be used for the zone 0 istio ingress gateway.
+	Zone0IP string
+	// Zone1IP is the IP address to be used for the zone 1 istio ingress gateway.
+	Zone1IP string
+	// Zone2IP is the IP address to be used for the zone 2 istio ingress gateway.
+	Zone2IP string
 	// APIServerSNIEnabled states whether the APIServerSNI feature gate of the gardenlet is set to true.
 	APIServerSNIEnabled bool
 
@@ -36,12 +42,15 @@ type ControllerOptions struct {
 func (c *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&c.MaxConcurrentReconciles, cmd.MaxConcurrentReconcilesFlag, c.MaxConcurrentReconciles, "The maximum number of concurrent reconciliations.")
 	fs.StringVar(&c.HostIP, "host-ip", c.HostIP, "Overwrite Host IP to use for kube-apiserver service LoadBalancer")
+	fs.StringVar(&c.Zone0IP, "zone-0-ip", c.Zone0IP, "Overwrite IP to use for kube-apiserver service LoadBalancer in zone 0")
+	fs.StringVar(&c.Zone1IP, "zone-1-ip", c.Zone1IP, "Overwrite IP to use for kube-apiserver service LoadBalancer in zone 1")
+	fs.StringVar(&c.Zone2IP, "zone-2-ip", c.Zone2IP, "Overwrite IP to use for kube-apiserver service LoadBalancer in zone 2")
 	fs.BoolVar(&c.APIServerSNIEnabled, "apiserver-sni-enabled", c.APIServerSNIEnabled, "States whether the APIServerSNI feature gate of the gardenlet is set to true")
 }
 
 // Complete implements Completer.Complete.
 func (c *ControllerOptions) Complete() error {
-	c.config = &ControllerConfig{c.MaxConcurrentReconciles, c.HostIP, c.APIServerSNIEnabled}
+	c.config = &ControllerConfig{c.MaxConcurrentReconciles, c.HostIP, c.Zone0IP, c.Zone1IP, c.Zone2IP, c.APIServerSNIEnabled}
 	return nil
 }
 
@@ -56,6 +65,12 @@ type ControllerConfig struct {
 	MaxConcurrentReconciles int
 	// HostIP is the host ip.
 	HostIP string
+	// Zone0IP is the IP address to be used for the zone 0 istio ingress gateway.
+	Zone0IP string
+	// Zone1IP is the IP address to be used for the zone 1 istio ingress gateway.
+	Zone1IP string
+	// Zone2IP is the IP address to be used for the zone 2 istio ingress gateway.
+	Zone2IP string
 	// APIServerSNIEnabled states whether the APIServerSNI feature gate of the gardenlet is set to true.
 	APIServerSNIEnabled bool
 }
@@ -64,5 +79,8 @@ type ControllerConfig struct {
 func (c *ControllerConfig) Apply(opts *AddOptions) {
 	opts.Controller.MaxConcurrentReconciles = c.MaxConcurrentReconciles
 	opts.HostIP = c.HostIP
+	opts.Zone0IP = c.Zone0IP
+	opts.Zone1IP = c.Zone1IP
+	opts.Zone2IP = c.Zone2IP
 	opts.APIServerSNIEnabled = c.APIServerSNIEnabled
 }

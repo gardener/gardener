@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,21 +33,45 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 	f.Shoot.Spec.ControlPlane = nil
 
 	It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", func() {
+		setupDNSForTest()
+		DeferCleanup(tearDownDNSForTest)
+
 		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 		defer cancel()
 
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
 		By("Upgrade Shoot (non-HA to HA with failure tolerance type 'zone')")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 30*time.Minute)
 		defer cancel()
 		highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeZone)
 
 		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
+
+var defaultResolver *net.Resolver
+
+func setupDNSForTest() {
+	defaultResolver = net.DefaultResolver
+	net.DefaultResolver = &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			dialer := net.Dialer{
+				Timeout: time.Duration(5) * time.Second,
+			}
+			// We use tcp to distinguish easily in-cluster requests (done via udp) and requests from
+			// the tests (using tcp). The result for cluster api names differ depending on the source.
+			return dialer.DialContext(ctx, "tcp", "127.0.0.1:53")
+		},
+	}
+}
+
+func tearDownDNSForTest() {
+	net.DefaultResolver = defaultResolver
+}

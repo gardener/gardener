@@ -53,7 +53,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	It("Create, Update, Delete", Label("simple"), func() {
 		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 		defer cancel()
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()

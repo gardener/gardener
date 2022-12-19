@@ -29,8 +29,11 @@ import (
 )
 
 type reconciler struct {
-	client client.Client
-	hostIP string
+	client  client.Client
+	hostIP  string
+	zone0IP string
+	zone1IP string
+	zone2IP string
 }
 
 func (r *reconciler) InjectClient(client client.Client) error {
@@ -39,13 +42,19 @@ func (r *reconciler) InjectClient(client client.Client) error {
 }
 
 var (
-	keyIstioIngressGateway = client.ObjectKey{Namespace: "istio-ingress", Name: "istio-ingressgateway"}
-	keyNginxIngress        = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
+	keyIstioIngressGateway      = client.ObjectKey{Namespace: "istio-ingress", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayZone0 = client.ObjectKey{Namespace: "istio-ingress--0", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayZone1 = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayZone2 = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
+	keyNginxIngress             = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
 )
 
 const (
-	nodePortIstioIngressGateway int32 = 30443
-	nodePortIngress             int32 = 30448
+	nodePortIstioIngressGateway      int32 = 30443
+	nodePortIstioIngressGatewayZone0 int32 = 30444
+	nodePortIstioIngressGatewayZone1 int32 = 30445
+	nodePortIstioIngressGatewayZone2 int32 = 30446
+	nodePortIngress                  int32 = 30448
 )
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -67,15 +76,28 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	log.Info("Reconciling service")
 
-	if key == keyIstioIngressGateway || key == keyNginxIngress {
+	var ip string
+	if key == keyIstioIngressGateway || key == keyNginxIngress ||
+		key == keyIstioIngressGatewayZone0 || key == keyIstioIngressGatewayZone1 || key == keyIstioIngressGatewayZone2 {
 		patch := client.MergeFrom(service.DeepCopy())
 
 		for i, servicePort := range service.Spec.Ports {
 			switch {
 			case key == keyIstioIngressGateway && servicePort.Name == "tcp":
 				service.Spec.Ports[i].NodePort = nodePortIstioIngressGateway
+				ip = r.hostIP
+			case key == keyIstioIngressGatewayZone0 && servicePort.Name == "tcp":
+				service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone0
+				ip = r.zone0IP
+			case key == keyIstioIngressGatewayZone1 && servicePort.Name == "tcp":
+				service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone1
+				ip = r.zone1IP
+			case key == keyIstioIngressGatewayZone2 && servicePort.Name == "tcp":
+				service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone2
+				ip = r.zone2IP
 			case key == keyNginxIngress && servicePort.Name == "https":
 				service.Spec.Ports[i].NodePort = nodePortIngress
+				ip = r.hostIP
 			}
 		}
 
@@ -89,7 +111,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	patch := client.MergeFrom(service.DeepCopy())
-	service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: r.hostIP}}
+	service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: ip}}
 	return reconcile.Result{}, r.client.Status().Patch(ctx, service, patch)
 }
 
@@ -107,7 +129,10 @@ func (r *reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 
 		for i, port := range service.Spec.Ports {
 			if port.NodePort == nodePortIstioIngressGateway ||
-				port.NodePort == nodePortIngress {
+				port.NodePort == nodePortIngress ||
+				port.NodePort == nodePortIstioIngressGatewayZone0 ||
+				port.NodePort == nodePortIstioIngressGatewayZone1 ||
+				port.NodePort == nodePortIstioIngressGatewayZone2 {
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.Intn(max-min) + min)

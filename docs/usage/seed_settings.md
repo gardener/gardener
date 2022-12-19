@@ -75,6 +75,35 @@ In most cases, the cloud-controller-manager (responsible for managing these load
 
 By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
 
+### External Traffic Policy
+
+Setting the [external traffic policy](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip) to `Local` can be beneficial as it
+preserves the source IP address of client requests. In addition to that, it removes one hop in the data path and hence reduces request latency. On some cloud infrastructures, it can furthermore be
+used in conjunction with `Service` annotations as described above to prevent cross-zonal traffic from the load balancer to the backend pod.
+
+The default external traffic policy is `Cluster` meaning that all traffic from the load balancer will be sent to any cluster node, which then itself will redirect the traffic to the actual receiving
+pod. This approach adds a node to the data path, may cross the zone boundaries twice and replaces the source IP with one of the cluster nodes.
+
+![External Traffic Policy Cluster](./images/external-traffic-policy-cluster.png)
+
+Using external traffic policy `Local` drops the additional node, i.e. only cluster nodes with corresponding backend pods will be in the list of backends of the load balancer. However, this has
+multiple implications. The health check port in this scenario is exposed by `kube-proxy` , i.e. if `kube-proxy` is not working on a node a corresponding pod on the node will not receive traffic from
+the load balancer as the load balancer will see a failing health check. (This is quite different from ordinary service routing where `kube-proxy` is only responsible for setup, but does not need to
+run for its operation.) Furthermore, load balancing may become imbalanced if multiple pods run on the same node because load balancers will split the load equally among the nodes and not among the
+pods. This is mitigated by corresponding node anti affinities.
+
+![External Traffic Policy Local](./images/external-traffic-policy-local.png)
+
+Operators need to take these implications into account when considering switching external traffic policy to `Local`.
+
+### Zone-specific Settings
+
+In case a seed cluster is configured to use multiple zones via `.spec.provider.zones`, it may be necessary to configure the load balancers in individual zones in different way, e.g. by utilizing
+different annotations. One reason may be to reduce cross-zonal traffic and have zone-specific load balancers in place. Zone-specific load balancers may then be bound to zone-specific subnets or
+availability zones in the cloud infrastructure.
+
+Besides the load balancer annotations, it is also possible to set the [external traffic policy](#external-traffic-policy) for each zone-specific load balancer individually.
+
 ## Vertical Pod Autoscaler
 
 Gardener heavily relies on the Kubernetes [`vertical-pod-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).

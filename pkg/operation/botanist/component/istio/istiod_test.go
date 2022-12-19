@@ -16,6 +16,7 @@ package istio_test
 
 import (
 	"context"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -61,6 +62,11 @@ var _ = Describe("istiod", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 		renderer              cr.Interface
+
+		minReplicas = 2
+		maxReplicas = 5
+
+		externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
 
 		istiodService = `apiVersion: v1
 kind: Service
@@ -870,7 +876,17 @@ spec:
               topologyKey: "kubernetes.io/hostname"
 `
 
-		istioIngressAutoscaler = `
+		istioIngressAutoscaler = func(min *int, max *int) string {
+			minReplicas := 2
+			if min != nil {
+				minReplicas = *min
+			}
+			maxReplicas := 5
+			if max != nil {
+				maxReplicas = *max
+			}
+
+			return `
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
@@ -886,14 +902,15 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: istio-ingressgateway
-  minReplicas: 2
-  maxReplicas: 5
+  minReplicas: ` + fmt.Sprintf("%d", minReplicas) + `
+  maxReplicas: ` + fmt.Sprintf("%d", maxReplicas) + `
   metrics:
   - type: Resource
     resource:
       name: cpu
       targetAverageUtilization: 80
 `
+		}
 
 		istioIngressBootstrapConfig = `apiVersion: v1
 kind: ConfigMap
@@ -1476,7 +1493,8 @@ subjects:
   name: istio-ingressgateway
 `
 
-		istioIngressService = `apiVersion: v1
+		istioIngressService = func(externalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType) string {
+			out := `apiVersion: v1
 kind: Service
 metadata:
   name: istio-ingressgateway
@@ -1503,6 +1521,12 @@ spec:
     targetPort: 999
   
 `
+			if externalTrafficPolicy != nil {
+				out += `  externalTrafficPolicy: ` + string(*externalTrafficPolicy) + `
+`
+			}
+			return out
+		}
 
 		istioIngressServiceAccount = `apiVersion: v1
 kind: ServiceAccount
@@ -2289,14 +2313,14 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"])).To(Equal(istiodValidationWebhook))
 
 			By("checking istio-ingress resources")
-			Expect(string(managedResourceSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_gateway_test-ingress.yaml"])).To(Equal(istioIngressGateway))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
-			Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(nil)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment))
 
@@ -2343,6 +2367,86 @@ spec:
 
 				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
+			})
+		})
+
+		Context("horizontal ingress gateway scaling", func() {
+			BeforeEach(func() {
+				minReplicas = 3
+				maxReplicas = 8
+				igw[0].Values.MinReplicas = &minReplicas
+				igw[0].Values.MaxReplicas = &maxReplicas
+				istiod = NewIstio(
+					c,
+					renderer,
+					IstiodValues{
+						Image:                "foo/bar",
+						TrustDomain:          "foo.local",
+						NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
+						DNSServerAddress:     pointer.String("1.2.3.4"),
+						Zones:                []string{"a", "b", "c"},
+					},
+					deployNS,
+					igw,
+					ipp,
+				)
+			})
+
+			It("should successfully deploy correct autoscaling", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(&minReplicas, &maxReplicas)))
+			})
+		})
+
+		Context("external traffic policy cluster", func() {
+			BeforeEach(func() {
+				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeCluster
+				igw[0].Values.ExternalTrafficPolicy = &externalTrafficPolicy
+				istiod = NewIstio(
+					c,
+					renderer,
+					IstiodValues{
+						Image:                "foo/bar",
+						TrustDomain:          "foo.local",
+						NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
+						DNSServerAddress:     pointer.String("1.2.3.4"),
+						Zones:                []string{"a", "b", "c"},
+					},
+					deployNS,
+					igw,
+					ipp,
+				)
+			})
+
+			It("should successfully deploy correct external traffic policy", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(&externalTrafficPolicy)))
+			})
+		})
+
+		Context("external traffic policy local", func() {
+			BeforeEach(func() {
+				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				igw[0].Values.ExternalTrafficPolicy = &externalTrafficPolicy
+				istiod = NewIstio(
+					c,
+					renderer,
+					IstiodValues{
+						Image:                "foo/bar",
+						TrustDomain:          "foo.local",
+						NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
+						DNSServerAddress:     pointer.String("1.2.3.4"),
+						Zones:                []string{"a", "b", "c"},
+					},
+					deployNS,
+					igw,
+					ipp,
+				)
+			})
+
+			It("should successfully deploy correct external traffic policy", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(&externalTrafficPolicy)))
 			})
 		})
 	})

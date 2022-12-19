@@ -38,6 +38,12 @@ type AddOptions struct {
 	Controller controller.Options
 	// HostIP is the IP address of the host.
 	HostIP string
+	// Zone0IP is the IP address to be used for the zone 0 istio ingress gateway.
+	Zone0IP string
+	// Zone1IP is the IP address to be used for the zone 1 istio ingress gateway.
+	Zone1IP string
+	// Zone2IP is the IP address to be used for the zone 2 istio ingress gateway.
+	Zone2IP string
 	// APIServerSNIEnabled states whether the APIServerSNI feature gate of the gardenlet is set to true.
 	APIServerSNIEnabled bool
 }
@@ -46,7 +52,10 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	opts.Controller.Reconciler = &reconciler{
-		hostIP: opts.HostIP,
+		hostIP:  opts.HostIP,
+		zone0IP: opts.Zone0IP,
+		zone1IP: opts.Zone1IP,
+		zone2IP: opts.Zone2IP,
 	}
 	opts.Controller.RecoverPanic = true
 
@@ -55,11 +64,16 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		return err
 	}
 
-	istioIngressGatewayPredicate, err := predicate.LabelSelectorPredicate(
-		metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(opts.APIServerSNIEnabled)},
-	)
-	if err != nil {
-		return err
+	istioIngressGatewayPredicates := []predicate.Predicate{}
+	zone0, zone1, zone2 := "0", "1", "2"
+	for _, zone := range []*string{nil, &zone0, &zone1, &zone2} {
+		predicate, err := predicate.LabelSelectorPredicate(
+			metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(opts.APIServerSNIEnabled, zone)},
+		)
+		if err != nil {
+			return err
+		}
+		istioIngressGatewayPredicates = append(istioIngressGatewayPredicates, predicate)
 	}
 
 	nginxIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{
@@ -71,7 +85,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	}
 
 	return ctrl.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForObject{},
-		predicate.Or(istioIngressGatewayPredicate, nginxIngressPredicate),
+		predicate.Or(nginxIngressPredicate, predicate.Or(istioIngressGatewayPredicates...)),
 	)
 }
 
@@ -80,8 +94,13 @@ func AddToManager(mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }
 
-func matchExpressionsIstioIngressGateway(apiServerSNIEnabled bool) []metav1.LabelSelectorRequirement {
+func matchExpressionsIstioIngressGateway(apiServerSNIEnabled bool, zone *string) []metav1.LabelSelectorRequirement {
 	if apiServerSNIEnabled {
+		istioLabelValue := "ingressgateway"
+		if zone != nil {
+			istioLabelValue += "--zone--" + *zone
+		}
+
 		return []metav1.LabelSelectorRequirement{
 			{
 				Key:      "app",
@@ -91,7 +110,7 @@ func matchExpressionsIstioIngressGateway(apiServerSNIEnabled bool) []metav1.Labe
 			{
 				Key:      "istio",
 				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{"ingressgateway"},
+				Values:   []string{istioLabelValue},
 			},
 		}
 	}

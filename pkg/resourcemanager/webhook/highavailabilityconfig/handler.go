@@ -80,6 +80,7 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 	var (
 		failureToleranceType *gardencorev1beta1.FailureToleranceType
 		zones                []string
+		isZonePinningEnabled bool
 	)
 
 	if v, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType]; ok {
@@ -91,6 +92,10 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 		zones = sets.NewString(strings.Split(v, ",")...).Delete("").List()
 	}
 
+	if v, err := strconv.ParseBool(namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZonePinning]); err == nil {
+		isZonePinningEnabled = v
+	}
+
 	isHorizontallyScaled, maxReplicas, err := h.isHorizontallyScaled(ctx, req.Namespace, schema.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}.String(), req.Kind.Kind, req.Name)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -98,9 +103,9 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 
 	switch requestGK {
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
-		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas)
+		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, isZonePinningEnabled)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
-		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas)
+		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, isZonePinningEnabled)
 	default:
 		return admission.Allowed(fmt.Sprintf("unexpected resource: %s", requestGK))
 	}
@@ -127,6 +132,7 @@ func (h *Handler) handleDeployment(
 	zones []string,
 	isHorizontallyScaled bool,
 	maxReplicas int32,
+	isZonePinningEnabled bool,
 ) (
 	runtime.Object,
 	error,
@@ -150,7 +156,8 @@ func (h *Handler) handleDeployment(
 	}
 
 	h.mutateNodeAffinity(
-		failureToleranceType,
+		// TODO(ScheererJ): Remove "failureToleranceType != nil" in the future
+		failureToleranceType != nil || isZonePinningEnabled,
 		zones,
 		&deployment.Spec.Template,
 	)
@@ -173,6 +180,7 @@ func (h *Handler) handleStatefulSet(
 	zones []string,
 	isHorizontallyScaled bool,
 	maxReplicas int32,
+	isZonePinningEnabled bool,
 ) (
 	runtime.Object,
 	error,
@@ -196,7 +204,8 @@ func (h *Handler) handleStatefulSet(
 	}
 
 	h.mutateNodeAffinity(
-		failureToleranceType,
+		// TODO(ScheererJ): Remove "failureToleranceType != nil" in the future
+		failureToleranceType != nil || isZonePinningEnabled,
 		zones,
 		&statefulSet.Spec.Template,
 	)
@@ -293,11 +302,11 @@ func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPI
 }
 
 func (h *Handler) mutateNodeAffinity(
-	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	isZonePinningEnabled bool,
 	zones []string,
 	podTemplateSpec *corev1.PodTemplateSpec,
 ) {
-	if nodeSelectorRequirement := kutil.GetNodeSelectorRequirementForZones(failureToleranceType, zones); nodeSelectorRequirement != nil {
+	if nodeSelectorRequirement := kutil.GetNodeSelectorRequirementForZones(isZonePinningEnabled, zones); nodeSelectorRequirement != nil {
 		if podTemplateSpec.Spec.Affinity == nil {
 			podTemplateSpec.Spec.Affinity = &corev1.Affinity{}
 		}

@@ -117,6 +117,9 @@ const (
 	// HighAvailabilityConfigZones is a constant for an annotation on a Namespace which describes the availability
 	// zones are used.
 	HighAvailabilityConfigZones = "high-availability-config.resources.gardener.cloud/zones"
+	// HighAvailabilityConfigZonePinning is a constant for an annotation on a Namespace which enables pinning of
+	// workload to the specified zones.
+	HighAvailabilityConfigZonePinning = "high-availability-config.resources.gardener.cloud/zone-pinning"
 	// HighAvailabilityConfigType is a constant for a label on a resource which describes which component type it is.
 	HighAvailabilityConfigType = "high-availability-config.resources.gardener.cloud/type"
 	// HighAvailabilityConfigTypeController is a constant for a label value on a resource describing it's a controller.

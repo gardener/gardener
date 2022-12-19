@@ -2081,6 +2081,34 @@ message SeedSettingLoadBalancerServices {
   // Annotations is a map of annotations that will be injected/merged into every load balancer service object.
   // +optional
   map<string, string> annotations = 1;
+
+  // ExternalTrafficPolicy describes how nodes distribute service traffic they
+  // receive on one of the service's "externally-facing" addresses.
+  // Defaults to "Cluster".
+  // +optional
+  optional string externalTrafficPolicy = 2;
+
+  // Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
+  // Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.
+  // +optional
+  repeated SeedSettingLoadBalancerServicesZones zones = 3;
+}
+
+// SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
+// multi-zonal setup.
+message SeedSettingLoadBalancerServicesZones {
+  // Name is the name of the zone as specified in seed.spec.provider.zones.
+  optional string name = 1;
+
+  // Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.
+  // +optional
+  map<string, string> annotations = 2;
+
+  // ExternalTrafficPolicy describes how nodes distribute service traffic they
+  // receive on one of the service's "externally-facing" addresses.
+  // Defaults to "Cluster".
+  // +optional
+  optional string externalTrafficPolicy = 3;
 }
 
 // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.

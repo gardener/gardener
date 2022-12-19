@@ -19,13 +19,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 )
@@ -33,6 +40,8 @@ import (
 const pathEtcHosts = "/etc/hosts"
 
 type actuator struct {
+	common.RESTConfigContext
+
 	lock             sync.Mutex
 	writeToHostsFile bool
 }
@@ -42,15 +51,19 @@ func NewActuator(writeToHostsFile bool) dnsrecord.Actuator {
 	return &actuator{writeToHostsFile: writeToHostsFile}
 }
 
-func (a *actuator) Reconcile(_ context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
-	return a.reconcile(log, dnsrecord, CreateOrUpdateValuesInEtcHostsFile)
+func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.reconcile(ctx, log, dnsrecord, cluster, CreateOrUpdateValuesInEtcHostsFile, updateCoreDNSRewriteRule)
 }
 
-func (a *actuator) Delete(_ context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
-	return a.reconcile(log, dnsrecord, DeleteValuesInEtcHostsFile)
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.reconcile(ctx, log, dnsrecord, cluster, DeleteValuesInEtcHostsFile, deleteCoreDNSRewriteRule)
 }
 
-func (a *actuator) reconcile(log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte) error {
+func (a *actuator) reconcile(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
+	if err := a.updateCoreDNSRewritingRules(ctx, log, dnsRecord, cluster, mutateCorednsRules); err != nil {
+		return err
+	}
+
 	if !a.writeToHostsFile {
 		return nil
 	}
@@ -169,4 +182,44 @@ func reconcileEtcHostsFile(etcHostsContent []byte, name string, values []string,
 	}
 
 	return []byte(newContent)
+}
+
+func (a *actuator) updateCoreDNSRewritingRules(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
+	// Only handle dns records for kube-apiserver
+	if dnsRecord == nil || !strings.HasPrefix(dnsRecord.Spec.Name, "api.") || !strings.HasSuffix(dnsRecord.Spec.Name, ".local.gardener.cloud") {
+		return nil
+	}
+
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: dnsRecord.Namespace}}
+	if err := a.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+		return err
+	}
+
+	var zone *string
+	if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok && !strings.Contains(zones, ",") && len(cluster.Seed.Spec.Provider.Zones) > 1 {
+		zone = &zones
+	}
+
+	corednsConfig := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns-custom", Namespace: "gardener-extension-provider-local-coredns"}}
+	if err := a.Client().Get(ctx, client.ObjectKeyFromObject(corednsConfig), corednsConfig); err != nil {
+		return err
+	}
+
+	originalConfig := corednsConfig.DeepCopy()
+	mutateCorednsRules(corednsConfig, dnsRecord, zone)
+
+	return a.Client().Patch(ctx, corednsConfig, client.MergeFrom(originalConfig))
+}
+
+func deleteCoreDNSRewriteRule(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string) {
+	delete(corednsConfig.Data, dnsRecord.Spec.Name+".override")
+}
+
+func updateCoreDNSRewriteRule(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string) {
+	istioNamespaceSuffix := ""
+	if zone != nil {
+		istioNamespaceSuffix = "--" + *zone
+	}
+	corednsConfig.Data[dnsRecord.Spec.Name+".override"] =
+		"rewrite stop name regex " + regexp.QuoteMeta(dnsRecord.Spec.Name) + " istio-ingressgateway.istio-ingress" + istioNamespaceSuffix + ".svc.cluster.local answer auto"
 }

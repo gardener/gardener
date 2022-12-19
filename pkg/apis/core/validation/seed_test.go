@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -451,6 +452,141 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.settings.loadBalancerServices.annotations"),
+					})),
+				))
+			})
+
+			It("should allow valid load balancer service traffic policy", func() {
+				for _, p := range []string{"Cluster", "Local"} {
+					policy := corev1.ServiceExternalTrafficPolicyType(p)
+					seed.Spec.Settings = &core.SeedSettings{
+						LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
+							ExternalTrafficPolicy: &policy,
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with load balancer service traffic policy '%s' and have no errors", p))
+				}
+			})
+
+			It("should prevent invalid load balancer service traffic policy", func() {
+				policy := corev1.ServiceExternalTrafficPolicyType("foobar")
+				seed.Spec.Settings = &core.SeedSettings{
+					LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
+						ExternalTrafficPolicy: &policy,
+					},
+				}
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.settings.loadBalancerServices.externalTrafficPolicy"),
+					})),
+				))
+			})
+
+			It("should allow valid zonal load balancer service annotations and traffic policy", func() {
+				for _, p := range []string{"Cluster", "Local"} {
+					policy := corev1.ServiceExternalTrafficPolicyType(p)
+					zoneName := "a"
+					seed.Spec.Provider.Zones = []string{zoneName, "b"}
+					seed.Spec.Settings = &core.SeedSettings{
+						LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
+							Zones: []core.SeedSettingLoadBalancerServicesZones{{
+								Name: zoneName,
+								Annotations: map[string]string{
+									"simple":                          "bar",
+									"now-with-dashes":                 "bar",
+									"1-starts-with-num":               "bar",
+									"1234":                            "bar",
+									"simple/simple":                   "bar",
+									"now-with-dashes/simple":          "bar",
+									"now-with-dashes/now-with-dashes": "bar",
+									"now.with.dots/simple":            "bar",
+									"now-with.dashes-and.dots/simple": "bar",
+									"1-num.2-num/3-num":               "bar",
+									"1234/5678":                       "bar",
+									"1.2.3.4/5678":                    "bar",
+									"UpperCase123":                    "bar",
+								},
+								ExternalTrafficPolicy: &policy,
+							}},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with valid zonal load balancer traffic policy '%s' and have no errors", p))
+				}
+			})
+
+			It("should prevent invalid zonal load balancer service annotations, traffic policy and duplicate zones", func() {
+				policy := corev1.ServiceExternalTrafficPolicyType("foobar")
+				zoneName := "a"
+				incorrectZoneName := "b"
+				seed.Spec.Provider.Zones = []string{zoneName}
+				seed.Spec.Settings = &core.SeedSettings{
+					LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
+						Zones: []core.SeedSettingLoadBalancerServicesZones{
+							{
+								Name: incorrectZoneName,
+								Annotations: map[string]string{
+									"nospecialchars^=@":      "bar",
+									"cantendwithadash-":      "bar",
+									"only/one/slash":         "bar",
+									strings.Repeat("a", 254): "bar",
+								},
+								ExternalTrafficPolicy: &policy,
+							},
+							{
+								Name: incorrectZoneName,
+							},
+						},
+					},
+				}
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.settings.loadBalancerServices.zones"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].annotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].externalTrafficPolicy"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotFound),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[0].name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotFound),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[1].name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.settings.loadBalancerServices.zones[1].name"),
 					})),
 				))
 			})

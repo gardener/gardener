@@ -29,7 +29,7 @@ spec:
       - args:
         - -conf
         - /etc/coredns/Corefile
-        image: coredns/coredns:1.9.3
+        image: coredns/coredns:1.10.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 5
@@ -77,6 +77,9 @@ spec:
         - mountPath: /etc/coredns
           name: config-volume
           readOnly: true
+        - mountPath: /etc/coredns/custom
+          name: custom-config-volume
+          readOnly: true
       nodeSelector:
         kubernetes.io/os: linux
       restartPolicy: Always
@@ -88,4 +91,9 @@ spec:
             path: Corefile
           name: coredns
         name: config-volume
+      - configMap:
+          defaultMode: 420
+          name: coredns-custom
+          optional: true
+        name: custom-config-volume
 {{- end -}}

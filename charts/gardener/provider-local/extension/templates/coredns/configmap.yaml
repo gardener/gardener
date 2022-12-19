@@ -6,6 +6,34 @@ metadata:
   namespace: gardener-extension-provider-local-coredns
 data:
   Corefile: |
+    {{- if .Values.controllers.service.apiServerSNIEnabled }}
+    .:9053 {
+        view external {
+          expr proto() == 'tcp'
+        }
+        errors
+        health {
+           lameduck 5s
+        }
+        ready
+        import custom/*.override
+        prometheus :9153
+        hosts {
+          {{ .Values.controllers.service.hostIP }} istio-ingressgateway.istio-ingress.svc.cluster.local
+          {{ .Values.controllers.service.zone0IP }} istio-ingressgateway.istio-ingress--0.svc.cluster.local
+          {{ .Values.controllers.service.zone1IP }} istio-ingressgateway.istio-ingress--1.svc.cluster.local
+          {{ .Values.controllers.service.zone2IP }} istio-ingressgateway.istio-ingress--2.svc.cluster.local
+        }
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
+        cache 30
+        loop
+        log
+        reload
+        loadbalance
+    }
+    {{- end }}
     .:9053 {
         errors
         health {
@@ -13,9 +41,7 @@ data:
         }
         ready
     {{- if .Values.controllers.service.apiServerSNIEnabled }}
-        rewrite stop {
-          name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
-        }
+        import custom/*.override
     {{- else }}
         rewrite stop {
           name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud kube-apiserver.shoot--{2}--{1}.svc.cluster.local answer auto

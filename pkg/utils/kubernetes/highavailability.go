@@ -43,8 +43,8 @@ func GetReplicaCount(failureToleranceType *gardencorev1beta1.FailureToleranceTyp
 // Note that the returned requirement should be added to all existing node selector terms in the
 // spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms field of pods because
 // the various node selector terms are evaluated with the OR operator.
-func GetNodeSelectorRequirementForZones(failureToleranceType *gardencorev1beta1.FailureToleranceType, zones []string) *corev1.NodeSelectorRequirement {
-	if len(zones) == 0 || failureToleranceType == nil {
+func GetNodeSelectorRequirementForZones(isZonePinningEnabled bool, zones []string) *corev1.NodeSelectorRequirement {
+	if len(zones) == 0 || !isZonePinningEnabled {
 		return nil
 	}
 

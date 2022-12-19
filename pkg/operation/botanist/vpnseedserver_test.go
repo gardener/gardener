@@ -189,23 +189,9 @@ var _ = Describe("VPNSeedServer", func() {
 				DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 			})
 			vpnSeedServer.EXPECT().SetSeedNamespaceObjectUID(namespaceUID)
-			vpnSeedServer.EXPECT().SetSNIConfig(botanist.Config.SNI)
 		})
 
 		It("should set the secrets and SNI config and deploy", func() {
-			vpnSeedServer.EXPECT().Deploy(ctx)
-			Expect(botanist.DeployVPNServer(ctx)).To(Succeed())
-		})
-
-		It("should set the secrets and the ExposureClass handler config and deploy", func() {
-			botanist.ExposureClassHandler = &config.ExposureClassHandler{
-				Name: "test",
-				SNI:  &config.SNI{},
-			}
-
-			vpnSeedServer.EXPECT().SetExposureClassHandlerName(botanist.ExposureClassHandler.Name)
-			vpnSeedServer.EXPECT().SetSNIConfig(botanist.ExposureClassHandler.SNI)
-
 			vpnSeedServer.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployVPNServer(ctx)).To(Succeed())
 		})

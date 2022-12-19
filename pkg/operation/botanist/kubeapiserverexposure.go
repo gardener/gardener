@@ -22,7 +22,6 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,21 +29,19 @@ import (
 )
 
 func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) component.DeployWaiter {
-	var sniServiceKey = client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace}
-	if b.ExposureClassHandler != nil {
-		sniServiceKey.Name = *b.ExposureClassHandler.SNI.Ingress.ServiceName
-		sniServiceKey.Namespace = *b.ExposureClassHandler.SNI.Ingress.Namespace
-	}
-
 	return kubeapiserverexposure.NewService(
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
-			Annotations: b.getKubeAPIServerServiceAnnotations(sniPhase),
-			SNIPhase:    sniPhase,
+			AnnotationsFunc: func() map[string]string { return b.IstioLoadBalancerAnnotations() },
+			SNIPhase:        sniPhase,
 		},
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		sniServiceKey,
+		func() client.ObjectKey {
+			return client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}
+		},
+		func() client.ObjectKey {
+			return client.ObjectKey{Name: b.IstioServiceName(), Namespace: b.IstioNamespace()}
+		},
 		nil,
 		b.setAPIServerServiceClusterIP,
 		func(address string) {
@@ -64,13 +61,6 @@ func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.
 	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
 }
 
-func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
-	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
-		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
-	}
-	return b.Seed.LoadBalancerServiceAnnotations
-}
-
 // APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and the shoot uses internal and external
 // DNS.
 func (b *Botanist) APIServerSNIEnabled() bool {
@@ -83,9 +73,14 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.Applier(),
 		b.Shoot.SeedNamespace,
-		&kubeapiserverexposure.SNIValues{
-			IstioIngressGateway:      b.getIngressGatewayConfig(),
-			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+		func() *kubeapiserverexposure.SNIValues {
+			return &kubeapiserverexposure.SNIValues{
+				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
+					Namespace: b.IstioNamespace(),
+					Labels:    b.IstioLabels(),
+				},
+				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			}
 		},
 	))
 }
@@ -93,20 +88,6 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 // DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
 func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
-}
-
-func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressGateway {
-	ingressGatewayConfig := kubeapiserverexposure.IstioIngressGateway{
-		Namespace: *b.Config.SNI.Ingress.Namespace,
-		Labels:    b.Config.SNI.Ingress.Labels,
-	}
-
-	if b.ExposureClassHandler != nil {
-		ingressGatewayConfig.Namespace = *b.ExposureClassHandler.SNI.Ingress.Namespace
-		ingressGatewayConfig.Labels = gutil.GetMandatoryExposureClassHandlerSNILabels(b.ExposureClassHandler.SNI.Ingress.Labels, b.ExposureClassHandler.Name)
-	}
-
-	return ingressGatewayConfig
 }
 
 // SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
@@ -151,15 +132,20 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.Applier(),
 		b.Shoot.SeedNamespace,
-		&kubeapiserverexposure.SNIValues{
-			APIServerClusterIP: clusterIP,
-			NamespaceUID:       b.SeedNamespaceObject.UID,
-			Hosts: []string{
-				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-			},
-			IstioIngressGateway:      b.getIngressGatewayConfig(),
-			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+		func() *kubeapiserverexposure.SNIValues {
+			return &kubeapiserverexposure.SNIValues{
+				APIServerClusterIP: clusterIP,
+				NamespaceUID:       b.SeedNamespaceObject.UID,
+				Hosts: []string{
+					gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+					gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				},
+				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
+					Namespace: b.IstioNamespace(),
+					Labels:    b.IstioLabels(),
+				},
+				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			}
 		},
 	)
 }

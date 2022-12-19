@@ -19,18 +19,16 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
+
+	"github.com/Masterminds/semver"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -99,12 +97,6 @@ type Interface interface {
 	// SetSeedNamespaceObjectUID sets UID for the namespace
 	SetSeedNamespaceObjectUID(namespaceUID types.UID)
 
-	// SetExposureClassHandlerName sets the name of the ExposureClass handler.
-	SetExposureClassHandlerName(string)
-
-	// SetSNIConfig set the sni config.
-	SetSNIConfig(*config.SNI)
-
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 }
@@ -113,12 +105,6 @@ type Interface interface {
 type Secrets struct {
 	// DiffieHellmanKey is a secret containing the diffie hellman key.
 	DiffieHellmanKey component.Secret
-}
-
-// IstioIngressGateway contains the values for istio ingress gateway configuration.
-type IstioIngressGateway struct {
-	Namespace string
-	Labels    map[string]string
 }
 
 // NetworkValues contains the configuration values for the network.
@@ -149,8 +135,6 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
-	// IstioIngressGateway contains the values for istio ingress gateway configuration.
-	IstioIngressGateway IstioIngressGateway
 	// SeedVersion is the Kubernetes version of the Seed.
 	SeedVersion *semver.Version
 }
@@ -160,25 +144,29 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
+	istioNamespaceFunc func() string,
+	istioLabelsFunc func() map[string]string,
 	values Values,
 ) Interface {
 	return &vpnSeedServer{
-		client:         client,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		values:         values,
+		client:             client,
+		namespace:          namespace,
+		secretsManager:     secretsManager,
+		values:             values,
+		istioNamespaceFunc: istioNamespaceFunc,
+		istioLabelsFunc:    istioLabelsFunc,
 	}
 }
 
 type vpnSeedServer struct {
-	client                   client.Client
-	namespace                string
-	secretsManager           secretsmanager.Interface
-	namespaceUID             types.UID
-	values                   Values
-	exposureClassHandlerName *string
-	sniConfig                *config.SNI
-	secrets                  Secrets
+	client             client.Client
+	namespace          string
+	secretsManager     secretsmanager.Interface
+	namespaceUID       types.UID
+	values             Values
+	secrets            Secrets
+	istioNamespaceFunc func() string
+	istioLabelsFunc    func() map[string]string
 }
 
 func (v *vpnSeedServer) GetValues() Values {
@@ -940,10 +928,6 @@ func (v *vpnSeedServer) SetSecrets(secrets Secrets) { v.secrets = secrets }
 func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
 	v.namespaceUID = namespaceUID
 }
-func (v *vpnSeedServer) SetExposureClassHandlerName(handlerName string) {
-	v.exposureClassHandlerName = &handlerName
-}
-func (v *vpnSeedServer) SetSNIConfig(cfg *config.SNI) { v.sniConfig = cfg }
 
 func (v *vpnSeedServer) indexedName(idx *int) string {
 	if idx == nil {
@@ -993,26 +977,11 @@ func (v *vpnSeedServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
-	var namespace = v.values.IstioIngressGateway.Namespace
-	if v.sniConfig != nil && v.exposureClassHandlerName != nil {
-		namespace = *v.sniConfig.Ingress.Namespace
-	}
-	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: namespace}}
+	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioNamespaceFunc()}}
 }
 
 func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
-	var defaulIgwSelectors = map[string]string{
-		v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-	}
-
-	if v.sniConfig != nil {
-		if v.exposureClassHandlerName != nil {
-			return gutil.GetMandatoryExposureClassHandlerSNILabels(v.sniConfig.Ingress.Labels, *v.exposureClassHandlerName)
-		}
-		return utils.MergeStringMaps(v.sniConfig.Ingress.Labels, defaulIgwSelectors)
-	}
-
-	return defaulIgwSelectors
+	return v.istioLabelsFunc()
 }
 
 // GetLabels returns the labels for the vpn-seed-server

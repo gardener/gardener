@@ -159,6 +159,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdogProbe":     schema_pkg_apis_core_v1alpha1_SeedSettingDependencyWatchdogProbe(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation":   schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices":        schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServicesZones":   schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServicesZones(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks":                 schema_pkg_apis_core_v1alpha1_SeedSettingOwnerChecks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                  schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS":                    schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref),
@@ -313,6 +314,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProbe":      schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProbe(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":    schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":         schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones":    schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks":                  schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                   schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS":                     schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref),
@@ -6411,7 +6413,75 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref common.Re
 							},
 						},
 					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the service's \"externally-facing\" addresses. Defaults to \"Cluster\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup. Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServicesZones"),
+									},
+								},
+							},
+						},
+					},
 				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServicesZones"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServicesZones(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the zone as specified in seed.spec.provider.zones.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the service's \"externally-facing\" addresses. Defaults to \"Cluster\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
 			},
 		},
 	}
@@ -13625,7 +13695,75 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 							},
 						},
 					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the service's \"externally-facing\" addresses. Defaults to \"Cluster\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup. Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones"),
+									},
+								},
+							},
+						},
+					},
 				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the zone as specified in seed.spec.provider.zones.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the service's \"externally-facing\" addresses. Defaults to \"Cluster\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
 			},
 		},
 	}
