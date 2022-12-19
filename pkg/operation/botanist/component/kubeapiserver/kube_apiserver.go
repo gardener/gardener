@@ -82,8 +82,6 @@ const (
 	SecretNameUserKubeconfig = "user-kubeconfig"
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
-	// UserNameVPNSeed is the user name for the vpn-seed components (used as common name in its client certificate)
-	UserNameVPNSeed = "vpn-seed"
 	// UserNameVPNSeedClient is the user name for the HA vpn-seed-client components (used as common name in its client certificate)
 	UserNameVPNSeedClient = "vpn-seed-client"
 
@@ -214,8 +212,6 @@ type Images struct {
 	APIServerProxyPodWebhook string
 	// KubeAPIServer is the container image for the kube-apiserver.
 	KubeAPIServer string
-	// VPNSeed is the container image for the vpn-seed.
-	VPNSeed string
 	// VPNClient is the container image for the vpn-seed-client.
 	VPNClient string
 }

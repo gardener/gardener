@@ -139,5 +139,42 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				Entry("NodePort", corev1.ServiceTypeNodePort),
 			)
 		})
+
+		Context("sni disabled", func() {
+			BeforeEach(func() {
+				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=false")).ToNot(HaveOccurred())
+			})
+
+			It("returns Disabled for not existing services", func() {
+				phase, err := botanist.SNIPhase(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(phase).To(Equal(component.PhaseDisabled))
+			})
+
+			It("returns Disabling for service of type ClusterIP", func() {
+				svc.Spec.Type = corev1.ServiceTypeClusterIP
+				Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
+
+				phase, err := botanist.SNIPhase(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(phase).To(Equal(component.PhaseDisabling))
+			})
+
+			DescribeTable(
+				"return Disabled for service of type",
+				func(svcType corev1.ServiceType) {
+					svc.Spec.Type = svcType
+					Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
+
+					phase, err := botanist.SNIPhase(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(phase).To(Equal(component.PhaseDisabled))
+				},
+
+				Entry("ExternalName", corev1.ServiceTypeExternalName),
+				Entry("LoadBalancer", corev1.ServiceTypeLoadBalancer),
+				Entry("NodePort", corev1.ServiceTypeNodePort),
+			)
+		})
 	})
 })
