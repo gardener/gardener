@@ -2574,7 +2574,7 @@ rules:
 				})
 
 				It("should properly configure the settings related to reversed vpn if enabled", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version, VPN: VPNConfig{ReversedVPNEnabled: true}})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version})
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
@@ -2624,59 +2624,6 @@ rules:
 							},
 						},
 					))
-				})
-
-				It("should not configure the settings related to reversed vpn if disabled", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: false}})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
-					Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
-				})
-
-				It("should properly configure the settings related to oidc if enabled", func() {
-					oidc := &gardencorev1beta1.OIDCConfig{
-						IssuerURL:      pointer.String("someurl"),
-						ClientID:       pointer.String("clientid"),
-						CABundle:       pointer.String(""),
-						UsernameClaim:  pointer.String("usernameclaim"),
-						GroupsClaim:    pointer.String("groupsclaim"),
-						UsernamePrefix: pointer.String("usernameprefix"),
-						GroupsPrefix:   pointer.String("groupsprefix"),
-						SigningAlgs:    []string{"foo", "bar"},
-						RequiredClaims: map[string]string{"one": "two", "three": "four"},
-					}
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, OIDC: oidc})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
-						"--oidc-issuer-url="+*oidc.IssuerURL,
-						"--oidc-client-id="+*oidc.ClientID,
-						"--oidc-ca-file=/srv/kubernetes/oidc/ca.crt",
-						"--oidc-username-claim="+*oidc.UsernameClaim,
-						"--oidc-groups-claim="+*oidc.GroupsClaim,
-						"--oidc-username-prefix="+*oidc.UsernamePrefix,
-						"--oidc-groups-prefix="+*oidc.GroupsPrefix,
-						"--oidc-signing-algs=foo,bar",
-						"--oidc-required-claim=one=two",
-						"--oidc-required-claim=three=four",
-					))
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
-						Name:      "oidc-cabundle",
-						MountPath: "/srv/kubernetes/oidc",
-					}))
-
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
-						Name: "oidc-cabundle",
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: "kube-apiserver-oidc-cabundle-cd372fb8",
-							},
-						},
-					}))
 				})
 
 				It("should not configure the settings related to oidc if disabled", func() {
