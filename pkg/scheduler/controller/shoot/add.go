@@ -46,7 +46,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: r.Config.ConcurrentSyncs,
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }
