@@ -284,6 +284,9 @@ type ShootCareControllerConfiguration struct {
 	SyncPeriod *metav1.Duration
 	// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 	StaleExtensionHealthChecks *StaleExtensionHealthChecks
+	// ManagedResourceProgressingThreshold is the duration after which if managed resource progressing
+	// condition remains true then managed resource is considered stuck.
+	ManagedResourceProgressingThreshold *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
 	// WebhookRemediatorEnabled specifies whether the remediator for webhooks not following the Kubernetes best

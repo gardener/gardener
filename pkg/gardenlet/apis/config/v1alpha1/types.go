@@ -350,6 +350,9 @@ type ShootCareControllerConfiguration struct {
 	// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 	// +optional
 	StaleExtensionHealthChecks *StaleExtensionHealthChecks `json:"staleExtensionHealthChecks,omitempty"`
+	// ManagedResourceProgressingThreshold is the duration after which if managed resource progressing
+	// condition remains true then managed resource is considered stuck.
+	ManagedResourceProgressingThreshold *metav1.Duration `json:"managedResourceProgressingThreshold,omitempty"`
 	// ConditionThresholds defines the condition threshold per condition type.
 	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
