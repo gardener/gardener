@@ -25,8 +25,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 			if !ok {
@@ -64,6 +64,7 @@ func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informe
 			g.handleBackupBucketDelete(backupBucket)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1.BackupBucket) {

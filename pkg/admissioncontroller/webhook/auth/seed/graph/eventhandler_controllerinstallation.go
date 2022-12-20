@@ -24,8 +24,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-func (g *graph) setupControllerInstallationWatch(_ context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupControllerInstallationWatch(_ context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 			if !ok {
@@ -72,6 +72,7 @@ func (g *graph) setupControllerInstallationWatch(_ context.Context, informer cac
 			g.handleControllerInstallationDelete(controllerInstallation)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleControllerInstallationCreateOrUpdate(controllerInstallation *gardencorev1beta1.ControllerInstallation) {

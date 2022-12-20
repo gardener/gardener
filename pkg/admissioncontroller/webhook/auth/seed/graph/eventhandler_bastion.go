@@ -25,8 +25,8 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 )
 
-func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			bastion, ok := obj.(*operationsv1alpha1.Bastion)
 			if !ok {
@@ -62,6 +62,7 @@ func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) {
 			g.handleBastionDelete(bastion)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleBastionCreateOrUpdate(bastion *operationsv1alpha1.Bastion) {

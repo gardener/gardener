@@ -26,8 +26,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 			if !ok {
@@ -66,6 +66,7 @@ func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer
 			g.handleBackupEntryDelete(backupEntry)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.BackupEntry) {

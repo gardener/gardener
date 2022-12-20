@@ -27,8 +27,8 @@ import (
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 )
 
-func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			serviceAccount, ok := obj.(*corev1.ServiceAccount)
 			if !ok {
@@ -74,6 +74,7 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 			g.handleServiceAccountDelete(serviceAccount)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleServiceAccountCreateOrUpdate(serviceAccount *corev1.ServiceAccount) {

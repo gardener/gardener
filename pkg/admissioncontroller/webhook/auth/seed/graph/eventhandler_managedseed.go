@@ -32,8 +32,8 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
@@ -61,6 +61,7 @@ func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Inform
 			g.handleManagedSeedDelete(managedSeed)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) {

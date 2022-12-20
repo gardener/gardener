@@ -67,7 +67,7 @@ func New(logger logr.Logger, client client.Client) *graph {
 func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	for _, resource := range []struct {
 		obj     client.Object
-		setupFn func(context.Context, cache.Informer)
+		setupFn func(context.Context, cache.Informer) error
 	}{
 		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
 		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
@@ -85,7 +85,10 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		if err != nil {
 			return err
 		}
-		resource.setupFn(ctx, informer)
+		err = resource.setupFn(ctx, informer)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
