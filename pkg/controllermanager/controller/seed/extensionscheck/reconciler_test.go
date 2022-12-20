@@ -28,6 +28,8 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -64,7 +66,11 @@ var _ = Describe("Reconciler", func() {
 
 		fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
+		c = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithObjects(seed).
+			WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.SeedRefName, indexer.ControllerInstallationSeedRefNameIndexerFunc).
+			Build()
 		conf := config.SeedExtensionsCheckControllerConfiguration{
 			SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
 		}

@@ -289,7 +289,17 @@ var _ = Describe("#SNI", func() {
 				// TODO(mvladev): can't directly import the istio apis due to dependency issues.
 				s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualServiceList"), &unstructured.UnstructuredList{})
 				s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"), &unstructured.Unstructured{})
-				c = fake.NewClientBuilder().WithScheme(s).Build()
+				virtualServiceObj := &unstructured.Unstructured{}
+				virtualServiceObj.SetGroupVersionKind(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"))
+
+				c = fake.NewClientBuilder().
+					WithScheme(s).
+					WithIndex(
+						virtualServiceObj, "metadata.name", func(o client.Object) []string {
+							return []string{o.GetName()}
+						},
+					).
+					Build()
 			})
 
 			It("returns true when exists", func() {

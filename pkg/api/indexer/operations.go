@@ -24,15 +24,18 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 )
 
+// BastionShootNameIndexerFunc extracts the .spec.shootRef.name field of a Bastion.
+var BastionShootNameIndexerFunc = func(obj client.Object) []string {
+	bastion, ok := obj.(*operationsv1alpha1.Bastion)
+	if !ok {
+		return []string{""}
+	}
+	return []string{bastion.Spec.ShootRef.Name}
+}
+
 // AddBastionShootName adds an index for operations.BastionShootName to the given indexer.
 func AddBastionShootName(ctx context.Context, indexer client.FieldIndexer) error {
-	if err := indexer.IndexField(ctx, &operationsv1alpha1.Bastion{}, operations.BastionShootName, func(obj client.Object) []string {
-		bastion, ok := obj.(*operationsv1alpha1.Bastion)
-		if !ok {
-			return []string{""}
-		}
-		return []string{bastion.Spec.ShootRef.Name}
-	}); err != nil {
+	if err := indexer.IndexField(ctx, &operationsv1alpha1.Bastion{}, operations.BastionShootName, BastionShootNameIndexerFunc); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to Bastion Informer: %w", operations.BastionShootName, err)
 	}
 	return nil

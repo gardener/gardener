@@ -30,12 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
-	bastionregistry "github.com/gardener/gardener/pkg/registry/operations/bastion"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Add", func() {
@@ -152,10 +152,10 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			log = logr.Discard()
-			fakeClient = test.NewClientWithFieldSelectorSupport(
-				fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build(),
-				bastionregistry.ToSelectableFields,
-			)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithIndex(&operationsv1alpha1.Bastion{}, operations.BastionShootName, indexer.BastionShootNameIndexerFunc).
+				Build()
 		})
 
 		It("should do nothing if the object is no shoot", func() {
