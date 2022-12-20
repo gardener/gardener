@@ -20,6 +20,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -45,16 +46,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		r.SeedClient = seedCluster.GetClient()
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		fmt.Sprintf("%s-%s", ControllerName, r.ObjectKind),
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(fmt.Sprintf("%s-%s", ControllerName, r.ObjectKind)).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		},
-	)
+		}).
+		Build(r)
 	if err != nil {
 		return err
 	}
