@@ -67,7 +67,7 @@ func setupDNSForTest() {
 			}
 			// We use tcp to distinguish easily in-cluster requests (done via udp) and requests from
 			// the tests (using tcp). The result for cluster api names differ depending on the source.
-			return dialer.DialContext(ctx, "tcp", "127.0.0.1:53")
+			return dialer.DialContext(ctx, "tcp", "127.0.0.1:5353")
 		},
 	}
 }
