@@ -52,8 +52,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		controller.Options{
 			Reconciler:              r,
 			MaxConcurrentReconciles: 1,
-			RecoverPanic:            true,
-			RateLimiter:             workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second),
+
+			RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second),
 		},
 	)
 	if err != nil {

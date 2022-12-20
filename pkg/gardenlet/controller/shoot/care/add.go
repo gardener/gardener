@@ -53,7 +53,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		controller.Options{
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ShootCare.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
+
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
 		},

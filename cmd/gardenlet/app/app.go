@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -160,6 +161,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
+		Controller: v1alpha1.ControllerConfigurationSpec{
+			RecoverPanic: pointer.Bool(true),
+		},
 
 		ClientDisableCacheFor: []client.Object{
 			&corev1.Event{},

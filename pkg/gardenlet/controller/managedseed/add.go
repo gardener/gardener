@@ -100,7 +100,6 @@ func (r *Reconciler) AddToManager(
 		controller.Options{
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		},
 	)
 	if err != nil {
