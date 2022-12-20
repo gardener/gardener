@@ -133,11 +133,11 @@ results in
 2021-12-16T09:35:59.099+0100    INFO    controller.shoot    Reconciling Shoot        {"name": "sunflower", "namespace": "garden-greenhouse"}
 ```
 
-The logger is injected by controller-runtime's `Controller` implementation and our `controllerutils.CreateWorker` alike (if a logger is passed using `controllerutils.WithLogger`). The logger returned by `logf.FromContext` is never `nil`. If the context doesn't carry a logger, it falls back to the global logger (`logf.Log`), which might discard logs if not configured, but is also never `nil`.
+The logger is injected by controller-runtime's `Controller` implementation. The logger returned by `logf.FromContext` is never `nil`. If the context doesn't carry a logger, it falls back to the global logger (`logf.Log`), which might discard logs if not configured, but is also never `nil`.
 
 > ⚠️ Make sure that you don't overwrite the `name` or `namespace` value keys for such loggers, otherwise you will lose information about the reconciled object.
 
-The controller implementation (controller-runtime / `CreateWorker`) itself takes care of logging the error returned by reconcilers.
+The controller implementation (controller-runtime) itself takes care of logging the error returned by reconcilers.
 Hence, don't log an error that you are returning.
 Generally, functions should not return an error, if they already logged it, because that means the error is already handled and not an error anymore.
 See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logging) for more on this.
@@ -230,23 +230,3 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
   logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
   log := logf.Log.WithName("test")
   ```
-
-## Migration from logrus to logr
-
-These points might be helpful when refactoring existing code during the migration period:
-
-- For migrating an existing controller to logr:
-  - Create a named logger ([example](https://github.com/gardener/gardener/blob/ce9d741798eac2df8c470190ab483aa4c5818ebf/pkg/controllermanager/controller/cloudprofile/cloudprofile.go#L63)).
-  - Pass `controllerutils.WithLogger` to `CreateWorker` ([example](https://github.com/gardener/gardener/blob/ce9d741798eac2df8c470190ab483aa4c5818ebf/pkg/controllermanager/controller/cloudprofile/cloudprofile.go#L113)). This allows `logf.FromContext` to be used in reconcilers.
-  - Use `logf.FromContext` in `Reconcile` to retrieve the logr logger and use it from there on ([example](https://github.com/gardener/gardener/blob/ce9d741798eac2df8c470190ab483aa4c5818ebf/pkg/controllermanager/controller/cloudprofile/cloudprofile_control.go#L72)).
-  - Make sure to follow the other guidelines mentioned above as well (see [Logging in Controllers](#logging-in-controllers)).
-- Libraries might expect a different logging implementation than the component which uses it. E.g., a controller that already uses logr might want to use the `flow` package which still uses logrus. In such cases:
-  - You can consider refactoring the library along with the component itself, if feasible.
-  - It is acceptable for the migration period to use a logger derived from the respective global logger (`logger.Logger` or `logf.Log`) and pass it to the library.
-    However, please add a `TODO` for cleaning it up later on, once the migration is completed. E.g.:
-    ```go
-    // TODO: switch to logr once flow package is migrated
-    err := shootFlow.Run(flow.Opts{
-      Logger: logger.Logger.WithFields(logrus.Fields{"logger": "controller." + ControllerName, "name": shoot.Name, "namespace": shoot.Namespace})
-    })
-    ```
