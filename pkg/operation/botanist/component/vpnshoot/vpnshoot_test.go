@@ -927,7 +927,6 @@ status:
 						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
 					)
 
-					_ = secretNameClient1 // TODO
 					statefulSet := &appsv1.StatefulSet{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["statefulset__kube-system__vpn-shoot.yaml"], statefulSet)).To(Succeed())
 					expected := statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)
