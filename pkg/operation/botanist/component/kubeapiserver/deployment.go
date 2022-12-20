@@ -42,12 +42,11 @@ import (
 )
 
 const (
-	secretNameHAVPNSeedClient = "vpn-seed-client"
-
 	secretNameServer                 = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
 	secretNameKubeAggregator         = "kube-aggregator"
 	secretNameHTTPProxy              = "kube-apiserver-http-proxy"
+	secretNameHAVPNSeedClient        = "vpn-seed-client"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer            = "kube-apiserver"

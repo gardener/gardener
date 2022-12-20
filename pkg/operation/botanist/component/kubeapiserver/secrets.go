@@ -109,12 +109,7 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 		}
 	}
 
-	secret, err := k.secretsManager.Generate(ctx, staticTokenSecretConfig, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
+	return k.secretsManager.Generate(ctx, staticTokenSecretConfig, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
 func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken *corev1.Secret) error {
@@ -250,7 +245,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 		}, kutil.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 	)
 
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	return k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  v1beta1constants.DeploymentNameKubeAPIServer,
 		IPAddresses:                 append(ipAddresses, k.values.ServerCertificate.ExtraIPAddresses...),
@@ -258,39 +253,24 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 		CertType:                    secretutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*corev1.Secret, error) {
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	return k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        secretNameKubeAPIServerToKubelet,
 		CommonName:                  userName,
 		CertType:                    secretutils.ClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAKubelet, secretsmanager.UseOldCA), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*corev1.Secret, error) {
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	return k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        secretNameKubeAggregator,
 		CommonName:                  "system:kube-aggregator",
 		CertType:                    secretutils.ClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAFrontProxy), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
@@ -298,17 +278,12 @@ func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.S
 		return nil, nil
 	}
 
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	return k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        secretNameHTTPProxy,
 		CommonName:                  "kube-apiserver-http-proxy",
 		CertType:                    secretutils.ClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretHAVPNSeedClient(ctx context.Context) (*corev1.Secret, error) {
@@ -316,17 +291,12 @@ func (k *kubeAPIServer) reconcileSecretHAVPNSeedClient(ctx context.Context) (*co
 		return nil, nil
 	}
 
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	return k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        secretNameHAVPNSeedClient,
 		CommonName:                  UserNameVPNSeedClient,
 		CertType:                    secretutils.ClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretHAVPNSeedClientTLSAuth(ctx context.Context) (*corev1.Secret, error) {
@@ -334,12 +304,7 @@ func (k *kubeAPIServer) reconcileSecretHAVPNSeedClientTLSAuth(ctx context.Contex
 		return nil, nil
 	}
 
-	secretTLSAuth, err := k.secretsManager.Generate(ctx, &secretutils.VPNTLSAuthConfig{
+	return k.secretsManager.Generate(ctx, &secretutils.VPNTLSAuthConfig{
 		Name: vpnseedserver.SecretNameTLSAuth,
 	}, secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secretTLSAuth, nil
 }
