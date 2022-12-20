@@ -57,6 +57,7 @@ enableProfiling: false
 healthzBindAddress: ""
 hostnameOverride: ""
 iptables:
+  localhostNodePorts: null
   masqueradeAll: false
   masqueradeBit: null
   minSyncPeriod: 0s
@@ -77,7 +78,6 @@ nodePortAddresses: null
 oomScoreAdj: null
 portRange: ""
 showHiddenMetricsForVersion: ""
-udpIdleTimeout: 0s
 winkernel:
   enableDSR: false
   forwardHealthCheckVip: false
