@@ -94,7 +94,7 @@ func ValidateManagedSeedSetSpec(spec *seedmanagement.ManagedSeedSetSpec, fldPath
 	if len(spec.Selector.MatchLabels) == 0 && len(spec.Selector.MatchExpressions) == 0 {
 		allErrs = append(allErrs, field.Invalid(selectorPath, spec.Selector, "empty selector is invalid for ManagedSeedSet"))
 	} else {
-		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.Selector, selectorPath)...)
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.Selector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, selectorPath)...)
 		var err error
 		if selector, err = metav1.LabelSelectorAsSelector(&spec.Selector); err != nil {
 			allErrs = append(allErrs, field.Invalid(selectorPath, spec.Selector, err.Error()))

@@ -142,7 +142,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
 	if spec.SeedSelector != nil {
-		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, fldPath.Child("seedSelector"))...)
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("seedSelector"))...)
 	}
 
 	if spec.CABundle != nil {

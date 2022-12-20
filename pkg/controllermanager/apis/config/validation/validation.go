@@ -174,7 +174,7 @@ func validateProjectControllerConfiguration(conf *config.ProjectControllerConfig
 func validateProjectQuotaConfiguration(conf config.QuotaConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(conf.ProjectSelector, fldPath.Child("projectSelector"))...)
+	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(conf.ProjectSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("projectSelector"))...)
 
 	if conf.Config == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("config"), "must provide a quota config"))
