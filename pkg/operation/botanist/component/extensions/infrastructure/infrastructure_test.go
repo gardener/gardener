@@ -357,7 +357,9 @@ var _ = Describe("#Interface", func() {
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Status().Return(mc)
+			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+
+			mc.EXPECT().Status().Return(mockStatusWriter)
 
 			values.SSHPublicKey = sshPublicKey
 			values.AnnotateOperation = true
@@ -379,7 +381,7 @@ var _ = Describe("#Interface", func() {
 			// restore state
 			expectedWithState := obj.DeepCopy()
 			expectedWithState.Status.State = state
-			test.EXPECTPatch(ctx, mc, expectedWithState, obj, types.MergePatchType)
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
 
 			// annotate with restore annotation
 			expectedWithRestore := expectedWithState.DeepCopy()

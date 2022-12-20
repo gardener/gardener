@@ -299,7 +299,9 @@ var _ = Describe("#Network", func() {
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Status().Return(mc)
+			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+
+			mc.EXPECT().Status().Return(mockStatusWriter)
 
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
 				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("networks"), networkName))
@@ -318,7 +320,7 @@ var _ = Describe("#Network", func() {
 			// restore state
 			expectedWithState := obj.DeepCopy()
 			expectedWithState.Status.State = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
-			test.EXPECTPatch(ctx, mc, expectedWithState, obj, types.MergePatchType)
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
 
 			// annotate with restore annotation
 			expectedWithRestore := expectedWithState.DeepCopy()

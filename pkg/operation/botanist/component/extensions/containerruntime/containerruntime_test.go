@@ -345,7 +345,9 @@ var _ = Describe("#ContainerRuntime", func() {
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Status().Return(mc)
+			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+
+			mc.EXPECT().Status().Return(mockStatusWriter)
 
 			worker := gardencorev1beta1.Worker{
 				Name: workerNames[0],
@@ -378,7 +380,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			expectedWithState.Status = extensionsv1alpha1.ContainerRuntimeStatus{
 				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}},
 			}
-			test.EXPECTPatch(ctx, mc, expectedWithState, expected[0], types.MergePatchType)
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, expected[0], types.MergePatchType)
 
 			// annotate with restore annotation
 			expectedWithRestore := expectedWithState.DeepCopy()
