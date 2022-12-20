@@ -17,9 +17,9 @@ package kubernetes_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -37,7 +37,9 @@ var _ = Describe("DaemonSet", func() {
 		Entry("OwnerRefs is 'nil'", nil, false),
 		Entry("OwnerRefs is empty", []metav1.OwnerReference{}, false),
 		Entry("OwnerRefs doesn't contain DaemonSet", []metav1.OwnerReference{{}}, false),
-		Entry("DaemonSet is owner", []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "DaemonSet"}}, true),
-		Entry("DaemonSet and other ref are owners", []metav1.OwnerReference{{}, {APIVersion: "apps/v1", Kind: "DaemonSet"}}, true),
+		Entry("DaemonSet is owner but no controller set", []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "DaemonSet"}}, false),
+		Entry("DaemonSet is owner but not controller", []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "DaemonSet", Controller: pointer.Bool(false)}}, false),
+		Entry("DaemonSet is owner and controller", []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "DaemonSet", Controller: pointer.Bool(true)}}, true),
+		Entry("DaemonSet and other ref are owners", []metav1.OwnerReference{{}, {APIVersion: "apps/v1", Kind: "DaemonSet", Controller: pointer.Bool(true)}}, true),
 	)
 })

@@ -668,15 +668,17 @@ Please note, the `gardener-resource-manager` itself as well as pods labelled wit
 
 #### System Components Webhook
 
-If enabled, this webhook handles scheduling concerns for system components `Pod`s (except those managed by `DaemonSet`s).
+If enabled, this webhook handles scheduling concerns for system components `Pod`s (labelled with `gardener.cloud/role: system-component`, except those managed by `DaemonSet`s).
 The following tasks are performed by this webhook:
 
-- Add `pod.spec.nodeSelector` as given in the webhook configuration.
-- Add `pod.spec.tolerations` as given in the webhook configuration.
-- Add `pod.spec.tolerations` for any existing nodes matching the node selector given in the webhook configuration. Known taints and tolerations used for [taint based evictions](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions) are disregarded.
+1. Add `pod.spec.nodeSelector` as given in the webhook configuration.
+2. Add `pod.spec.tolerations` as given in the webhook configuration.
+3. Add `pod.spec.tolerations` for any existing nodes matching the node selector given in the webhook configuration. Known taints and tolerations used for [taint based evictions](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions) are disregarded.
 
 Gardener enables this webhook for `kube-system` and `kubernetes-dashboard` namespaces in shoot clusters.
-It furthermore adds the configuration, so that `Pod`s will get the `worker.gardener.cloud/system-components: true` node selector as well as tolerate any custom taint that is added to system component worker nodes (`shoot.spec.provider.workers[].systemComponents.allow: true`).
+It adds a configuration, so that `Pod`s will get the `worker.gardener.cloud/system-components: true` node selector (step 1) as well as tolerate any custom taint (step 2) that is added to system component worker nodes (`shoot.spec.provider.workers[].systemComponents.allow: true`).
+In addition, the webhook merges these tolerations with the ones required for at that time available system component `Node`s in the cluster (step 3).
+Both is required to ensure system component `Pod`s can be _scheduled_ or _executed_ during an active shoot reconciliation that is happening due to any modifications to `shoot.spec.provider.workers[].taints`, e.g. `Pod`s must be scheduled while there are still `Node`s not having the updated taint configuration.
 
 > You can opt-out of this behaviour for `Pod`s by labeling them with `system-components-config.resources.gardener.cloud/skip=true`.
 

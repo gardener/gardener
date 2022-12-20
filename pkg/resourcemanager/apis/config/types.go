@@ -215,7 +215,7 @@ type ResourceManagerWebhookConfiguration struct {
 	ProjectedTokenMount ProjectedTokenMountWebhookConfig
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
 	SeccompProfile SeccompProfileWebhookConfig
-	// SystemComponentsConfig is the configuration for the pod-node-handler webhook.
+	// SystemComponentsConfig is the configuration for the system-components-config webhook.
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig
 	// TokenInvalidator is the configuration for the token-invalidator webhook.
 	TokenInvalidator TokenInvalidatorWebhookConfig

@@ -232,7 +232,7 @@ type ResourceManagerWebhookConfiguration struct {
 	ExtensionValidation ExtensionValidation `json:"extensionValidation"`
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
-	// SystemComponentsConfig is the configuration for the pod-node-handler webhook.
+	// SystemComponentsConfig is the configuration for the system-components-config webhook.
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`

@@ -50,7 +50,12 @@ This document provides a checklist for them which you can walk through.
 
 7. **Ensure task dependencies are as precise as possible in shoot flows** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot/reconciler_reconcile.go#L508-L512), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot/reconciler_delete.go#L368-L372))
 
-   Only define the minimum of needed dependency tasks in the [shoot reconciliation/deletion flows](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot). 
+   Only define the minimum of needed dependency tasks in the [shoot reconciliation/deletion flows](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot).
+
+8. **Handle shoot system components**
+
+   Label system component `Pod`s with `gardener.cloud/role: system-component`. Gardener adds required label selectors and tolerations so that non-`DaemonSet` managed `Pod`s will exclusively run on selected nodes, [more information](../concepts/resource-manager.md#system-components-webhook).
+   `DaemonSet`s on the other hand, should generally tolerate any `NoSchedule` or `NoExecute` taints so that they can run on any `Node`, regardless of user added taints.
 
 ## Security
 

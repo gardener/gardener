@@ -15,17 +15,14 @@
 package systemcomponentsconfig_test
 
 import (
-	"reflect"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("SystemComponentsConfig tests", func() {
@@ -39,6 +36,9 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
 				Namespace:    testNamespace.Name,
+				Labels: map[string]string{
+					"gardener.cloud/role": "system-component",
+				},
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -52,25 +52,23 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 	})
 
 	JustBeforeEach(func() {
+		labelsInUse := make(map[string]string)
+
 		for _, n := range nodes {
-			if !reflect.DeepEqual(n.ObjectMeta, metav1.ObjectMeta{}) {
-				continue
+			node := n
+			node.ObjectMeta.GenerateName = "test-"
+
+			if node.ObjectMeta.Labels == nil {
+				node.ObjectMeta.Labels = nodeLabels()
 			}
 
-			node := n
-			node.ObjectMeta = metav1.ObjectMeta{
-				GenerateName: "test-",
-				Labels:       nodeLabels(),
-			}
+			labelsInUse = utils.MergeStringMaps(labelsInUse, node.ObjectMeta.Labels)
 
 			Expect(testClient.Create(ctx, &node)).To(Succeed())
 		}
 
 		DeferCleanup(func() {
-			Expect(testClient.DeleteAllOf(ctx, &corev1.Node{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
-				LabelSelector: labels.SelectorFromSet(nodeLabels()),
-			},
-			})).To(Succeed())
+			Expect(testClient.DeleteAllOf(ctx, &corev1.Node{}, client.MatchingLabels(labelsInUse))).To(Succeed())
 		})
 	})
 
@@ -87,7 +85,7 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 			nodes = []corev1.Node{{}, {}, {}}
 		})
 
-		Context("pod without taints", func() {
+		Context("nodes without taints", func() {
 			It("should add the node selector and configured tolerations", func() {
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 				Expect(pod.Spec.NodeSelector).To(Equal(handlerNodeSelector))
@@ -95,7 +93,7 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 			})
 		})
 
-		Context("pod with taints", func() {
+		Context("nodes with taints", func() {
 			var additionalTaintsPool1, additionalTaintsPool2 []corev1.Taint
 
 			BeforeEach(func() {
@@ -143,7 +141,7 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 				)
 			})
 
-			It("should add the node selector and configured tolerations + tolerate node taints", func() {
+			It("should add the node selector and configured tolerations and tolerate taints of existing nodes", func() {
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 				Expect(pod.Spec.NodeSelector).To(Equal(handlerNodeSelector))
 
@@ -174,11 +172,25 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 			})
 		})
 
+		Context("when no system component pod", func() {
+			It("should not add node selector or tolerations", func() {
+				var (
+					selectorBefore    = pod.Spec.NodeSelector
+					tolerationsBefore = pod.Spec.Tolerations
+				)
+
+				metav1.SetMetaDataLabel(&pod.ObjectMeta, "gardener.cloud/role", "some-component")
+
+				Expect(testClient.Create(ctx, pod)).To(Succeed())
+				Expect(pod.Spec.NodeSelector).To(Equal(selectorBefore))
+				Expect(pod.Spec.Tolerations).To(ConsistOf(addKubernetesDefaultTolerations(tolerationsBefore)))
+			})
+		})
+
 		Context("when nodes don't match selector", func() {
 			BeforeEach(func() {
 				nonRelevantNode := corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "test-",
 						Labels: map[string]string{
 							"test-non-system-components-pool": testID,
 						},
@@ -189,17 +201,9 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 				}
 
 				nodes = append(nodes, nonRelevantNode)
-
-				DeferCleanup(func() {
-					Expect(testClient.DeleteAllOf(ctx, &corev1.Node{}, &client.DeleteAllOfOptions{
-						ListOptions: client.ListOptions{
-							LabelSelector: labels.SelectorFromSet(nonRelevantNode.GetLabels()),
-						},
-					})).To(Succeed())
-				})
 			})
 
-			It("should add the node selector and configured tolerations + tolerate node taints", func() {
+			It("should add the node selector and configured tolerations and tolerate taints of existing nodes", func() {
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 				Expect(pod.Spec.NodeSelector).To(Equal(handlerNodeSelector))
 				Expect(pod.Spec.Tolerations).To(ConsistOf(addKubernetesDefaultTolerations(handlerTolerations)))

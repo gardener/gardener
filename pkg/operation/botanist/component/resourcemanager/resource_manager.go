@@ -1675,6 +1675,11 @@ func GetSystemComponentsConfigMutatingWebhook(namespaceSelector *metav1.LabelSel
 		ObjectSelector: &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
+					Key:      v1beta1constants.GardenRole,
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   []string{v1beta1constants.GardenRoleSystemComponent},
+				},
+				{
 					Key:      resourcesv1alpha1.SystemComponentsConfigSkip,
 					Operator: metav1.LabelSelectorOpDoesNotExist,
 				},
