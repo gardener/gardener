@@ -25,7 +25,7 @@ func (f Use) Do(env *envp.Env) {
 	ctx := logr.NewContext(context.TODO(), env.Log.WithName("use"))
 	env.EnsureBaseDirs(ctx)
 	if f.UseEnv {
-		// the the env var unconditionally
+		// the env var unconditionally
 		if env.PathMatches(f.AssetsPath) {
 			env.PrintInfo(f.PrintFormat)
 			return

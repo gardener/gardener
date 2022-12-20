@@ -22,8 +22,8 @@ require (
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/onsi/ginkgo/v2 v2.4.0
-	github.com/onsi/gomega v1.23.0
+	github.com/onsi/ginkgo/v2 v2.6.0
+	github.com/onsi/gomega v1.24.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/cobra v1.6.0
@@ -32,9 +32,9 @@ require (
 	github.com/texttheater/golang-levenshtein v1.0.1
 	go.uber.org/automaxprocs v1.4.0
 	go.uber.org/goleak v1.2.0
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.1.0
-	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
+	golang.org/x/time v0.3.0
 	golang.org/x/tools v0.2.0
 	gomodules.xyz/jsonpatch/v2 v2.2.0
 	gonum.org/v1/gonum v0.11.0
@@ -61,9 +61,9 @@ require (
 	k8s.io/kubelet v0.26.0
 	k8s.io/metrics v0.26.0
 	k8s.io/pod-security-admission v0.26.0
-	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d
-	sigs.k8s.io/controller-runtime v0.13.0
-	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220706173534-cd0058ad295c // v0.12.3
+	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
+	sigs.k8s.io/controller-runtime v0.14.1
+	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20221212190805-d4f1e822ca11 // v0.14.1
 	sigs.k8s.io/controller-tools v0.10.0
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -87,7 +87,6 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fluent/fluent-operator v1.7.0
-	github.com/frankban/quicktest v1.13.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
@@ -181,10 +180,12 @@ require (
 replace (
 	github.com/emicklei/go-restful/v3 => github.com/emicklei/go-restful/v3 v3.9.0 // keep this value in sync with k8s.io/apiserver
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
+	// remove this once https://github.com/gardener/etcd-druid/pull/450 is merged
+	github.com/gardener/etcd-druid => github.com/shafeeqes/etcd-druid v0.7.1-0.20221128092627-e77cecf56fed
 	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
 	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/google/gnostic => github.com/google/gnostic v0.5.7-v3refs // keep this value in sync with k8s.io/apiserver
-	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.2 // keep this value in sync with sigs.k8s.io/controller-runtime
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.14.0 // keep this value in sync with sigs.k8s.io/controller-runtime
 	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
 	google.golang.org/grpc => google.golang.org/grpc v1.49.0 // keep this value in sync with k8s.io/apiserver
 	k8s.io/api => k8s.io/api v0.26.0
