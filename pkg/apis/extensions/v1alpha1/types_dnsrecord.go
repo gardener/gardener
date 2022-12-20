@@ -106,6 +106,8 @@ type DNSRecordType string
 const (
 	// DNSRecordTypeA specifies that the DNSRecord is of type A.
 	DNSRecordTypeA DNSRecordType = "A"
+	// DNSRecordTypeAAAA specifies that the DNSRecord is of type AAAA.
+	DNSRecordTypeAAAA DNSRecordType = "AAAA"
 	// DNSRecordTypeCNAME specifies that the DNSRecord is of type CNAME.
 	DNSRecordTypeCNAME DNSRecordType = "CNAME"
 	// DNSRecordTypeTXT specifies that the DNSRecord is of type TXT.

@@ -31,10 +31,13 @@ func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
 	return false
 }
 
-// GetDNSRecordType returns the appropriate DNS record type (A or CNAME) for the given address.
+// GetDNSRecordType returns the appropriate DNS record type (A/AAAA or CNAME) for the given address.
 func GetDNSRecordType(address string) extensionsv1alpha1.DNSRecordType {
-	if ip := net.ParseIP(address); ip != nil && ip.To4() != nil {
-		return extensionsv1alpha1.DNSRecordTypeA
+	if ip := net.ParseIP(address); ip != nil {
+		if ip.To4() != nil {
+			return extensionsv1alpha1.DNSRecordTypeA
+		}
+		return extensionsv1alpha1.DNSRecordTypeAAAA
 	}
 	return extensionsv1alpha1.DNSRecordTypeCNAME
 }
