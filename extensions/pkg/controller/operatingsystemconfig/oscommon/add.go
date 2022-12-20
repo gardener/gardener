@@ -15,6 +15,7 @@
 package oscommon
 
 import (
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -37,7 +38,7 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, ctrlName string, osTypes []string, generator generator.Generator, opts AddOptions) error {
-	opts.Controller.RecoverPanic = true
+	opts.Controller.RecoverPanic = pointer.Bool(true)
 	return operatingsystemconfig.Add(mgr, operatingsystemconfig.AddArgs{
 		Actuator:          actuator.NewActuator(ctrlName, generator),
 		Predicates:        operatingsystemconfig.DefaultPredicates(opts.IgnoreOperationAnnotation),

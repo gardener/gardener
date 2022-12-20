@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -122,7 +123,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	// add controller, that regenerates the CA and server cert secrets periodically
 	ctrl, err := controller.New(certificateReconcilerName, mgr, controller.Options{
 		Reconciler:   r,
-		RecoverPanic: true,
+		RecoverPanic: pointer.Bool(true),
 		// if going into exponential backoff, wait at most the configured sync period
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.SyncPeriod),
 	})

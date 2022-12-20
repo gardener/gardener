@@ -16,6 +16,7 @@ package service
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -40,7 +41,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, predicates ...predicate.P
 		For(&corev1.Service{}, builder.WithPredicates(predicates...)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
-			RecoverPanic:            true,
+			RecoverPanic:            pointer.Bool(true),
 		}).
 		Complete(r)
 }

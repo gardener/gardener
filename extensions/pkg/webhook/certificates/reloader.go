@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -78,7 +79,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager) error 
 	// add controller that reloads the server cert secret periodically
 	ctrl, err := controller.NewUnmanaged(certificateReloaderName, mgr, controller.Options{
 		Reconciler:   r,
-		RecoverPanic: true,
+		RecoverPanic: pointer.Bool(true),
 		// if going into exponential backoff, wait at most the configured sync period
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.SyncPeriod),
 	})
