@@ -34,8 +34,7 @@ type Interface interface {
 	SeedmanagementV1alpha1() seedmanagementv1alpha1.SeedmanagementV1alpha1Interface
 }
 
-// Clientset contains the clients for groups. Each group has exactly one
-// version included in a Clientset.
+// Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
 	seedmanagementV1alpha1 *seedmanagementv1alpha1.SeedmanagementV1alpha1Client
