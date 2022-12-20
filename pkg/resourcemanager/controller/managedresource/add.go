@@ -96,7 +96,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Complete(reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },

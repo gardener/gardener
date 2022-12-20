@@ -56,7 +56,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

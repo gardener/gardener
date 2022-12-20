@@ -57,7 +57,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 			Reconciler:              r,
 			MaxConcurrentReconciles: 1,
 			RateLimiter:             r.RateLimiter,
-			RecoverPanic:            true,
 		},
 	)
 	if err != nil {
