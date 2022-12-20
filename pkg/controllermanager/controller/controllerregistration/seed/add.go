@@ -55,7 +55,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(r.SeedPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Build(r)
 	if err != nil {

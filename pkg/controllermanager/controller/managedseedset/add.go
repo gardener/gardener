@@ -63,7 +63,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&seedmanagementv1alpha1.ManagedSeedSet{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Build(r)
 	if err != nil {

@@ -39,7 +39,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&certificatesv1.CertificateSigningRequest{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

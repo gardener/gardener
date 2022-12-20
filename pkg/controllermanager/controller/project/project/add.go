@@ -49,7 +49,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Owns(&rbacv1.RoleBinding{}, builder.WithPredicates(r.RoleBindingPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 			RateLimiter:             r.RateLimiter,
 		}).
 		Complete(r)
