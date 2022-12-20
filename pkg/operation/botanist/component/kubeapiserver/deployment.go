@@ -166,11 +166,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAFrontProxy)
 	}
 
-	secretCAVPN, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
-	}
-
 	secretCAKubelet, found := k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
@@ -470,7 +465,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		if err := k.handleVPNSettings(deployment, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
+			return err
+		}
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
 
@@ -717,24 +714,33 @@ func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 func (k *kubeAPIServer) handleVPNSettings(
 	deployment *appsv1.Deployment,
 	configMapEgressSelector *corev1.ConfigMap,
-	secretCAVPN *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
-) {
+) error {
+	if !k.values.VPN.Enabled {
+		return nil
+	}
+
+	secretCAVPN, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
+	}
 
 	if k.values.VPN.HighAvailabilityEnabled {
-		k.handleVPNSettingsHAReversedVPN(deployment, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		k.handleVPNSettingsHA(deployment, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
 	} else {
-		k.handleVPNSettingsReversedVPN(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy)
+		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxy, configMapEgressSelector)
 	}
+
+	return nil
 }
 
-func (k *kubeAPIServer) handleVPNSettingsReversedVPN(
+func (k *kubeAPIServer) handleVPNSettingsNonHA(
 	deployment *appsv1.Deployment,
-	configMapEgressSelector *corev1.ConfigMap,
 	secretCAVPN *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
+	configMapEgressSelector *corev1.ConfigMap,
 ) {
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
@@ -781,7 +787,7 @@ func (k *kubeAPIServer) handleVPNSettingsReversedVPN(
 	}...)
 }
 
-func (k *kubeAPIServer) handleVPNSettingsHAReversedVPN(
+func (k *kubeAPIServer) handleVPNSettingsHA(
 	deployment *appsv1.Deployment,
 	secretCAVPN *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,

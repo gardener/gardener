@@ -218,6 +218,8 @@ type Images struct {
 
 // VPNConfig contains information for configuring the VPN settings for the kube-apiserver.
 type VPNConfig struct {
+	// Enabled states whether VPN is enabled.
+	Enabled bool
 	// PodNetworkCIDR is the CIDR of the pod network.
 	PodNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
@@ -389,7 +391,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if k.values.VPN.HighAvailabilityEnabled {
+	if k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled {
 		if err := k.reconcileServiceAccount(ctx); err != nil {
 			return err
 		}

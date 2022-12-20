@@ -55,6 +55,7 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -103,6 +104,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
 		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
 		secretNameVPNSeedClient           = "vpn-seed-client"
+		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00"
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
@@ -138,9 +140,10 @@ var _ = Describe("KubeAPIServer", func() {
 
 	JustBeforeEach(func() {
 		values = Values{
+			Autoscaling:    autoscalingConfig,
 			RuntimeVersion: runtimeVersion,
 			Version:        version,
-			Autoscaling:    autoscalingConfig,
+			VPN:            VPNConfig{Enabled: true},
 		}
 		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, sm, values)
@@ -870,17 +873,21 @@ var _ = Describe("KubeAPIServer", func() {
 				}))
 			})
 
-			Context("should successfully deploy the allow-kube-apiserver NetworkPolicy resource", func() {
-				var (
-					protocol             = corev1.ProtocolTCP
-					portAPIServer        = intstr.FromInt(443)
-					portBlackboxExporter = intstr.FromInt(9115)
-					portEtcd             = intstr.FromInt(2379)
-					portVPNSeedServer    = intstr.FromInt(9443)
-				)
+			var (
+				protocol             = corev1.ProtocolTCP
+				portAPIServer        = intstr.FromInt(443)
+				portBlackboxExporter = intstr.FromInt(9115)
+				portEtcd             = intstr.FromInt(2379)
+				portVPNSeedServer    = intstr.FromInt(9443)
+			)
 
-				It("w/ ReversedVPN", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version})
+			Context("allow-kube-apiserver NetworkPolicy resource", func() {
+				It("should successfully deploy when VPN is enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true},
+					})
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -935,6 +942,93 @@ var _ = Describe("KubeAPIServer", func() {
 									Ports: []networkingv1.NetworkPolicyPort{{
 										Protocol: &protocol,
 										Port:     &portVPNSeedServer,
+									}},
+								},
+							},
+							Ingress: []networkingv1.NetworkPolicyIngressRule{
+								{
+									From: []networkingv1.NetworkPolicyPeer{
+										{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
+										{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+									},
+									Ports: []networkingv1.NetworkPolicyPort{{
+										Protocol: &protocol,
+										Port:     &portAPIServer,
+									}},
+								},
+								{
+									From: []networkingv1.NetworkPolicyPeer{{
+										PodSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"gardener.cloud/role": "monitoring",
+												"app":                 "prometheus",
+												"role":                "monitoring",
+											},
+										},
+									}},
+									Ports: []networkingv1.NetworkPolicyPort{
+										{
+											Protocol: &protocol,
+											Port:     &portBlackboxExporter,
+										},
+										{
+											Protocol: &protocol,
+											Port:     &portAPIServer,
+										},
+									},
+								},
+							},
+							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+						},
+					}))
+				})
+
+				It("should successfully deploy when VPN is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: false},
+					})
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
+					Expect(networkPolicyAllowKubeAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: networkingv1.SchemeGroupVersion.String(),
+							Kind:       "NetworkPolicy",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            networkPolicyAllowKubeAPIServer.Name,
+							Namespace:       networkPolicyAllowKubeAPIServer.Namespace,
+							ResourceVersion: "1",
+							Annotations: map[string]string{
+								"gardener.cloud/description": "Allows Ingress to the Shoot's Kubernetes API Server from " +
+									"pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' and " +
+									"Prometheus, and Egress to etcd pods.",
+							},
+						},
+						Spec: networkingv1.NetworkPolicySpec{
+							PodSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":                 "kubernetes",
+									"gardener.cloud/role": "controlplane",
+									"role":                "apiserver",
+								},
+							},
+							Egress: []networkingv1.NetworkPolicyEgressRule{
+								{
+									To: []networkingv1.NetworkPolicyPeer{{
+										PodSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"app":                 "etcd-statefulset",
+												"gardener.cloud/role": "controlplane",
+											},
+										},
+									}},
+									Ports: []networkingv1.NetworkPolicyPort{{
+										Protocol: &protocol,
+										Port:     &portEtcd,
 									}},
 								},
 							},
@@ -1396,9 +1490,12 @@ rules:
 			})
 
 			Context("egress selector", func() {
-
 				It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version})
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true},
+					})
 
 					configMapEgressSelector = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
@@ -1424,6 +1521,31 @@ rules:
 						Data:      configMapEgressSelector.Data,
 					}))
 				})
+
+				DescribeTable("do nothing",
+					func(vpnConfig VPNConfig) {
+						kapi = New(kubernetesInterface, namespace, sm, Values{
+							Version: version,
+							VPN:     vpnConfig,
+						})
+
+						var found bool
+
+						configMapList := &corev1.ConfigMapList{}
+						Expect(c.List(ctx, configMapList, client.InNamespace(namespace))).To(Succeed())
+						for _, configMap := range configMapList.Items {
+							if strings.HasPrefix(configMap.Name, "kube-apiserver-egress-selector-config") {
+								found = true
+								break
+							}
+						}
+
+						Expect(found).To(BeFalse())
+					},
+
+					Entry("VPN is disabled", VPNConfig{Enabled: false}),
+					Entry("VPN is enabled but HA is disabled", VPNConfig{Enabled: true, HighAvailabilityEnabled: false}),
+				)
 			})
 		})
 
@@ -1446,7 +1568,11 @@ rules:
 			})
 
 			It("should have the expected labels w/ SNI", func() {
-				kapi = New(kubernetesInterface, namespace, sm, Values{SNI: SNIConfig{Enabled: true}, RuntimeVersion: runtimeVersion, Version: version})
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					SNI:            SNIConfig{Enabled: true},
+					RuntimeVersion: runtimeVersion,
+					Version:        version,
+				})
 				deployAndRead()
 
 				Expect(deployment.Labels).To(Equal(map[string]string{
@@ -1458,29 +1584,70 @@ rules:
 				}))
 			})
 
-			It("should have the expected annotations", func() {
-				deployAndRead()
+			Context("expected annotations", func() {
+				var defaultAnnotations map[string]string
 
-				Expect(deployment.Annotations).To(Equal(map[string]string{
-					"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
-					"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
-					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
-					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
-					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
-					"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
-					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
-					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
-					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
-					"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
-					"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
-					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
-					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
-					"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-					"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-					"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
-					"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
-					"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
-				}))
+				BeforeEach(func() {
+					defaultAnnotations = map[string]string{
+						"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
+						"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
+						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
+						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
+						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
+						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
+					}
+				})
+
+				It("should have the expected annotations when VPN is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when VPN is enabled but HA is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
+					})))
+				})
+
+				It("should have the expected annotations when VPN and HA is enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
+						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+					})))
+				})
 			})
 
 			It("should have the expected deployment settings", func() {
@@ -1490,7 +1657,11 @@ rules:
 					intStrZero            = intstr.FromInt(0)
 				)
 
-				kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: AutoscalingConfig{Replicas: &replicas}, RuntimeVersion: runtimeVersion, Version: version})
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Autoscaling:    AutoscalingConfig{Replicas: &replicas},
+					RuntimeVersion: runtimeVersion,
+					Version:        version,
+				})
 				deployAndRead()
 
 				Expect(deployment.Spec.MinReadySeconds).To(Equal(int32(30)))
@@ -1509,30 +1680,9 @@ rules:
 				}))
 			})
 
-			It("should have the expected pod template metadata", func() {
-				kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version})
+			It("should have the expected pod template labels", func() {
 				deployAndRead()
 
-				Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
-					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
-					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
-					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
-					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
-					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
-					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
-					"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
-					"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
-					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
-					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
-					"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-					"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-					"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
-					"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
-					"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
-					"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
-					"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
-					"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
-				}))
 				Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
 					"gardener.cloud/role":              "controlplane",
 					"app":                              "kubernetes",
@@ -1542,6 +1692,72 @@ rules:
 					"networking.gardener.cloud/to-public-networks":  "allowed",
 					"networking.gardener.cloud/from-prometheus":     "allowed",
 				}))
+			})
+
+			Context("expected pod template annotations", func() {
+				var defaultAnnotations map[string]string
+
+				BeforeEach(func() {
+					defaultAnnotations = map[string]string{
+						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
+						"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
+						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
+						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
+						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
+						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
+					}
+				})
+
+				It("should have the expected annotations when VPN is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when VPN is enabled but HA is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
+					})))
+				})
+
+				It("should have the expected annotations when VPN and HA is enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
+						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+					})))
+				})
 			})
 
 			It("should have the expected pod settings", func() {
@@ -1563,11 +1779,12 @@ rules:
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 			})
 
-			It("should have one init container and three vpn-seed-client sidecar containers when vpn high availability are enabled", func() {
+			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
 				values := Values{
 					Images:             Images{VPNClient: "vpn-client-image:really-latest"},
 					ServiceNetworkCIDR: "4.5.6.0/24",
 					VPN: VPNConfig{
+						Enabled:                              true,
 						HighAvailabilityEnabled:              true,
 						HighAvailabilityNumberOfSeedServers:  2,
 						HighAvailabilityNumberOfShootClients: 3,
@@ -1783,7 +2000,7 @@ rules:
 					corev1.Volume{
 						Name: "vpn-seed-tlsauth",
 						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{SecretName: "vpn-seed-server-tlsauth-a1d0aa00"},
+							Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeedServerTLSAuth},
 						},
 					},
 					corev1.Volume{
@@ -1844,32 +2061,31 @@ rules:
 			})
 
 			Context("kube-apiserver container", func() {
-				images := Images{KubeAPIServer: "some-kapi-image:latest"}
+				var (
+					acceptedIssuers    = []string{"issuer1", "issuer2"}
+					admissionPlugin1   = "foo"
+					admissionPlugin2   = "foo"
+					admissionPlugins   = []gardencorev1beta1.AdmissionPlugin{{Name: admissionPlugin1}, {Name: admissionPlugin2}}
+					apiServerResources = corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+					}
+					eventTTL                            = 2 * time.Hour
+					externalHostname                    = "api.foo.bar.com"
+					images                              = Images{KubeAPIServer: "some-kapi-image:latest"}
+					serviceAccountIssuer                = "issuer"
+					serviceAccountMaxTokenExpiration    = time.Hour
+					serviceAccountExtendTokenExpiration = false
+					serviceNetworkCIDR                  = "1.2.3.4/5"
+				)
 
-				It("should have the kube-apiserver container with the expected spec", func() {
-					var (
-						apiServerResources = corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("1"),
-								corev1.ResourceMemory: resource.MustParse("2Gi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("4Gi"),
-							},
-						}
-						admissionPlugin1                    = "foo"
-						admissionPlugin2                    = "foo"
-						admissionPlugins                    = []gardencorev1beta1.AdmissionPlugin{{Name: admissionPlugin1}, {Name: admissionPlugin2}}
-						eventTTL                            = 2 * time.Hour
-						externalHostname                    = "api.foo.bar.com"
-						serviceAccountIssuer                = "issuer"
-						acceptedIssuers                     = []string{"issuer1", "issuer2"}
-						serviceAccountMaxTokenExpiration    = time.Hour
-						serviceAccountExtendTokenExpiration = false
-						serviceNetworkCIDR                  = "1.2.3.4/5"
-					)
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
+				JustBeforeEach(func() {
+					values = Values{
 						EnabledAdmissionPlugins: admissionPlugins,
 						Autoscaling:             AutoscalingConfig{APIServerResources: apiServerResources},
 						EventTTL:                &metav1.Duration{Duration: eventTTL},
@@ -1889,7 +2105,11 @@ rules:
 						ServiceNetworkCIDR: serviceNetworkCIDR,
 						Version:            version,
 						VPN:                VPNConfig{},
-					})
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+				})
+
+				It("should have the kube-apiserver container with the expected spec", func() {
 					deployAndRead()
 
 					issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+serviceAccountIssuer)
@@ -1953,7 +2173,6 @@ rules:
 						"--tls-cipher-suites="+strings.Join(tlscipherSuites, ","),
 						"--vmodule=httplog=3",
 						"--v=3",
-						"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
 					))
 					Expect(issuerIdx).To(BeNumerically(">=", 0))
 					Expect(issuerIdx).To(BeNumerically("<", issuerIdx1))
@@ -2047,21 +2266,6 @@ rules:
 							Name:      "usr-share-cacerts",
 							MountPath: "/usr/share/ca-certificates",
 							ReadOnly:  true,
-						},
-						corev1.VolumeMount{
-							Name:      "ca-vpn",
-							MountPath: "/srv/kubernetes/ca-vpn",
-							ReadOnly:  false,
-						},
-						corev1.VolumeMount{
-							Name:      "http-proxy",
-							MountPath: "/etc/srv/kubernetes/envoy",
-							ReadOnly:  false,
-						},
-						corev1.VolumeMount{
-							Name:      "egress-selection-config",
-							MountPath: "/etc/kubernetes/egress",
-							ReadOnly:  false,
 						},
 					))
 					Expect(deployment.Spec.Template.Spec.Volumes).To(ConsistOf(
@@ -2225,16 +2429,58 @@ rules:
 								},
 							},
 						},
-
-						// VPN-related secrets (will be asserted in detail later)
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("ca-vpn")}),
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")}),
-						MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-selection-config")}),
 					))
 
 					secret := &corev1.Secret{}
 					Expect(c.Get(ctx, kutil.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
+				})
+
+				It("should have the kube-apiserver container with the expected spec when VPN is enabled but HA is disabled", func() {
+					values.VPN = VPNConfig{Enabled: true, HighAvailabilityEnabled: false}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+						"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "ca-vpn",
+							MountPath: "/srv/kubernetes/ca-vpn",
+							ReadOnly:  false,
+						},
+						corev1.VolumeMount{
+							Name:      "http-proxy",
+							MountPath: "/etc/srv/kubernetes/envoy",
+							ReadOnly:  false,
+						},
+						corev1.VolumeMount{
+							Name:      "egress-selection-config",
+							MountPath: "/etc/kubernetes/egress",
+							ReadOnly:  false,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						// VPN-related secrets (will be asserted in detail later)
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("ca-vpn")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-selection-config")}),
+					))
+				})
+
+				It("should have the kube-apiserver container with the expected spec when VPN and HA is enabled", func() {
+					values.VPN = VPNConfig{Enabled: true, HighAvailabilityEnabled: true}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						// VPN-related secrets (will be asserted in detail later)
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed-client")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed-tlsauth")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("dev-net-tun")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-api-access-gardener")}),
+					))
 				})
 
 				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
@@ -2461,7 +2707,7 @@ rules:
 						HTTPAccessVerbosity: pointer.Int32(3),
 					}
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{Logging: logging, Images: images, RuntimeVersion: runtimeVersion, Version: version})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Logging: logging, RuntimeVersion: runtimeVersion, Version: version})
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
@@ -2471,6 +2717,7 @@ rules:
 				})
 
 				It("should not configure the KubeAPISeverLogging settings if not provided", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version})
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
@@ -2549,7 +2796,12 @@ rules:
 				})
 
 				It("should properly configure the settings related to reversed vpn if enabled", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version})
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Images:         images,
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true},
+					})
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
@@ -2695,6 +2947,7 @@ rules:
 						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
 						ServiceNetworkCIDR: "4.5.6.0/24",
 						VPN: VPNConfig{
+							Enabled:                              true,
 							HighAvailabilityEnabled:              false,
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
@@ -2718,6 +2971,7 @@ rules:
 						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
 						ServiceNetworkCIDR: "4.5.6.0/24",
 						VPN: VPNConfig{
+							Enabled:                              true,
 							HighAvailabilityEnabled:              true,
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
