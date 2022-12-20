@@ -156,7 +156,6 @@ func DefaultPredicates() []predicate.Predicate {
 // and Start it when the Manager is Started.
 func Register(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error {
 	args.ControllerOptions.Reconciler = NewReconciler(actuator, *args.registeredExtension, args.SyncPeriod)
-	args.ControllerOptions.RecoverPanic = true
 	return add(mgr, args)
 }
 

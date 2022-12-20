@@ -21,7 +21,6 @@ import (
 	"os"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -35,6 +34,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -92,6 +92,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			WebhookCertDir:             "/tmp/gardener-extensions-cert",
 			MetricsBindAddress:         ":8080",
 			HealthBindAddress:          ":8081",
+			RecoverPanic:               pointer.Bool(true),
 		}
 		generalOpts = &extensionscmdcontroller.GeneralOptions{}
 

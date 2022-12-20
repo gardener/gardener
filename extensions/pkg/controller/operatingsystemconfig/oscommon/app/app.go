@@ -20,6 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 	componentbaseconfig "k8s.io/component-base/config"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -40,6 +41,7 @@ func NewControllerCommand(ctrlName string, osTypes []string, generator generator
 			LeaderElection:          true,
 			LeaderElectionID:        extensionscmdcontroller.LeaderElectionNameID(ctrlName),
 			LeaderElectionNamespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
+			RecoverPanic:            pointer.Bool(true),
 		}
 		ctrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
