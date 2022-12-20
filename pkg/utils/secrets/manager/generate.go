@@ -196,6 +196,19 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 		return existingSecret.Data, nil
 	}
 
+	existingSecrets := &corev1.SecretList{}
+	if err := m.client.List(ctx, existingSecrets, client.InNamespace(m.namespace), client.MatchingLabels{LabelKeyUseDataForName: configName}); err != nil {
+		return nil, err
+	}
+
+	if len(existingSecrets.Items) > 1 {
+		return nil, fmt.Errorf("found more than one existing secret with %q label for config %q", LabelKeyUseDataForName, configName)
+	}
+
+	if len(existingSecrets.Items) == 1 {
+		return existingSecrets.Items[0].Data, nil
+	}
+
 	return newData, nil
 }
 
