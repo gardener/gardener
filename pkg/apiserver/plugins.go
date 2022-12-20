@@ -19,6 +19,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
 	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
+	"k8s.io/apiserver/pkg/admission/plugin/validatingadmissionpolicy"
 	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
 	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
 
@@ -76,8 +77,9 @@ var (
 		// new admission plugins should generally be inserted above here
 		// webhook, and resourcequota plugins must go at the end
 
-		mutatingwebhook.PluginName,   // MutatingAdmissionWebhook
-		validatingwebhook.PluginName, // ValidatingAdmissionWebhook
+		mutatingwebhook.PluginName,           // MutatingAdmissionWebhook
+		validatingadmissionpolicy.PluginName, // ValidatingAdmissionPolicy
+		validatingwebhook.PluginName,         // ValidatingAdmissionWebhook
 
 		// This plugin must remain the last one in the list since it updates the quota usage
 		// which can only happen reliably if previous plugins permitted the request.
@@ -108,6 +110,7 @@ var (
 		bastionvalidator.PluginName,                // Bastion
 		mutatingwebhook.PluginName,                 // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,               // ValidatingAdmissionWebhook
+		validatingadmissionpolicy.PluginName,       // ValidatingAdmissionPolicy
 		resourcequota.PluginName,                   // ResourceQuota
 	)
 

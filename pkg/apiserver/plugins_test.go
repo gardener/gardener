@@ -27,7 +27,7 @@ import (
 var _ = Describe("AllOrderedPlugins", func() {
 	It("must end with specific plugins", func() {
 		// it's important for these admission plugins to be invoked at the end, ensure correct order here
-		Expect(strings.Join(apiserver.AllOrderedPlugins, ",")).To(HaveSuffix(",MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota"))
+		Expect(strings.Join(apiserver.AllOrderedPlugins, ",")).To(HaveSuffix(",MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook,ResourceQuota"))
 	})
 
 	It("expects default plugins", func() {
@@ -35,7 +35,7 @@ var _ = Describe("AllOrderedPlugins", func() {
 		admissionOpts := genericoptions.NewAdmissionOptions()
 		// we can't automatically insert our admission plugins in the right order
 		// we should reevaluate, what's the correct order for the plugins, when the default list of plugins changes
-		Expect(strings.Join(admissionOpts.RecommendedPluginOrder, ",")).To(Equal("NamespaceLifecycle,MutatingAdmissionWebhook,ValidatingAdmissionWebhook"))
-		Expect(strings.Join(admissionOpts.Plugins.Registered(), ",")).To(Equal("MutatingAdmissionWebhook,NamespaceLifecycle,ValidatingAdmissionWebhook"))
+		Expect(strings.Join(admissionOpts.RecommendedPluginOrder, ",")).To(Equal("NamespaceLifecycle,MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook"))
+		Expect(strings.Join(admissionOpts.Plugins.Registered(), ",")).To(Equal("MutatingAdmissionWebhook,NamespaceLifecycle,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook"))
 	})
 })
