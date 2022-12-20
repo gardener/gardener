@@ -149,30 +149,6 @@ var _ = Describe("Predicate", func() {
 		})
 	})
 
-	Describe("#Not", func() {
-		It("should invert predicate", func() {
-			predicate := Not(predicate.Funcs{
-				CreateFunc: func(_ event.CreateEvent) bool {
-					return true
-				},
-				UpdateFunc: func(_ event.UpdateEvent) bool {
-					return true
-				},
-				GenericFunc: func(_ event.GenericEvent) bool {
-					return true
-				},
-				DeleteFunc: func(_ event.DeleteEvent) bool {
-					return true
-				},
-			})
-
-			gomega.Expect(predicate.Create(event.CreateEvent{})).To(gomega.BeFalse())
-			gomega.Expect(predicate.Update(event.UpdateEvent{})).To(gomega.BeFalse())
-			gomega.Expect(predicate.Delete(event.DeleteEvent{})).To(gomega.BeFalse())
-			gomega.Expect(predicate.Generic(event.GenericEvent{})).To(gomega.BeFalse())
-		})
-	})
-
 	DescribeTable("#ForEventTypes",
 		func(events []EventType, createMatcher, updateMatcher, deleteMatcher, genericMatcher gomegatypes.GomegaMatcher) {
 			p := ForEventTypes(events...)

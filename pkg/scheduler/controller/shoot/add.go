@@ -42,7 +42,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(
 			r.ShootPredicate(),
-			predicateutils.Not(predicateutils.IsDeleting()),
+			predicate.Not(predicateutils.IsDeleting()),
 		)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: r.Config.ConcurrentSyncs,
