@@ -87,7 +87,7 @@ func (h *SeedHealth) CheckSeed(
 		}
 	}
 
-	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, nil, nil)
+	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, nil, nil, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
 	return []gardencorev1beta1.Condition{NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
@@ -150,5 +150,5 @@ func checkManagedResourceForSeed(checker *HealthChecker, condition gardencorev1b
 		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(),
 	}
 
-	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck)
+	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck, nil)
 }

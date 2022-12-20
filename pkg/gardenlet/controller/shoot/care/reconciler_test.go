@@ -491,7 +491,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
-func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1.ConditionType]time.Duration, _ *metav1.Duration, con []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1.ConditionType]time.Duration, _ *metav1.Duration, _ *metav1.Duration, con []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	return h(con)
 }
 

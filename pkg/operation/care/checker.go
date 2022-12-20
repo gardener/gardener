@@ -89,13 +89,14 @@ var (
 
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
-	reader                             client.Reader
-	clock                              clock.Clock
-	conditionThresholds                map[gardencorev1beta1.ConditionType]time.Duration
-	staleExtensionHealthCheckThreshold *metav1.Duration
-	lastOperation                      *gardencorev1beta1.LastOperation
-	kubernetesVersion                  *semver.Version
-	gardenerVersion                    *semver.Version
+	reader                              client.Reader
+	clock                               clock.Clock
+	conditionThresholds                 map[gardencorev1beta1.ConditionType]time.Duration
+	staleExtensionHealthCheckThreshold  *metav1.Duration
+	managedResourceProgressingThreshold *metav1.Duration
+	lastOperation                       *gardencorev1beta1.LastOperation
+	kubernetesVersion                   *semver.Version
+	gardenerVersion                     *semver.Version
 }
 
 // NewHealthChecker creates a new health checker.
@@ -104,19 +105,22 @@ func NewHealthChecker(
 	clock clock.Clock,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
+	managedResourceProgressingThreshold *metav1.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
 	kubernetesVersion *semver.Version,
 	gardenerVersion *semver.Version,
 ) *HealthChecker {
 	return &HealthChecker{
-		reader:                             reader,
-		clock:                              clock,
-		conditionThresholds:                conditionThresholds,
-		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
-		lastOperation:                      lastOperation,
-		kubernetesVersion:                  kubernetesVersion,
-		gardenerVersion:                    gardenerVersion,
+		reader:                              reader,
+		clock:                               clock,
+		conditionThresholds:                 conditionThresholds,
+		staleExtensionHealthCheckThreshold:  healthCheckOutdatedThreshold,
+		managedResourceProgressingThreshold: managedResourceProgressingThreshold,
+		lastOperation:                       lastOperation,
+		kubernetesVersion:                   kubernetesVersion,
+		gardenerVersion:                     gardenerVersion,
 	}
+	return nil
 }
 
 func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.Condition, requiredNames, names sets.String, reason, message string) *gardencorev1beta1.Condition {
@@ -237,13 +241,13 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 }
 
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
-func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool{
 		resourcesv1alpha1.ResourcesApplied: defaultSuccessfulCheck(),
 		resourcesv1alpha1.ResourcesHealthy: defaultSuccessfulCheck(),
 	}
 
-	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck)
+	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck, managedResourceProgressingThreshold)
 }
 
 func defaultSuccessfulCheck() func(status gardencorev1beta1.ConditionStatus) bool {
@@ -258,13 +262,27 @@ func resourcesNotProgressingCheck() func(status gardencorev1beta1.ConditionStatu
 	}
 }
 
-func (b *HealthChecker) checkManagedResourceConditions(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkManagedResourceConditions(
+	condition gardencorev1beta1.Condition,
+	mr *resourcesv1alpha1.ManagedResource,
+	conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool,
+	managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 		return &c
 	}
 
+	var conditionProgressing, conditionHealthy bool
 	for _, cond := range mr.Status.Conditions {
+		if cond.Type == resourcesv1alpha1.ResourcesProgressing &&
+			cond.Status == gardencorev1beta1.ConditionTrue &&
+			managedResourceProgressingThreshold != nil &&
+			time.Since(cond.LastTransitionTime.Time) >= managedResourceProgressingThreshold.Duration {
+			conditionProgressing = true
+		}
+		if cond.Type == resourcesv1alpha1.ResourcesHealthy && cond.Status == gardencorev1beta1.ConditionTrue {
+			conditionHealthy = true
+		}
 		checkConditionStatus, ok := conditionsToCheck[cond.Type]
 		if !ok {
 			continue
@@ -282,6 +300,11 @@ func (b *HealthChecker) checkManagedResourceConditions(condition gardencorev1bet
 			missing = append(missing, string(cond))
 		}
 		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceMissingConditionError, fmt.Sprintf("ManagedResource %s is missing the following condition(s), %v", mr.Name, missing))
+		return &c
+	}
+
+	if conditionProgressing && conditionHealthy {
+		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceStuckInProgressingError, fmt.Sprintf("ManagedResource %s progressing state is true for more than %v time", mr.Name, managedResourceProgressingThreshold.Duration))
 		return &c
 	}
 

@@ -90,9 +90,10 @@ func (h *Health) Check(
 	ctx context.Context,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
+	managedResourceProgressingThreshold *metav1.Duration,
 	conditions []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
-	updatedConditions := h.healthChecks(ctx, thresholdMappings, healthCheckOutdatedThreshold, conditions)
+	updatedConditions := h.healthChecks(ctx, thresholdMappings, healthCheckOutdatedThreshold, managedResourceProgressingThreshold, conditions)
 	lastOp := h.shoot.GetInfo().Status.LastOperation
 	lastErrors := h.shoot.GetInfo().Status.LastErrors
 	return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
@@ -259,6 +260,7 @@ func (h *Health) healthChecks(
 	ctx context.Context,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
+	managedResourceProgressingThreshold *metav1.Duration,
 	conditions []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
 	if h.shoot.HibernationEnabled || h.shoot.GetInfo().Status.IsHibernated {
@@ -286,7 +288,7 @@ func (h *Health) healthChecks(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
-	checker := NewHealthChecker(h.seedClient.Client(), h.clock, thresholdMappings, healthCheckOutdatedThreshold, h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion, h.shoot.GardenerVersion)
+	checker := NewHealthChecker(h.seedClient.Client(), h.clock, thresholdMappings, healthCheckOutdatedThreshold,managedResourceProgressingThreshold, h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion, h.shoot.GardenerVersion)
 
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if err != nil || !apiServerRunning {
@@ -328,8 +330,13 @@ func (h *Health) healthChecks(
 		nodes = NewConditionOrError(h.clock, nodes, newNodes, err)
 		return nil
 	}, func(ctx context.Context) error {
+<<<<<<< HEAD
 		newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy)
 		systemComponents = NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
+=======
+		newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, managedResourceProgressingThreshold, extensionConditionsSystemComponentsHealthy)
+		systemComponents = NewConditionOrError(systemComponents, newSystemComponents, err)
+>>>>>>> dee2933e2 (Use ManagedResourceProgressingThreshold in shoot care)
 		return nil
 	})(ctx)
 
@@ -393,6 +400,7 @@ func (h *Health) checkSystemComponents(
 	ctx context.Context,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
+	managedResourceProgressingThreshold *metav1.Duration,
 	extensionConditions []ExtensionCondition,
 ) (
 	*gardencorev1beta1.Condition,
@@ -408,7 +416,7 @@ func (h *Health) checkSystemComponents(
 			continue
 		}
 
-		if exitCondition := checker.CheckManagedResource(condition, &mr); exitCondition != nil {
+		if exitCondition := checker.CheckManagedResource(condition, &mr, managedResourceProgressingThreshold); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
