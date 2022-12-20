@@ -45,7 +45,7 @@ This resource contains the following information:
 * The DNS provider type (e.g., `aws-route53`, `google-clouddns`, ...)
 * A reference to a `Secret` object that contains the provider-specific credentials used to communicate with the provider's API.
 * The fully qualified domain name (FQDN) of the DNS record, e.g. "api.\<shoot domain\>".
-* The DNS record type, one of `A`, `CNAME`, or `TXT`.
+* The DNS record type, one of `A`, `AAAA`, `CNAME`, or `TXT`.
 * The DNS record values, that is a list of IP addresses for A records, a single hostname for CNAME records, or a list of texts for TXT records.
 
 Optionally, the `DNSRecord` resource may contain also the following information:
@@ -146,6 +146,23 @@ The following table contains information about the provider extension version th
 | provider-equinix-metal                       |    N/A   |
 | provider-kubevirt                            |    N/A   |
 | provider-openshift                           |    N/A   |
+
+### Support for `DNSRecord` IPv6 `recordType: AAAA` in the provider extensions
+
+The following table contains information about the provider extension version that adds support for `DNSRecord` IPv6 `recordType: AAAA`:
+
+| Extension              | Version   |
+|------------------------|-----------|
+| provider-alicloud      | N/A       |
+| provider-aws           | N/A       |
+| provider-azure         | N/A       |
+| provider-gcp           | N/A       |
+| provider-openstack     | N/A       |
+| provider-vsphere       | N/A       |
+| provider-equinix-metal | N/A       |
+| provider-kubevirt      | N/A       |
+| provider-openshift     | N/A       |
+| provider-local         | `v1.63.0` |
 
 ## References and additional resources
 
