@@ -611,14 +611,6 @@ func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condi
 	return *newCondition
 }
 
-var (
-	controlPlaneMonitoringLoggingSelector = mustGardenRoleLabelSelector(
-		v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.GardenRoleMonitoring,
-		v1beta1constants.GardenRoleLogging,
-	)
-)
-
 func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {
 	return (isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||
 		(lastOperation.State == gardencorev1beta1.LastOperationStateProcessing && lastErrors == nil)
