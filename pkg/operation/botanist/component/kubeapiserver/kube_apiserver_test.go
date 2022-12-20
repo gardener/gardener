@@ -1595,9 +1595,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
-						"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
-						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
@@ -1607,8 +1605,34 @@ rules:
 					}
 				})
 
+				It("should have the expected annotations when there are no nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when there are nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     false,
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-77bc5458": secretNameCAKubelet,
+						"reference.resources.gardener.cloud/secret-c1267cc2": secretNameKubeAPIServerToKubelet,
+					})))
+				})
+
 				It("should have the expected annotations when VPN is disabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
 						RuntimeVersion: runtimeVersion,
 						Version:        version,
 						VPN:            VPNConfig{Enabled: false},
@@ -1620,6 +1644,7 @@ rules:
 
 				It("should have the expected annotations when VPN is enabled but HA is disabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
 						RuntimeVersion: runtimeVersion,
 						Version:        version,
 						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: false},
@@ -1635,6 +1660,7 @@ rules:
 
 				It("should have the expected annotations when VPN and HA is enabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
 						RuntimeVersion: runtimeVersion,
 						Version:        version,
 						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
@@ -1705,9 +1731,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
-						"reference.resources.gardener.cloud/secret-77bc5458":    secretNameCAKubelet,
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
-						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
@@ -1717,8 +1741,34 @@ rules:
 					}
 				})
 
+				It("should have the expected annotations when there are no nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when there are nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     false,
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-77bc5458": secretNameCAKubelet,
+						"reference.resources.gardener.cloud/secret-c1267cc2": secretNameKubeAPIServerToKubelet,
+					})))
+				})
+
 				It("should have the expected annotations when VPN is disabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
 						RuntimeVersion: runtimeVersion,
 						Version:        version,
 						VPN:            VPNConfig{Enabled: false},
@@ -1730,6 +1780,7 @@ rules:
 
 				It("should have the expected annotations when VPN is enabled but HA is disabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
 						RuntimeVersion: runtimeVersion,
 						Version:        version,
 						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: false},
@@ -1745,6 +1796,7 @@ rules:
 
 				It("should have the expected annotations when VPN and HA is enabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
 						RuntimeVersion: runtimeVersion,
 						Version:        version,
 						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
@@ -2091,6 +2143,7 @@ rules:
 						EventTTL:                &metav1.Duration{Duration: eventTTL},
 						ExternalHostname:        externalHostname,
 						Images:                  images,
+						IsNodeless:              true,
 						Logging: &gardencorev1beta1.KubeAPIServerLogging{
 							Verbosity:           pointer.Int32(3),
 							HTTPAccessVerbosity: pointer.Int32(3),
@@ -2109,7 +2162,9 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 				})
 
-				It("should have the kube-apiserver container with the expected spec", func() {
+				It("should have the kube-apiserver container with the expected spec when VPN is disabled and when there are no nodes", func() {
+					values.VPN = VPNConfig{Enabled: false}
+					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
 					issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+serviceAccountIssuer)
@@ -2125,7 +2180,6 @@ rules:
 						"--enable-admission-plugins="+admissionPlugin1+","+admissionPlugin2,
 						"--disable-admission-plugins=",
 						"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
-						"--allow-privileged=true",
 						"--anonymous-auth=false",
 						"--audit-log-path=/var/lib/audit.log",
 						"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
@@ -2145,10 +2199,6 @@ rules:
 						"--event-ttl="+eventTTL.String(),
 						"--external-hostname="+externalHostname,
 						"--insecure-port=0",
-						"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
-						"--kubelet-certificate-authority=/srv/kubernetes/ca-kubelet/bundle.crt",
-						"--kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/tls.crt",
-						"--kubelet-client-key=/srv/kubernetes/apiserver-kubelet/tls.key",
 						"--livez-grace-period=1m",
 						"--shutdown-delay-duration=15s",
 						"--profiling=false",
@@ -2211,10 +2261,6 @@ rules:
 							MountPath: "/srv/kubernetes/ca-front-proxy",
 						},
 						corev1.VolumeMount{
-							Name:      "ca-kubelet",
-							MountPath: "/srv/kubernetes/ca-kubelet",
-						},
-						corev1.VolumeMount{
 							Name:      "etcd-client",
 							MountPath: "/srv/kubernetes/etcd/client",
 						},
@@ -2233,10 +2279,6 @@ rules:
 						corev1.VolumeMount{
 							Name:      "static-token",
 							MountPath: "/srv/kubernetes/token",
-						},
-						corev1.VolumeMount{
-							Name:      "kubelet-client",
-							MountPath: "/srv/kubernetes/apiserver-kubelet",
 						},
 						corev1.VolumeMount{
 							Name:      "kube-aggregator",
@@ -2322,14 +2364,6 @@ rules:
 							},
 						},
 						corev1.Volume{
-							Name: "ca-kubelet",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameCAKubelet,
-								},
-							},
-						},
-						corev1.Volume{
 							Name: "etcd-client",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
@@ -2358,14 +2392,6 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretNameStaticToken,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "kubelet-client",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameKubeAPIServerToKubelet,
 								},
 							},
 						},
@@ -2434,6 +2460,48 @@ rules:
 					secret := &corev1.Secret{}
 					Expect(c.Get(ctx, kutil.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
+				})
+
+				It("should have the kube-apiserver container with the expected spec when there are nodes", func() {
+					values.IsNodeless = false
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+						"--allow-privileged=true",
+						"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
+						"--kubelet-certificate-authority=/srv/kubernetes/ca-kubelet/bundle.crt",
+						"--kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/tls.crt",
+						"--kubelet-client-key=/srv/kubernetes/apiserver-kubelet/tls.key",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "ca-kubelet",
+							MountPath: "/srv/kubernetes/ca-kubelet",
+						},
+						corev1.VolumeMount{
+							Name:      "kubelet-client",
+							MountPath: "/srv/kubernetes/apiserver-kubelet",
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "ca-kubelet",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAKubelet,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "kubelet-client",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameKubeAPIServerToKubelet,
+								},
+							},
+						},
+					))
 				})
 
 				It("should have the kube-apiserver container with the expected spec when VPN is enabled but HA is disabled", func() {

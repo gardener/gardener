@@ -166,11 +166,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAFrontProxy)
 	}
 
-	secretCAKubelet, found := k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
-	}
-
 	secretCAETCD, found := k.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
@@ -293,10 +288,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 								MountPath: volumeMountPathCAFrontProxy,
 							},
 							{
-								Name:      volumeNameCAKubelet,
-								MountPath: volumeMountPathCAKubelet,
-							},
-							{
 								Name:      volumeNameEtcdClient,
 								MountPath: volumeMountPathEtcdClient,
 							},
@@ -315,10 +306,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 							{
 								Name:      volumeNameStaticToken,
 								MountPath: volumeMountPathStaticToken,
-							},
-							{
-								Name:      volumeNameKubeAPIServerToKubelet,
-								MountPath: volumeMountPathKubeAPIServerToKubelet,
 							},
 							{
 								Name:      volumeNameKubeAggregator,
@@ -385,14 +372,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 							},
 						},
 						{
-							Name: volumeNameCAKubelet,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretCAKubelet.Name,
-								},
-							},
-						},
-						{
 							Name: volumeNameEtcdClient,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
@@ -421,14 +400,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretStaticToken.Name,
-								},
-							},
-						},
-						{
-							Name: volumeNameKubeAPIServerToKubelet,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretKubeletClient.Name,
 								},
 							},
 						},
@@ -465,11 +436,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
+		k.handleOIDCSettings(deployment, secretOIDCCABundle)
+		k.handleServiceAccountSigningKeySettings(deployment)
 		if err := k.handleVPNSettings(deployment, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
-		k.handleOIDCSettings(deployment, secretOIDCCABundle)
-		k.handleServiceAccountSigningKeySettings(deployment)
+		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
+			return err
+		}
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
@@ -484,7 +458,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
 	out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
-	out = append(out, "--allow-privileged=true")
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
 	out = append(out, "--audit-log-path=/var/lib/audit.log")
 	out = append(out, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
@@ -519,11 +492,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	if version.ConstraintK8sLess124.Check(k.values.Version) {
 		out = append(out, "--insecure-port=0")
 	}
-
-	out = append(out, "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP")
-	out = append(out, fmt.Sprintf("--kubelet-certificate-authority=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateBundle))
-	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyCertificate))
-	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyPrivateKey))
 
 	if k.values.Requests != nil {
 		if k.values.Requests.MaxNonMutatingInflight != nil {
@@ -1144,4 +1112,53 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 			}},
 		})
 	}
+}
+
+func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, secretKubeletClient *corev1.Secret) error {
+	if k.values.IsNodeless {
+		return nil
+	}
+
+	secretCAKubelet, found := k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
+	}
+
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command,
+		"--allow-privileged=true",
+		"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
+		fmt.Sprintf("--kubelet-certificate-authority=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateBundle),
+		fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyCertificate),
+		fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyPrivateKey),
+	)
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+		{
+			Name:      volumeNameCAKubelet,
+			MountPath: volumeMountPathCAKubelet,
+		},
+		{
+			Name:      volumeNameKubeAPIServerToKubelet,
+			MountPath: volumeMountPathKubeAPIServerToKubelet,
+		},
+	}...)
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+		{
+			Name: volumeNameCAKubelet,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretCAKubelet.Name,
+				},
+			},
+		},
+		{
+			Name: volumeNameKubeAPIServerToKubelet,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretKubeletClient.Name,
+				},
+			},
+		},
+	}...)
+
+	return nil
 }

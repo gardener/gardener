@@ -235,15 +235,19 @@ func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
 func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
 	var (
 		ipAddresses = append([]net.IP{}, k.values.ServerCertificate.ExtraIPAddresses...)
-		dnsNames    = append([]string{
+		dnsNames    = []string{
 			v1beta1constants.DeploymentNameKubeAPIServer,
 			fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, k.namespace),
 			fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, k.namespace),
-		}, kutil.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
+		}
 	)
 
 	if k.values.SNI.PodMutatorEnabled || k.values.VPN.HighAvailabilityEnabled {
 		ipAddresses = append(ipAddresses, net.ParseIP("127.0.0.1"))
+	}
+
+	if k.values.IsNodeless {
+		dnsNames = append(dnsNames, kutil.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 	}
 
 	return k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
@@ -257,6 +261,10 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*corev1.Secret, error) {
+	if k.values.IsNodeless {
+		return nil, nil
+	}
+
 	return k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        secretNameKubeAPIServerToKubelet,
 		CommonName:                  userName,

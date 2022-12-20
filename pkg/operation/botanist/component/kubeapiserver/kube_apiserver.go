@@ -142,6 +142,8 @@ type Values struct {
 	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
+	// IsNodeless specifies whether the cluster managed by this API server has worker nodes.
+	IsNodeless bool
 	// Logging contains configuration settings for the log and access logging verbosity
 	Logging *gardencorev1beta1.KubeAPIServerLogging
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.

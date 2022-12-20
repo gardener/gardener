@@ -150,6 +150,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			EventTTL:                       eventTTL,
 			FeatureGates:                   featureGates,
 			Images:                         images,
+			IsNodeless:                     false,
 			OIDC:                           oidcConfig,
 			Requests:                       requests,
 			RuntimeConfig:                  runtimeConfig,
