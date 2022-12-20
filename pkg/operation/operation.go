@@ -258,7 +258,7 @@ func (b *Builder) Build(
 	}
 	operation.Seed = seed
 
-	seedVersion, err := semver.NewVersion(versionutils.Normalize(seedClientSet.Version()))
+	seedVersion, err := semver.NewVersion(seedClientSet.Version())
 	if err != nil {
 		return nil, err
 	}

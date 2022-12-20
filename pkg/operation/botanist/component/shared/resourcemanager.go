@@ -77,7 +77,7 @@ func NewGardenerResourceManager(
 		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
-		Version:                             runtimeVersion,
+		KubernetesVersion:                   runtimeVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),

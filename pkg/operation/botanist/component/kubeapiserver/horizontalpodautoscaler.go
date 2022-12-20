@@ -17,17 +17,18 @@ package kubeapiserver
 import (
 	"context"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -35,13 +36,13 @@ const (
 	hpaTargetAverageUtilizationMemory int32 = 80
 )
 
-func (k *kubeAPIServer) emptyHorizontalPodAutoscaler(seedK8sVersionGreaterEqual123 bool) client.Object {
+func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() client.Object {
 	hpaObjectMeta := metav1.ObjectMeta{
 		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
 	}
 
-	if seedK8sVersionGreaterEqual123 {
+	if versionutils.ConstraintK8sGreaterEqual123.Check(k.values.RuntimeVersion) {
 		return &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: hpaObjectMeta,
 		}

@@ -86,12 +86,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
 	)
 
-	k8sVersionGreaterEqual121, err := version.CompareVersions(a.kubernetesVersion.String(), ">=", "1.21")
-	if err != nil {
-		return err
-	}
-
-	pdb = a.emptyPDB(k8sVersionGreaterEqual121)
+	pdb = a.emptyPDB()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, deployment, func() error {
 		maxSurge := intstr.FromInt(100)
@@ -254,10 +249,6 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 }
 
 func (a *authzServer) Destroy(ctx context.Context) error {
-	k8sVersionGreaterEqual121, err := version.CompareVersions(a.kubernetesVersion.String(), ">=", "1.21")
-	if err != nil {
-		return err
-	}
 	return kutil.DeleteObjects(
 		ctx,
 		a.client,
@@ -266,7 +257,7 @@ func (a *authzServer) Destroy(ctx context.Context) error {
 		a.emptyService(),
 		a.emptyVirtualService(),
 		a.emptyVPA(),
-		a.emptyPDB(k8sVersionGreaterEqual121),
+		a.emptyPDB(),
 	)
 }
 
@@ -293,13 +284,13 @@ func (a *authzServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: Name + "-vpa", Namespace: a.namespace}}
 }
 
-func (a *authzServer) emptyPDB(k8sVersionGreaterEqual121 bool) client.Object {
+func (a *authzServer) emptyPDB() client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      Name + "-pdb",
 		Namespace: a.namespace,
 	}
 
-	if k8sVersionGreaterEqual121 {
+	if version.ConstraintK8sGreaterEqual121.Check(a.kubernetesVersion) {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 		}

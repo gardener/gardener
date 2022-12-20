@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/utils/pointer"
@@ -30,10 +31,10 @@ var _ = Describe("Monitoring", func() {
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
 			etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-				Role:       testRole,
-				Class:      ClassNormal,
-				Replicas:   pointer.Int32(1),
-				K8sVersion: "1.20.1",
+				Role:              testRole,
+				Class:             ClassNormal,
+				Replicas:          pointer.Int32(1),
+				KubernetesVersion: semver.MustParse("1.20.1"),
 			})
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
 		})
@@ -44,10 +45,10 @@ var _ = Describe("Monitoring", func() {
 			Context("w/o backup", func() {
 				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassNormal,
-						Replicas:   pointer.Int32(1),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassNormal,
+						Replicas:          pointer.Int32(1),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -58,10 +59,10 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassImportant,
-						Replicas:   pointer.Int32(1),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassImportant,
+						Replicas:          pointer.Int32(1),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -72,10 +73,10 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules for k8s >= 1.21 (normal) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassNormal,
-						Replicas:   pointer.Int32(1),
-						K8sVersion: "1.21.1",
+						Role:              testRole,
+						Class:             ClassNormal,
+						Replicas:          pointer.Int32(1),
+						KubernetesVersion: semver.MustParse("1.21.1"),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -88,10 +89,10 @@ var _ = Describe("Monitoring", func() {
 			Context("w/ backup", func() {
 				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassNormal,
-						Replicas:   pointer.Int32(1),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassNormal,
+						Replicas:          pointer.Int32(1),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -103,10 +104,10 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassImportant,
-						Replicas:   pointer.Int32(1),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassImportant,
+						Replicas:          pointer.Int32(1),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -121,10 +122,10 @@ var _ = Describe("Monitoring", func() {
 			Context("w/o backup", func() {
 				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassNormal,
-						Replicas:   pointer.Int32(3),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassNormal,
+						Replicas:          pointer.Int32(3),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -135,10 +136,10 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassImportant,
-						Replicas:   pointer.Int32(3),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassImportant,
+						Replicas:          pointer.Int32(3),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -151,10 +152,10 @@ var _ = Describe("Monitoring", func() {
 			Context("w/ backup", func() {
 				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassNormal,
-						Replicas:   pointer.Int32(3),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassNormal,
+						Replicas:          pointer.Int32(3),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -166,10 +167,10 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:       testRole,
-						Class:      ClassImportant,
-						Replicas:   pointer.Int32(3),
-						K8sVersion: "1.20.1",
+						Role:              testRole,
+						Class:             ClassImportant,
+						Replicas:          pointer.Int32(3),
+						KubernetesVersion: semver.MustParse("1.20.1"),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -179,7 +180,6 @@ var _ = Describe("Monitoring", func() {
 					)
 				})
 			})
-
 		})
 	})
 })

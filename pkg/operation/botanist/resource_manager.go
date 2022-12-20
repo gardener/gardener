@@ -87,7 +87,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
-		Version:                              version,
+		KubernetesVersion:                    version,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),

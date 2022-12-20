@@ -17,6 +17,17 @@ package nginxingress_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -29,16 +40,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Nginx Ingress", func() {
@@ -593,7 +594,7 @@ status: {}
 
 		Context("Kubernetes version >= 1.22", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = "v1.22.12-gke.300"
+				values.KubernetesVersion = semver.MustParse("v1.22.12")
 				values.IngressClass = "nginx-ingress-gardener"
 			})
 
@@ -607,7 +608,7 @@ status: {}
 
 		Context("Kubernetes version < 1.22", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = "1.20"
+				values.KubernetesVersion = semver.MustParse("1.20")
 				values.IngressClass = "nginx-gardener"
 			})
 

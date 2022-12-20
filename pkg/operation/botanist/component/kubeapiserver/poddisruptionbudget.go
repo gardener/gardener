@@ -17,23 +17,24 @@ package kubeapiserver
 import (
 	"context"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-func (k *kubeAPIServer) emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121 bool) client.Object {
+func (k *kubeAPIServer) emptyPodDisruptionBudget() client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
 	}
 
-	if seedK8sVersionGreaterEqual121 {
+	if versionutils.ConstraintK8sGreaterEqual121.Check(k.values.RuntimeVersion) {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 		}

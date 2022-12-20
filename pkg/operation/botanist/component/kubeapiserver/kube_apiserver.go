@@ -21,18 +21,6 @@ import (
 	"net"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
-
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,6 +35,17 @@ import (
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 var (
@@ -153,6 +152,8 @@ type Values struct {
 	Requests *gardencorev1beta1.KubeAPIServerRequests
 	// RuntimeConfig is the set of runtime configurations.
 	RuntimeConfig map[string]bool
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
 	// ServerCertificate contains configuration for the server certificate.
 	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
@@ -308,17 +309,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapEgressSelector                    = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
 
-	seedK8sVersionGreaterEqual121, err := version.CompareVersions(k.client.Version(), ">=", "1.21")
-	if err != nil {
-		return err
-	}
-	seedK8sVersionGreaterEqual123, err := version.CompareVersions(k.client.Version(), ">=", "1.23")
-	if err != nil {
-		return err
-	}
-
-	podDisruptionBudget = k.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121)
-	horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler(seedK8sVersionGreaterEqual123)
+	podDisruptionBudget = k.emptyPodDisruptionBudget()
+	horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler()
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
 		return err
@@ -481,22 +473,13 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {
-	seedK8sVersionGreaterEqual121, err := version.CompareVersions(k.client.Version(), ">=", "1.21")
-	if err != nil {
-		return err
-	}
-	seedK8sVersionGreaterEqual123, err := version.CompareVersions(k.client.Version(), ">=", "1.23")
-	if err != nil {
-		return err
-	}
-
 	return kutil.DeleteObjects(ctx, k.client.Client(),
 		k.emptyManagedResource(),
 		k.emptyManagedResourceSecret(),
-		k.emptyHorizontalPodAutoscaler(seedK8sVersionGreaterEqual123),
+		k.emptyHorizontalPodAutoscaler(),
 		k.emptyVerticalPodAutoscaler(),
 		k.emptyHVPA(),
-		k.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121),
+		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),

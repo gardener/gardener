@@ -17,6 +17,7 @@ package webhook
 import (
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -30,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -44,8 +44,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 	if err != nil {
 		return err
 	}
-
-	targetVersionGreaterEqual123, err := version.CompareVersions(targetServerVersion.GitVersion, ">=", "1.23")
+	targetVersion, err := semver.NewVersion(targetServerVersion.GitVersion)
 	if err != nil {
 		return err
 	}
@@ -67,9 +66,9 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
 		if err := (&highavailabilityconfig.Handler{
-			Logger:                       mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
-			TargetClient:                 targetCluster.GetClient(),
-			TargetVersionGreaterEqual123: targetVersionGreaterEqual123,
+			Logger:        mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
+			TargetClient:  targetCluster.GetClient(),
+			TargetVersion: targetVersion,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
 		}
