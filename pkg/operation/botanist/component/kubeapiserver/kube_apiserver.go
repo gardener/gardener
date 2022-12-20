@@ -156,6 +156,8 @@ type Values struct {
 	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
 	ServiceAccount ServiceAccountConfig
+	// ServiceNetworkCIDR is the CIDR of the service network.
+	ServiceNetworkCIDR string
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
@@ -218,8 +220,6 @@ type Images struct {
 type VPNConfig struct {
 	// PodNetworkCIDR is the CIDR of the pod network.
 	PodNetworkCIDR string
-	// ServiceNetworkCIDR is the CIDR of the service network.
-	ServiceNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
 	NodeNetworkCIDR *string
 	// HighAvailabilityEnabled states if VPN uses HA configuration.

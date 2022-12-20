@@ -154,11 +154,11 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Requests:                       requests,
 			RuntimeConfig:                  runtimeConfig,
 			RuntimeVersion:                 b.Seed.KubernetesVersion,
+			ServiceNetworkCIDR:             b.Shoot.Networks.Services.String(),
 			StaticTokenKubeconfigEnabled:   b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 			Version:                        b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
 				PodNetworkCIDR:                       b.Shoot.Networks.Pods.String(),
-				ServiceNetworkCIDR:                   b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:                      b.Shoot.GetInfo().Spec.Networking.Nodes,
 				HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 				HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,

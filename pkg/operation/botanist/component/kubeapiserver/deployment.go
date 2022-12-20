@@ -561,7 +561,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		out = append(out, fmt.Sprintf("--service-account-max-token-expiration=%s", k.values.ServiceAccount.MaxTokenExpiration.Duration))
 	}
 
-	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.VPN.ServiceNetworkCIDR))
+	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.ServiceNetworkCIDR))
 	out = append(out, fmt.Sprintf("--secure-port=%d", Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
 	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
@@ -938,7 +938,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 			{
 				Name:  "SERVICE_NETWORK",
-				Value: k.values.VPN.ServiceNetworkCIDR,
+				Value: k.values.ServiceNetworkCIDR,
 			},
 			{
 				Name:  "POD_NETWORK",
@@ -1012,7 +1012,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		Env: []corev1.EnvVar{
 			{
 				Name:  "SERVICE_NETWORK",
-				Value: k.values.VPN.ServiceNetworkCIDR,
+				Value: k.values.ServiceNetworkCIDR,
 			},
 			{
 				Name:  "POD_NETWORK",

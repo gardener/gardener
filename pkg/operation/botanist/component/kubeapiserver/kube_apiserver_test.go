@@ -1565,13 +1565,13 @@ rules:
 
 			It("should have one init container and three vpn-seed-client sidecar containers when vpn high availability are enabled", func() {
 				values := Values{
-					Images: Images{VPNClient: "vpn-client-image:really-latest"},
+					Images:             Images{VPNClient: "vpn-client-image:really-latest"},
+					ServiceNetworkCIDR: "4.5.6.0/24",
 					VPN: VPNConfig{
 						HighAvailabilityEnabled:              true,
 						HighAvailabilityNumberOfSeedServers:  2,
 						HighAvailabilityNumberOfShootClients: 3,
 						PodNetworkCIDR:                       "1.2.3.0/24",
-						ServiceNetworkCIDR:                   "4.5.6.0/24",
 						NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
 					},
 					RuntimeVersion: runtimeVersion,
@@ -1592,7 +1592,7 @@ rules:
 							},
 							{
 								Name:  "SERVICE_NETWORK",
-								Value: values.VPN.ServiceNetworkCIDR,
+								Value: values.ServiceNetworkCIDR,
 							},
 							{
 								Name:  "POD_NETWORK",
@@ -1703,7 +1703,7 @@ rules:
 					Env: []corev1.EnvVar{
 						{
 							Name:  "SERVICE_NETWORK",
-							Value: values.VPN.ServiceNetworkCIDR,
+							Value: values.ServiceNetworkCIDR,
 						},
 						{
 							Name:  "POD_NETWORK",
@@ -1885,9 +1885,10 @@ rules:
 							MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
 							ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
 						},
-						RuntimeVersion: runtimeVersion,
-						Version:        version,
-						VPN:            VPNConfig{ServiceNetworkCIDR: serviceNetworkCIDR},
+						RuntimeVersion:     runtimeVersion,
+						ServiceNetworkCIDR: serviceNetworkCIDR,
+						Version:            version,
+						VPN:                VPNConfig{},
 					})
 					deployAndRead()
 
@@ -2691,13 +2692,13 @@ rules:
 			Context("HA VPN role", func() {
 				It("should not deploy role, rolebinding and service account w/o HA VPN", func() {
 					values := Values{
-						Images: Images{VPNClient: "vpn-client-image:really-latest"},
+						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
+						ServiceNetworkCIDR: "4.5.6.0/24",
 						VPN: VPNConfig{
 							HighAvailabilityEnabled:              false,
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
 							PodNetworkCIDR:                       "1.2.3.0/24",
-							ServiceNetworkCIDR:                   "4.5.6.0/24",
 							NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
 						},
 						RuntimeVersion: runtimeVersion,
@@ -2714,13 +2715,13 @@ rules:
 
 				It("should successfully deploy and destroy the role, rolebinding and service account w/ HA VPN", func() {
 					values := Values{
-						Images: Images{VPNClient: "vpn-client-image:really-latest"},
+						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
+						ServiceNetworkCIDR: "4.5.6.0/24",
 						VPN: VPNConfig{
 							HighAvailabilityEnabled:              true,
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
 							PodNetworkCIDR:                       "1.2.3.0/24",
-							ServiceNetworkCIDR:                   "4.5.6.0/24",
 							NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
 						},
 						RuntimeVersion: runtimeVersion,
