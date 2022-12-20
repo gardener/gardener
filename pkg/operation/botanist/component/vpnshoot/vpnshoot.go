@@ -67,14 +67,11 @@ const (
 
 	volumeName          = "vpn-shoot"
 	volumeNameTLSAuth   = "vpn-shoot-tlsauth"
-	volumeNameDH        = "vpn-shoot-dh"
 	volumeNameDevNetTun = "dev-net-tun"
 
-	volumeMountPathSecretShoot = "/srv/secrets/vpn-shoot"
-	volumeMountPathSecret      = "/srv/secrets/vpn-client"
-	volumeMountPathSecretTLS   = "/srv/secrets/tlsauth"
-	volumeMountPathSecretDH    = "/srv/secrets/dh"
-	volumeMountPathDevNetTun   = "/dev/net/tun"
+	volumeMountPathSecret    = "/srv/secrets/vpn-client"
+	volumeMountPathSecretTLS = "/srv/secrets/tlsauth"
+	volumeMountPathDevNetTun = "/dev/net/tun"
 )
 
 // Interface contains functions for a VPNShoot Deployer

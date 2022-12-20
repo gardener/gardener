@@ -5,7 +5,8 @@ title: Reversed VPN Tunnel
 # Reversed VPN Tunnel Setup and Configuration 
 
 The Reversed VPN Tunnel is enabled by default.
-A high availability VPN connection is automatically deployed in all shoots that configure an HA control-plane.
+A highly available VPN connection is automatically deployed in all shoots that configure an HA control-plane.
+
 ## Reversed VPN Tunnel
 
 In the first VPN solution, connection establishment was initiated by a VPN client in the seed cluster.
@@ -19,7 +20,7 @@ Connection establishment with a reversed tunnel:
 `APIServer --> Envoy-Proxy | VPN-Seed-Server <-- Istio/Envoy-Proxy <-- SNI API Server Endpoint <-- LB (one for all clusters of a seed) <--- internet <--- VPN-Shoot-Client --> Pods | Nodes | Services`
 
 The reversed VPN tunnel is always deployed.
-The feature gate `ReversedVPN` is GA and will be removed in a future release
+The feature gate `ReversedVPN` is GA and will be removed in a future release.
 
 ## High Availability for Reversed VPN Tunnel
 

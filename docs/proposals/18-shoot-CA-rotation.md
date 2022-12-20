@@ -42,6 +42,7 @@ Out of scope for now:
 - `kubelet` serving CA is self-generated (valid for `1y`) and self-signed by `kubelet` on startup
   - `kube-apiserver` does not seem to verify the presented serving certificate
   - `kubelet` can be configured to request serving certificate via CSR that can be verified by `kube-apiserver`, though, we consider this as a separate improvement outside of this GEP
+- Legacy VPN solution uses the cluster CA for both serving and client certificates. As the solution is soon to be dropped in favor of the new `ReversedVPN` solution, we don't intend to introduce a dedicated CA for this component. If `ReversedVPN` is disabled and the CA rotation is triggered, we make sure to propagate the cluster CA to the relevant places in the legacy VPN solution.
 
 Naturally, not all certificates used for communication with the `kube-apiserver` are under control of Gardener. An example for a Gardener-controlled certificate is the kubelet client certificate used to communicate with the api server. An example for credentials not controlled by gardener are kubeconfigs or client certificates requested via `CertificateSigningRequest`s by the shoot owner.
 

@@ -152,6 +152,8 @@ The OpenVPN client- and server pods are singleton pods in this approach and ther
 
 We have introduced a gardenlet feature gate `ReversedVPN`. If `APIServerSNI` and `ReversedVPN` are enabled the proposed solution is automatically enabled for all shoot clusters hosted by the seed. If `ReversedVPN` is enabled but `APIServerSNI` is not the gardenlet will panic during startup as this is an invalid configuration. All existing shoot clusters will automatically be migrated during the next reconciliation. We assume that the `ReversedVPN` feature will work with Gardener as well as operator managed Istio.
 
+We have also added a shoot annotation `alpha.featuregates.shoot.gardener.cloud/reversed-vpn` which can override the feature gate to enable or disable the solution for individual clusters. This is only respected if `APIServerSNI` is enabled, otherwise it is ignored.
+
 ### Security Review
 
 The change in the VPN solution will potentially open up new attack vectors. We will perform a thorough analysis outside of this document.

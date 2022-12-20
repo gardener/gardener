@@ -458,11 +458,6 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						ControlledValues: &controlledValues,
 					},
-					{
-						ContainerName:    "vpn-seed",
-						Mode:             &containerPolicyOff,
-						ControlledValues: &controlledValues,
-					},
 				}
 				defaultExpectedWeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
 					{
@@ -677,11 +672,6 @@ var _ = Describe("KubeAPIServer", func() {
 								"cpu":    resource.MustParse("8"),
 								"memory": resource.MustParse("25G"),
 							},
-							ControlledValues: &controlledValues,
-						},
-						{
-							ContainerName:    "vpn-seed",
-							Mode:             &containerPolicyOff,
 							ControlledValues: &controlledValues,
 						},
 						{
@@ -1599,7 +1589,7 @@ rules:
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 			})
 
-			It("should have no init container and three vpn-seed-client sidecar containers when vpn high availability are enabled", func() {
+			It("should have one init container and three vpn-seed-client sidecar containers when vpn high availability are enabled", func() {
 				values := Values{
 					Images: Images{VPNClient: "vpn-client-image:really-latest"},
 					VPN: VPNConfig{

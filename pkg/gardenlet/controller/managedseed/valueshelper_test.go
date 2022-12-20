@@ -105,7 +105,8 @@ var _ = Describe("ValuesHelper", func() {
 				},
 			},
 			FeatureGates: map[string]bool{
-				string(features.HVPA): true,
+				string("FooFeature"): true,
+				string("BarFeature"): true,
 			},
 			Logging: &config.Logging{
 				Enabled: pointer.Bool(true),
@@ -221,7 +222,8 @@ var _ = Describe("ValuesHelper", func() {
 					},
 				},
 				FeatureGates: map[string]bool{
-					string(features.HVPA): true,
+					string("FooFeature"): true,
+					string("BarFeature"): true,
 				},
 				Logging: &configv1alpha1.Logging{
 					Enabled: pointer.Bool(true),
@@ -277,7 +279,8 @@ var _ = Describe("ValuesHelper", func() {
 						},
 					},
 					"featureGates": map[string]interface{}{
-						"HVPA": true,
+						"FooFeature": true,
+						"BarFeature": true,
 					},
 					"logging": map[string]interface{}{
 						"enabled": true,

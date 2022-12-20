@@ -42,9 +42,6 @@ import (
 )
 
 const (
-	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
-	SecretNameVPNSeedTLSAuth  = "vpn-seed-tlsauth"
-	secretNameLegacyVPNSeed   = "vpn-seed"
 	secretNameHAVPNSeedClient = "vpn-seed-client"
 
 	secretNameServer                 = "kube-apiserver"
@@ -54,7 +51,6 @@ const (
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer            = "kube-apiserver"
-	containerNameVPNSeed                  = "vpn-seed"
 	containerNameVPNSeedClient            = "vpn-client"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
@@ -72,14 +68,12 @@ const (
 	volumeNameHTTPProxy                            = "http-proxy"
 	volumeNameKubeAPIServerToKubelet               = "kubelet-client"
 	volumeNameKubeAggregator                       = "kube-aggregator"
-	volumeNameLibModules                           = "modules"
 	volumeNameOIDCCABundle                         = "oidc-cabundle"
 	volumeNameServer                               = "kube-apiserver-server"
 	volumeNameServiceAccountKey                    = "service-account-key"
 	volumeNameServiceAccountKeyBundle              = "service-account-key-bundle"
 	volumeNameUserProvidedServiceAccountSigningKey = "service-account-signing-key"
 	volumeNameStaticToken                          = "static-token"
-	volumeNameVPNSeed                              = "vpn-seed"
 	volumeNameVPNSeedClient                        = "vpn-seed-client"
 	volumeNameAPIServerAccess                      = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth                       = "vpn-seed-tlsauth"
@@ -110,7 +104,6 @@ const (
 	volumeMountPathServiceAccountKeyBundle              = "/srv/kubernetes/service-account-key-bundle"
 	volumeMountPathUserProvidedServiceAccountSigningKey = "/srv/kubernetes/service-account-signing-key"
 	volumeMountPathStaticToken                          = "/srv/kubernetes/token"
-	volumeMountPathVPNSeed                              = "/srv/secrets/vpn-seed"
 	volumeMountPathVPNSeedClient                        = "/srv/secrets/vpn-client"
 	volumeMountPathAPIServerAccess                      = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth                       = "/srv/secrets/tlsauth"

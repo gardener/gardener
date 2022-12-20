@@ -116,8 +116,6 @@ if name in injectedSpecialCases:
     names = injectedSpecialCases[name]
 elif name == 'autoscaler':
     names = ['cluster-autoscaler']
-elif name == 'vpn':
-    names = ['vpn-seed', 'vpn-shoot']
 elif name == 'vpn2':
     names = ['vpn-seed-server', 'vpn-shoot-client']
 elif name == 'external-dns-management':
