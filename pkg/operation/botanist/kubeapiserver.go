@@ -489,7 +489,7 @@ func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context)
 	return config, nil
 }
 
-func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
+func (b *Botanist) computeKubeAPIServerServiceAccountConfig(config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) kubeapiserver.ServiceAccountConfig {
 	var (
 		defaultIssuer = "https://" + externalHostname
 		out           = kubeapiserver.ServiceAccountConfig{
@@ -499,7 +499,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 	)
 
 	if config == nil || config.ServiceAccountConfig == nil {
-		return out, nil
+		return out
 	}
 
 	out.ExtendTokenExpiration = config.ServiceAccountConfig.ExtendTokenExpiration
@@ -513,20 +513,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
 	}
 
-	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
-		secret := &corev1.Secret{}
-		if err := b.GardenClient.Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {
-			return out, err
-		}
-
-		data, ok := secret.Data[kubeapiserver.SecretServiceAccountSigningKeyDataKeySigningKey]
-		if !ok {
-			return out, fmt.Errorf("no signing key in secret %s/%s at .data.%s", secret.Namespace, secret.Name, kubeapiserver.SecretServiceAccountSigningKeyDataKeySigningKey)
-		}
-		out.SigningKey = data
-	}
-
-	return out, nil
+	return out
 }
 
 func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
@@ -591,20 +578,15 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	}
 
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServerCertificateConfig(b.computeKubeAPIServerServerCertificateConfig())
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
-
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalHostname(externalHostname)
 
 	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalServer(externalServer)
 
-	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(ctx, b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, externalHostname)
-	if err != nil {
-		return err
-	}
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServiceAccountConfig(serviceAccountConfig)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServerCertificateConfig(b.computeKubeAPIServerServerCertificateConfig())
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServiceAccountConfig(b.computeKubeAPIServerServiceAccountConfig(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, externalHostname))
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
 
 	etcdEncryptionConfig, err := b.computeKubeAPIServerETCDEncryptionConfig(ctx)
 	if err != nil {

@@ -9167,23 +9167,6 @@ This value is a string or URI. Defaults to URI of the API server.</p>
 </tr>
 <tr>
 <td>
-<code>signingKeySecretName</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SigningKeySecret is a reference to a secret that contains an optional private key of the
-service account token issuer. The issuer will sign issued ID tokens with this private key.
-Only useful if service account tokens are also issued by another external system.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>extendTokenExpiration</code></br>
 <em>
 bool

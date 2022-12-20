@@ -1536,21 +1536,9 @@ usernames: ["admin"]
 
 		Describe("ServiceAccountConfig", func() {
 			var (
-				signingKey            = []byte("some-key")
-				signingKeySecret      *corev1.Secret
 				maxTokenExpiration    = metav1.Duration{Duration: time.Hour}
 				extendTokenExpiration = false
 			)
-
-			BeforeEach(func() {
-				signingKeySecret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-secret",
-						Namespace: projectNamespace,
-					},
-					Data: map[string][]byte{"signing-key": signingKey},
-				}
-			})
 
 			DescribeTable("should have the expected ServiceAccountConfig config",
 				func(prepTest func(), expectedConfig kubeapiserver.ServiceAccountConfig, expectError bool, errMatcher gomegatypes.GomegaMatcher) {
@@ -1707,74 +1695,6 @@ usernames: ["admin"]
 						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("SigningKeySecret is nil",
-					func() {
-						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
-						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
-						}
-						botanist.Shoot.SetInfo(shootCopy)
-					},
-					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("SigningKeySecret is provided but secret is missing",
-					func() {
-						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
-						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								SigningKeySecret: &corev1.LocalObjectReference{
-									Name: signingKeySecret.Name,
-								},
-							},
-						}
-						botanist.Shoot.SetInfo(shootCopy)
-					},
-					nil,
-					true,
-					MatchError(ContainSubstring("not found")),
-				),
-				Entry("SigningKeySecret is provided but secret does not have correct data field",
-					func() {
-						signingKeySecret.Data = nil
-						Expect(gardenClient.Create(ctx, signingKeySecret)).To(Succeed())
-
-						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
-						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								SigningKeySecret: &corev1.LocalObjectReference{
-									Name: signingKeySecret.Name,
-								},
-							},
-						}
-						botanist.Shoot.SetInfo(shootCopy)
-					},
-					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
-					true,
-					MatchError(ContainSubstring("no signing key in secret")),
-				),
-				Entry("SigningKeySecret is provided and secret is compliant",
-					func() {
-						Expect(gardenClient.Create(ctx, signingKeySecret)).To(Succeed())
-
-						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
-						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								SigningKeySecret: &corev1.LocalObjectReference{
-									Name: signingKeySecret.Name,
-								},
-							},
-						}
-						botanist.Shoot.SetInfo(shootCopy)
-					},
-					kubeapiserver.ServiceAccountConfig{
-						Issuer:     "https://api." + internalClusterDomain,
-						SigningKey: signingKey,
-					},
 					false,
 					Not(HaveOccurred()),
 				),

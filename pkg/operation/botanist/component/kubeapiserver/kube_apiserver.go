@@ -244,8 +244,6 @@ type ServiceAccountConfig struct {
 	Issuer string
 	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
 	AcceptedIssuers []string
-	// SigningKey is the key used when service accounts are signed.
-	SigningKey []byte
 	// ExtendTokenExpiration states whether the service account token expirations should be extended.
 	ExtendTokenExpiration *bool
 	// MaxTokenExpiration states what the maximal token expiration should be.
@@ -285,20 +283,19 @@ type kubeAPIServer struct {
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
-		deployment                                 = k.emptyDeployment()
-		podDisruptionBudget                        client.Object
-		horizontalPodAutoscaler                    client.Object
-		verticalPodAutoscaler                      = k.emptyVerticalPodAutoscaler()
-		hvpa                                       = k.emptyHVPA()
-		networkPolicyAllowFromShootAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
-		networkPolicyAllowToShootAPIServer         = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
-		networkPolicyAllowKubeAPIServer            = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
-		secretETCDEncryptionConfiguration          = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
-		secretOIDCCABundle                         = k.emptySecret(secretOIDCCABundleNamePrefix)
-		secretUserProvidedServiceAccountSigningKey = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
-		configMapAdmission                         = k.emptyConfigMap(configMapAdmissionNamePrefix)
-		configMapAuditPolicy                       = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
-		configMapEgressSelector                    = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		deployment                           = k.emptyDeployment()
+		podDisruptionBudget                  client.Object
+		horizontalPodAutoscaler              client.Object
+		verticalPodAutoscaler                = k.emptyVerticalPodAutoscaler()
+		hvpa                                 = k.emptyHVPA()
+		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
+		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
+		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretETCDEncryptionConfiguration    = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
+		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
+		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
+		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
 
 	podDisruptionBudget = k.emptyPodDisruptionBudget()
@@ -337,10 +334,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretOIDCCABundle(ctx, secretOIDCCABundle); err != nil {
-		return err
-	}
-
-	if err := k.reconcileSecretUserProvidedServiceAccountSigningKey(ctx, secretUserProvidedServiceAccountSigningKey); err != nil {
 		return err
 	}
 
@@ -425,7 +418,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapEgressSelector,
 		secretETCDEncryptionConfiguration,
 		secretOIDCCABundle,
-		secretUserProvidedServiceAccountSigningKey,
 		secretServiceAccountKey,
 		secretStaticToken,
 		secretServer,
