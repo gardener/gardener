@@ -282,6 +282,15 @@ images:
   sourceRepository: github.com/gardener/hvpa-controller
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
   tag: "v0.8.0"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'private'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'high'
+        availability_requirement: 'high'
 
 # Horizontal cluster-proportional-autoscaler
 - name: cluster-proportional-autoscaler
