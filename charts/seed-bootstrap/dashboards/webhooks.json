@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 12,
-  "iteration": 1671506061734,
+  "id": 15,
+  "iteration": 1671601861822,
   "links": [],
   "panels": [
     {
@@ -60,8 +60,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 12,
+        "h": 7,
+        "w": 24,
         "x": 0,
         "y": 1
       },
@@ -89,66 +89,6 @@
           "refId": "A"
         }
       ],
-      "title": "Total requests",
-      "type": "bargauge"
-    },
-    {
-      "datasource": "${datasource}",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "links": [
-            {
-              "title": "",
-              "url": "/d/webhook-details/controller-runtime-webhook-details?var-datasource=$datasource&var-job=$job&var-webhook=${__series.name}"
-            }
-          ],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 1
-      },
-      "id": 12,
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "text": {}
-      },
-      "pluginVersion": "7.5.17",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(controller_runtime_webhook_latency_seconds_count{job=\"$job\",webhook=~\"$webhook\"}[$__range])) by(webhook)",
-          "interval": "",
-          "legendFormat": "{{webhook}}",
-          "refId": "A"
-        }
-      ],
       "title": "Request Rate",
       "type": "bargauge"
     },
@@ -159,7 +99,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 8
       },
       "id": 16,
       "panels": [],
@@ -175,11 +115,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "requests/s",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 30,
             "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
@@ -206,7 +146,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -214,7 +154,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "id": 2,
       "options": {
@@ -244,7 +184,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Total Requests by webhook",
+      "title": "Request Rate by webhook",
       "type": "timeseries"
     },
     {
@@ -294,7 +234,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 18
       },
       "id": 9,
       "options": {
@@ -323,7 +263,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Total Requests by code",
+      "title": "Request Rate by code",
       "type": "timeseries"
     },
     {
@@ -335,11 +275,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "requests/s",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 30,
             "gradientMode": "none",
             "hideFrom": {
               "graph": false,
@@ -374,7 +314,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 27
       },
       "id": 4,
       "options": {
@@ -403,7 +343,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Inflight Requests",
+      "title": "Inflight Requests by webhook",
       "type": "timeseries"
     },
     {
@@ -458,7 +398,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 36
       },
       "id": 6,
       "options": {
@@ -490,90 +430,9 @@
       "timeShift": null,
       "title": "Latency (${percentile}th Percentile)",
       "type": "timeseries"
-    },
-    {
-      "datasource": "${datasource}",
-      "description": "Shows the latency of processing admission requests.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "1/s",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false
-            },
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 45
-      },
-      "id": 8,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [
-            "max",
-            "mean",
-            "last"
-          ],
-          "displayMode": "table",
-          "placement": "right"
-        },
-        "tooltipOptions": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "7.5.17",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(controller_runtime_webhook_latency_seconds_count{job=\"$job\",webhook=~\"$webhook\"}[$__rate_interval])) by(webhook)",
-          "interval": "",
-          "legendFormat": "{{webhook}}",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Request Rate",
-      "type": "timeseries"
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
   "tags": [

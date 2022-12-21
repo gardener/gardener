@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 2,
-  "iteration": 1671505632803,
+  "id": 5,
+  "iteration": 1671602759105,
   "links": [],
   "panels": [
     {
@@ -251,11 +251,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "errors/sec",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 30,
             "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
@@ -282,7 +282,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -803,12 +803,12 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "adds/sec",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 30,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -834,7 +834,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -866,7 +866,7 @@
           "refId": "A"
         }
       ],
-      "title": "Enqueues by pod",
+      "title": "Enqueue Rate by  pod",
       "type": "timeseries"
     },
     {
@@ -878,7 +878,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "retries/sec",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -909,7 +909,7 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -941,7 +941,7 @@
           "refId": "A"
         }
       ],
-      "title": "Retries by pod",
+      "title": "Retry Rate by pod",
       "type": "timeseries"
     },
     {
@@ -953,12 +953,12 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "ops/sec",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -984,7 +984,7 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -1018,7 +1018,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Work Rate",
+      "title": "Work Rate by pod",
       "type": "timeseries"
     },
     {
@@ -1308,6 +1308,7 @@
       }
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
   "tags": [
@@ -1371,8 +1372,8 @@
         "allValue": null,
         "current": {
           "selected": false,
-          "text": "backupbucket",
-          "value": "backupbucket"
+          "text": "seed-lease",
+          "value": "seed-lease"
         },
         "datasource": "${datasource}",
         "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
