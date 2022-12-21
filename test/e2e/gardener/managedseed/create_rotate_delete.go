@@ -136,19 +136,20 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 
 		By("Trigger gardenlet kubeconfig auto-rotation by reducing kubeconfig validity")
 		{
-			By("Scale down gardenlet deployment to prevent interference of old pods with old validity settings")
-			// See https://github.com/gardener/gardener/issues/6766 for details
-			Eventually(func(g Gomega) {
+			By("Scale down gardenlet deployment and wait until no gardenlet pods exist anymore")
+			CEventually(ctx, func(g Gomega) []corev1.Pod {
 				deployment := &appsv1.Deployment{}
 				g.Expect(shootClient.Client().Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: "garden"}, deployment)).To(Succeed())
 
-				patch := client.MergeFrom(deployment.DeepCopy())
-				deployment.Spec.Replicas = pointer.Int32(0)
-				g.Expect(shootClient.Client().Patch(ctx, deployment, patch)).To(Succeed())
-			}).Should(Succeed())
+				if pointer.Int32Deref(deployment.Spec.Replicas, 0) != 0 {
+					By("Scale down gardenlet deployment to prevent interference of old pods with old validity settings")
+					// See https://github.com/gardener/gardener/issues/6766 for details
 
-			By("Wait until no gardenlet pods exist anymore")
-			CEventually(ctx, func(g Gomega) []corev1.Pod {
+					patch := client.MergeFrom(deployment.DeepCopy())
+					deployment.Spec.Replicas = pointer.Int32(0)
+					g.Expect(shootClient.Client().Patch(ctx, deployment, patch)).To(Succeed())
+				}
+
 				podList := &corev1.PodList{}
 				g.Expect(shootClient.Client().List(ctx, podList, client.InNamespace("garden"), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})).To(Succeed())
 				return podList.Items
