@@ -46,6 +46,9 @@ spec:
   template:
     metadata:
       annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/scheme: 'http'
+        prometheus.io/name: 'gardenlet'
         prometheus.io/port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port | quote }}
         {{- if .Values.config.gardenClientConnection.bootstrapKubeconfig }}
         {{- if not .Values.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
