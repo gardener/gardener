@@ -179,7 +179,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 			By("Change Shoot's .spec.seedName")
 			shoot.Spec.SeedName = pointer.String("another-seed")
-			shoot, err = testCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{})
+			err = testClient.SubResource("binding").Update(ctx, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

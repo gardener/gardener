@@ -31,7 +31,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -39,10 +38,9 @@ import (
 
 // Reconciler schedules shoots to seeds.
 type Reconciler struct {
-	Client                  client.Client
-	Config                  *config.ShootSchedulerConfiguration
-	VersionedGardenerClient *gardencoreversionedclientset.Clientset
-	Recorder                record.EventRecorder
+	Client   client.Client
+	Config   *config.ShootSchedulerConfiguration
+	Recorder record.EventRecorder
 }
 
 // Reconcile schedules shoots to seeds.
@@ -76,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	shoot.Spec.SeedName = &seed.Name
-	if _, err = r.VersionedGardenerClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{}); err != nil {
+	if err = r.Client.SubResource("binding").Update(ctx, shoot); err != nil {
 		log.Error(err, "Failed to bind shoot to seed")
 		r.reportFailedScheduling(shoot, err)
 		return reconcile.Result{}, err

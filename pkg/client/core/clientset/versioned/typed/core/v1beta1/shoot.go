@@ -50,7 +50,6 @@ type ShootInterface interface {
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Shoot, err error)
 	CreateAdminKubeconfigRequest(ctx context.Context, shootName string, adminKubeconfigRequest *v1alpha1.AdminKubeconfigRequest, opts v1.CreateOptions) (*v1alpha1.AdminKubeconfigRequest, error)
-	UpdateBinding(ctx context.Context, shootName string, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (*v1beta1.Shoot, error)
 
 	ShootExpansion
 }
@@ -209,21 +208,6 @@ func (c *shoots) CreateAdminKubeconfigRequest(ctx context.Context, shootName str
 		SubResource("adminkubeconfig").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(adminKubeconfigRequest).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateBinding takes the top resource name and the representation of a shoot and updates it. Returns the server's representation of the shoot, and an error, if there is any.
-func (c *shoots) UpdateBinding(ctx context.Context, shootName string, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (result *v1beta1.Shoot, err error) {
-	result = &v1beta1.Shoot{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("shoots").
-		Name(shootName).
-		SubResource("binding").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(shoot).
 		Do(ctx).
 		Into(result)
 	return

@@ -153,14 +153,3 @@ func (c *FakeShoots) CreateAdminKubeconfigRequest(ctx context.Context, shootName
 	}
 	return obj.(*authenticationv1alpha1.AdminKubeconfigRequest), err
 }
-
-// UpdateBinding takes the representation of a shoot and updates it. Returns the server's representation of the shoot, and an error, if there is any.
-func (c *FakeShoots) UpdateBinding(ctx context.Context, shootName string, shoot *v1alpha1.Shoot, opts v1.UpdateOptions) (result *v1alpha1.Shoot, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(shootsResource, "binding", c.ns, shoot), &v1alpha1.Shoot{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.Shoot), err
-}

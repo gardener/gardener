@@ -355,21 +355,6 @@ func (mr *MockShootInterfaceMockRecorder) Update(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockShootInterface)(nil).Update), arg0, arg1, arg2)
 }
 
-// UpdateBinding mocks base method.
-func (m *MockShootInterface) UpdateBinding(arg0 context.Context, arg1 string, arg2 *v1beta1.Shoot, arg3 v1.UpdateOptions) (*v1beta1.Shoot, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateBinding", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*v1beta1.Shoot)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateBinding indicates an expected call of UpdateBinding.
-func (mr *MockShootInterfaceMockRecorder) UpdateBinding(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBinding", reflect.TypeOf((*MockShootInterface)(nil).UpdateBinding), arg0, arg1, arg2, arg3)
-}
-
 // UpdateStatus mocks base method.
 func (m *MockShootInterface) UpdateStatus(arg0 context.Context, arg1 *v1beta1.Shoot, arg2 v1.UpdateOptions) (*v1beta1.Shoot, error) {
 	m.ctrl.T.Helper()

@@ -26,7 +26,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -413,14 +412,8 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 		return err
 	}
 
-	restConfig := f.GardenClient.RESTConfig()
-	versionedCoreClient, err := gardencoreversionedclientset.NewForConfig(restConfig)
-	if err != nil {
-		return fmt.Errorf("failed create versioned core client: %w", err)
-	}
-
 	shoot.Spec.SeedName = &seed.Name
-	if _, err = versionedCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{}); err != nil {
+	if err := f.GardenClient.Client().SubResource("binding").Update(ctx, shoot); err != nil {
 		return fmt.Errorf("failed updating binding for shoot %q: %w", client.ObjectKeyFromObject(shoot), err)
 	}
 
