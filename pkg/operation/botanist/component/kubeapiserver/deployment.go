@@ -475,7 +475,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretCAClient, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -714,7 +714,6 @@ func (k *kubeAPIServer) handleVPNSettings(
 	configMapEgressSelector *corev1.ConfigMap,
 	secretCAVPN *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
-	secretLegacyVPNCAClient *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
 ) {

@@ -90,16 +90,6 @@ type ReversedVPNValues struct {
 	OpenVPNPort int32
 }
 
-// NetworkValues contains the configuration values for the network.
-type NetworkValues struct {
-	// PodCIDR is the CIDR of the pod network.
-	PodCIDR string
-	// ServiceCIDR is the CIDR of the service network.
-	ServiceCIDR string
-	// NodeCIDR is the CIDR of the node network.
-	NodeCIDR string
-}
-
 // Values is a set of configuration values for the VPNShoot component.
 type Values struct {
 	// Image is the container image used for vpnShoot.
@@ -110,8 +100,6 @@ type Values struct {
 	VPAEnabled bool
 	// ReversedVPN contains the configuration values for the ReversedVPN.
 	ReversedVPN ReversedVPNValues
-	// Network contains the configuration values for the network.
-	Network NetworkValues
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
 	HighAvailabilityEnabled bool
 	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA

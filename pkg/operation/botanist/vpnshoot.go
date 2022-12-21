@@ -19,7 +19,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"k8s.io/utils/pointer"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
@@ -37,11 +36,6 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 			Endpoint:    b.outOfClusterAPIServerFQDN(),
 			OpenVPNPort: 8132,
-		},
-		Network: vpnshoot.NetworkValues{
-			PodCIDR:     b.Shoot.Networks.Pods.String(),
-			ServiceCIDR: b.Shoot.Networks.Services.String(),
-			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
 		},
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,

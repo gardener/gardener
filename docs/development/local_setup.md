@@ -260,7 +260,7 @@ If your remote Garden cluster is a Gardener shoot, and you can access the seed o
 hack/local-development/remote-garden/enable-seed-authorizer <seed kubeconfig> <namespace>
 ```
 
-> Note: This script is not working anymore, as the `ReversedVPN` feature can't be disabled. The annotation `alpha.featuregates.shoot.gardener.cloud/reversed-vpn` on `Shoot`s is no longer respected .
+> Note: This script is not working anymore, as the `ReversedVPN` feature can't be disabled. The annotation `alpha.featuregates.shoot.gardener.cloud/reversed-vpn` on `Shoot`s is no longer respected.
 
 To prevent Gardener from reconciling the shoot and overwriting your changes, add the annotation `shoot.gardener.cloud/ignore: 'true'` to the remote Garden shoot. Note that this annotation takes effect only if it is enabled via the `constollers.shoot.respectSyncPeriodOverwrite: true` option in the `gardenlet` configuration.
 

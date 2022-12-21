@@ -145,7 +145,9 @@ var _ = Describe("ValuesHelper", func() {
 				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
-			FeatureGates: map[string]bool{},
+			FeatureGates: map[string]bool{
+				"FooFeature": false,
+			},
 		}
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -222,7 +224,7 @@ var _ = Describe("ValuesHelper", func() {
 					},
 				},
 				FeatureGates: map[string]bool{
-					string("FooFeature"): true,
+					string("FooFeature"): false,
 					string("BarFeature"): true,
 				},
 				Logging: &configv1alpha1.Logging{
@@ -279,7 +281,7 @@ var _ = Describe("ValuesHelper", func() {
 						},
 					},
 					"featureGates": map[string]interface{}{
-						"FooFeature": true,
+						"FooFeature": false,
 						"BarFeature": true,
 					},
 					"logging": map[string]interface{}{
