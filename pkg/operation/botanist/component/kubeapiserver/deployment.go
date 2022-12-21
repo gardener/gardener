@@ -716,6 +716,16 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--livez-grace-period=1m")
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
+	// For kube-apiserver version 1.24 there is a deadlock that can occur during shutdown that prevents the graceful termination
+	// of the kube-apiserver container to complete when the --audit-log-mode setting is set to batch. Open TCP connections to that
+	// kube-apiserver are not terminated and clients will keep receiving an error that the kube-apiserver is shutting down which leads
+	// to various problems, e.g. nodes becoming not ready. By setting --shutdown-send-retry-after=true, we instruct the kube-apiserver
+	// to send a response with `Connection: close` and `Retry-After: N` headers during the graceful termination and thus all new
+	// requests will have their connections closed and eventually be reopened to healthy kube-apiservers.
+	// TODO: Once https://github.com/kubernetes/kubernetes/pull/113741 is merged this setting can be removed.
+	if version.ConstraintK8sEqual124.Check(k.values.Version) {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-send-retry-after=true")
+	}
 }
 
 func (k *kubeAPIServer) handleVPNSettings(
