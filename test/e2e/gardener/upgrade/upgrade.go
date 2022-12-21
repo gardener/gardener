@@ -33,9 +33,11 @@ import (
 
 var _ = Describe("Gardener upgrade Tests for", func() {
 	var (
-		gardenerPreviousRelease = os.Getenv("GARDENER_PREVIOUS_VERSION")
-		gardenerCurrentRelease  = os.Getenv("GARDENER_NEXT_VERSION")
-		projectNamespace        = "garden-local"
+		gardenerPreviousVersion    = os.Getenv("GARDENER_PREVIOUS_VERSION")
+		gardenerPreviousGitVersion = os.Getenv("GARDENER_PREVIOUS_RELEASE")
+		gardenerCurrentVersion     = os.Getenv("GARDENER_NEXT_VERSION")
+		gardenerCurrentGitVersion  = os.Getenv("GARDENER_NEXT_RELEASE")
+		projectNamespace           = "garden-local"
 	)
 
 	Context("Shoot::e2e-upgrade", func() {
@@ -54,7 +56,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		shootTest.Spec.Extensions = nil
 		f.Shoot = shootTest
 
-		When("Pre-Upgrade (Gardener version:'"+gardenerPreviousRelease+"')", Ordered, Label("pre-upgrade"), func() {
+		When("Pre-Upgrade (Gardener version:'"+gardenerPreviousVersion+"', Git version:'"+gardenerPreviousGitVersion+"')", Ordered, Label("pre-upgrade"), func() {
 			var (
 				ctx    context.Context
 				cancel context.CancelFunc
@@ -86,7 +88,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			})
 		})
 
-		When("Post-Upgrade (Gardener version:'"+gardenerCurrentRelease+"')", Ordered, Label("post-upgrade"), func() {
+		When("Post-Upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Label("post-upgrade"), func() {
 			var (
 				ctx        context.Context
 				cancel     context.CancelFunc
@@ -114,7 +116,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			})
 
 			It("should able to delete a shoot which was created in previous release", func() {
-				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousRelease))
+				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
 				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, shootTest)).To(Succeed())
 			})
 		})
