@@ -147,23 +147,11 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		},
 	}
 
-	service := emptyVPNShootService(infrastructure.Namespace)
-	service.Spec = corev1.ServiceSpec{
-		Type:     corev1.ServiceTypeClusterIP,
-		Selector: map[string]string{"app": "machine"},
-		Ports: []corev1.ServicePort{{
-			Name:       "vpn",
-			Port:       4314,
-			TargetPort: intstr.FromInt(30123),
-		}},
-	}
-
 	for _, obj := range []client.Object{
 		networkPolicyAllowToMachinePods,
 		networkPolicyAllowToProviderLocalCoreDNS,
 		networkPolicyAllowToIstioIngressGateway,
 		networkPolicyAllowMachinePods,
-		service,
 	} {
 		if err := a.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return err
@@ -179,7 +167,6 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace),
-		emptyVPNShootService(infrastructure.Namespace),
 	)
 }
 
@@ -200,19 +187,6 @@ func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-		},
-	}
-}
-
-func emptyVPNShootService(namespace string) *corev1.Service {
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "vpn-shoot",
 		},
 	}
 }

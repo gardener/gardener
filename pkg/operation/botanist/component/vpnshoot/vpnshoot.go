@@ -54,16 +54,11 @@ const (
 	// LabelValue is used as value for LabeApp.
 	LabelValue = "vpn-shoot"
 
-	servicePort   int32 = 4314
-	containerPort int32 = 1194
-
 	managedResourceName = "shoot-core-vpn-shoot"
 	deploymentName      = "vpn-shoot"
 	containerName       = "vpn-shoot"
 	initContainerName   = "vpn-shoot-init"
 	serviceName         = "vpn-shoot"
-
-	secretNameDH = "vpn-shoot-dh"
 
 	volumeName          = "vpn-shoot"
 	volumeNameTLSAuth   = "vpn-shoot-tlsauth"
