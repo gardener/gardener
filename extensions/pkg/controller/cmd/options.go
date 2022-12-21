@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -302,7 +302,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.MetricsBindAddress = c.MetricsBindAddress
 	opts.HealthProbeBindAddress = c.HealthBindAddress
 	opts.Logger = c.Logger
-	opts.Controller = v1alpha1.ControllerConfigurationSpec{RecoverPanic: c.RecoverPanic}
+	opts.Controller = controllerconfigv1alpha1.ControllerConfigurationSpec{RecoverPanic: c.RecoverPanic}
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.

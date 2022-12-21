@@ -25,7 +25,7 @@ import (
 )
 
 // BastionShootNameIndexerFunc extracts the .spec.shootRef.name field of a Bastion.
-var BastionShootNameIndexerFunc = func(obj client.Object) []string {
+func BastionShootNameIndexerFunc(obj client.Object) []string {
 	bastion, ok := obj.(*operationsv1alpha1.Bastion)
 	if !ok {
 		return []string{""}

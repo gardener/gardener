@@ -25,34 +25,32 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-var (
-	// ProjectNamespaceIndexerFunc extracts the .spec.namespace field of a Project.
-	ProjectNamespaceIndexerFunc = func(obj client.Object) []string {
-		project, ok := obj.(*gardencorev1beta1.Project)
-		if !ok {
-			return []string{""}
-		}
-		return []string{pointer.StringDeref(project.Spec.Namespace, "")}
+// ProjectNamespaceIndexerFunc extracts the .spec.namespace field of a Project.
+func ProjectNamespaceIndexerFunc(obj client.Object) []string {
+	project, ok := obj.(*gardencorev1beta1.Project)
+	if !ok {
+		return []string{""}
 	}
+	return []string{pointer.StringDeref(project.Spec.Namespace, "")}
+}
 
-	// BackupBucketSeedNameIndexerFunc extracts the .spec.seedName field of a BackupBucket.
-	BackupBucketSeedNameIndexerFunc = func(obj client.Object) []string {
-		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
-		if !ok {
-			return []string{""}
-		}
-		return []string{pointer.StringDeref(backupBucket.Spec.SeedName, "")}
+// BackupBucketSeedNameIndexerFunc extracts the .spec.seedName field of a BackupBucket.
+func BackupBucketSeedNameIndexerFunc(obj client.Object) []string {
+	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+	if !ok {
+		return []string{""}
 	}
+	return []string{pointer.StringDeref(backupBucket.Spec.SeedName, "")}
+}
 
-	// ControllerInstallationSeedRefNameIndexerFunc extracts the .spec.seedRef.name field of a ControllerInstallation.
-	ControllerInstallationSeedRefNameIndexerFunc = func(obj client.Object) []string {
-		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-		if !ok {
-			return []string{""}
-		}
-		return []string{controllerInstallation.Spec.SeedRef.Name}
+// ControllerInstallationSeedRefNameIndexerFunc extracts the .spec.seedRef.name field of a ControllerInstallation.
+func ControllerInstallationSeedRefNameIndexerFunc(obj client.Object) []string {
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok {
+		return []string{""}
 	}
-)
+	return []string{controllerInstallation.Spec.SeedRef.Name}
+}
 
 // AddProjectNamespace adds an index for core.ProjectNamespace to the given indexer.
 func AddProjectNamespace(ctx context.Context, indexer client.FieldIndexer) error {

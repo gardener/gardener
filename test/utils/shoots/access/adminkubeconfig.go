@@ -49,9 +49,6 @@ func RequestAdminKubeconfigForShoot(ctx context.Context, gardenClient kubernetes
 	if err := gardenClient.Client().SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest); err != nil {
 		return nil, err
 	}
-	if err := gardenClient.Client().SubResource("adminkubeconfig").Get(ctx, shoot, adminKubeconfigRequest); err != nil {
-		return nil, err
-	}
 
 	return adminKubeconfigRequest.Status.Kubeconfig, nil
 }

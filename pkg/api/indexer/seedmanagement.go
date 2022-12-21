@@ -25,7 +25,7 @@ import (
 )
 
 // ManagedSeedShootNameIndexerFunc extracts the .spec.shoot.name field of a ManagedSeed.
-var ManagedSeedShootNameIndexerFunc = func(obj client.Object) []string {
+func ManagedSeedShootNameIndexerFunc(obj client.Object) []string {
 	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
 	if !ok {
 		return []string{""}

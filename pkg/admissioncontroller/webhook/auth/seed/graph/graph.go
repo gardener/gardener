@@ -85,8 +85,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		if err != nil {
 			return err
 		}
-		err = resource.setupFn(ctx, informer)
-		if err != nil {
+		if err := resource.setupFn(ctx, informer); err != nil {
 			return err
 		}
 	}
