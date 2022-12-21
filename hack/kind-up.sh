@@ -66,7 +66,7 @@ setup_loopback_device
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" --set "environment=$ENVIRONMENT")
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 kubectl get nodes -o name |\
