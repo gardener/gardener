@@ -109,13 +109,15 @@ function upgrade_to_next_release() {
   # downloads and upgrades to GARDENER_NEXT_RELEASE release if GARDENER_NEXT_RELEASE is not same as version mentioned in VERSION file.
   # if GARDENER_NEXT_RELEASE is same as version mentioned in VERSION file then it is considered as local release and install gardener from local repo.
   if [[ -n $GARDENER_NEXT_RELEASE && $GARDENER_NEXT_RELEASE != $VERSION ]]; then
-    # download gardener previous release to perform gardener upgrade tests
+    # download gardener next release to perform gardener upgrade tests
     $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_NEXT_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
+    export GARDENER_NEXT_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE/VERSION)"
     pushd $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE >/dev/null
     copy_kubeconfig_from_kubeconfig_env_var
     gardener_up
     popd >/dev/null
   else
+    export GARDENER_NEXT_VERSION=$VERSION
     gardener_up
   fi
 
@@ -172,6 +174,7 @@ set_seed_name
 
 # download gardener previous release to perform gardener upgrade tests
 $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
+export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/VERSION)"
 
 # test setup
 kind_up

@@ -33,8 +33,8 @@ import (
 
 var _ = Describe("Gardener upgrade Tests for", func() {
 	var (
-		gardenerPreviousRelease = os.Getenv("GARDENER_PREVIOUS_RELEASE")
-		gardenerCurrentRelease  = os.Getenv("GARDENER_NEXT_RELEASE")
+		gardenerPreviousRelease = os.Getenv("GARDENER_PREVIOUS_VERSION")
+		gardenerCurrentRelease  = os.Getenv("GARDENER_NEXT_VERSION")
 		projectNamespace        = "garden-local"
 	)
 
