@@ -403,11 +403,6 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 }
 
 func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
-	imageAlpineIPTables, err := b.ImageVector.FindImage(images.ImageNameAlpineIptables, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-
 	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(images.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
@@ -428,7 +423,6 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 	}
 
 	return kubeapiserver.Images{
-		AlpineIPTables:           imageAlpineIPTables.String(),
 		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
 		KubeAPIServer:            imageKubeAPIServer.String(),
 		VPNClient:                vpnClient,

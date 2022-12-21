@@ -134,10 +134,8 @@ var _ = Describe("KubeAPIServer", func() {
 					KubernetesVersion: semver.MustParse("1.22.1"),
 				},
 				ImageVector: imagevector.ImageVector{
-					{Name: "alpine-iptables"},
 					{Name: "apiserver-proxy-pod-webhook"},
 					{Name: "kube-apiserver"},
-					{Name: "vpn-seed"},
 					{Name: "vpn-shoot-client"},
 				},
 				APIServerAddress:   apiServerAddress,
@@ -182,16 +180,8 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DefaultKubeAPIServer", func() {
-		It("should return an error because the alpine-iptables image cannot be found", func() {
+		It("should return an error because the apiserver-proxy-pod-webhook image cannot be found", func() {
 			botanist.ImageVector = imagevector.ImageVector{}
-
-			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-			Expect(kubeAPIServer).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("could not find image \"alpine-iptables\"")))
-		})
-
-		It("should return an error because the apiserver-proxy-pod-webhook cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}}
 
 			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 			Expect(kubeAPIServer).To(BeNil())
@@ -199,7 +189,7 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		It("should return an error because the kube-apiserver cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}, {Name: "apiserver-proxy-pod-webhook"}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "apiserver-proxy-pod-webhook"}}
 
 			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 			Expect(kubeAPIServer).To(BeNil())

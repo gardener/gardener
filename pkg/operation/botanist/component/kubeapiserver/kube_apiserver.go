@@ -206,8 +206,6 @@ type ETCDEncryptionConfig struct {
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.
 type Images struct {
-	// AlpineIPTables is the container image for alpine-iptables.
-	AlpineIPTables string
 	// APIServerProxyPodWebhook is the container image for the apiserver-proxy-pod-webhook.
 	APIServerProxyPodWebhook string
 	// KubeAPIServer is the container image for the kube-apiserver.

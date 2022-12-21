@@ -23,8 +23,6 @@ const (
 	ImageNameAlertmanager = "alertmanager"
 	// ImageNameAlpine is a constant for an image in the image vector with name 'alpine'.
 	ImageNameAlpine = "alpine"
-	// ImageNameAlpineIptables is a constant for an image in the image vector with name 'alpine-iptables'.
-	ImageNameAlpineIptables = "alpine-iptables"
 	// ImageNameApiserverProxy is a constant for an image in the image vector with name 'apiserver-proxy'.
 	ImageNameApiserverProxy = "apiserver-proxy"
 	// ImageNameApiserverProxyPodWebhook is a constant for an image in the image vector with name 'apiserver-proxy-pod-webhook'.
