@@ -59,17 +59,18 @@ var _ = Describe("Component", func() {
 					Name:    "updatecacerts.service",
 					Command: pointer.String("start"),
 					Content: pointer.String(`[Unit]
-Description=Update CA bundle at /etc/ssl/certs/ca-certificates.crt
+Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
 Wants=systemd-tmpfiles-setup.service clean-ca-certificates.service
 After=systemd-tmpfiles-setup.service clean-ca-certificates.service
 Before=sysinit.target kubelet.service
 ConditionPathIsReadWrite=/etc/ssl/certs
+ConditionPathIsReadWrite=/var/lib/ca-certificates-local
 ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/update-ca-certificates --fresh
+ExecStart=/etc/ssl/update-local-ca-certificates.sh
 ExecStartPost=/bin/systemctl restart docker.service
 [Install]
 WantedBy=multi-user.target`),
@@ -77,7 +78,35 @@ WantedBy=multi-user.target`),
 			))
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
-					Path:        "/etc/ssl/certs/ROOTcerts.pem",
+					Path:        "/etc/ssl/update-local-ca-certificates.sh",
+					Permissions: pointer.Int32(0744),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "b64",
+							Data: utils.EncodeBase64([]byte(`#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+if [[ -f "/etc/debian_version" ]]; then
+    # Copy certificates from default "localcertsdir" because /usr is mounted read-only in Garden Linux.
+    # See https://github.com/gardenlinux/gardenlinux/issues/1490
+    mkdir -p "/var/lib/ca-certificates-local"
+    if [[ -d "/usr/local/share/ca-certificates" ]]; then
+        cp -af /usr/local/share/ca-certificates/* "/var/lib/ca-certificates-local"
+    fi
+    # localcertsdir is supported on Debian based OS only
+    /usr/sbin/update-ca-certificates --fresh --localcertsdir "/var/lib/ca-certificates-local"
+else
+    /usr/sbin/update-ca-certificates --fresh
+fi
+`)),
+						},
+					},
+				},
+				extensionsv1alpha1.File{
+					Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
 					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
