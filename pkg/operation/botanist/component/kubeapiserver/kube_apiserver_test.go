@@ -2723,6 +2723,16 @@ rules:
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
 				})
+
+				It("should set the --shutdown-send-retry-after=true flag if the kubernetes version is 1.24", func() {
+					version = semver.MustParse("1.24.7")
+					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+						"--shutdown-send-retry-after=true",
+					))
+				})
 			})
 		})
 	})
