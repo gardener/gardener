@@ -286,8 +286,13 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 			Namespace: shoot.Namespace,
 		},
 		Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-			Shoot:     &seedmanagementv1alpha1.Shoot{Name: shoot.Name},
-			Gardenlet: &seedmanagementv1alpha1.Gardenlet{Config: *gardenletConfig},
+			Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot.Name},
+			Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+				Config: *gardenletConfig,
+				Deployment: &seedmanagementv1alpha1.GardenletDeployment{
+					ReplicaCount: pointer.Int32(1), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
+				},
+			},
 		},
 	}, nil
 }
