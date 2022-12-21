@@ -45,12 +45,12 @@ setup_loopback_device() {
   fi
   LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
   echo "Checking loopback device ${LOOPBACK_DEVICE}..."
-  for a in 127.0.0.10 127.0.0.11 127.0.0.12; do
-    if ip address show dev ${LOOPBACK_DEVICE} | grep -q $a; then
-      echo "IP address $a already assigned to ${LOOPBACK_DEVICE}."
+  for address in 127.0.0.10 127.0.0.11 127.0.0.12; do
+    if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address; then
+      echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
     else
-      echo "Adding IP address $a to ${LOOPBACK_DEVICE}..."
-      ip address add $a dev ${LOOPBACK_DEVICE}
+      echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
+      ip address add $address dev ${LOOPBACK_DEVICE}
     fi
   done
   echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
