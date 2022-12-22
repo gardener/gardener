@@ -61,6 +61,9 @@ const (
 	// data is valid. In case the data contains a certificate it is the time part of the certificate's 'not after'
 	// field.
 	LabelKeyValidUntilTime = "valid-until-time"
+	// LabelKeyUseDataForName is a constant for a key of a label on a Secret describing that its data should be used
+	// instead of generating a fresh secret with the same name.
+	LabelKeyUseDataForName = "secrets-manager-use-data-for-name"
 
 	// LabelValueTrue is a constant for a value of a label on a Secret describing the value 'true'.
 	LabelValueTrue = "true"

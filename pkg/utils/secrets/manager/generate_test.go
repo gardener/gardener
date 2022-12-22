@@ -16,6 +16,7 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -763,6 +764,69 @@ var _ = Describe("Generate", func() {
 				Expect(secretInfos.current.obj).To(Equal(secret))
 				Expect(secretInfos.old).To(BeNil())
 				Expect(secretInfos.bundle).To(BeNil())
+			})
+		})
+
+		Context("adoption of existing secret data", func() {
+			var (
+				oldData = map[string][]byte{"id_rsa": []byte("some-old-data")}
+				config  *secretutils.RSASecretConfig
+			)
+
+			BeforeEach(func() {
+				config = &secretutils.RSASecretConfig{
+					Name: "foo",
+					Bits: 4096,
+				}
+			})
+
+			It("should generate a new data if no existing secrets indicates keeping the old data", func() {
+				By("generating secret")
+				secret, err := m.Generate(ctx, config)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("verifying new data was generated")
+				Expect(secret.Data).NotTo(Equal(oldData))
+			})
+
+			It("should keep the old data if an existing secrets indicate keeping it", func() {
+				By("creating existing secret with old key")
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-existing-secret",
+						Namespace: namespace,
+						Labels:    map[string]string{"secrets-manager-use-data-for-name": config.GetName()},
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: oldData,
+				}
+				Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+				By("generating secret")
+				secret, err := m.Generate(ctx, config)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("verifying old data was kept")
+				Expect(secret.Data).To(Equal(oldData))
+			})
+
+			It("should return an error if multiple existing secrets indicate keeping the old data", func() {
+				By("creating existing secret with old key")
+				for i := 0; i < 2; i++ {
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("some-existing-secret-%d", i),
+							Namespace: namespace,
+							Labels:    map[string]string{"secrets-manager-use-data-for-name": config.GetName()},
+						},
+					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed(), "for secret "+existingSecret.Name)
+				}
+
+				By("generating secret")
+				secret, err := m.Generate(ctx, config)
+				Expect(err).To(MatchError(ContainSubstring(`found more than one existing secret with "secrets-manager-use-data-for-name" label for config "foo"`)))
+				Expect(secret).To(BeNil())
 			})
 		})
 

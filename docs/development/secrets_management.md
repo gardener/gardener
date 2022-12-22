@@ -120,6 +120,37 @@ External components that want to reuse the `SecretsManager` should consider the 
   The relevant information can be retrieved from the `Cluster` resource under `.spec.shoot.status.credentials.rotation.certificateAuthorities`.
 - Independent of the specific identity, secrets marked with the `Persist` option are automatically saved in the `ShootState` resource by gardenlet and are also restored by gardenlet on Control Plane Migration to the new Seed.
 
+## Migrating Existing Secrets To SecretsManager
+
+If you already have existing secrets which were not created with `SecretsManager` then you can (optionally) migrate them by labeling them with `secrets-manager-use-data-for=<config-name>`.
+For example, if your `SecretsManager` generates a `CertificateConfigSecret` with name `foo` like this
+
+```go
+secret, err := k.secretsManager.Generate(
+    ctx,
+    &secrets.CertificateSecretConfig{
+        Name:                        "foo",
+        // ...
+    },
+)
+```
+
+and you already have an existing secret in your system whose data should be kept instead of regenerated, then labeling it with `secrets-manager-use-data-for=foo` will instruct `SecretsManager` accordingly.
+
+**⚠️ Caveat: You have to make sure that the existing `data` keys match with what `SecretsManager` uses:**
+
+| Secret Type          | Data Keys                                               |
+| -------------------- |---------------------------------------------------------|
+| Basic Auth           | `basic_auth.csv`, `username`, `password`, `auth`        |
+| CA Certificate       | `ca.crt`, `ca.key`                                      |
+| Non-CA Certificate   | `tls.crt`, `tls.key`                                    |
+| Control Plane Secret | `ca.crt`, `username`, `password`, `token`, `kubeconfig` |
+| ETCD Encryption Key  | `key`, `secret`                                         |
+| Kubeconfig           | `kubeconfig`                                            |
+| RSA Private Key      | `id_rsa`, `id_rsa.pub`                                  |
+| Static Token         | `static_tokens.csv`                                     |
+| VPN TLS Auth         | `vpn.tlsauth`                                           |
+
 ## Implementation Details
 
 The source of truth for the secrets manager is the list of `Secret`s in the Kubernetes cluster it acts upon (typically, the seed cluster).
