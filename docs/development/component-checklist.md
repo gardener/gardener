@@ -54,7 +54,7 @@ This document provides a checklist for them which you can walk through.
 
 8. **Handle shoot system components**
 
-   Label system component `Pod`s with `gardener.cloud/role: system-component`. Gardener adds required label selectors and tolerations so that non-`DaemonSet` managed `Pod`s will exclusively run on selected nodes, [more information](../concepts/resource-manager.md#system-components-webhook).
+   Shoot system components deployed by `gardener-resource-manager` are labelled with `resource.gardener.cloud/managed-by: gardener`. This makes Gardener adding required label selectors and tolerations so that non-`DaemonSet` managed `Pod`s will exclusively run on selected nodes, [more information](../concepts/resource-manager.md#system-components-webhook).
    `DaemonSet`s on the other hand, should generally tolerate any `NoSchedule` or `NoExecute` taints so that they can run on any `Node`, regardless of user added taints.
 
 ## Security

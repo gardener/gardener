@@ -172,7 +172,7 @@ func (c *Constraint) constraintsChecks(
 
 var (
 	notResourceManager   = utils.MustNewRequirement(v1beta1constants.LabelApp, selection.NotIn, resourcemanager.LabelValue)
-	notManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotIn, "gardener")
+	notManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotIn, resourcesv1alpha1.GardenerManager)
 	labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(notResourceManager).Add(notManagedByGardener)}
 )
 

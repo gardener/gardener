@@ -57,6 +57,9 @@ const (
 	// It is set by the ManagedResource controller depending on its configuration. By default it is set to "gardener".
 	ManagedBy = "resources.gardener.cloud/managed-by"
 
+	// GardenerManager is a constant for the default value of the 'ManagedBy' label.
+	GardenerManager = "gardener"
+
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
 	// be considered by this controller.
 	StaticTokenSkip = "token-invalidator.resources.gardener.cloud/skip"

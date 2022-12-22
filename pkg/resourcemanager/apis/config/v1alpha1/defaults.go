@@ -22,6 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -160,7 +162,7 @@ func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerC
 		obj.AlwaysUpdate = pointer.Bool(false)
 	}
 	if obj.ManagedByLabelValue == nil {
-		obj.ManagedByLabelValue = pointer.String("gardener")
+		obj.ManagedByLabelValue = pointer.String(resourcesv1alpha1.GardenerManager)
 	}
 }
 

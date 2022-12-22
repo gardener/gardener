@@ -1182,12 +1182,10 @@ webhooks:
       - kubernetes-dashboard
   objectSelector:
     matchExpressions:
-    - key: gardener.cloud/role
-      operator: In
-      values:
-      - system-component
     - key: system-components-config.resources.gardener.cloud/skip
       operator: DoesNotExist
+    matchLabels:
+      resources.gardener.cloud/managed-by: gardener
   rules:
   - apiGroups:
     - ""

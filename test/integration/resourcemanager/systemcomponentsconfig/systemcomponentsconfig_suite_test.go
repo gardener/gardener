@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"testing"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -172,15 +174,20 @@ func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistra
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetSystemComponentsConfigMutatingWebhook(&metav1.LabelSelector{
-					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
-				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
-					return admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Path: &path,
-						},
-					}
-				}),
+				resourcemanager.GetSystemComponentsConfigMutatingWebhook(
+					&metav1.LabelSelector{
+						MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
+					}, &metav1.LabelSelector{
+						MatchLabels: map[string]string{resourcesv1alpha1.ManagedBy: resourcesv1alpha1.GardenerManager},
+					},
+					nil,
+					func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+						return admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{
+								Path: &path,
+							},
+						}
+					}),
 			},
 		},
 	}

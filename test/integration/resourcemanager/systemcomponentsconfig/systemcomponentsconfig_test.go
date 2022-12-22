@@ -37,7 +37,7 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 				GenerateName: "test-",
 				Namespace:    testNamespace.Name,
 				Labels: map[string]string{
-					"gardener.cloud/role": "system-component",
+					"resources.gardener.cloud/managed-by": "gardener",
 				},
 			},
 			Spec: corev1.PodSpec{
@@ -217,7 +217,7 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 					tolerationsBefore = pod.Spec.Tolerations
 				)
 
-				metav1.SetMetaDataLabel(&pod.ObjectMeta, "gardener.cloud/role", "some-component")
+				metav1.SetMetaDataLabel(&pod.ObjectMeta, "resources.gardener.cloud/managed-by", "some-manager")
 
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 				Expect(pod.Spec.NodeSelector).To(Equal(selectorBefore))

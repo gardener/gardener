@@ -1186,7 +1186,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	if r.values.TargetDiffersFromSourceCluster {
 		objectSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				resourcesv1alpha1.ManagedBy: "gardener",
+				resourcesv1alpha1.ManagedBy: resourcesv1alpha1.GardenerManager,
 			},
 		}
 	}
@@ -1207,7 +1207,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.PodTopologySpreadConstraintsEnabled {
@@ -1652,11 +1652,22 @@ func GetSeccompProfileMutatingWebhook(
 
 // GetSystemComponentsConfigMutatingWebhook returns the system-components-config mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
-func GetSystemComponentsConfigMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	oSelector := &metav1.LabelSelector{}
+	if objectSelector != nil {
+		oSelector = objectSelector.DeepCopy()
+	}
+	oSelector.MatchExpressions = append(oSelector.MatchExpressions,
+		metav1.LabelSelectorRequirement{
+			Key:      resourcesv1alpha1.SystemComponentsConfigSkip,
+			Operator: metav1.LabelSelectorOpDoesNotExist,
+		},
 	)
 
 	return admissionregistrationv1.MutatingWebhook{
@@ -1671,20 +1682,8 @@ func GetSystemComponentsConfigMutatingWebhook(namespaceSelector *metav1.LabelSel
 				admissionregistrationv1.Create,
 			},
 		}},
-		NamespaceSelector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{
-				{
-					Key:      v1beta1constants.GardenRole,
-					Operator: metav1.LabelSelectorOpIn,
-					Values:   []string{v1beta1constants.GardenRoleSystemComponent},
-				},
-				{
-					Key:      resourcesv1alpha1.SystemComponentsConfigSkip,
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				},
-			},
-		},
+		NamespaceSelector:       namespaceSelector,
+		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, systemcomponentsconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,
