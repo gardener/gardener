@@ -2577,6 +2577,93 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeForbiddenError())
 					})
 
+					It("should reject due to a machine image that does not match the kubeletVersionConstraint constraint when the control plane K8s version does not match", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										KubeletVersionConstraint: pointer.String("< 1.26"),
+										Architectures:            []string{"amd64"},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Kubernetes.Version = "1.26.0"
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.3",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("does not support CPU architecture 'amd64', is expired or does not match kubelet version constraint"))
+					})
+
+					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the worker K8s version does not match", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										KubeletVersionConstraint: pointer.String(">= 1.26"),
+										Architectures:            []string{"amd64"},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Kubernetes.Version = "1.26.0"
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.3",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+								Kubernetes: &core.WorkerKubernetes{
+									Version: pointer.String("1.25.0"),
+								},
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("does not support CPU architecture 'amd64', is expired or does not match kubelet version constraint"))
+					})
+
 					It("should default version to latest non-preview version as shoot does not specify one", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = nil
 						shoot.Spec.Provider.Workers[1].Machine.Image = nil

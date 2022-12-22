@@ -710,6 +710,18 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	DescribeTable("#CalculateEffectiveKubernetesVersion",
+		func(controlPlaneVersion *semver.Version, workerKubernetes *core.WorkerKubernetes, expectedRes *semver.Version) {
+			res, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{}, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
+	)
+
 	DescribeTable("#GetSecretBindingTypes",
 		func(secretBinding *core.SecretBinding, expected []string) {
 			actual := GetSecretBindingTypes(secretBinding)

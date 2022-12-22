@@ -764,6 +764,13 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		}
 	}
 
+	controlPlaneVersion, err := semver.NewVersion(c.shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, fmt.Sprintf("cannot parse the kubernetes version: %s", err.Error())))
+		// exit early, all other validation errors will be misleading
+		return allErrs
+	}
+
 	for i, worker := range c.shoot.Spec.Provider.Workers {
 		var oldWorker = core.Worker{Machine: core.Machine{Image: &core.ShootMachineImage{}}}
 		for _, ow := range c.oldShoot.Spec.Provider.Workers {
@@ -781,8 +788,16 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				detail := fmt.Sprintf("machine type '%s' does not support CPU architecture '%s' or is unavailable in at least one zone, supported machine types are: %+v", worker.Machine.Type, *worker.Machine.Architecture, validMachineTypes)
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, detail))
 			}
-			if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
-				detail := fmt.Sprintf("machine image '%s' does not support CPU architecture '%s' or is expired, valid machine images are: %+v", worker.Machine.Image, *worker.Machine.Architecture, validMachineImages)
+
+			kubeletVersion, err := helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath, worker.Kubernetes, "cannot determine effective Kubernetes version for worker pool"))
+				// exit early, all other validation errors will be misleading
+				return allErrs
+			}
+
+			if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine, kubeletVersion); !ok {
+				detail := fmt.Sprintf("machine image '%s' does not support CPU architecture '%s', is expired or does not match kubelet version constraint; valid machine images are: %+v", worker.Machine.Image, *worker.Machine.Architecture, validMachineImages)
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, detail))
 			} else {
 				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
@@ -1308,7 +1323,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
-func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, []string) {
+func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine, kubeletVersion *semver.Version) (bool, []string) {
 	if oldMachine.Image == nil ||
 		(apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture)) {
 		return true, nil
@@ -1323,6 +1338,13 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, machine, 
 				}
 				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
 					continue
+				}
+				if machineVersion.KubeletVersionConstraint != nil {
+					// CloudProfile cannot contain an invalid kubeletVersionConstraint
+					constraint, _ := semver.NewConstraint(*machineVersion.KubeletVersionConstraint)
+					if !constraint.Check(kubeletVersion) {
+						continue
+					}
 				}
 				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
 			}
@@ -1344,6 +1366,14 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, machine, 
 				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
 					continue
 				}
+				if machineVersion.KubeletVersionConstraint != nil {
+					// CloudProfile cannot contain an invalid kubeletVersionConstraint constraint
+					constraint, _ := semver.NewConstraint(*machineVersion.KubeletVersionConstraint)
+					if !constraint.Check(kubeletVersion) {
+						continue
+					}
+				}
+
 				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
 
 				if machineVersion.Version == machine.Image.Version {
