@@ -3649,6 +3649,7 @@ func autoConvert_v1beta1_MachineImageVersion_To_core_MachineImageVersion(in *Mac
 	}
 	out.CRI = *(*[]core.CRI)(unsafe.Pointer(&in.CRI))
 	out.Architectures = *(*[]string)(unsafe.Pointer(&in.Architectures))
+	out.KubeletVersionConstraint = (*string)(unsafe.Pointer(in.KubeletVersionConstraint))
 	return nil
 }
 
@@ -3663,6 +3664,7 @@ func autoConvert_core_MachineImageVersion_To_v1beta1_MachineImageVersion(in *cor
 	}
 	out.CRI = *(*[]CRI)(unsafe.Pointer(&in.CRI))
 	out.Architectures = *(*[]string)(unsafe.Pointer(&in.Architectures))
+	out.KubeletVersionConstraint = (*string)(unsafe.Pointer(in.KubeletVersionConstraint))
 	return nil
 }
 

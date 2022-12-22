@@ -6226,6 +6226,22 @@ ExpirableVersion
 <p>Architectures is the list of CPU architectures of the machine image in this version.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeletVersionConstraint</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version.
+If the field is not specified, it is assumed that the machine image in this version supports all kubelet versions.
+Examples:
+- &lsquo;&gt;= 1.26&rsquo; - supports only kubelet versions greater than or equal to 1.26
+- &lsquo;&lt; 1.26&rsquo; - supports only kubelet versions less than 1.26</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineType">MachineType

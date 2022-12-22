@@ -107,6 +107,12 @@ type MachineImageVersion struct {
 	CRI []CRI
 	// Architectures is the list of CPU architectures of the machine image in this version.
 	Architectures []string
+	// KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version.
+	// If the field is not specified, it is assumed that the machine image in this version supports all kubelet versions.
+	// Examples:
+	// - '>= 1.26' - supports only kubelet versions greater than or equal to 1.26
+	// - '< 1.26' - supports only kubelet versions less than 1.26
+	KubeletVersionConstraint *string
 }
 
 // ExpirableVersion contains a version and an expiration date.

@@ -2516,6 +2516,11 @@ func (in *MachineImageVersion) DeepCopyInto(out *MachineImageVersion) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.KubeletVersionConstraint != nil {
+		in, out := &in.KubeletVersionConstraint, &out.KubeletVersionConstraint
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
