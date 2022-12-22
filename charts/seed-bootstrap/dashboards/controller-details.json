@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 12,
-  "iteration": 1671693962297,
+  "id": 9,
+  "iteration": 1671696946140,
   "links": [],
   "panels": [
     {
@@ -696,7 +696,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(workqueue_unfinished_work_seconds{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(workqueue_unfinished_work_seconds{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -771,7 +771,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(workqueue_longest_running_processor_seconds{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}) by (pod)",
+          "expr": "max(workqueue_longest_running_processor_seconds{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}) by (pod)",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -860,7 +860,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(workqueue_adds_total{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(workqueue_adds_total{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -935,7 +935,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(workqueue_retries_total{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(workqueue_retries_total{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -1012,14 +1012,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.5, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "expr": "histogram_quantile(0.5, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (name,le))",
           "interval": "",
           "legendFormat": "P50",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.9, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "expr": "histogram_quantile(0.9, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (name,le))",
           "hide": false,
           "interval": "",
           "legendFormat": "P90",
@@ -1027,7 +1027,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (name,le))",
           "hide": false,
           "interval": "",
           "legendFormat": "P99",
@@ -1105,14 +1105,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.5, sum(rate(workqueue_work_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "expr": "histogram_quantile(0.5, sum(rate(workqueue_work_duration_seconds_bucket{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (name,le))",
           "interval": "",
           "legendFormat": "P50",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.9, sum(rate(workqueue_work_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "expr": "histogram_quantile(0.9, sum(rate(workqueue_work_duration_seconds_bucket{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (name,le))",
           "hide": false,
           "interval": "",
           "legendFormat": "P90",
@@ -1120,7 +1120,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(workqueue_work_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "expr": "histogram_quantile(0.99, sum(rate(workqueue_work_duration_seconds_bucket{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}[$__rate_interval])) by (name,le))",
           "hide": false,
           "interval": "",
           "legendFormat": "P99",
@@ -1180,7 +1180,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(workqueue_depth{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}) by (pod)",
+          "expr": "sum(workqueue_depth{job=\"$job\",pod=~\"$pod\",name=\"$controller\"}) by (pod)",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1295,21 +1295,26 @@
         "allValue": null,
         "current": {
           "selected": false,
-          "text": "seed-lease",
-          "value": "seed-lease"
+          "tags": [],
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "${datasource}",
-        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
+        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, pod)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
-        "multi": false,
-        "name": "controller",
+        "multi": true,
+        "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
+          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -1326,21 +1331,21 @@
         "allValue": null,
         "current": {
           "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "text": "backupbucket",
+          "value": "backupbucket"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\",controller=\"$controller\"}, pod)",
+        "definition": "label_values(controller_runtime_reconcile_total{job=\"$job\",pod=~\"$pod\"}, controller)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
-        "multi": true,
-        "name": "pod",
+        "multi": false,
+        "name": "controller",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\",controller=\"$controller\"}, pod)",
+          "query": "label_values(controller_runtime_reconcile_total{job=\"$job\",pod=~\"$pod\"}, controller)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

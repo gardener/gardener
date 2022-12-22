@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 16,
-  "iteration": 1671693595616,
+  "id": 13,
+  "iteration": 1671696161188,
   "links": [],
   "panels": [
     {
@@ -261,7 +261,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(controller_runtime_webhook_requests_in_flight{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}) by (pod)",
+          "expr": "sum(controller_runtime_webhook_requests_in_flight{job=\"$job\",pod=~\"$pod\",webhook=\"$webhook\"}) by (pod)",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -342,14 +342,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.5,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by(le,webhook))",
+          "expr": "histogram_quantile(0.5,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",pod=~\"$pod\",webhook=\"$webhook\"}[$__rate_interval])) by(le,webhook))",
           "interval": "",
           "legendFormat": "P50",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.9,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by(le,webhook))",
+          "expr": "histogram_quantile(0.9,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",pod=~\"$pod\",webhook=\"$webhook\"}[$__rate_interval])) by(le,webhook))",
           "hide": false,
           "interval": "",
           "legendFormat": "P90",
@@ -357,7 +357,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",webhook=\"$webhook\",pod=~\"$pod\"}[$__rate_interval])) by(le,webhook))",
+          "expr": "histogram_quantile(0.99,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job=\"$job\",pod=~\"$pod\",webhook=\"$webhook\"}[$__rate_interval])) by(le,webhook))",
           "hide": false,
           "interval": "",
           "legendFormat": "P99",
@@ -433,22 +433,27 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "/networkpolicy",
-          "value": "/networkpolicy"
+          "selected": true,
+          "tags": [],
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "${datasource}",
-        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},webhook)",
+        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},pod)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
-        "multi": false,
-        "name": "webhook",
+        "multi": true,
+        "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},webhook)",
+          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\"},pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -464,26 +469,22 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "selected": false,
+          "text": "/controlplane",
+          "value": "/controlplane"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},code)",
+        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",pod=~\"$pod\"},webhook)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
-        "multi": true,
-        "name": "code",
+        "multi": false,
+        "name": "webhook",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},code)",
+          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",pod=~\"$pod\"},webhook)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -504,17 +505,17 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},pod)",
+        "definition": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",pod=~\"$pod\",webhook=\"$webhook\"},code)",
         "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
         "label": null,
         "multi": true,
-        "name": "pod",
+        "name": "code",
         "options": [],
         "query": {
-          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\"},pod)",
+          "query": "label_values(controller_runtime_webhook_requests_total{job=\"$job\",pod=~\"$pod\",webhook=\"$webhook\"},code)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
