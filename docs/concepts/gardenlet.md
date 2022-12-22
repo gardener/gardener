@@ -1,4 +1,8 @@
-# Gardenlet
+---
+title: gardenelet
+---
+
+# gardenlet
 
 Gardener is implemented using the [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/):
 It uses custom controllers that act on our own custom resources,
@@ -27,7 +31,7 @@ Kubernetes runs a primary "agent" on every node, the kubelet,
 which is responsible for managing pods and containers on its particular node.
 Decentralizing the responsibility to the kubelet has the advantage that the overall system
 is scalable. Gardener achieves the same for cluster management by using a **gardenlet**
-as primary "agent" on every seed cluster, and is only responsible for shoot clusters
+as а primary "agent" on every seed cluster, and is only responsible for shoot clusters
 located in its particular seed cluster:
 
 ![Counterparts in the Gardener Architecture and the Kubernetes Architecture](images/gardenlet-architecture-similarities.png)
@@ -36,14 +40,14 @@ The `gardener-controller-manager` has controllers to manage resources of the Gar
 
 Reversing the control flow allows placing seed clusters or shoot clusters behind firewalls without the necessity of direct access via VPN tunnels anymore.
 
-![Reversed Control Flow Using a Gardenlet](images/gardenlet-architecture-detailed.png)
+![Reversed Control Flow Using a gardenlet](images/gardenlet-architecture-detailed.png)
 
 ## TLS Bootstrapping
 
 Kubernetes doesn’t manage worker nodes itself, and it’s also not
 responsible for the lifecycle of the kubelet running on the workers.
 Similarly, Gardener doesn’t manage seed clusters itself,
-so Gardener is also not responsible for the lifecycle of the gardenlet running on the seeds.
+so it is also not responsible for the lifecycle of the gardenlet running on the seeds.
 As a consequence, both the gardenlet and the kubelet need to prepare
 a trusted connection to the Gardener API server
 and the Kubernetes API server correspondingly.
@@ -71,32 +75,32 @@ that automatically signs CSRs created by gardenlets.
 > kubelet bootstrapping process. More information:
 > [Kubelet's TLS bootstrapping](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/).
 
-If you don't want to run this bootstrap process you can create
+If you don't want to run this bootstrap process, you can create
 a `kubeconfig` pointing to the garden cluster for the gardenlet yourself,
-and use field `gardenClientConnection.kubeconfig` in the
+and use the field `gardenClientConnection.kubeconfig` in the
 gardenlet configuration to share it with the gardenlet.
 
-## Gardenlet Certificate Rotation
+## gardenlet Certificate Rotation
 
 The certificate used to authenticate the gardenlet against the API server
 has a certain validity based on the configuration of the garden cluster
-(`--cluster-signing-duration` flag of the `kube-controller-manager` (default `1y`)). 
+(`--cluster-signing-duration` flag of the `kube-controller-manager` (default `1y`)).
 
-> If your garden cluster is of at least Kubernetes v1.22 then you can also configure the validity for the client certificate by specifying `.gardenClientConnection.kubeconfigValidity.validity` in the gardenlet's component configuration.
+> If your garden cluster is of at least Kubernetes v1.22, then you can also configure the validity for the client certificate by specifying `.gardenClientConnection.kubeconfigValidity.validity` in the gardenlet's component configuration.
 > Note that changing this value will only take effect when the kubeconfig is rotated again (it is not picked up immediately).
-> The minimum validity is `10m` (that's what is enforced by the `CertificateSigningRequest` API in Kubernetes which is used by gardenlet).
+> The minimum validity is `10m` (that's what is enforced by the `CertificateSigningRequest` API in Kubernetes which is used by the gardenlet).
 
-By default, after about 70-90% of the validity expired, the gardenlet tries to automatically replace
+By default, after about 70-90% of the validity has expired, the gardenlet tries to automatically replace
 the current certificate with a new one (certificate rotation).
 
 > You can change these boundaries by specifying `.gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentage{Min,Max}` in the gardenlet's component configuration.
 
-To use certificate rotation, you need to specify the secret to store
-the `kubeconfig` with the rotated certificate in field
+To use a certificate rotation, you need to specify the secret to store
+the `kubeconfig` with the rotated certificate in the field
 `.gardenClientConnection.kubeconfigSecret` of the
 gardenlet [component configuration](#component-configuration).
 
-### Rotate certificates using bootstrap `kubeconfig`
+### Rotate Certificates Using Bootstrap `kubeconfig`
 
 If the gardenlet created the certificate during the initial TLS Bootstrapping
 using the Bootstrap `kubeconfig`, certificates can be rotated automatically.
@@ -106,11 +110,11 @@ the CSR during a certificate rotation.
 
 ℹ️ You can trigger an immediate renewal by annotating the `Secret` in the seed
 cluster stated in the `.gardenClientConnection.kubeconfigSecret` field with
-`gardener.cloud/operation=renew` and restarting the gardenlet. After it booted
+`gardener.cloud/operation=renew` and restarting the gardenlet. After it has booted
 up again, gardenlet will issue a new certificate independent of the remaining
-validity  of the existing one.
+validity of the existing one.
 
-### Rotate Certificate Using Custom `kubeconfig`
+### Rotate Certificates Using Custom `kubeconfig`
 
 When trying to rotate a custom certificate that wasn’t created by gardenlet
 as part of the TLS Bootstrap, the x509 certificate's `Subject` field
@@ -121,16 +125,15 @@ needs to conform to the following:
 Otherwise, the `gardener-controller-manager` doesn’t automatically
 sign the CSR.
 In this case, an external component or user needs to approve the CSR manually,
-for example, using command  `kubectl certificate approve  seed-csr-<...>`).
+for example, using the command  `kubectl certificate approve  seed-csr-<...>`).
 If that doesn’t happen within 15 minutes,
 the gardenlet repeats the process and creates another CSR.
 
-## Configuring the Seed to work with
+## Configuring the Seed to Work with gardenlet
 
-The Gardenlet works with a single seed, which must be configured in the
+The gardenlet works with a single seed, which must be configured in the
 `GardenletConfiguration` under `.seedConfig`. This must be a copy of the
-`Seed` resource, for example (see `example/20-componentconfig-gardenlet.yaml`
-for a more complete example):
+`Seed` resource, for example:
 
 ```yaml
 apiVersion: gardenlet.config.gardener.cloud/v1alpha1
@@ -146,13 +149,14 @@ seedConfig:
       name: my-seed-secret
       namespace: garden
 ```
+(see [this yaml file](../../example/20-componentconfig-gardenlet.yaml) for a more complete example)
 
 When using `make start-gardenlet`, the corresponding script will automatically
 fetch the seed cluster's `kubeconfig` based on the `seedConfig.spec.secretRef`
 and set the environment accordingly.
 
 On startup, gardenlet registers a `Seed` resource using the given template
-in `seedConfig` if it's not present already.
+in the `seedConfig` if it's not present already.
 
 ## Component Configuration
 
@@ -162,7 +166,7 @@ In the component configuration for the gardenlet, it’s possible to define:
 * settings for the controllers inside the gardenlet
 * settings for leader election and log levels, feature gates, and seed selection or seed configuration.
 
-More information: [Example Gardenlet Component Configuration](../../example/20-componentconfig-gardenlet.yaml).
+More information: [Example gardenlet Component Configuration](../../example/20-componentconfig-gardenlet.yaml).
 
 ## Heartbeats
 
@@ -172,7 +176,7 @@ the gardenlet is using `Lease` objects for heart beats of the seed cluster.
 Every two seconds, the gardenlet checks that the seed cluster's `/healthz`
 endpoint returns HTTP status code 200.
 If that is the case, the gardenlet renews the lease in the Garden cluster in the `gardener-system-seed-lease` namespace and updates
-the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource, see also [this section](#lease-reconciler).
+the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource. For more information, see [this section](#lease-reconciler).
 
 Similarly to the `node-lifecycle-controller` inside the `kube-controller-manager`,
 the `gardener-controller-manager` features a `seed-lifecycle-controller` that sets
@@ -183,7 +187,7 @@ As a consequence, the `gardener-scheduler` doesn’t consider this seed cluster 
 
 The gardenlet includes an HTTP server that serves a `/healthz` endpoint.
 It’s used as a liveness probe in the `Deployment` of the gardenlet.
-If the gardenlet fails to renew its lease
+If the gardenlet fails to renew its lease,
 then the endpoint returns `500 Internal Server Error`, otherwise it returns `200 OK`.
 
 Please note that the `/healthz` only indicates whether the gardenlet
@@ -191,7 +195,7 @@ could successfully probe the Seed's API server and renew the lease with
 the Garden cluster.
 It does *not* show that the Gardener extension API server (with the Gardener resource groups)
 is available.
-However, the Gardenlet is designed to withstand such connection outages and
+However, the gardenlet is designed to withstand such connection outages and
 retries until the connection is reestablished.
 
 ## Controllers
@@ -203,8 +207,8 @@ The gardenlet consists out of several controllers which are now described in mor
 The `BackupBucket` controller reconciles those `core.gardener.cloud/v1beta1.BackupBucket` resources whose `.spec.seedName` value is equal to the name of the `Seed` the respective `gardenlet` is responsible for.
 A `core.gardener.cloud/v1beta1.BackupBucket` resource is created by the `Seed` controller if `.spec.backup` is defined in the `Seed`.
 
-The controller adds finalizers to the `BackupBucket` and the secret mentioned in the `.spec.secretRef` of the `BackupBucket`. The controller also copies this secret to the seed cluster. Additionally, it creates an `extensions.gardener.cloud/v1alpha1.BackupBucket` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciles it (see [this](../extensions/backupbucket.md) for more details).
-The status from the reconciliation is reported in the `.status.lastOperation` field. Once the extension resource is ready and the `.status.generatedSecretRef` is set by the extension controller, `gardenlet` copies the referenced secret to the `garden` namespace in the garden cluster. An owner reference to the `core.gardener.cloud/v1beta1.BackupBucket` is added to this secret.
+The controller adds finalizers to the `BackupBucket` and the secret mentioned in the `.spec.secretRef` of the `BackupBucket`. The controller also copies this secret to the seed cluster. Additionally, it creates an `extensions.gardener.cloud/v1alpha1.BackupBucket` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciles it (see [Contract: BackupBucket Resource](../extensions/backupbucket.md) for more details).
+The status from the reconciliation is reported in the `.status.lastOperation` field. Once the extension resource is ready and the `.status.generatedSecretRef` is set by the extension controller, the `gardenlet` copies the referenced secret to the `garden` namespace in the garden cluster. An owner reference to the `core.gardener.cloud/v1beta1.BackupBucket` is added to this secret.
 
 If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller deletes the generated secret in the garden cluster and the `extensions.gardener.cloud/v1alpha1.BackupBucket` resource in the seed cluster and it waits for the respective extension controller to remove its finalizers from the `extensions.gardener.cloud/v1alpha1.BackupBucket`. Then it deletes the secret in the seed cluster and finally removes the finalizers from the `core.gardener.cloud/v1beta1.BackupBucket` and the referred secret.
 
@@ -215,11 +219,11 @@ Those resources are created by the `Shoot` controller (only if backup is enabled
 
 #### "Main" Reconciler
 
-The controller creates an `extensions.gardener.cloud/v1alpha1.BackupEntry` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [this](../extensions/backupentry.md) for more details).
+The controller creates an `extensions.gardener.cloud/v1alpha1.BackupEntry` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [Contract: BackupEntry Resource](../extensions/backupentry.md) for more details).
 The status is populated in the `.status.lastOperation` field.
 
 The `core.gardener.cloud/v1beta1.BackupEntry` resource has an owner reference pointing to the corresponding `Shoot`.
-Hence, if the `Shoot` is deleted, also the `BackupEntry` resource gets deleted.
+Hence, if the `Shoot` is deleted, the `BackupEntry` resource also gets deleted.
 In this case, the controller deletes the `extensions.gardener.cloud/v1alpha1.BackupEntry` resource in the seed cluster and waits until the responsible extension controller has deleted it.
 Afterwards, the finalizer of the `core.gardener.cloud/v1beta1.BackupEntry` resource is released so that it finally disappears from the system.
 
@@ -242,13 +246,13 @@ It checks if the source `Seed` also has owner checks enabled. If not or if the `
 The controller updates the status to force restoration in the following cases:
 1. If the `BackupEntry` is annotated with `shoot.gardener.cloud/force-restore=true`.
 2. If the grace period for migration has elapsed (which is set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration).
-3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the  `lastUpdateTime` of the operation.
+3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the `lastUpdateTime` of the operation.
 
 ### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
 
 The `Bastion` controller reconciles those `operations.gardener.cloud/v1alpha1.Bastion` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 
-The controller creates an `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster in the shoot namespace with the same name as `operations.gardener.cloud/v1alpha1.Bastion`. Then it waits until the responsible extension controller has reconciled it (see [this](../extensions/bastion.md) for more details).The status is populated in the `.status.conditions` and `.status.ingress` fields.
+The controller creates an `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster in the shoot namespace with the same name as `operations.gardener.cloud/v1alpha1.Bastion`. Then it waits until the responsible extension controller has reconciled it (see [Contract: Bastion Resource](../extensions/bastion.md) for more details). The status is populated in the `.status.conditions` and `.status.ingress` fields.
 
 During the deletion of `operations.gardener.cloud/v1alpha1.Bastion` resources, the controller first sets the `Ready` condition to `False` and then deletes the `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster.
 Once this resource is gone, the finalizer of the `operations.gardener.cloud/v1alpha1.Bastion` resource is released, so it finally disappears from the system.
@@ -288,9 +292,9 @@ The reconciler maintains the `Installed` condition of the `ControllerInstallatio
 This reconciler reconciles `ControllerInstallation` objects and checks whether they are in a healthy state.
 It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
 
-- If the `ResourcesApplied` condition of the `ManagedResource` is `True` then the `Installed` condition of the `ControllerInstallation` will be set  to `True`.
-- If the `ResourcesHealthy` condition of the `ManagedResource` is `True` then the `Healthy` condition of the `ControllerInstallation` will be set  to `True`.
-- If the `ResourcesProgressing` condition of the `ManagedResource` is `True` then the `Progressing` condition of the `ControllerInstallation` will be set  to `True`.
+- If the `ResourcesApplied` condition of the `ManagedResource` is `True`, then the `Installed` condition of the `ControllerInstallation` will be set to `True`.
+- If the `ResourcesHealthy` condition of the `ManagedResource` is `True`, then the `Healthy` condition of the `ControllerInstallation` will be set to `True`.
+- If the `ResourcesProgressing` condition of the `ManagedResource` is `True`, then the `Progressing` condition of the `ControllerInstallation` will be set to `True`.
 
 A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=True` and `Progressing=False`.
 
@@ -301,15 +305,15 @@ It is responsible for maintaining the `Required` condition on `ControllerInstall
 Concretely, when there is at least one extension resource in the seed cluster a `ControllerInstallation` is responsible for, then the status of the `Required` condition will be `True`.
 If there are no extension resources anymore, its status will be `False`.
 
-This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to deployed to which seed cluster, see [this document](controller-manager.md#controllerregistration-controller) for more details.
+This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to be deployed to which seed cluster. See [Gardener Controller Manager](controller-manager.md#controllerregistration-controller) for more details.
 
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
-The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to Kubernetes API server. 
+The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to the Kubernetes API server. 
 
-The controller resolves the IP address of Kubernetes service in `default` namespace and creates egress `NetworkPolicy`s for it.
+The controller resolves the IP address of the Kubernetes service in the `default` namespace and creates an egress `NetworkPolicy`s for it.
 
-For more details about `NetworkPolicy`s in Gardener please see [this document](network_policies.md).
+For more details about `NetworkPolicy`s in Gardener, please see [Network Policies in Gardener](network_policies.md).
 
 ### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
 
@@ -323,10 +327,10 @@ Those comprise CA certificates, the various `CustomResourceDefinition`s, the log
 The reconciler also deploys a `BackupBucket` resource in the garden cluster in case the `Seed'`s `.spec.backup` is set.
 It also checks whether the seed cluster's Kubernetes version is at least the [minimum supported version](../usage/supported_k8s_versions.md#seed-cluster-versions) and errors in case this constraint is not met.
 
-This reconciler maintains the `Bootstrapped` condition, i.e. it sets it
+This reconciler maintains the `Bootstrapped` condition, i.e. it sets it:
 
-- to `Progressing` before it executes its reconciliation flow,
-- to `False` in case an error occurs,
+- to `Progressing` before it executes its reconciliation flow.
+- to `False` in case an error occurs.
 - to `True` in case the reconciliation succeeded.
 
 #### "Care" Reconciler
@@ -335,28 +339,28 @@ This reconciler checks whether the seed system components (deployed by the "main
 It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
 A `ManagedResource` is considered "healthy" if the conditions `ResourcesApplied=ResourcesHealthy=True` and `ResourcesProgressing=False`.
 
-If all `ManagedResource`s are healthy then the `SeedSystemComponentsHealthy` condition of the `Seed` will be set to `True`.
+If all `ManagedResource`s are healthy, then the `SeedSystemComponentsHealthy` condition of the `Seed` will be set to `True`.
 Otherwise, it will be set to `False`.
 
-If at least one `ManagedResource` is unhealthy and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`) then the status of the `SeedSystemComponentsHealthy` condition will be set
+If at least one `ManagedResource` is unhealthy and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`), then the status of the `SeedSystemComponentsHealthy` condition will be set:
 
 - to `Progressing` if it was `True` before.
 - to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
 - to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
 
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
-Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
+Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
 #### "Lease" Reconciler
 
 This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
-If this succeeds then it renews a `Lease` resource in the garden cluster's `gardener-system-seed-lease` namespace.
+If this succeeds, then it renews a `Lease` resource in the garden cluster's `gardener-system-seed-lease` namespace.
 This indicates a heartbeat to the external world, and internally the `gardenlet` sets its health status to `true`.
 In addition, the `GardenletReady` condition in the `status` of the `Seed` is set to `True`.
-The whole process is similar to what the `kubelet` does to report heartbeats for its `Node` resource and its `KubeletReady` condition, see also [this section](#heartbeats).
+The whole process is similar to what the `kubelet` does to report heartbeats for its `Node` resource and its `KubeletReady` condition. For more information, see [this section](#heartbeats).
 
-If the connection to the `/healthz` endpoint or the update of the `Lease` fails then the internal health status of `gardenlet` is set to `false`.
-Also, this internal health status is set to `false` automatically after some time in case the controller gets stuck for whatever reason.
+If the connection to the `/healthz` endpoint or the update of the `Lease` fails, then the internal health status of `gardenlet` is set to `false`.
+Also, this internal health status is set to `false` automatically after some time, in case the controller gets stuck for whatever reason.
 This internal health status is available via the `gardenlet`'s `/healthz` endpoint and is used for the `livenessProbe` in the `gardenlet` pod.
 
 ### [`Shoot` Controller](../../pkg/gardenlet/controller/shoot)
@@ -374,22 +378,22 @@ The main reconciliation logic is performed in 3 different task flows dedicated t
 - `migrate`: this flow is triggered when `spec.seedName` specifies a different seed than `status.seedName`. It performs the first half of the [Control Plane Migration](../usage/control_plane_migration.md#shoot-control-plane-migration), i.e., a backup (`migrate` operation) of all control plane components followed by a "shallow delete".
 - `delete`: this flow is triggered when the shoot's `deletionTimestamp` is set, i.e., when it is deleted.
 
-Gardenlet takes special care to prevent unnecessary shoot reconciliations.
+The gardenlet takes special care to prevent unnecessary shoot reconciliations.
 This is important for several reasons, e.g., to not overload the seed API servers and to not exhaust infrastructure rate limits too fast.
-Gardenlet performs shoot reconciliations according to the following rules:
+The gardenlet performs shoot reconciliations according to the following rules:
 
 - If `status.observedGeneration` is less than `metadata.generation`: this is the case, e.g., when the spec was changed, a [manual reconciliation operation](../usage/shoot_operations.md) was triggered, or the shoot was deleted.
 - If the [last operation](../usage/shoot_status.md) was not successful.
-- If the shoot is in a [failed state](../usage/shoot_status.md), gardenlet does not perform any reconciliation on the shoot (unless the retry operation was triggered). However, it syncs the `Cluster` resource to the seed in order to inform extension controllers about the failed state.
+- If the shoot is in a [failed state](../usage/shoot_status.md), the gardenlet does not perform any reconciliation on the shoot (unless the retry operation was triggered). However, it syncs the `Cluster` resource to the seed in order to inform the extension controllers about the failed state.
 - Regular reconciliations are performed with every `GardenletConfiguration.controllers.shoot.syncPeriod` (defaults to `1h`).
-- Shoot reconciliations are not performed if the assigned seed cluster is not healthy or has not been reconciled by the current gardenlet version yet (determined by the `Seed.status.gardener` section). This is done to make sure that shoots are reconciled with fully rolled out seed system components after a gardener upgrade. Otherwise, gardenlet might perform operations of the new version that doesn't match the old version of the deployed seed system components, which might lead to unspecified behavior.
+- Shoot reconciliations are not performed if the assigned seed cluster is not healthy or has not been reconciled by the current gardenlet version yet (determined by the `Seed.status.gardener` section). This is done to make sure that shoots are reconciled with fully rolled out seed system components after a Gardener upgrade. Otherwise, the gardenlet might perform operations of the new version that doesn't match the old version of the deployed seed system components, which might lead to unspecified behavior.
 
 There are a few special cases that overwrite or confine how often and under which circumstances periodic shoot reconciliations are performed:
 
-- In case, the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), the sync period for a shoot can be increased individually by setting the `shoot.gardener.cloud/sync-period` annotation. This is always allowed for shoots in the `garden` namespace. Shoots are not reconciled with a higher frequency than specified in `GardenletConfiguration.controllers.shoot.syncPeriod`.
-- In case, the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), shoots can be marked as "ignored" by setting the `shoot.gardener.cloud/ignore` annotation. In this case, gardenlet does not perform any reconciliation for the shoot.
-- In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). Gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [this doc](../usage/shoot_maintenance.md#cluster-reconciliation)).
-- In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [this doc](../usage/shoot_maintenance.md)).
+- In case the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), the sync period for a shoot can be increased individually by setting the `shoot.gardener.cloud/sync-period` annotation. This is always allowed for shoots in the `garden` namespace. Shoots are not reconciled with a higher frequency than specified in `GardenletConfiguration.controllers.shoot.syncPeriod`.
+- In case the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), shoots can be marked as "ignored" by setting the `shoot.gardener.cloud/ignore` annotation. In this case, the gardenlet does not perform any reconciliation for the shoot.
+- In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), the gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). The gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [Shoot Maintenance](../usage/shoot_maintenance.md#cluster-reconciliation)).
+- In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [Shoot Maintenance](../usage/shoot_maintenance.md)).
 
 #### "Care" Reconciler
 
@@ -402,32 +406,32 @@ It maintains four conditions and performs the following checks:
 - `APIServerAvailable`: The `/healthz` endpoint of the shoot's `kube-apiserver` is called and considered healthy when it responds with `200 OK`.
 - `ControlPlaneHealthy`: The control plane is considered healthy when the respective `Deployment`s (for example `kube-apiserver`), `StatefulSet`s (for example `prometheus`), and `Etcd`s (for example `etcd-main`) exist and are healthy.
 - `EveryNodyReady`: The conditions of the worker nodes are checked (e.g., `Ready`, `MemoryPressure`, etc.). Also, it's checked whether the Kubernetes version of the installed `kubelet` matches the desired version specified in the `Shoot` resource.
-- `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g. `ResourcesApplied`, etc.). Also, it is verified whether the VPN tunnel connection is established (which is required for `kube-apiserver` to communicate with the worker nodes).
+- `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g. `ResourcesApplied`, etc.). Also, it is verified whether the VPN tunnel connection is established (which is required for the `kube-apiserver` to communicate with the worker nodes).
 
-Each condition can optionally also have error `codes` in order to indicate which type of issue was detected (see [this document](../usage/shoot_status.md) for more details).
+Each condition can optionally also have error `codes` in order to indicate which type of issue was detected (see [Shoot Status](../usage/shoot_status.md) for more details).
 
-Apart from the above, extension controllers can also contribute to the `status` or error `codes` of these conditions (see [this document](../extensions/shoot-health-status-conditions.md) for more details).
+Apart from the above, extension controllers can also contribute to the `status` or error `codes` of these conditions (see [Contributing to Shoot Health Status Conditions](../extensions/shoot-health-status-conditions.md) for more details).
 
-If all checks for a certain conditions are succeeded then its `status` will be set to `True`.
+If all checks for a certain conditions are succeeded, then its `status` will be set to `True`.
 Otherwise, it will be set to `False`.
 
-If at least one check fails and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`) then the status will be set
+If at least one check fails and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`), then the status will be set:
 
 - to `Progressing` if it was `True` before.
 - to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
 - to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
 
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
-Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
+Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
-##### Constraints And   Automatic Webhook Remediation
+##### Constraints And Automatic Webhook Remediation
 
-Please see [this document](../usage/shoot_status.md#constraints) for more details.
+Please see [Shoot Status](../usage/shoot_status.md#constraints) for more details.
 
 ##### Garbage Collection
 
 Stale pods in the shoot namespace in the seed cluster and in the `kube-system` namespace in the shoot cluster are deleted.
-A pod is considered stale when
+A pod is considered stale when:
 
 - it was terminated with reason `Evicted`.
 - it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
@@ -442,19 +446,19 @@ The controller updates the status to force restoration in the following cases:
 
 1. If the `Shoot` is annotated with `shoot.gardener.cloud/force-restore=true`.
 2. If the grace period for migration has elapsed (which is set in the `ShootMigrationControllerConfiguration` in the gardenlet's component configuration).
-3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `ShootMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the  `lastUpdateTime` of the operation.
+3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `ShootMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the `lastUpdateTime` of the operation.
 
 ### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
 
-The `ShootState` controller in the `gardenlet` reconciles resources containing information that have to be synced to the `ShootState`.
+The `ShootState` controller in the `gardenlet` reconciles resources containing information that has to be synced to the `ShootState`.
 This information is used when a [control plane migration](../usage/control_plane_migration.md) is performed.
 
 #### "Extensions" Reconciler
 
-This reconciler watches resources in the `extensions.gardener.cloud` API group in the seed cluster which contain `Shoot`-specific state or data.
+This reconciler watches resources in the `extensions.gardener.cloud` API group in the seed cluster which contain a `Shoot`-specific state or data.
 Those are `BackupEntry`s, `ContainerRuntime`s, `ControlPlane`s, `DNSRecord`s, `Extension`s, `Infrastructure`s, `Network`s, `OperatingSystemConfig`s, and `Worker`s.
 
-When there is a change in the `.status.state` or `.status.resources[]` fields of these resources then this information is synced into the `ShootState` resource in the garden cluster.
+When there is a change in the `.status.state` or `.status.resources[]` fields of these resources, then this information is synced into the `ShootState` resource in the garden cluster.
 
 #### "Secret" Reconciler
 
@@ -470,7 +474,7 @@ creates a clone of itself with the same version and the same configuration
 that it currently has.
 Then it deploys the gardenlet clone into the managed seed cluster.
 
-More information: [Register Shoot as Seed](../usage/managed_seed.md)
+For more information, see [Register Shoot as Seed](../usage/managed_seed.md).
 
 ## Migrating from Previous Gardener Versions
 
@@ -486,10 +490,10 @@ With previous Gardener versions, you had deployed the Gardener Helm chart
 With v1, this stays the same, but you now have to deploy the gardenlet Helm chart as well
 into all of your seeds (if they aren’t managed, as mentioned earlier).
 
-More information: [Deploy a Gardenlet](../deployment/deploy_gardenlet.md) for all instructions.
+See [Deploy a gardenlet](../deployment/deploy_gardenlet.md) for all instructions.
 
 ## Related Links
 
 - [Gardener Architecture](architecture.md)
 - [#356: Implement Gardener Scheduler](https://github.com/gardener/gardener/issues/356)
-- [#2309: Add /healthz endpoint for Gardenlet](https://github.com/gardener/gardener/pull/2309)
+- [#2309: Add /healthz endpoint for gardenlet](https://github.com/gardener/gardener/pull/2309)

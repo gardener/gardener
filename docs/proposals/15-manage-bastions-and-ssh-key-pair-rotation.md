@@ -13,15 +13,18 @@ reviewers:
 
 ## Table of Contents
 
-- [Motivation](#motivation)
+- [GEP-15: Bastion Management and SSH Key Pair Rotation](#gep-15-bastion-management-and-ssh-key-pair-rotation)
+  - [Table of Contents](#table-of-contents)
+  - [Motivation](#motivation)
     - [Goals](#goals)
     - [Non-Goals](#non-goals)
-- [Proposal](#proposal)
+  - [Proposal](#proposal)
     - [Involved Components](#involved-components)
     - [SSH Flow](#ssh-flow)
     - [Resource Example](#resource-example)
-- [SSH Key Pair Rotation](#ssh-key-pair-rotation)
+  - [SSH Key Pair Rotation](#ssh-key-pair-rotation)
     - [Rotation Proposal](#rotation-proposal)
+    - [Limitations](#limitations)
 
 ## Motivation
 `gardenctl` (v1) has the functionality to setup `ssh` sessions to the targeted shoot cluster (nodes). To this end, infrastructure resources like VMs, public IPs, firewall rules, etc. have to be created. `gardenctl` will clean up the resources after termination of the `ssh` session (or rather when the operator is done with her work). However, there were issues in the past where these infrastructure resources were not properly cleaned up afterwards, e.g. due to some error (no retries either). Hence, the proposal is to have a dedicated controller (for each infrastructure) that manages the infrastructure resources and their cleanup. The current `gardenctl` also re-used the `ssh` node credentials for the bastion host. While that's possible, it would be safer to rather use personal or generated `ssh` key pairs to access the bastion host.
@@ -52,7 +55,7 @@ The following is a list of involved components, that either need to be newly int
   - New `operations.gardener.cloud` API Group
   - New resource type `Bastion`, see [resource example](#resource-example) below
   - New Admission Webhooks for `Bastion` resource
-  - `SeedAuthorizer`: The `SeedAuthorizer` and dependency graph needs to be extended to consider the `Bastion` resource https://github.com/gardener/gardener/tree/master/pkg/admissioncontroller/webhooks/auth/seed/graph
+  - `SeedAuthorizer`: The `SeedAuthorizer` and dependency graph needs to be extended to consider the `Bastion` resource https://github.com/gardener/gardener/tree/master/pkg/admissioncontroller/webhook/auth/seed/graph
   - Is configured with `timeToLive`, the time to add to the current time on each heartbeat
 - `gardenlet`
   - Deploys `Bastion` CRD under the `extensions.gardener.cloud` API Group to the Seed, see [resource example](#resource-example) below

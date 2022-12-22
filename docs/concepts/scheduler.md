@@ -6,7 +6,7 @@ Conceptually, the task of the Gardener Scheduler is very similar to the task of 
 Either the scheduling strategy or the shoot cluster purpose hereby determines how the scheduler is operating.
 The following sections explain the configuration and flow in greater detail.
 
-## Why is the Gardener Scheduler needed?
+## Why Is the Gardener Scheduler Needed?
 
 ### 1. Decoupling
 
@@ -20,7 +20,7 @@ It should be possible to easily extend and tweak the scheduler in the future.
 Possibly, similar to the Kubernetes scheduler, hooks could be provided which influence the scheduling decisions.
 It should be also possible to completely replace the standard Gardener Scheduler with a custom implementation.
 
-## Algorithm overview
+## Algorithm Overview
 
 The following **sequence** describes the steps involved to determine a seed candidate:
 
@@ -42,7 +42,7 @@ The following **sequence** describes the steps involved to determine a seed cand
 ## Configuration
 
 The Gardener Scheduler configuration has to be supplied on startup. It is a mandatory and also the only available flag.
-[Here](../../example/20-componentconfig-gardener-scheduler.yaml) is an example scheduler configuration.
+[This yaml file](../../example/20-componentconfig-gardener-scheduler.yaml) holds an example scheduler configuration.
 
 Most of the configuration options are the same as in the Gardener Controller Manager (leader election, client connection, ...).
 However, the Gardener Scheduler on the other hand does not need a TLS configuration, because there are currently no webhooks configurable.
@@ -56,21 +56,21 @@ The `SameRegion` strategy is the default strategy.
 
    The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
 It tries to find a seed that has the identical `.spec.provider.type` and `.spec.provider.region` fields set.
-If it cannot find a suitable seed, it adds an event to the shoot stating, that it is unschedulable.
+If it cannot find a suitable seed, it adds an event to the shoot stating that it is unschedulable.
 
 2. *Minimal Distance strategy*
 
    The Gardener Scheduler tries to find a valid seed with minimal distance to the shoot's intended region.
-The distance is calculated based on the Levenshtein distance of the region. Therefore the region name
+The distance is calculated based on the Levenshtein distance of the region. Therefore, the region name
 is split into a base name and an orientation. Possible orientations are `north`, `south`, `east`, `west` and `central`.
 The distance then is twice the Levenshtein distance of the region's base name plus a correction value based on the
 orientation and the provider.
 
    If the orientations of shoot and seed candidate match, the correction value is 0, if they differ it is 2 and if
 either the seed's or the shoot's region does not have an orientation it is 1.
-If the provider differs the correction value is additionally incremented by 2.
+If the provider differs, the correction value is additionally incremented by 2.
 
-   Because of this a matching region with a matching provider is always prefered.
+   Because of this, a matching region with a matching provider is always prefered.
 
 In order to put the scheduling decision into effect, the scheduler sends an update request for the `Shoot` resource to
 the API server. After validation, the Gardener Aggregated API server updates the shoot to have the `spec.seedName` field set.
@@ -78,43 +78,43 @@ Subsequently, the Gardenlet picks up and starts to create the cluster on the spe
 
 3. *Special handling based on shoot cluster purpose*
 
-Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [this document](../usage/shoot_purposes.md) for more information).
+Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [Shoot Cluster Purpose](../usage/shoot_purposes.md) for more information).
 
-In case the shoot has the `testing` purpose then the scheduler only reads the `.spec.provider.type` from the `Shoot` resource and tries to find a `Seed` that has the identical `.spec.provider.type`.
+In case the shoot has the `testing` purpose, then the scheduler only reads the `.spec.provider.type` from the `Shoot` resource and tries to find a `Seed` that has the identical `.spec.provider.type`.
 The region does not matter, i.e., `testing` shoots may also be scheduled on a seed in a complete different region if it is better for balancing the whole Gardener system.
 
-## `shoots/binding` subresource
+## `shoots/binding` Subresource
 
-The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creation of shoot clusters, the scheduler updates the binding automatically if an appropriate seed cluster is available.
-Only an operator with necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, Please see [Triggering the Migration](../usage/control_plane_migration.md#triggering-the-migration).
+The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creation of a shoot cluster/s, the scheduler updates the binding automatically if an appropriate seed cluster is available.
+Only an operator with the necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, please see [Triggering the Migration](../usage/control_plane_migration.md#triggering-the-migration).
 
-## `spec.seedName` field in the `Shoot` specification
-Similar to the `.spec.nodeName` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedName` field. If this field is set on creation, the shoot will be scheduled to this seed. However, this field can only be set by users having RBAC for the `shoots/binding` subresource. If this field is not set, the `scheduler` will assign a suitable seed automatically and populate this field with the seed name.
+## `spec.seedName` Field in the `Shoot` Specification
+Similarly to the `.spec.nodeName` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedName` field. If this field is set on creation, the shoot will be scheduled to this seed. However, this field can only be set by users having RBAC for the `shoots/binding` subresource. If this field is not set, the `scheduler` will assign a suitable seed automatically and populate this field with the seed name.
 
-## `seedSelector` field in the `Shoot` specification
+## `seedSelector` Field in the `Shoot` Specification
 
-Similar to the `.spec.nodeSelector` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedSelector` field.
-It allows the user to provide a label selector that must match the labels of `Seed`s in order to be scheduled to one of them.
-The labels on `Seed`s are usually controlled by Gardener administrators/operators - end users cannot add arbitrary labels themselves.
-If provided, the Gardener Scheduler will only consider those seeds as "suitable" whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.
+Similarly to the `.spec.nodeSelector` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedSelector` field.
+It allows the user to provide a label selector that must match the labels of the `Seed`s in order to be scheduled to one of them.
+The labels on the `Seed`s are usually controlled by Gardener administrators/operators - end users cannot add arbitrary labels themselves.
+If provided, the Gardener Scheduler will only consider as "suitable" those seeds whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.
 
-By default only seeds with the same provider than the shoot are selected. By adding a `providerTypes` field to the `seedSelector`
+By default, only seeds with the same provider as the shoot are selected. By adding a `providerTypes` field to the `seedSelector`,
 a dedicated set of possible providers (`*` means all provider types) can be selected.
 
-## Ensuring seeds capacity for shoots is not exceeded
+## Ensuring a Seed's Capacity for Shoots Is Not Exceeded
 
-Seeds have a practical limit of how many shoots they can accommodate. Exceeding this limit is undesirable as the system performance will be noticeably impacted. Therefore, the scheduler ensures that a seed's capacity for shoots is not exceeded by taking into account a maximum number of shoots that can be scheduled onto a seed.
+Seeds have a practical limit of how many shoots they can accommodate. Exceeding this limit is undesirable, as the system performance will be noticeably impacted. Therefore, the scheduler ensures that a seed's capacity for shoots is not exceeded by taking into account a maximum number of shoots that can be scheduled onto a seed.
 
 This mechanism works as follows:
 
 * The `gardenlet` is configured with certain *resources* and their total *capacity* (and, for certain resources, the amount *reserved* for Gardener), see [/example/20-componentconfig-gardenlet.yaml](../../example/20-componentconfig-gardenlet.yaml). Currently, the only such resource is the maximum number of shoots that can be scheduled onto a seed. 
-* The `gardenlet` seed controller updates the `capacity` and `allocatable` fields in Seed status with the capacity of each resource and how much of it is actually available to be consumed by shoots. The `allocatable` value of a resource is equal to `capacity` minus `reserved`.
+* The `gardenlet` seed controller updates the `capacity` and `allocatable` fields in the Seed status with the capacity of each resource and how much of it is actually available to be consumed by shoots. The `allocatable` value of a resource is equal to `capacity` minus `reserved`.
 * When scheduling shoots, the scheduler filters out all candidate seeds whose allocatable capacity for shoots would be exceeded if the shoot is scheduled onto the seed.
 
-## Failure to determine a suitable seed
+## Failure to Determine a Suitable Seed
 
 In case the scheduler fails to find a suitable seed, the operation is being retried with exponential backoff.
 
 ## Current Limitation / Future Plans
 
-- Azure has unfortunately a geographically non-hierarchical naming pattern and does not start with the continent. This is the reason why we will exchange the implementation of the `MinimalDistance` strategy with a more suitable one in the future.
+- Azure unfortunately has a geographically non-hierarchical naming pattern and does not start with the continent. This is the reason why we will exchange the implementation of the `MinimalDistance` strategy with a more suitable one in the future.

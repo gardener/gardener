@@ -23,7 +23,7 @@ Currently the available Shoot condition types are:
 - `EveryNodeReady`
 - `SystemComponentsHealthy`
 
-The Shoot conditions are maintained by the [shoot care reconciler](../../pkg/gardenlet/controller/shoot/care) of gardenlet.
+The Shoot conditions are maintained by the [shoot care reconciler](../../pkg/gardenlet/controller/shoot/care/reconciler.go) of gardenlet.
 Find more information in [this document](../concepts/gardenlet.md#shoot-controller).
 
 ### Sync Period

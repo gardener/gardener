@@ -190,7 +190,7 @@ spec:
 
 ### ManagedSeed Controller
 
-ManagedSeeds are reconciled by a new *managed seed controller* in `gardenlet`. Its implementation is very similar to the current [seed registration controller](https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/seed_registration_control.go), and in fact could be regarded as a refactoring of the latter, with the difference that it uses the `ManagedSeed` resource rather than the `use-as-seed` annotation on a Shoot. The `gardenlet` only reconciles ManagedSeeds that refer to Shoots scheduled on Seeds the `gardenlet` is responsible for.
+ManagedSeeds are reconciled by a new *managed seed controller* in `gardenlet`. Its implementation is very similar to the current seed registration controller, and in fact could be regarded as a refactoring of the latter, with the difference that it uses the `ManagedSeed` resource rather than the `use-as-seed` annotation on a Shoot. The `gardenlet` only reconciles ManagedSeeds that refer to Shoots scheduled on Seeds the `gardenlet` is responsible for.
 
 Once this controller is considered sufficiently stable, the current `use-as-seed` annotation and the controller mentioned above should be marked as deprecated and eventually removed.
 
