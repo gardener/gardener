@@ -24,6 +24,7 @@ spec:
         {{- end }}
         {{- if and .Values.metrics.enableScraping }}
         prometheus.io/scrape: "true"
+        prometheus.io/name: 'provider-local'
         # default metrics endpoint in controller-runtime
         prometheus.io/port: "{{ .Values.metricsPort }}"
         {{- end }}

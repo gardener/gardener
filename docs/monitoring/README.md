@@ -35,9 +35,11 @@ Deployed in the `garden` namespace. Important scrape targets:
 ```
 prometheus.io/scrape=true
 prometheus.io/port=<port>
+prometheus.io/name=<name>
 ```
 - cadvisor metrics from pods in the garden and extension namespaces
 
+The job name label will be applied to all metrics from that service.
 **Purpose**: Entrypoint for operators when debugging issues with extensions or other garden components.
 
 ### Shoot Prometheus
