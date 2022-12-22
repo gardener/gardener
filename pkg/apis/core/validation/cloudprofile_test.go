@@ -616,6 +616,69 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						"Field": Equal("spec.machineImages[0].versions[0].architecture"),
 					}))))
 				})
+
+				It("should allow valid kubeletVersionConstraint constraint for machine image versions", func() {
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.2",
+									},
+									CRI:                      []core.CRI{{Name: "docker"}},
+									KubeletVersionConstraint: pointer.String("< 1.26"),
+								},
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.3",
+									},
+									CRI:                      []core.CRI{{Name: "docker"}},
+									KubeletVersionConstraint: pointer.String(">= 1.26"),
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid invalid kubeletVersionConstraint constraint for machine image versions", func() {
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.2",
+									},
+									CRI:                      []core.CRI{{Name: "docker"}},
+									KubeletVersionConstraint: pointer.String(""),
+								},
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.3",
+									},
+									CRI:                      []core.CRI{{Name: "docker"}},
+									KubeletVersionConstraint: pointer.String("invalid-version"),
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.machineImages[0].versions[0].kubeletVersionConstraint"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.machineImages[0].versions[1].kubeletVersionConstraint"),
+						})),
+					))
+				})
 			})
 
 			It("should forbid if no cri is present", func() {

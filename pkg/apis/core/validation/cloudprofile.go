@@ -327,6 +327,12 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 			allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 			allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
+
+			if machineVersion.KubeletVersionConstraint != nil {
+				if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
+					allErrs = append(allErrs, field.Invalid(versionsPath.Child("kubeletVersionConstraint"), machineVersion.KubeletVersionConstraint, fmt.Sprintf("cannot parse the kubeletVersionConstraint: %s", err.Error())))
+				}
+			}
 		}
 	}
 
