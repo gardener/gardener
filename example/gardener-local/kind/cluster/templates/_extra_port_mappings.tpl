@@ -67,10 +67,7 @@
 {{- define "extraPortMappings.gardener.seed.dns" -}}
 {{- if .Values.gardener.controlPlane.deployed -}}
 - containerPort: 30053
-  hostPort: 53
+  hostPort: 5353
   protocol: TCP
-- containerPort: 30053
-  hostPort: 53
-  protocol: UDP
 {{- end -}}
 {{- end -}}

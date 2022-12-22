@@ -38,11 +38,31 @@ parse_flags() {
   done
 }
 
+setup_loopback_device() {
+  if ! command -v ip &> /dev/null; then
+    echo "Skipping loopback device setup because 'ip' command is not available..."
+    return
+  fi
+  LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
+  echo "Checking loopback device ${LOOPBACK_DEVICE}..."
+  for address in 127.0.0.10 127.0.0.11 127.0.0.12; do
+    if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address; then
+      echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
+    else
+      echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
+      ip address add $address dev ${LOOPBACK_DEVICE}
+    fi
+  done
+  echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
+}
+
 parse_flags "$@"
 
 mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-backupbuckets" \
   "$(dirname "$0")/../dev/local-registry"
+
+setup_loopback_device
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
