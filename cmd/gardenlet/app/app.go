@@ -57,7 +57,6 @@ import (
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
@@ -130,11 +129,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return err
 	}
 	log.Info("Feature Gates", "featureGates", gardenletfeatures.FeatureGate.String())
-
-	if gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		return fmt.Errorf("inconsistent feature gate: APIServerSNI is required for ReversedVPN (APIServerSNI: %t, ReversedVPN: %t)",
-			gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI), gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN))
-	}
 
 	if kubeconfig := os.Getenv("GARDEN_KUBECONFIG"); kubeconfig != "" {
 		cfg.GardenClientConnection.Kubeconfig = kubeconfig

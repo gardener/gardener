@@ -72,11 +72,6 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				},
 				ControlledValues: &controlledValues,
 			},
-			{
-				ContainerName:    containerNameVPNSeed,
-				Mode:             &containerPolicyOff,
-				ControlledValues: &controlledValues,
-			},
 		}
 		weightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
 			{

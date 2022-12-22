@@ -119,22 +119,40 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 				"Server from pods labeled with '%s=%s' and Prometheus, and Egress to etcd pods.",
 				v1beta1constants.LabelNetworkPolicyToShootAPIServer, v1beta1constants.LabelNetworkPolicyAllowed),
 		}
+
+		port := &portVPNSeedServerNonHA
+		if k.values.VPN.HighAvailabilityEnabled {
+			port = &portVPNSeedServerHA
+		}
+
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				// Allow connection to shoot's etcd instances.
-				To: []networkingv1.NetworkPolicyPeer{{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: etcd.GetLabels(),
-					},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					// Allow connection to shoot's etcd instances.
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{
+							MatchLabels: etcd.GetLabels(),
+						},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{{
+						Protocol: &protocol,
+						Port:     &portEtcd,
+					}},
+				},
+				{
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{
+							MatchLabels: vpnseedserver.GetLabels(),
+						},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{{
+						Protocol: &protocol,
+						Port:     port,
+					}},
 				}},
-				Ports: []networkingv1.NetworkPolicyPort{{
-					Protocol: &protocol,
-					Port:     &portEtcd,
-				}},
-			}},
 			// Allow connections from everything which needs to talk to the API server.
 			Ingress: []networkingv1.NetworkPolicyIngressRule{
 				{
@@ -169,25 +187,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 			},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 		}
-
-		if k.values.VPN.ReversedVPNEnabled {
-			port := &portVPNSeedServerNonHA
-			if k.values.VPN.HighAvailabilityEnabled {
-				port = &portVPNSeedServerHA
-			}
-			networkPolicy.Spec.Egress = append(networkPolicy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
-				To: []networkingv1.NetworkPolicyPeer{{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: vpnseedserver.GetLabels(),
-					},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{{
-					Protocol: &protocol,
-					Port:     port,
-				}},
-			})
-		}
-
 		return nil
 	})
 	return err

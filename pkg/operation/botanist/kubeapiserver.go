@@ -157,7 +157,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			StaticTokenKubeconfigEnabled:   b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 			Version:                        b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
-				ReversedVPNEnabled:                   b.Shoot.ReversedVPNEnabled,
 				PodNetworkCIDR:                       b.Shoot.Networks.Pods.String(),
 				ServiceNetworkCIDR:                   b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:                      b.Shoot.GetInfo().Spec.Networking.Nodes,
@@ -404,22 +403,12 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 }
 
 func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
-	imageAlpineIPTables, err := b.ImageVector.FindImage(images.ImageNameAlpineIptables, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-
 	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(images.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
 
 	imageKubeAPIServer, err := b.ImageVector.FindImage(images.ImageNameKubeApiserver, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-
-	imageVPNSeed, err := b.ImageVector.FindImage(images.ImageNameVpnSeed, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
@@ -434,10 +423,8 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 	}
 
 	return kubeapiserver.Images{
-		AlpineIPTables:           imageAlpineIPTables.String(),
 		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
 		KubeAPIServer:            imageKubeAPIServer.String(),
-		VPNSeed:                  imageVPNSeed.String(),
 		VPNClient:                vpnClient,
 	}, nil
 }

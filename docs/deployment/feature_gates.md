@@ -30,8 +30,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI (deprecated)                    | `true`  | `Beta`  | `1.48` |        |
 | SeedChange                                   | `false` | `Alpha` | `1.12` | `1.52` |
 | SeedChange                                   | `true`  | `Beta`  | `1.53` |        |
-| ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
-| ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` | `1.52` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`  | `1.53` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
@@ -108,6 +106,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootSARotation                              | `true`  | `Beta`       | `1.51` | `1.56` |
 | ShootSARotation                              | `true`  | `GA`         | `1.57` | `1.59` |
 | ShootSARotation                              |         | `Removed`    | `1.60` |        |
+| ReversedVPN                                  | `false` | `Alpha`      | `1.22` | `1.41` |
+| ReversedVPN                                  | `true`  | `Beta`       | `1.42` | `1.62` |
+| ReversedVPN                                  | `true`  | `GA`         | `1.63` |        |
 
 ## Using a feature
 

@@ -15,48 +15,27 @@
 package botanist
 
 import (
-	"context"
-
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"k8s.io/utils/pointer"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
-	var (
-		imageName         = images.ImageNameVpnShoot
-		reversedVPNValues = vpnshoot.ReversedVPNValues{
-			Enabled: false,
-		}
-	)
 
-	if b.Shoot.ReversedVPNEnabled {
-		imageName = images.ImageNameVpnShootClient
-
-		reversedVPNValues = vpnshoot.ReversedVPNValues{
-			Enabled:     true,
-			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
-			Endpoint:    b.outOfClusterAPIServerFQDN(),
-			OpenVPNPort: 8132,
-		}
-	}
-
-	image, err := b.ImageVector.FindImage(imageName, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(images.ImageNameVpnShootClient, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
 	values := vpnshoot.Values{
-		Image:       image.String(),
-		VPAEnabled:  b.Shoot.WantsVerticalPodAutoscaler,
-		ReversedVPN: reversedVPNValues,
-		Network: vpnshoot.NetworkValues{
-			PodCIDR:     b.Shoot.Networks.Pods.String(),
-			ServiceCIDR: b.Shoot.Networks.Services.String(),
-			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
+		Image:      image.String(),
+		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
+		ReversedVPN: vpnshoot.ReversedVPNValues{
+			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
+			Endpoint:    b.outOfClusterAPIServerFQDN(),
+			OpenVPNPort: 8132,
 		},
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
@@ -71,18 +50,4 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		b.SecretsManager,
 		values,
 	), nil
-}
-
-// DeployVPNShoot deploys the VPNShoot system component.
-func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
-	secrets := vpnshoot.Secrets{}
-
-	if !b.Shoot.ReversedVPNEnabled {
-		dhSecret := b.getDiffieHellmanSecret()
-		secrets.DH = &dhSecret
-	}
-
-	b.Shoot.Components.SystemComponents.VPNShoot.SetSecrets(secrets)
-
-	return b.Shoot.Components.SystemComponents.VPNShoot.Deploy(ctx)
 }

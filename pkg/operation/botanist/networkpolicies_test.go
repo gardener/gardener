@@ -125,7 +125,7 @@ var _ = Describe("Networkpolicies", func() {
 		),
 
 		Entry(
-			"w/ network CIDRs with reversed vpn",
+			"w/ network CIDRs",
 			component.PhaseUnknown,
 			func() {
 				botanist.Shoot.GetInfo().Spec.Networking.Pods = &podCIDRShoot
@@ -133,7 +133,6 @@ var _ = Describe("Networkpolicies", func() {
 				botanist.Shoot.GetInfo().Spec.Networking.Nodes = &nodeCIDRShoot
 				botanist.Seed.GetInfo().Spec.Networks.Nodes = &nodeCIDRSeed
 				botanist.Seed.GetInfo().Spec.Networks.BlockCIDRs = blockCIDRs
-				botanist.Shoot.ReversedVPNEnabled = true
 			},
 			func(client client.Client, namespace string, values networkpolicies.Values) {
 				Expect(client).To(Equal(c))
@@ -159,50 +158,6 @@ var _ = Describe("Networkpolicies", func() {
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
 						CIDR:   "100.64.0.0/10",
 						Except: nil,
-					}},
-				))
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
-			},
-		),
-
-		Entry(
-			"w/ network CIDRs",
-			component.PhaseUnknown,
-			func() {
-				botanist.Shoot.GetInfo().Spec.Networking.Pods = &podCIDRShoot
-				botanist.Shoot.GetInfo().Spec.Networking.Services = &serviceCIDRShoot
-				botanist.Shoot.GetInfo().Spec.Networking.Nodes = &nodeCIDRShoot
-				botanist.Seed.GetInfo().Spec.Networks.Nodes = &nodeCIDRSeed
-				botanist.Seed.GetInfo().Spec.Networks.BlockCIDRs = blockCIDRs
-			},
-			func(client client.Client, namespace string, values networkpolicies.Values) {
-				Expect(client).To(Equal(c))
-				Expect(namespace).To(Equal(seedNamespace))
-				Expect(values.SNIEnabled).To(BeFalse())
-				Expect(values.BlockedAddresses).To(Equal(blockCIDRs))
-				Expect(values.DenyAllTraffic).To(BeTrue())
-				Expect(values.ShootNetworkPeers).To(ConsistOf(
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRShoot, Except: blockCIDRs}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: podCIDRShoot}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/14"}},
-				))
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-						CIDR:   "10.0.0.0/8",
-						Except: append(append([]string{podCIDRSeed, nodeCIDRSeed}, blockCIDRs...), nodeCIDRShoot),
-					}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-						CIDR:   "172.16.0.0/12",
-						Except: []string{serviceCIDRShoot},
-					}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-						CIDR:   "192.168.0.0/16",
-						Except: []string{serviceCIDRSeed},
-					}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-						CIDR:   "100.64.0.0/10",
-						Except: []string{podCIDRShoot},
 					}},
 				))
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))

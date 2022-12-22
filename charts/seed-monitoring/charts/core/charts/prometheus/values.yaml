@@ -24,9 +24,6 @@ secretNameClusterCA: ca
 secretNameEtcdCA: ca-etcd
 secretNameEtcdClientCert: etcd-client-tls
 
-reversedVPN:
-  enabled: false
-
 namespace:
   uid: 100c3bb5-48b9-4f88-96ef-48ed557d4212
 

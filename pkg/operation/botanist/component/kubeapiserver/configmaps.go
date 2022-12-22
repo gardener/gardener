@@ -101,7 +101,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuditPolicy(ctx context.Context, confi
 }
 
 func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if !k.values.VPN.ReversedVPNEnabled || k.values.VPN.HighAvailabilityEnabled {
+	if k.values.VPN.HighAvailabilityEnabled {
 		// We don't delete the confimap here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
 		return nil

@@ -313,7 +313,7 @@ func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*cor
 }
 
 func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
-	if !k.values.VPN.ReversedVPNEnabled || k.values.VPN.HighAvailabilityEnabled {
+	if k.values.VPN.HighAvailabilityEnabled {
 		return nil, nil
 	}
 
@@ -323,24 +323,6 @@ func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.S
 		CertType:                    secretutils.ClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
-}
-
-func (k *kubeAPIServer) reconcileSecretLegacyVPNSeed(ctx context.Context) (*corev1.Secret, error) {
-	if k.values.VPN.ReversedVPNEnabled {
-		return nil, nil
-	}
-
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:                        secretNameLegacyVPNSeed,
-		CommonName:                  UserNameVPNSeed,
-		CertType:                    secretutils.ClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return nil, err
 	}
@@ -359,21 +341,6 @@ func (k *kubeAPIServer) reconcileSecretHAVPNSeedClient(ctx context.Context) (*co
 		CertType:                    secretutils.ClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
-}
-
-func (k *kubeAPIServer) reconcileSecretLegacyVPNSeedTLSAuth(ctx context.Context) (*corev1.Secret, error) {
-	if k.values.VPN.ReversedVPNEnabled {
-		return nil, nil
-	}
-
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.VPNTLSAuthConfig{
-		Name: SecretNameVPNSeedTLSAuth,
-	}, secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return nil, err
 	}

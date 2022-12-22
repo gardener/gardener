@@ -67,6 +67,7 @@ const (
 	// owner: @ScheererJ @DockToFuture
 	// alpha: v1.22.0
 	// beta: v1.42.0
+	// GA: v1.63.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
 	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
@@ -103,10 +104,10 @@ const (
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
-	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated},
-	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated},
+	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
+	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
-	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
+	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:          {Default: false, PreRelease: featuregate.Alpha},
 	HAControlPlanes:       {Default: false, PreRelease: featuregate.Alpha},

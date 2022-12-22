@@ -35,13 +35,6 @@ var _ = Describe("Logging", func() {
     Time_Format %m%d %H:%M:%S.%L
 
 [PARSER]
-    Name        vpnSeedParser
-    Format      regex
-    Regex       ^(?<time>[^0-9]*\d{1,2}\s+[^\s]+\s+\d{4})\s+(?<log>.*)
-    Time_Key    time
-    Time_Format %a %b%t%d %H:%M:%S %Y
-
-[PARSER]
     Name        apiProxyMutatorParser
     Format      json
     Time_Key    ts
@@ -52,13 +45,6 @@ var _ = Describe("Logging", func() {
     Match               kubernetes.*kube-apiserver*kube-apiserver*
     Key_Name            log
     Parser              kubeAPIServerParser
-    Reserve_Data        True
-
-[FILTER]
-    Name                parser
-    Match               kubernetes.*kube-apiserver*vpn-seed*
-    Key_Name            log
-    Parser              vpnSeedParser
     Reserve_Data        True
 
 [FILTER]

@@ -134,10 +134,8 @@ var _ = Describe("KubeAPIServer", func() {
 					KubernetesVersion: semver.MustParse("1.22.1"),
 				},
 				ImageVector: imagevector.ImageVector{
-					{Name: "alpine-iptables"},
 					{Name: "apiserver-proxy-pod-webhook"},
 					{Name: "kube-apiserver"},
-					{Name: "vpn-seed"},
 					{Name: "vpn-shoot-client"},
 				},
 				APIServerAddress:   apiServerAddress,
@@ -182,32 +180,16 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DefaultKubeAPIServer", func() {
-		It("should return an error because the alpine-iptables image cannot be found", func() {
+		It("should return an error because the apiserver-proxy-pod-webhook image cannot be found", func() {
 			botanist.ImageVector = imagevector.ImageVector{}
-
-			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-			Expect(kubeAPIServer).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("could not find image \"alpine-iptables\"")))
-		})
-
-		It("should return an error because the apiserver-proxy-pod-webhook cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}}
 
 			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 			Expect(kubeAPIServer).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("could not find image \"apiserver-proxy-pod-webhook\"")))
 		})
 
-		It("should return an error because the vpn-seed cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}, {Name: "apiserver-proxy-pod-webhook"}, {Name: "kube-apiserver"}}
-
-			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-			Expect(kubeAPIServer).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("could not find image \"vpn-seed\"")))
-		})
-
 		It("should return an error because the kube-apiserver cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}, {Name: "apiserver-proxy-pod-webhook"}, {Name: "vpn-seed"}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "apiserver-proxy-pod-webhook"}}
 
 			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 			Expect(kubeAPIServer).To(BeNil())
@@ -1110,21 +1092,9 @@ usernames: ["admin"]
 					Expect(kubeAPIServer.GetValues().VPN).To(Equal(expectedConfig))
 				},
 
-				Entry("ReversedVPN disabled",
+				Entry("ReversedVPN enabled",
 					nil,
 					kubeapiserver.VPNConfig{
-						ReversedVPNEnabled: false,
-						PodNetworkCIDR:     podNetworkCIDR,
-						ServiceNetworkCIDR: serviceNetworkCIDR,
-						NodeNetworkCIDR:    &nodeNetworkCIDR,
-					},
-				),
-				Entry("ReversedVPN enabled",
-					func() {
-						botanist.Shoot.ReversedVPNEnabled = true
-					},
-					kubeapiserver.VPNConfig{
-						ReversedVPNEnabled: true,
 						PodNetworkCIDR:     podNetworkCIDR,
 						ServiceNetworkCIDR: serviceNetworkCIDR,
 						NodeNetworkCIDR:    &nodeNetworkCIDR,
@@ -1137,7 +1107,6 @@ usernames: ["admin"]
 						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.VPNConfig{
-						ReversedVPNEnabled: false,
 						PodNetworkCIDR:     podNetworkCIDR,
 						ServiceNetworkCIDR: serviceNetworkCIDR,
 					},
@@ -1836,13 +1805,6 @@ usernames: ["admin"]
 					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 				},
 
-				Entry("SNI disabled",
-					nil,
-					featureGatePtr(features.APIServerSNI), pointer.Bool(false),
-					kubeapiserver.SNIConfig{
-						PodMutatorEnabled: false,
-					},
-				),
 				Entry("SNI enabled but no need for internal DNS",
 					func() {
 						botanist.Shoot.DisableDNS = true
@@ -1881,25 +1843,6 @@ usernames: ["admin"]
 						AdvertiseAddress:  apiServerClusterIP,
 						PodMutatorEnabled: true,
 						APIServerFQDN:     "api." + internalClusterDomain,
-					},
-				),
-				Entry("SNI and both DNS enabled but pod injector disabled via annotation",
-					func() {
-						botanist.Shoot.DisableDNS = false
-						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
-						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
-						botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("some-domain")
-						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
-							Domain:    pointer.StringPtr("some-domain"),
-							Providers: []gardencorev1beta1.DNSProvider{{}},
-						}
-						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "disable"}
-					},
-					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
-					kubeapiserver.SNIConfig{
-						Enabled:           true,
-						AdvertiseAddress:  apiServerClusterIP,
-						PodMutatorEnabled: false,
 					},
 				),
 			)

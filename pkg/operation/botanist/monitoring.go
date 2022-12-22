@@ -97,14 +97,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.SystemComponents.CoreDNS,
 		b.Shoot.Components.SystemComponents.KubeProxy,
 		b.Shoot.Components.SystemComponents.VPNShoot,
+		b.Shoot.Components.ControlPlane.VPNSeedServer,
 	}
 
 	if b.Shoot.NodeLocalDNSEnabled {
 		monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
-	}
-
-	if b.Shoot.ReversedVPNEnabled {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.VPNSeedServer)
 	}
 
 	if b.Shoot.WantsClusterAutoscaler {
@@ -211,9 +208,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"kubernetesVersion":        b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
-			},
-			"reversedVPN": map[string]interface{}{
-				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,

@@ -63,8 +63,7 @@ type Ensurer interface {
 	// "old" might be "nil" and must always be checked.
 	EnsureETCD(ctx context.Context, gctx gcontext.GardenContext, new, old *druidv1alpha1.Etcd) error
 	// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked. Please note that the vpn-seed-server deployment will only exist
-	// if the gardenlet's ReversedVPN feature gate is enabeld.
+	// "old" might be "nil" and must always be checked.
 	EnsureVPNSeedServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
 	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)

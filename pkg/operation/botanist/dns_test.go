@@ -188,12 +188,6 @@ var _ = Describe("dns", func() {
 			gardenletfeatures.RegisterFeatureGates()
 		})
 
-		It("returns false when feature gate is disabled", func() {
-			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=false")).ToNot(HaveOccurred())
-
-			Expect(b.APIServerSNIEnabled()).To(BeFalse())
-		})
-
 		It("returns true when feature gate is enabled", func() {
 			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 			b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
@@ -208,12 +202,6 @@ var _ = Describe("dns", func() {
 	Context("APIServerSNIPodMutatorEnabled", func() {
 		BeforeEach(func() {
 			gardenletfeatures.RegisterFeatureGates()
-		})
-
-		It("returns false when the feature gate is disabled", func() {
-			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=false")).ToNot(HaveOccurred())
-
-			Expect(b.APIServerSNIPodMutatorEnabled()).To(BeFalse())
 		})
 
 		Context("APIServerSNI feature gate is enabled", func() {

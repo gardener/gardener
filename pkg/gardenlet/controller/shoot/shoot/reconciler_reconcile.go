@@ -511,7 +511,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deployVPNShoot = g.Add(flow.Task{
 			Name:         "Deploying vpn-shoot system component",
-			Fn:           flow.TaskFn(botanist.DeployVPNShoot).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.VPNShoot.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployKubeScheduler, deployVPNSeedServer, waitUntilShootNamespacesReady),
 		})
 		deployNodeProblemDetector = g.Add(flow.Task{
@@ -592,15 +592,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
 		})
-		vpnLBReady = g.Add(flow.Task{
-			Name:         "Waiting until vpn-shoot LoadBalancer is ready",
-			Fn:           flow.TaskFn(botanist.WaitUntilVpnShootServiceIsReady).SkipIf(o.Shoot.HibernationEnabled || o.Shoot.ReversedVPNEnabled),
-			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
-		})
 		waitUntilTunnelConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilTunnelConnectionExists).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady, vpnLBReady),
+			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until all shoot worker nodes have updated the cloud config user data",

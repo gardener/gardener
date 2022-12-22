@@ -28,12 +28,7 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
 3. No load balancers for Shoot clusters.
 
-   _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster. Hence, when the gardenlet's `ReversedVPN` feature gate is disabled then the `kube-system/vpn-shoot` `Service` must be manually patched (with `{"status": {"loadBalancer": {"ingress": [{"hostname": "vpn-shoot"}]}}}`) to make the reconciliation work._
-
-4. Only one shoot cluster possible when gardenlet's `APIServerSNI` feature gate is disabled.
-
-   _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._\
-   _However, given that the `APIServerSNI` feature gate is deprecated and will be removed in the future (see [gardener/gardener#6007](https://github.com/gardener/gardener/pull/6007)), we will probably not invest into this._
+   _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster.
 
 5. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in cluster `coredns`.
 
@@ -113,9 +108,6 @@ data:
 #### `Infrastructure`
 
 This controller generates a `NetworkPolicy` which allows the control plane pods (like `kube-apiserver`) to communicate with the worker machine pods (see [`Worker` section](#worker))).
-
-In addition, it creates a `Service` named `vpn-shoot` which is only used in case the gardenlet's `ReversedVPN` feature gate is disabled.
-This `Service` enables the `vpn-seed` containers in the `kube-apiserver` pods in the seed cluster to communicate with the `vpn-shoot` pod running in the shoot cluster.
 
 #### `Network`
 

@@ -21,6 +21,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -47,6 +48,7 @@ var _ = Describe("NodeProblemDetector", func() {
 				},
 			},
 		})
+		botanist.Garden = &garden.Garden{}
 	})
 
 	AfterEach(func() {
@@ -63,7 +65,7 @@ var _ = Describe("NodeProblemDetector", func() {
 		})
 
 		It("should successfully create a nodeproblemdetector interface", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, false)()
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
 			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: "node-problem-detector"}}
 

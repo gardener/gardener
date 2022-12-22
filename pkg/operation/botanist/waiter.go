@@ -43,14 +43,6 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 	return nil
 }
 
-// WaitUntilVpnShootServiceIsReady waits until the external load balancer of the VPN has been created.
-func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
-	const timeout = 10 * time.Minute
-
-	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.ShootClientSet.Client(), metav1.NamespaceSystem, "vpn-shoot", timeout)
-	return err
-}
-
 // WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot) in the kube-system
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
@@ -59,34 +51,6 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
 		return CheckTunnelConnection(ctx, b.Logger, b.ShootClientSet, common.VPNTunnel)
 	}); err != nil {
-		// If the classic VPN solution is used for the shoot cluster then let's try to fetch
-		// the last events of the vpn-shoot service (potentially indicating an error with the load balancer service).
-		if !b.Shoot.ReversedVPNEnabled {
-			b.Logger.Error(err, "Error occurred while checking the tunnel connection")
-
-			service := &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Service",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "vpn-shoot",
-					Namespace: metav1.NamespaceSystem,
-				},
-			}
-
-			eventsErrorMessage, err2 := kutil.FetchEventMessages(ctx, b.ShootClientSet.Client().Scheme(), b.ShootClientSet.Client(), service, corev1.EventTypeWarning, 2)
-			if err2 != nil {
-				return fmt.Errorf("'%v' occurred but could not fetch events for more information: %w", err, err2)
-			}
-
-			if eventsErrorMessage != "" {
-				return fmt.Errorf("%s\n\n%s", err.Error(), eventsErrorMessage)
-			}
-
-			return err
-		}
-
 		return err
 	}
 
