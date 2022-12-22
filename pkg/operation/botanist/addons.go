@@ -42,25 +42,6 @@ const (
 	SecretLabelKeyManagedResource = "managed-resource"
 )
 
-// GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
-// the kubernetes-dashboard properly.
-func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, error) {
-	var (
-		enabled = gardencorev1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons)
-		values  = map[string]interface{}{}
-	)
-
-	if b.APIServerSNIEnabled() {
-		values["kubeAPIServerHost"] = b.outOfClusterAPIServerFQDN()
-	}
-
-	if enabled && b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {
-		values["authenticationMode"] = *b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode
-	}
-
-	return common.GenerateAddonConfig(values, enabled), nil
-}
-
 // NeedsIngressDNS returns true if the Shoot cluster needs ingress DNS.
 func (b *Botanist) NeedsIngressDNS() bool {
 	return b.NeedsExternalDNS() && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
@@ -260,19 +241,7 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 		"pspDisabled": b.Shoot.PSPDisabled,
 	}
 
-	kubernetesDashboardConfig, err := b.GenerateKubernetesDashboardConfig()
-	if err != nil {
-		return nil, err
-	}
-	kubernetesDashboardImagesToInject := []string{
-		images.ImageNameKubernetesDashboard,
-		images.ImageNameKubernetesDashboardMetricsScraper,
-	}
-
-	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, kubernetesDashboardImagesToInject...)
-	if err != nil {
-		return nil, err
-	}
+	kubernetesDashboardEnabled := gardencorev1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons)
 
 	nginxIngressConfig, err := b.GenerateNginxIngressConfig()
 	if err != nil {
@@ -285,7 +254,7 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"global":               global,
-		"kubernetes-dashboard": kubernetesDashboard,
+		"kubernetes-dashboard": common.GenerateAddonConfig(nil, kubernetesDashboardEnabled),
 		"nginx-ingress":        nginxIngress,
 	})
 }
