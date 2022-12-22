@@ -153,11 +153,11 @@ data:
         enabled: {{ .Values.global.config.webhooks.systemComponentsConfig.enabled }}
         {{- if .Values.global.config.webhooks.systemComponentsConfig.nodeSelector }}
         nodeSelector:
-{{ toYaml .Values.global.config.webhooks.systemComponentsConfig.nodeSelector | indent 8 }}
+{{ toYaml .Values.global.config.webhooks.systemComponentsConfig.nodeSelector | indent 10 }}
         {{- end }}
         {{- if .Values.global.config.webhooks.systemComponentsConfig.podNodeSelector }}
         podNodeSelector:
-{{ toYaml .Values.global.config.webhooks.systemComponentsConfig.podNodeSelector | indent 8 }}
+{{ toYaml .Values.global.config.webhooks.systemComponentsConfig.podNodeSelector | indent 10 }}
         {{- end }}
         {{- if .Values.global.config.webhooks.systemComponentsConfig.podTolerations }}
         podTolerations:

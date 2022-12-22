@@ -191,3 +191,9 @@ func nodeLabels() map[string]string {
 		testIDKey: testID,
 	}
 }
+
+func cleanupNodeLabel() map[string]string {
+	return map[string]string{
+		"cleanup": testID,
+	}
+}

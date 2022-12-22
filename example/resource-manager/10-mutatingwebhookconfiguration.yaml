@@ -174,7 +174,7 @@ webhooks:
       operator: In
       values:
       - system-component
-    - key: topology-spread-constraints.resources.gardener.cloud/skip
+    - key: system-components-config.resources.gardener.cloud/skip
       operator: DoesNotExist
   sideEffects: None
   failurePolicy: Fail

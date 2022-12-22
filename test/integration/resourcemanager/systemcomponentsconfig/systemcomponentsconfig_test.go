@@ -52,23 +52,20 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		labelsInUse := make(map[string]string)
-
-		for _, n := range nodes {
-			node := n
+		for _, node := range nodes {
 			node.ObjectMeta.GenerateName = "test-"
 
 			if node.ObjectMeta.Labels == nil {
 				node.ObjectMeta.Labels = nodeLabels()
 			}
 
-			labelsInUse = utils.MergeStringMaps(labelsInUse, node.ObjectMeta.Labels)
+			node.ObjectMeta.Labels = utils.MergeStringMaps(node.ObjectMeta.Labels, cleanupNodeLabel())
 
 			Expect(testClient.Create(ctx, &node)).To(Succeed())
 		}
 
 		DeferCleanup(func() {
-			Expect(testClient.DeleteAllOf(ctx, &corev1.Node{}, client.MatchingLabels(labelsInUse))).To(Succeed())
+			Expect(testClient.DeleteAllOf(ctx, &corev1.Node{}, client.MatchingLabels(cleanupNodeLabel()))).To(Succeed())
 		})
 	})
 
@@ -203,7 +200,7 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 				nodes = append(nodes, nonRelevantNode)
 			})
 
-			It("should add the node selector and configured tolerations and tolerate taints of existing nodes", func() {
+			It("should add the node selector and configured tolerations", func() {
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 				Expect(pod.Spec.NodeSelector).To(Equal(handlerNodeSelector))
 				Expect(pod.Spec.Tolerations).To(ConsistOf(addKubernetesDefaultTolerations(handlerTolerations)))
