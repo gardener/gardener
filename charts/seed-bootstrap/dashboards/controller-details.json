@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 5,
-  "iteration": 1671602759105,
+  "id": 12,
+  "iteration": 1671693962297,
   "links": [],
   "panels": [
     {
@@ -946,7 +946,7 @@
     },
     {
       "datasource": "${datasource}",
-      "description": "Shows how many items of the workqueue are processed.",
+      "description": "Seconds an item stays in workqueue before being requested.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -965,6 +965,9 @@
               "tooltip": false
             },
             "lineInterpolation": "smooth",
+            "lineStyle": {
+              "fill": "solid"
+            },
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -973,7 +976,6 @@
             "showPoints": "auto",
             "spanNulls": false
           },
-          "decimals": 3,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -984,7 +986,7 @@
               }
             ]
           },
-          "unit": "ops"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -994,7 +996,7 @@
         "x": 0,
         "y": 45
       },
-      "id": 25,
+      "id": 21,
       "options": {
         "graph": {},
         "legend": {
@@ -1010,15 +1012,29 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(workqueue_work_duration_seconds_count{job=\"$job\",name=~\"$controller\"}[$__rate_interval])) by(pod)",
+          "expr": "histogram_quantile(0.5, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
           "interval": "",
-          "legendFormat": "{{pod}}",
+          "legendFormat": "P50",
           "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.9, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "P90",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "P99",
+          "refId": "C"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Work Rate by pod",
+      "title": "Queue Duration (P50, P90, P99)",
       "type": "timeseries"
     },
     {
@@ -1115,99 +1131,6 @@
       "type": "timeseries"
     },
     {
-      "datasource": "${datasource}",
-      "description": "Seconds an item stays in workqueue before being requested.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false
-            },
-            "lineInterpolation": "smooth",
-            "lineStyle": {
-              "fill": "solid"
-            },
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 53
-      },
-      "id": 21,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltipOptions": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "7.5.17",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "histogram_quantile(0.5, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
-          "interval": "",
-          "legendFormat": "P50",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "histogram_quantile(0.9, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "P90",
-          "refId": "B"
-        },
-        {
-          "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"$job\",name=~\"$controller\",pod=~\"$pod\"}[$__rate_interval])) by (name,le))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "P99",
-          "refId": "C"
-        }
-      ],
-      "title": "Queue Duration (P50, P90, P99)",
-      "type": "timeseries"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -1225,7 +1148,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
+        "x": 0,
         "y": 53
       },
       "hiddenSeries": false,

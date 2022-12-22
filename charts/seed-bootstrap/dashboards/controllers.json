@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 2,
-  "iteration": 1671600517951,
+  "id": 17,
+  "iteration": 1671693744998,
   "links": [],
   "panels": [
     {
@@ -1156,87 +1156,6 @@
     },
     {
       "datasource": "${datasource}",
-      "description": "Shows how many items of the workqueue are processed.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false
-            },
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false
-          },
-          "decimals": 3,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "ops"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 65
-      },
-      "id": 41,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [
-            "max",
-            "mean",
-            "last"
-          ],
-          "displayMode": "table",
-          "placement": "right"
-        },
-        "tooltipOptions": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "7.5.17",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(workqueue_work_duration_seconds_count{job=\"$job\",name=~\"$controller\"}[$__rate_interval])) by(name)",
-          "interval": "",
-          "legendFormat": "{{name}}",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Work Rate by controller",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "${datasource}",
       "description": "Shows how long an item stays in the workqueue before being requested.",
       "fieldConfig": {
         "defaults": {
@@ -1282,7 +1201,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 74
+        "y": 65
       },
       "id": 31,
       "options": {
@@ -1358,7 +1277,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 74
+        "y": 65
       },
       "id": 33,
       "options": {
@@ -1405,7 +1324,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 73
       },
       "hiddenSeries": false,
       "id": 35,
@@ -1499,7 +1418,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "seed-prometheus",
           "value": "seed-prometheus"
         },
