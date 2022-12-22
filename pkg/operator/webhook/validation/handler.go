@@ -49,6 +49,23 @@ func validate(obj runtime.Object) error {
 	return nil
 }
 
+func validateUpdate(oldObj, newObj runtime.Object) error {
+	oldGarden, ok := oldObj.(*operatorv1alpha1.Garden)
+	if !ok {
+		return fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", oldObj)
+	}
+	newGarden, ok := newObj.(*operatorv1alpha1.Garden)
+	if !ok {
+		return fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", newObj)
+	}
+
+	if errs := validation.ValidateGardenUpdate(oldGarden, newGarden); len(errs) > 0 {
+		return apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), newGarden.Name, errs)
+	}
+
+	return nil
+}
+
 // ValidateCreate performs the validation.
 func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	otherGardensAlreadyExist, err := kutil.ResourcesExist(ctx, h.RuntimeClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
@@ -63,8 +80,8 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error 
 }
 
 // ValidateUpdate performs the validation.
-func (h *Handler) ValidateUpdate(_ context.Context, _, newObj runtime.Object) error {
-	return validate(newObj)
+func (h *Handler) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) error {
+	return validateUpdate(oldObj, newObj)
 }
 
 // ValidateDelete performs the validation.

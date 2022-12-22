@@ -162,10 +162,10 @@ type Storage struct {
 // Backup contains the object store configuration for backups for the virtual garden etcd.
 type Backup struct {
 	// Provider is a provider name. This field is immutable.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Provider is immutable"
 	Provider string `json:"provider"`
 	// BucketName is the name of the backup bucket.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="BucketName is immutable"
 	BucketName string `json:"bucketName"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.

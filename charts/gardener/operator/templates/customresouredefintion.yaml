@@ -147,14 +147,14 @@ spec:
                                   bucket.
                                 type: string
                                 x-kubernetes-validations:
-                                - message: Value is immutable
+                                - message: BucketName is immutable
                                   rule: self == oldSelf
                               provider:
                                 description: Provider is a provider name. This field
                                   is immutable.
                                 type: string
                                 x-kubernetes-validations:
-                                - message: Value is immutable
+                                - message: Provider is immutable
                                   rule: self == oldSelf
                               secretRef:
                                 description: SecretRef is a reference to a Secret

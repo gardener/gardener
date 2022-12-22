@@ -334,7 +334,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		// create peer network policy only if there are 3 replicas
-		if pointer.Int32Deref(e.values.Replicas, 0) == 3 {
+		if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
 			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
 				peerNetworkPolicy.Annotations = map[string]string{
 					v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
@@ -456,7 +456,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
-		if pointer.Int32Deref(e.values.Replicas, 0) == 3 {
+		if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
 			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
@@ -689,7 +689,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		e.emptyNetworkPolicy(NetworkPolicyNameClient),
 	}
 
-	if pointer.Int32Deref(e.values.Replicas, 0) == 3 {
+	if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
 		objects = append(objects, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
 	}
 
