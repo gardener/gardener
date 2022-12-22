@@ -9,7 +9,7 @@ require (
 	github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/gardener/dependency-watchdog v0.7.0
-	github.com/gardener/etcd-druid v0.15.0
+	github.com/gardener/etcd-druid v0.15.1-0.20221222093730-c7ee1492a056 // vendor etcd 0.16.0 once it's released
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.45.0
 	github.com/ghodss/yaml v1.0.0
@@ -180,8 +180,6 @@ require (
 replace (
 	github.com/emicklei/go-restful/v3 => github.com/emicklei/go-restful/v3 v3.9.0 // keep this value in sync with k8s.io/apiserver
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
-	// remove this once https://github.com/gardener/etcd-druid/pull/450 is merged
-	github.com/gardener/etcd-druid => github.com/shafeeqes/etcd-druid v0.7.1-0.20221128092627-e77cecf56fed
 	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
 	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/google/gnostic => github.com/google/gnostic v0.5.7-v3refs // keep this value in sync with k8s.io/apiserver

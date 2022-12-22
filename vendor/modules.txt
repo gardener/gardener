@@ -91,7 +91,7 @@ github.com/fsnotify/fsnotify
 ## explicit; go 1.13
 github.com/gardener/dependency-watchdog/pkg/restarter/api
 github.com/gardener/dependency-watchdog/pkg/scaler/api
-# github.com/gardener/etcd-druid v0.15.0 => github.com/shafeeqes/etcd-druid v0.7.1-0.20221128092627-e77cecf56fed
+# github.com/gardener/etcd-druid v0.15.1-0.20221222093730-c7ee1492a056
 ## explicit; go 1.19
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
@@ -1710,7 +1710,6 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 # github.com/emicklei/go-restful/v3 => github.com/emicklei/go-restful/v3 v3.9.0
 # github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
-# github.com/gardener/etcd-druid => github.com/shafeeqes/etcd-druid v0.7.1-0.20221128092627-e77cecf56fed
 # github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
 # github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 # github.com/google/gnostic => github.com/google/gnostic v0.5.7-v3refs
