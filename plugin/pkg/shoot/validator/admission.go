@@ -1220,6 +1220,7 @@ func validateZones(constraints []core.Region, region, oldRegion string, worker, 
 		return allErrs
 	}
 
+	usedZones := sets.NewString()
 	for j, zone := range worker.Zones {
 		jdxPath := fldPath.Child("zones").Index(j)
 		if ok, validZones := validateZone(constraints, region, zone); !ok {
@@ -1229,6 +1230,10 @@ func validateZones(constraints []core.Region, region, oldRegion string, worker, 
 				allErrs = append(allErrs, field.NotSupported(jdxPath, zone, validZones))
 			}
 		}
+		if usedZones.Has(zone) {
+			allErrs = append(allErrs, field.Duplicate(jdxPath, zone))
+		}
+		usedZones.Insert(zone)
 	}
 
 	return allErrs
