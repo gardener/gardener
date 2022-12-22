@@ -213,9 +213,9 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 	}
 
 	secret.Labels = map[string]string{v1beta1constants.LabelRole: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration}
-	desiredLabels := utils.MergeStringMaps(secret.Labels) // copy
 	secret.Data = map[string][]byte{secretETCDEncryptionConfigurationDataKey: data}
 	utilruntime.Must(kutil.MakeUnique(secret))
+	desiredLabels := utils.MergeStringMaps(secret.Labels) // copy
 
 	if err := k.client.Client().Create(ctx, secret); err == nil || !apierrors.IsAlreadyExists(err) {
 		return err
