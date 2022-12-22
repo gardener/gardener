@@ -115,9 +115,6 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 		return nil, err
 	}
 
-	// For backwards-compatibility, we need to keep some of the existing secrets (cluster-admin token, basic auth
-	// password, etc.).
-	// TODO(rfranzke): Remove this code in the future
 	dataMap, err := m.keepExistingSecretsIfNeeded(ctx, config.GetName(), data.SecretData())
 	if err != nil {
 		return nil, err
@@ -141,6 +138,9 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName string, newData map[string][]byte) (map[string][]byte, error) {
 	existingSecret := &corev1.Secret{}
 
+	// For backwards-compatibility, we need to keep some of the existing secrets (cluster-admin token, basic auth
+	// password, etc.).
+	// TODO(rfranzke): Remove this switch statement in the future.
 	switch configName {
 	case "kube-apiserver-etcd-encryption-key":
 		if err := m.client.Get(ctx, kutil.Key(m.namespace, "etcd-encryption-secret"), existingSecret); err != nil {
