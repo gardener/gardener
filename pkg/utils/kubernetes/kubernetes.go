@@ -25,9 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,9 +38,13 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -703,4 +704,45 @@ func ClientCertificateFromRESTConfig(restConfig *rest.Config) (*tls.Certificate,
 
 	cert.Leaf = certs[0]
 	return &cert, nil
+}
+
+// TolerationForTaint returns the corresponding toleration for the given taint.
+func TolerationForTaint(taint corev1.Taint) corev1.Toleration {
+	operator := corev1.TolerationOpEqual
+	if taint.Value == "" {
+		operator = corev1.TolerationOpExists
+	}
+
+	return corev1.Toleration{
+		Key:      taint.Key,
+		Operator: operator,
+		Value:    taint.Value,
+		Effect:   taint.Effect,
+	}
+}
+
+// ComparableTolerations contains information to transform an ordinary 'corev1.Toleration' object to a semantically
+// comparable object that is fully compatible with the 'comparable' Golang interface, see https://github.com/golang/go/blob/de6abd78893e91f26337eb399644b7a6bc3ea583/src/builtin/builtin.go#L102.
+type ComparableTolerations struct {
+	tolerationSeconds map[int64]*int64
+}
+
+// Transform takes a toleration object and exchanges the 'TolerationSeconds' pointer if set. The int64 value will
+// be the same but pointers will be **reused** for all passed tolerations that have the same underlying toleration seconds value.
+func (c *ComparableTolerations) Transform(toleration corev1.Toleration) corev1.Toleration {
+	if toleration.TolerationSeconds == nil {
+		return toleration
+	}
+
+	if c.tolerationSeconds == nil {
+		c.tolerationSeconds = make(map[int64]*int64)
+	}
+
+	tolerationSeconds := *toleration.TolerationSeconds
+	if _, ok := c.tolerationSeconds[tolerationSeconds]; !ok {
+		c.tolerationSeconds[tolerationSeconds] = pointer.Int64(tolerationSeconds)
+	}
+
+	toleration.TolerationSeconds = c.tolerationSeconds[tolerationSeconds]
+	return toleration
 }

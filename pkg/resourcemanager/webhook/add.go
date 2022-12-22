@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 )
 
@@ -71,6 +72,18 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			TargetVersion: targetVersion,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.SystemComponentsConfig.Enabled {
+		if err := (&systemcomponentsconfig.Handler{
+			Logger:          mgr.GetLogger().WithName("webhook").WithName(systemcomponentsconfig.HandlerName),
+			TargetClient:    targetCluster.GetClient(),
+			NodeSelector:    cfg.Webhooks.SystemComponentsConfig.NodeSelector,
+			PodNodeSelector: cfg.Webhooks.SystemComponentsConfig.PodNodeSelector,
+			PodTolerations:  cfg.Webhooks.SystemComponentsConfig.PodTolerations,
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", systemcomponentsconfig.HandlerName, err)
 		}
 	}
 

@@ -149,5 +149,19 @@ data:
         {{- end }}
       seccompProfile:
         enabled: {{ .Values.global.config.webhooks.seccompProfile.enabled }}
+      systemComponentsConfig:
+        enabled: {{ .Values.global.config.webhooks.systemComponentsConfig.enabled }}
+        {{- if .Values.global.config.webhooks.systemComponentsConfig.nodeSelector }}
+        nodeSelector:
+{{ toYaml .Values.global.config.webhooks.systemComponentsConfig.nodeSelector | indent 10 }}
+        {{- end }}
+        {{- if .Values.global.config.webhooks.systemComponentsConfig.podNodeSelector }}
+        podNodeSelector:
+{{ toYaml .Values.global.config.webhooks.systemComponentsConfig.podNodeSelector | indent 10 }}
+        {{- end }}
+        {{- if .Values.global.config.webhooks.systemComponentsConfig.podTolerations }}
+        podTolerations:
+{{ toYaml .Values.global.config.webhooks.systemComponentsConfig.podTolerations | indent 8 }}
+        {{- end }}
       tokenInvalidator:
         enabled: {{ .Values.global.config.webhooks.tokenInvalidator.enabled }}

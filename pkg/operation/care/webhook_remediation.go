@@ -67,7 +67,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 		fns []flow.TaskFn
 
 		notExcluded          = utils.MustNewRequirement(v1beta1constants.LabelExcludeWebhookFromRemediation, selection.NotIn, "true")
-		notManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotIn, "gardener")
+		notManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotIn, resourcesv1alpha1.GardenerManager)
 		labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(notExcluded).Add(notManagedByGardener)}
 	)
 

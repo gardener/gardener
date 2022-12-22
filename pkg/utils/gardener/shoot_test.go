@@ -775,4 +775,110 @@ var _ = Describe("Shoot", func() {
 			Expect(statusSeedName).To(Equal(pointer.String("status")))
 		})
 	})
+
+	Describe("#ExtractSystemComponentsTolerations", func() {
+		It("should return no tolerations when workers are 'nil'", func() {
+			Expect(ExtractSystemComponentsTolerations(nil)).To(BeEmpty())
+		})
+
+		It("should return no tolerations when workers are empty", func() {
+			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{})).To(BeEmpty())
+		})
+
+		It("should return no tolerations when no taints are defined for system worker group", func() {
+			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false},
+					Taints: []corev1.Taint{
+						{
+							Key:    "someKey",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			})).To(BeEmpty())
+		})
+
+		It("should return tolerations when taints are defined for system worker group", func() {
+			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "someKey",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false},
+					Taints: []corev1.Taint{
+						{
+							Key:    "someKey",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			})).To(ConsistOf(corev1.Toleration{
+				Key:      "someKey",
+				Operator: corev1.TolerationOpEqual,
+				Value:    "someValue",
+				Effect:   corev1.TaintEffectNoExecute,
+			}))
+		})
+
+		It("should return tolerations when taints are defined multiple times for system worker group", func() {
+			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "someKey",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "someKey",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "someKey",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			})).To(ConsistOf(
+				corev1.Toleration{
+					Key:      "someKey",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoExecute,
+				},
+				corev1.Toleration{
+					Key:      "someKey",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			))
+		})
+	})
 })

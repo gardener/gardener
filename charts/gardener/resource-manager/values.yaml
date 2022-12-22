@@ -116,5 +116,17 @@ global:
       # expirationSeconds: 43200
       seccompProfile:
         enabled: false
+      systemComponentsConfig:
+        enabled: false
+        nodeSelector:
+          worker.gardener.cloud/system-components: "true"
+        podNodeSelector:
+          worker.gardener.cloud/system-components: "true"
+      # podTolerations:
+      # - key: someKey
+      #   operator: Equal
+      #   value: someValue
+      #   effect: NoSchedule
+      #   tolerationSeconds: 300
       tokenInvalidator:
         enabled: false

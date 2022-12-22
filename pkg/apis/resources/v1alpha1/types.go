@@ -57,6 +57,9 @@ const (
 	// It is set by the ManagedResource controller depending on its configuration. By default it is set to "gardener".
 	ManagedBy = "resources.gardener.cloud/managed-by"
 
+	// GardenerManager is a constant for the default value of the 'ManagedBy' label.
+	GardenerManager = "gardener"
+
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
 	// be considered by this controller.
 	StaticTokenSkip = "token-invalidator.resources.gardener.cloud/skip"
@@ -134,6 +137,10 @@ const (
 	// SeccompProfileSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// defaulting of its seccomp profile.
 	SeccompProfileSkip = "seccompprofile.resources.gardener.cloud/skip"
+
+	// SystemComponentsConfigSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
+	// adding default node selector and tolerations.
+	SystemComponentsConfigSkip = "system-components-config.resources.gardener.cloud/skip"
 
 	// PodTopologySpreadConstraintsSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// adding the pod-template-hash selector to the topology spread constraint.

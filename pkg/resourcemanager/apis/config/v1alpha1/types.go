@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
@@ -231,6 +232,8 @@ type ResourceManagerWebhookConfiguration struct {
 	ExtensionValidation ExtensionValidation `json:"extensionValidation"`
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
+	// SystemComponentsConfig is the configuration for the system-components-config webhook.
+	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`
 	// PodTopologySpreadConstraints is the configuration for the pod-topology-spread-constraints webhook.
@@ -259,6 +262,21 @@ type ExtensionValidation struct {
 type HighAvailabilityConfigWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool `json:"enabled"`
+}
+
+// SystemComponentsConfigWebhookConfig is the configuration for the system-components-config webhook.
+type SystemComponentsConfigWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
+	// NodeSelector is the selector used to retrieve nodes that run system components.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// PodNodeSelector is the node selector that should be added to pods.
+	// +optional
+	PodNodeSelector map[string]string `json:"podNodeSelector,omitempty"`
+	// PodTolerations are the tolerations that should be added to pods.
+	// +optional
+	PodTolerations []corev1.Toleration `json:"podTolerations,omitempty"`
 }
 
 // PodSchedulerNameWebhookConfig is the configuration for the pod-scheduler-name webhook.

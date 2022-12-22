@@ -423,6 +423,9 @@ var _ = Describe("ResourceManager", func() {
 					SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 						Enabled: true,
 					},
+					SystemComponentsConfig: resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
+						Enabled: false,
+					},
 					TokenInvalidator: resourcemanagerconfigv1alpha1.TokenInvalidatorWebhookConfig{
 						Enabled: true,
 					},
@@ -442,6 +445,15 @@ var _ = Describe("ResourceManager", func() {
 				config.Webhooks.PodSchedulerName = resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
 					Enabled:       true,
 					SchedulerName: pointer.String("bin-packing-scheduler"),
+				}
+				config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
+					Enabled: true,
+					NodeSelector: map[string]string{
+						"worker.gardener.cloud/system-components": "true",
+					},
+					PodNodeSelector: map[string]string{
+						"worker.gardener.cloud/system-components": "true",
+					},
 				}
 			} else {
 				config.Webhooks.CRDDeletionProtection.Enabled = true
@@ -1142,6 +1154,38 @@ webhooks:
   name: pod-scheduler-name.resources.gardener.cloud
   namespaceSelector: {}
   objectSelector: {}
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/system-components-config
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: system-components-config.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: gardener.cloud/purpose
+      operator: In
+      values:
+      - kube-system
+      - kubernetes-dashboard
+  objectSelector:
+    matchExpressions:
+    - key: system-components-config.resources.gardener.cloud/skip
+      operator: DoesNotExist
+    matchLabels:
+      resources.gardener.cloud/managed-by: gardener
   rules:
   - apiGroups:
     - ""

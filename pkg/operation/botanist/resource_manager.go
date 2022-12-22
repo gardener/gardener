@@ -84,6 +84,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		SchedulingProfile:                    v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
+		SystemComponentTolerations:           gutil.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
 		KubernetesVersion:                    version,

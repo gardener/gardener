@@ -15,6 +15,7 @@
 package config
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 )
@@ -214,6 +215,8 @@ type ResourceManagerWebhookConfiguration struct {
 	ProjectedTokenMount ProjectedTokenMountWebhookConfig
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
 	SeccompProfile SeccompProfileWebhookConfig
+	// SystemComponentsConfig is the configuration for the system-components-config webhook.
+	SystemComponentsConfig SystemComponentsConfigWebhookConfig
 	// TokenInvalidator is the configuration for the token-invalidator webhook.
 	TokenInvalidator TokenInvalidatorWebhookConfig
 }
@@ -234,6 +237,18 @@ type ExtensionValidation struct {
 type HighAvailabilityConfigWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool
+}
+
+// SystemComponentsConfigWebhookConfig is the configuration for the system-components-config webhook.
+type SystemComponentsConfigWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool
+	// NodeSelector is the selector used to retrieve nodes that run system components.
+	NodeSelector map[string]string
+	// PodNodeSelector is the node selector that should be added to pods.
+	PodNodeSelector map[string]string
+	// PodTolerations are the tolerations that should be added to pods.
+	PodTolerations []corev1.Toleration
 }
 
 // PodSchedulerNameWebhookConfig is the configuration for the pod-scheduler-name webhook.
