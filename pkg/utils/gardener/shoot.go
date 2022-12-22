@@ -495,12 +495,19 @@ func GetShootSeedNames(obj client.Object) (*string, *string) {
 // ExtractSystemComponentsTolerations returns tolerations that are required to schedule shoot system components
 // on the given workers. Tolerations are only considered for workers which have `SystemComponents.Allow: true`.
 func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []corev1.Toleration {
-	tolerations := gsets.New[corev1.Toleration]()
+	var (
+		tolerations = gsets.New[corev1.Toleration]()
+
+		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
+		// before they are added to the tolerations set.
+		comparableTolerations = &kutil.ComparableTolerations{}
+	)
 
 	for _, worker := range workers {
 		if gardencorev1beta1helper.SystemComponentsAllowed(&worker) {
 			for _, taint := range worker.Taints {
-				tolerations.Insert(kutil.TolerationForTaint(taint))
+				toleration := kutil.TolerationForTaint(taint)
+				tolerations.Insert(comparableTolerations.Transform(toleration))
 			}
 		}
 	}

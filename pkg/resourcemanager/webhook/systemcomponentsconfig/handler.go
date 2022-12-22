@@ -81,16 +81,22 @@ func (h *Handler) handleTolerations(ctx context.Context, log logr.Logger, pod *c
 		return err
 	}
 
-	tolerations := gsets.New[corev1.Toleration]()
+	var (
+		tolerations = gsets.New[corev1.Toleration]()
+
+		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
+		// before they are added to the tolerations set.
+		comparableTolerations = &kutil.ComparableTolerations{}
+	)
 
 	// Add existing tolerations from pod to map.
 	for _, existingToleration := range pod.Spec.Tolerations {
-		tolerations = tolerations.Insert(existingToleration)
+		tolerations = tolerations.Insert(comparableTolerations.Transform(existingToleration))
 	}
 
 	// Add tolerations from webhook configuration to map.
 	for _, toleration := range h.PodTolerations {
-		tolerations = tolerations.Insert(toleration)
+		tolerations = tolerations.Insert(comparableTolerations.Transform(toleration))
 	}
 
 	// Add required tolerations for existing system component nodes.
@@ -101,7 +107,8 @@ func (h *Handler) handleTolerations(ctx context.Context, log logr.Logger, pod *c
 				log.Info("Kubernetes reserved taint is skipped for toleration calculation", "node", client.ObjectKeyFromObject(&node), "taint", taint.Key)
 				continue
 			}
-			tolerations = tolerations.Insert(kutil.TolerationForTaint(taint))
+			toleration := kutil.TolerationForTaint(taint)
+			tolerations = tolerations.Insert(comparableTolerations.Transform(toleration))
 		}
 	}
 

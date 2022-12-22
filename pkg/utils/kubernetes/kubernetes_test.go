@@ -24,13 +24,6 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockio "github.com/gardener/gardener/pkg/mock/go/io"
-
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -48,8 +41,16 @@ import (
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockio "github.com/gardener/gardener/pkg/mock/go/io"
 )
 
 var _ = Describe("kubernetes", func() {
@@ -1333,6 +1334,80 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 				Operator: corev1.TolerationOpExists,
 				Effect:   taint.Effect,
 			}))
+		})
+	})
+
+	Describe("#ComparableTolerations", func() {
+		var comparabelTolerations *ComparableTolerations
+
+		BeforeEach(func() {
+			comparabelTolerations = &ComparableTolerations{}
+		})
+
+		Describe("#Transform", func() {
+			It("should be equal if toleration seconds are not set", func() {
+				toleration := corev1.Toleration{
+					Key:      "someKey",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoExecute,
+				}
+
+				Expect(comparabelTolerations.Transform(toleration)).To(Equal(corev1.Toleration{
+					Key:      "someKey",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoExecute,
+				}))
+			})
+
+			It("should reuse pointer for same value", func() {
+				toleration1 := corev1.Toleration{
+					Key:               "someKey",
+					Operator:          corev1.TolerationOpEqual,
+					Value:             "someValue",
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: pointer.Int64(300),
+				}
+
+				toleration2 := corev1.Toleration{
+					Key:               "someKey",
+					Operator:          corev1.TolerationOpEqual,
+					Value:             "someValue",
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: pointer.Int64(300),
+				}
+
+				Expect(toleration1).ToNot(BeIdenticalTo(toleration2))
+
+				toleration1 = comparabelTolerations.Transform(toleration1)
+				toleration2 = comparabelTolerations.Transform(toleration2)
+
+				Expect(toleration1).To(BeIdenticalTo(toleration2))
+			})
+
+			It("should not be identical if different toleration seconds are used", func() {
+				toleration1 := corev1.Toleration{
+					Key:               "someKey",
+					Operator:          corev1.TolerationOpEqual,
+					Value:             "someValue",
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: pointer.Int64(299),
+				}
+
+				toleration2 := corev1.Toleration{
+					Key:               "someKey",
+					Operator:          corev1.TolerationOpEqual,
+					Value:             "someValue",
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: pointer.Int64(300),
+				}
+
+				toleration1 = comparabelTolerations.Transform(toleration1)
+				toleration2 = comparabelTolerations.Transform(toleration2)
+
+				Expect(toleration1).ToNot(BeIdenticalTo(toleration2))
+			})
 		})
 	})
 })

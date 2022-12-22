@@ -152,6 +152,47 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 
 				Expect(pod.Spec.Tolerations).To(ConsistOf(addKubernetesDefaultTolerations(expectedTolerations)))
 			})
+
+			Context("pods with tolerations", func() {
+				var existingTolerations []corev1.Toleration
+
+				BeforeEach(func() {
+					existingTolerations = []corev1.Toleration{
+						{
+							Key:               "existingKey",
+							Operator:          corev1.TolerationOpEqual,
+							Value:             "existingValue",
+							Effect:            corev1.TaintEffectNoExecute,
+							TolerationSeconds: pointer.Int64(10),
+						},
+						{
+							Key:               "existingKey",
+							Operator:          corev1.TolerationOpEqual,
+							Value:             "existingValue",
+							Effect:            corev1.TaintEffectNoExecute,
+							TolerationSeconds: pointer.Int64(10),
+						},
+					}
+
+					pod.Spec.Tolerations = existingTolerations
+				})
+
+				It("should add the node selector and configured tolerations and tolerate taints of existing nodes", func() {
+					Expect(testClient.Create(ctx, pod)).To(Succeed())
+					Expect(pod.Spec.NodeSelector).To(Equal(handlerNodeSelector))
+
+					expectedTolerations := make([]corev1.Toleration, 0, len(additionalTaintsPool1)+len(additionalTaintsPool2))
+					for _, taint := range additionalTaintsPool1 {
+						expectedTolerations = append(expectedTolerations, taintToToleration(taint))
+					}
+					for _, taint := range additionalTaintsPool2 {
+						expectedTolerations = append(expectedTolerations, taintToToleration(taint))
+					}
+					expectedTolerations = append(expectedTolerations, existingTolerations[0])
+
+					Expect(pod.Spec.Tolerations).To(ConsistOf(addKubernetesDefaultTolerations(expectedTolerations)))
+				})
+			})
 		})
 
 		Context("when pod skips handling", func() {
