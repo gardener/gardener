@@ -66,7 +66,9 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -216,6 +218,30 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 				Config:     cfg,
 				Result:     kubeconfigBootstrapResult,
 			},
+
+			// TODO(rfranzke): Remove this in a future version.
+			// Ensure all existing ETCD encryption secrets get the 'garbage-collectable' label. There was a bug which
+			// prevented this from happening, see https://github.com/gardener/gardener/pull/7244.
+			manager.RunnableFunc(func(ctx context.Context) error {
+				secretList := &corev1.SecretList{}
+				if err := mgr.GetClient().List(ctx, secretList, client.MatchingLabels{v1beta1constants.LabelRole: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration}); err != nil {
+					return err
+				}
+
+				var tasks []flow.TaskFn
+
+				for _, obj := range secretList.Items {
+					secret := obj
+
+					tasks = append(tasks, func(ctx context.Context) error {
+						patch := client.MergeFrom(secret.DeepCopy())
+						metav1.SetMetaDataLabel(&secret.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
+						return mgr.GetClient().Patch(ctx, &secret, patch)
+					})
+				}
+
+				return flow.Parallel(tasks...)(ctx)
+			}),
 		},
 		ActualRunnables: []manager.Runnable{
 			&garden{
