@@ -1244,6 +1244,7 @@ resources:
   - secrets
 `
 
+				By("Verify encryption config secret")
 				expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-configuration", Namespace: namespace},
 					Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
@@ -1256,7 +1257,7 @@ resources:
 				Expect(kapi.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
-				Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
+				Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: corev1.SchemeGroupVersion.String(),
 						Kind:       "Secret",
@@ -1274,6 +1275,15 @@ resources:
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 
+				By("Deploy again and ensure that labels are still present")
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+				Expect(actualSecretETCDEncryptionConfiguration.Labels).To(Equal(map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+					"role": "kube-apiserver-etcd-encryption-configuration",
+				}))
+
+				By("Verify encryption key secret")
 				secretList := &corev1.SecretList{}
 				Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 					"name":       "kube-apiserver-etcd-encryption-key",
