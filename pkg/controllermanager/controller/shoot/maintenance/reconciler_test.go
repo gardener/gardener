@@ -160,6 +160,9 @@ var _ = Describe("Shoot Maintenance", func() {
 					Name: "shoot",
 				},
 				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.25.1",
+					},
 					Maintenance: &gardencorev1beta1.Maintenance{
 						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 							MachineImageVersion: true,
@@ -363,6 +366,29 @@ var _ = Describe("Shoot Maintenance", func() {
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[2], "CoreOs", "1.1.1")
 		})
 
+		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint constraint (control plane K8s version)", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String("< 1.26")
+			shoot.Spec.Kubernetes.Version = "1.26.0"
+
+			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
+		})
+
+		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint constraint (worker K8s version)", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String(">= 1.26")
+			shoot.Spec.Kubernetes.Version = "1.26.0"
+			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+				Version: pointer.String("1.25.0"),
+			}
+
+			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
+		})
+
 		It("should determine that the shoot worker machine images must be maintained - cloud profile has no matching (machineImage.name & machineImage.version) machine image defined (the shoots image has been deleted from the cloudProfile) -> update to latest machineImage with same name", func() {
 			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
@@ -408,7 +434,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 
-			Expect(err).NotTo(BeNil())
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return an error - edge case: qualifying version from CloudProfile for machine image is lower than the Shoot's version. Should not downgrade shoot machine image version.", func() {
