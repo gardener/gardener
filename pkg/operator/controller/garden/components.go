@@ -18,6 +18,7 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -25,11 +26,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardensystem"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
+
+const namePrefix = "virtual-garden-"
 
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	return sharedcomponent.NewGardenerResourceManager(
@@ -147,7 +151,7 @@ func (r *Reconciler) newEtcd(
 		r.GardenNamespace,
 		secretsManager,
 		etcd.Values{
-			NamePrefix:              "virtual-garden-",
+			NamePrefix:              namePrefix,
 			Role:                    role,
 			Class:                   class,
 			Replicas:                pointer.Int32(1),
@@ -162,4 +166,27 @@ func (r *Reconciler) newEtcd(
 			},
 		},
 	), nil
+}
+
+func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden) component.DeployWaiter {
+	var annotations map[string]string
+	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
+		annotations = settings.LoadBalancerServices.Annotations
+	}
+
+	return kubeapiserverexposure.NewService(
+		log,
+		r.RuntimeClient,
+		&kubeapiserverexposure.ServiceValues{
+			AnnotationsFunc: func() map[string]string { return annotations },
+			SNIPhase:        component.PhaseDisabled,
+		},
+		func() client.ObjectKey {
+			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
+		},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 }

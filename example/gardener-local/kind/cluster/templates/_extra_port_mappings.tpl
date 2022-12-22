@@ -50,6 +50,13 @@
 {{- end -}}
 {{- end -}}
 
+{{- define "extraPortMappings.gardener.operator.virtualGarden" -}}
+{{- if .Values.gardener.garden.deployed -}}
+- containerPort: 31443
+  hostPort: 443
+{{- end -}}
+{{- end -}}
+
 {{- define "extraPortMappings.gardener.seed.nginx" -}}
 {{- if and .Values.gardener.controlPlane.deployed .Values.gardener.seed.deployed -}}
 - containerPort: 30448

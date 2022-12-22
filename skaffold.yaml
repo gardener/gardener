@@ -651,6 +651,7 @@ build:
         - pkg/chartrenderer
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
+        - pkg/controller/service
         - pkg/controllerutils
         - pkg/controllerutils/mapper
         - pkg/controllerutils/predicate

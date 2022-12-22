@@ -79,10 +79,22 @@ type Provider struct {
 
 // Settings contains certain settings for this cluster.
 type Settings struct {
+	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the runtime
+	// cluster.
+	// +optional
+	LoadBalancerServices *SettingLoadBalancerServices `json:"loadBalancerServices,omitempty"`
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
 	// cluster.
 	// +optional
 	VerticalPodAutoscaler *SettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty"`
+}
+
+// SettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
+// runtime cluster.
+type SettingLoadBalancerServices struct {
+	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the

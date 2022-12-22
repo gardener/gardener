@@ -15,15 +15,14 @@
 package service
 
 import (
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controller/service"
 )
 
 // ControllerName is the name of the controller.
@@ -51,22 +50,8 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
-	opts.Controller.Reconciler = &reconciler{
-		hostIP:  opts.HostIP,
-		zone0IP: opts.Zone0IP,
-		zone1IP: opts.Zone1IP,
-		zone2IP: opts.Zone2IP,
-	}
-	opts.Controller.RecoverPanic = true
-
-	ctrl, err := controller.New(ControllerName, mgr, opts.Controller)
-	if err != nil {
-		return err
-	}
-
-	istioIngressGatewayPredicates := []predicate.Predicate{}
-	zone0, zone1, zone2 := "0", "1", "2"
-	for _, zone := range []*string{nil, &zone0, &zone1, &zone2} {
+	var istioIngressGatewayPredicates []predicate.Predicate
+	for _, zone := range []*string{nil, pointer.String("0"), pointer.String("1"), pointer.String("2")} {
 		predicate, err := predicate.LabelSelectorPredicate(
 			metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(opts.APIServerSNIEnabled, zone)},
 		)
@@ -84,9 +69,12 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		return err
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForObject{},
-		predicate.Or(nginxIngressPredicate, predicate.Or(istioIngressGatewayPredicates...)),
-	)
+	return (&service.Reconciler{
+		HostIP:  opts.HostIP,
+		Zone0IP: opts.Zone0IP,
+		Zone1IP: opts.Zone1IP,
+		Zone2IP: opts.Zone2IP,
+	}).AddToManager(mgr, predicate.Or(nginxIngressPredicate, predicate.Or(istioIngressGatewayPredicates...)))
 }
 
 // AddToManager adds a controller with the default Options.

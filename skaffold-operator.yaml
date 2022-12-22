@@ -53,6 +53,7 @@ build:
         - pkg/chartrenderer
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
+        - pkg/controller/service
         - pkg/controllerutils
         - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
@@ -69,6 +70,7 @@ build:
         - pkg/operation/botanist/component/gardensystem
         - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/kubeapiserver
+        - pkg/operation/botanist/component/kubeapiserverexposure
         - pkg/operation/botanist/component/kubescheduler
         - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/resourcemanager
@@ -234,5 +236,8 @@ deploy:
           - name: gardener-resource-manager
             repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
             tag: "{{.IMAGE_TAG2}}"
+        env:
+        - name: GARDENER_OPERATOR_LOCAL
+          value: "true"
       imageStrategy:
         helm: {}

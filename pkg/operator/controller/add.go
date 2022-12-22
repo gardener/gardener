@@ -19,9 +19,13 @@ import (
 	"os"
 	"path/filepath"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gardener/gardener/charts"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -55,6 +59,20 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 		ComponentImageVectors: componentImageVectors,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Garden controller: %w", err)
+	}
+
+	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {
+		virtualGardenKubeAPIServerPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{
+			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+			v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+		}})
+		if err != nil {
+			return err
+		}
+
+		if err := (&service.Reconciler{}).AddToManager(mgr, virtualGardenKubeAPIServerPredicate); err != nil {
+			return fmt.Errorf("failed adding Service controller: %w", err)
+		}
 	}
 
 	return nil
