@@ -52,24 +52,22 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
-		r.GardenSecretPredicate(),
-		r.SecretPredicate(),
-	)
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, mgr.GetLogger()),
+			builder.WithPredicates(
+				r.GardenSecretPredicate(),
+				r.SecretPredicate(),
+			),
+		).
+		Complete(r)
 }
 
 var (

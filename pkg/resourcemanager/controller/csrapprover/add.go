@@ -41,24 +41,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		r.TargetClient = targetCluster.GetClient()
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, targetCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-		predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			csr, ok := obj.(*certificatesv1.CertificateSigningRequest)
-			return ok && csr.Spec.SignerName == certificatesv1.KubeletServingSignerName
-		}),
-	)
+		Watches(
+			source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, targetCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					csr, ok := obj.(*certificatesv1.CertificateSigningRequest)
+					return ok && csr.Spec.SignerName == certificatesv1.KubeletServingSignerName
+				}),
+			),
+		).Complete(r)
 }

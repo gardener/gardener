@@ -64,17 +64,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
-		Build(r)
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				predicateutils.HasName(r.SeedName),
+				r.SeedPredicate()),
+		).Build(r)
 	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicateutils.HasName(r.SeedName),
-		r.SeedPredicate(),
-	); err != nil {
 		return err
 	}
 

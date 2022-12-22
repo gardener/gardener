@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -60,13 +59,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	r.Lock = &sync.RWMutex{}
 	r.KindToRequiredTypes = make(map[string]sets.String)
 
-	c, err := builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		WithOptions(controller.Options{
+	c, err := controller.New(
+		ControllerName,
+		mgr,
+		controller.Options{
+			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		}).
-		Build(r)
+		},
+	)
 	if err != nil {
 		return err
 	}

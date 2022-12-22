@@ -64,30 +64,24 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
+		Watches(
+			&source.Kind{Type: &gardencorev1beta1.Shoot{}},
+			&handler.EnqueueRequestForOwner{
+				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
+				IsController: true,
+			},
+			builder.WithPredicates(r.ShootPredicate()),
+		).
+		Watches(
+			&source.Kind{Type: &seedmanagementv1alpha1.ManagedSeed{}},
+			&handler.EnqueueRequestForOwner{
+				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
+				IsController: true,
+			},
+			builder.WithPredicates(r.ManagedSeedPredicate()),
+		).
 		Build(r)
 	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-		&handler.EnqueueRequestForOwner{
-			OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
-			IsController: true,
-		},
-		r.ShootPredicate(),
-	); err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		&source.Kind{Type: &seedmanagementv1alpha1.ManagedSeed{}},
-		&handler.EnqueueRequestForOwner{
-			OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
-			IsController: true,
-		},
-		r.ManagedSeedPredicate(),
-	); err != nil {
 		return err
 	}
 

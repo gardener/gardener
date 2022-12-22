@@ -46,23 +46,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		r.SeedClient = seedCluster.GetClient()
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(fmt.Sprintf("%s-%s", ControllerName, r.ObjectKind)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(r.NewObjectFunc(), seedCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		r.ObjectPredicate(),
-		r.InvalidOperationAnnotationPredicate(),
-	)
+		Watches(
+			source.NewKindWithCache(r.NewObjectFunc(), seedCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				r.ObjectPredicate(),
+				r.InvalidOperationAnnotationPredicate(),
+			),
+		).
+		Complete(r)
 }
 
 // ObjectPredicate returns true for 'create' and 'update' events. For updates, it only returns true when the extension

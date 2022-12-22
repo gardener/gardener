@@ -47,23 +47,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.ControllerInstallation{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		r.ControllerInstallationPredicate(),
-		r.HelmTypePredicate(gardenCluster.GetClient()),
-	)
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.ControllerInstallation{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				r.ControllerInstallationPredicate(),
+				r.HelmTypePredicate(gardenCluster.GetClient()),
+			),
+		).
+		Complete(r)
 }
 
 // ControllerInstallationPredicate returns a predicate that evaluates to true in all cases except for 'Update' events.

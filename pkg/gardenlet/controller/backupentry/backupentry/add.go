@@ -70,17 +70,16 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 
 			RateLimiter: r.RateLimiter,
 		}).
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
+			controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
+			builder.WithPredicates(
+				&predicate.GenerationChangedPredicate{},
+				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
+			),
+		).
 		Build(r)
 	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
-		controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
-		&predicate.GenerationChangedPredicate{},
-		predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
-	); err != nil {
 		return err
 	}
 

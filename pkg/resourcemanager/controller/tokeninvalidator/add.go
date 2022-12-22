@@ -49,6 +49,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.TargetClient = targetCluster.GetClient()
 	}
 
+	secret := &metav1.PartialObjectMetadata{}
+	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
+
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -56,19 +59,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 			MaxConcurrentReconciles: 1,
 			RateLimiter:             r.RateLimiter,
 		}).
+		Watches(
+			source.NewKindWithCache(secret, targetCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(r.SecretPredicate()),
+		).
 		Build(r)
 	if err != nil {
-		return err
-	}
-
-	secret := &metav1.PartialObjectMetadata{}
-	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
-
-	if err := c.Watch(
-		source.NewKindWithCache(secret, targetCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		r.SecretPredicate(),
-	); err != nil {
 		return err
 	}
 

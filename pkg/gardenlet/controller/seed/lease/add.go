@@ -45,22 +45,20 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.LeaseNamespace = gardencorev1beta1.GardenerSeedLeaseNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 			RateLimiter:             workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicateutils.HasName(r.SeedName),
-		predicateutils.ForEventTypes(predicateutils.Create),
-	)
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				predicateutils.HasName(r.SeedName),
+				predicateutils.ForEventTypes(predicateutils.Create),
+			),
+		).
+		Complete(r)
 }

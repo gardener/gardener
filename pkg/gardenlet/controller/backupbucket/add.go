@@ -59,7 +59,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -67,25 +67,20 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 
 			RateLimiter: r.RateLimiter,
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
-		controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
-		&predicate.GenerationChangedPredicate{},
-		r.SeedNamePredicate(),
-	); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&extensionsv1alpha1.BackupBucket{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.ExtensionStatusChanged(),
-	)
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
+			controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
+			builder.WithPredicates(
+				&predicate.GenerationChangedPredicate{},
+				r.SeedNamePredicate(),
+			),
+		).
+		Watches(
+			source.NewKindWithCache(&extensionsv1alpha1.BackupBucket{}, seedCluster.GetCache()),
+			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, logr.Discard()),
+			builder.WithPredicates(predicateutils.ExtensionStatusChanged()),
+		).
+		Complete(r)
 }
 
 // SeedNamePredicate returns a predicate which returns true when the object belongs to this seed.

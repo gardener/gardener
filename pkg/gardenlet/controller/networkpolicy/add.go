@@ -72,22 +72,19 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
+		Watches(
+			source.NewKindWithCache(&corev1.Namespace{}, seedCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
+		).
 		Build(r)
 	if err != nil {
 		return err
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(&corev1.Namespace{}, seedCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-	); err != nil {
-		return err
-	}
-
-	if err := c.Watch(
 		source.NewKindWithCache(&corev1.Endpoints{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, mgr.GetLogger()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 		r.IsKubernetesEndpoint(),
 	); err != nil {
 		return err
@@ -95,7 +92,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 
 	if err := c.Watch(
 		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, mgr.GetLogger()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
 		r.NetworkPolicyPredicate(),
 	); err != nil {
 		return err
@@ -103,7 +100,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 
 	return c.Watch(
 		&source.Channel{Source: r.ResolverUpdate},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, mgr.GetLogger()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 	)
 }
 

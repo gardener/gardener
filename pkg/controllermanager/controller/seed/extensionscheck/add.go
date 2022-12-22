@@ -46,7 +46,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -55,25 +55,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.RelevantConditionsChanged(
-			func(obj client.Object) []gardencorev1beta1.Condition {
-				controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-				if !ok {
-					return nil
-				}
-				return controllerInstallation.Status.Conditions
-			},
-			conditionsToCheck...,
-		),
-	)
+		Watches(
+			&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
+			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, logr.Discard()),
+			builder.WithPredicates(predicateutils.RelevantConditionsChanged(
+				func(obj client.Object) []gardencorev1beta1.Condition {
+					controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+					if !ok {
+						return nil
+					}
+					return controllerInstallation.Status.Conditions
+				},
+				conditionsToCheck...,
+			)),
+		).
+		Complete(r)
 }
 
 // MapControllerInstallationToSeed is a mapper.MapFunc for mapping a ControllerInstallation to the referenced Seed.

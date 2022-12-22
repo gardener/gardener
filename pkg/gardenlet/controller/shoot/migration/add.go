@@ -42,21 +42,19 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		&predicate.GenerationChangedPredicate{},
-		predicateutils.IsBeingMigratedPredicate(r.GardenClient, r.SeedName, gardenerutils.GetShootSeedNames),
-	)
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				&predicate.GenerationChangedPredicate{},
+				predicateutils.IsBeingMigratedPredicate(r.GardenClient, r.SeedName, gardenerutils.GetShootSeedNames),
+			),
+		).
+		Complete(r)
 }

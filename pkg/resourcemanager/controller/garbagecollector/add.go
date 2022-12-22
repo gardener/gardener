@@ -41,16 +41,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.MinimumObjectLifetime = pointer.Duration(10 * time.Minute)
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(controllerutils.EnqueueOnce, nil)
+		Watches(controllerutils.EnqueueOnce, nil).
+		Complete(r)
 }

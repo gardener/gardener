@@ -47,7 +47,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -56,16 +56,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.BackupBucket{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.BackupBucketPredicate(),
-	)
+		Watches(
+			&source.Kind{Type: &gardencorev1beta1.BackupBucket{}},
+			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, mgr.GetLogger()),
+			builder.WithPredicates(r.BackupBucketPredicate()),
+		).
+		Complete(r)
 }
 
 // BackupBucketPredicate reacts only on 'CREATE' and 'UPDATE' events. It returns false if .spec.seedName == nil. For

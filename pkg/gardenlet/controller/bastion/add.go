@@ -62,16 +62,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 
 			RateLimiter: r.RateLimiter,
 		}).
+		Watches(
+			source.NewKindWithCache(&operationsv1alpha1.Bastion{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
 		Build(r)
 	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&operationsv1alpha1.Bastion{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicate.GenerationChangedPredicate{},
-	); err != nil {
 		return err
 	}
 

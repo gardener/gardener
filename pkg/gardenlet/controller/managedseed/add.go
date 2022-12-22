@@ -93,31 +93,24 @@ func (r *Reconciler) AddToManager(
 		)
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&seedmanagementv1alpha1.ManagedSeed{}, gardenCluster.GetCache()),
-		r.EnqueueWithJitterDelay(),
-		r.ManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
-		&predicate.GenerationChangedPredicate{},
-	); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.SeedOfManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
-	)
+		Watches(
+			source.NewKindWithCache(&seedmanagementv1alpha1.ManagedSeed{}, gardenCluster.GetCache()),
+			r.EnqueueWithJitterDelay(),
+			builder.WithPredicates(r.ManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
+				&predicate.GenerationChangedPredicate{},
+			),
+		).
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, logr.Discard()),
+			builder.WithPredicates(r.SeedOfManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name)),
+		).Complete(r)
 }
 
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.

@@ -47,7 +47,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -56,17 +56,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
-		r.EventHandler(),
-		predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetShootSeedNames),
-		r.ShootPredicate(),
-	)
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+			r.EventHandler(),
+			builder.WithPredicates(
+				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetShootSeedNames),
+				r.ShootPredicate(),
+			),
+		).
+		Complete(r)
 }
 
 // RandomDurationWithMetaDuration is an alias for utils.RandomDurationWithMetaDuration.
