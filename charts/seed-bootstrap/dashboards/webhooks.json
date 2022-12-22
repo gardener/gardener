@@ -146,7 +146,7 @@
               }
             ]
           },
-          "unit": "ops"
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -201,7 +201,7 @@
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 0,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -226,7 +226,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -280,7 +280,7 @@
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 30,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -428,7 +428,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Latency (${percentile}th Percentile)",
+      "title": "Latency (P${percentile})",
       "type": "timeseries"
     }
   ],
@@ -456,7 +456,7 @@
         "options": [],
         "query": "prometheus",
         "queryValue": "",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"

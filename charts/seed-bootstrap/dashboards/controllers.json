@@ -1168,7 +1168,7 @@
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 30,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -1249,7 +1249,7 @@
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 30,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -1325,7 +1325,7 @@
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 30,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -1513,7 +1513,7 @@
         "options": [],
         "query": "prometheus",
         "queryValue": "",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"

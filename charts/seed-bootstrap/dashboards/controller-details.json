@@ -319,7 +319,7 @@
     },
     {
       "datasource": "${datasource}",
-      "description": "Shows the length per reconciliation per controller by pod.",
+      "description": "Shows percentiles of the reconciliation duration.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1332,7 +1332,7 @@
         "options": [],
         "query": "prometheus",
         "queryValue": "",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
@@ -1389,7 +1389,7 @@
           "query": "label_values(controller_runtime_reconcile_total{job=\"$job\"}, controller)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -1420,7 +1420,7 @@
           "query": "label_values(controller_runtime_reconcile_total{job=\"$job\",controller=\"$controller\"}, pod)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -1437,7 +1437,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "browser",
+  "timezone": "",
   "title": "Controller Runtime / Controller Details",
   "uid": "controller-details",
   "version": 1

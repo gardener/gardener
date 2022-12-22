@@ -1168,7 +1168,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "",
   "title": "Machine Controller Manager",
   "uid": "machine-controller-manager",
   "version": 1

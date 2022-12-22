@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 21,
-  "iteration": 1671602027286,
+  "id": 16,
+  "iteration": 1671693595616,
   "links": [],
   "panels": [
     {
@@ -48,7 +48,7 @@
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 0,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": {
               "graph": false,
               "legend": false,
@@ -110,7 +110,86 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Request rate for code: \"$code\" by pod",
+      "title": "Request Rate by pod",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "${datasource}",
+      "description": "Shows the total number of admission requests being served.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "max",
+            "mean",
+            "last"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltipOptions": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(controller_runtime_webhook_requests_total{job=\"$job\",webhook=\"$webhook\",code=~\"$code\",pod=~\"$pod\"}[$__rate_interval])) by (code)",
+          "interval": "",
+          "legendFormat": "{{code}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Request Rate by code",
       "type": "timeseries"
     },
     {
@@ -161,7 +240,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 19
       },
       "id": 4,
       "options": {
@@ -241,7 +320,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 28
       },
       "id": 6,
       "options": {
@@ -315,7 +394,7 @@
         "options": [],
         "query": "prometheus",
         "queryValue": "",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
