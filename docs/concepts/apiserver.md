@@ -15,7 +15,7 @@ After registration, it exposes the following resources:
 Each shoot has to reference a `CloudProfile` to declare the environment it should be created in.
 In a `CloudProfile`, the gardener operator specifies certain constraints like available machine types, regions, which Kubernetes versions they want to offer, etc.
 End-users can read `CloudProfile`s to see these values, but only operators can change the content or create/delete them.
-When a shoot is created or updated, then an admission plugin checkso that nly values that are allowed are used via the referenced `CloudProfile`.
+When a shoot is created or updated, then an admission plugin checks that only values that are allowed are used via the referenced `CloudProfile`.
 
 Additionally, a `CloudProfile` may contain a `providerConfig`, which is a special configuration dedicated for the infrastructure provider.
 Gardener does not evaluate or understand this config, but extension controllers might need it for declaration of provider-specific constraints, or global settings.
