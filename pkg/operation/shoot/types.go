@@ -109,6 +109,7 @@ type Components struct {
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
 	HVPA                     component.MonitoringComponent
+	Addons                   *Addons
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -162,6 +163,11 @@ type SystemComponents struct {
 type Logging struct {
 	ShootRBACProxy   component.Deployer
 	ShootEventLogger component.Deployer
+}
+
+// Addons contains references for the addons.
+type Addons struct {
+	KubernetesDashboard component.Deployer
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.
