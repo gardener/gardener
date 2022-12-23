@@ -2068,6 +2068,11 @@ message SeedNetworks {
   // ShootDefaults contains the default networks CIDRs for shoots.
   // +optional
   optional ShootNetworks shootDefaults = 4;
+
+  // IPFamilies specifies the IP families to use for seed networking. This field is immutable.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+  // +optional
+  repeated string ipFamilies = 5;
 }
 
 // SeedProvider defines the provider-specific information of this Seed cluster.

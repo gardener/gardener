@@ -181,6 +181,10 @@ type SeedNetworks struct {
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	// +optional
 	ShootDefaults *ShootNetworks `json:"shootDefaults,omitempty" protobuf:"bytes,4,opt,name=shootDefaults"`
+	// IPFamilies specifies the IP families to use for seed networking. This field is immutable.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+	// +optional
+	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,5,rep,name=ipFamilies,casttype=IPFamily"`
 }
 
 // ShootNetworks contains the default networks CIDRs for shoots.

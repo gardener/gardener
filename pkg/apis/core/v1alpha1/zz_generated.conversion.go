@@ -4798,6 +4798,7 @@ func autoConvert_v1alpha1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, ou
 	out.Pods = in.Pods
 	out.Services = in.Services
 	out.ShootDefaults = (*core.ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
+	out.IPFamilies = *(*[]core.IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 
@@ -4807,6 +4808,7 @@ func autoConvert_core_SeedNetworks_To_v1alpha1_SeedNetworks(in *core.SeedNetwork
 	out.Services = in.Services
 	out.ShootDefaults = (*ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	// WARNING: in.BlockCIDRs requires manual conversion: does not exist in peer-type
+	out.IPFamilies = *(*[]IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 

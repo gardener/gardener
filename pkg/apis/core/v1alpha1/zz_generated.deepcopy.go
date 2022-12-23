@@ -3560,6 +3560,11 @@ func (in *SeedNetworks) DeepCopyInto(out *SeedNetworks) {
 		*out = new(ShootNetworks)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.IPFamilies != nil {
+		in, out := &in.IPFamilies, &out.IPFamilies
+		*out = make([]IPFamily, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

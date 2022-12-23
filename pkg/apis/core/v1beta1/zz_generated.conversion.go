@@ -4594,6 +4594,7 @@ func autoConvert_v1beta1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, out
 	out.Services = in.Services
 	out.ShootDefaults = (*core.ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	out.BlockCIDRs = *(*[]string)(unsafe.Pointer(&in.BlockCIDRs))
+	out.IPFamilies = *(*[]core.IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 
@@ -4608,6 +4609,7 @@ func autoConvert_core_SeedNetworks_To_v1beta1_SeedNetworks(in *core.SeedNetworks
 	out.Services = in.Services
 	out.ShootDefaults = (*ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	out.BlockCIDRs = *(*[]string)(unsafe.Pointer(&in.BlockCIDRs))
+	out.IPFamilies = *(*[]IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 

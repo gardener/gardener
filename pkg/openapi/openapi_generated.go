@@ -6253,6 +6253,21 @@ func schema_pkg_apis_core_v1alpha1_SeedNetworks(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks"),
 						},
 					},
+					"ipFamilies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPFamilies specifies the IP families to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"pods", "services"},
 			},
@@ -13610,6 +13625,21 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 					"blockCIDRs": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running in the seed cluster.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"ipFamilies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPFamilies specifies the IP families to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

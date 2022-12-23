@@ -174,6 +174,8 @@ type SeedNetworks struct {
 	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
 	// in the seed cluster.
 	BlockCIDRs []string
+	// IPFamilies specifies the IP families to use for seed networking. This field is immutable.
+	IPFamilies []IPFamily
 }
 
 // ShootNetworks contains the default networks CIDRs for shoots.

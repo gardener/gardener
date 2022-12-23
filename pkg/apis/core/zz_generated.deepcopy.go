@@ -3566,6 +3566,11 @@ func (in *SeedNetworks) DeepCopyInto(out *SeedNetworks) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.IPFamilies != nil {
+		in, out := &in.IPFamilies, &out.IPFamilies
+		*out = make([]IPFamily, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
