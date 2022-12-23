@@ -32,6 +32,8 @@ kind: Network
 metadata:
   name: my-network
 spec:
+  ipFamilies:
+  - IPv4
   podCIDR: 100.244.0.0/16
   serviceCIDR: 100.32.0.0/13
   type: calico
@@ -62,6 +64,8 @@ kind: Network
 metadata:
   name: my-network
 spec:
+  ipFamilies:
+  - IPv4
   podCIDR: 100.244.0.0/16
   serviceCIDR: 100.32.0.0/13
   type: gardenet

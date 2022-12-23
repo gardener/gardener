@@ -57,6 +57,14 @@ spec:
             description: Specification of the Network. If the object's deletion timestamp
               is set, this field is immutable.
             properties:
+              ipFamilies:
+                description: IPFamilies specifies the IP families to use for shoot
+                  networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+                items:
+                  description: IPFamily is a type for specifying IP families to use
+                    in Gardener clusters.
+                  type: string
+                type: array
               podCIDR:
                 description: PodCIDR defines the CIDR that will be used for pods.
                   This field is immutable.

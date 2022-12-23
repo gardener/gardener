@@ -1304,6 +1304,11 @@ func (in *NetworkList) DeepCopyObject() runtime.Object {
 func (in *NetworkSpec) DeepCopyInto(out *NetworkSpec) {
 	*out = *in
 	in.DefaultSpec.DeepCopyInto(&out.DefaultSpec)
+	if in.IPFamilies != nil {
+		in, out := &in.IPFamilies, &out.IPFamilies
+		*out = make([]IPFamily, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
