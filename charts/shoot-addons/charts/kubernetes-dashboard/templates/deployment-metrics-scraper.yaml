@@ -1,63 +1,9 @@
+# TODO(acumino): Delete this Helm chart in a future version.
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: dashboard-metrics-scraper
   namespace: kubernetes-dashboard
-  labels:
-    gardener.cloud/role: optional-addon
-    origin: gardener
-    k8s-app: dashboard-metrics-scraper
-spec:
-  revisionHistoryLimit: 1
-  replicas: 1
-  selector:
-    matchLabels:
-      k8s-app: dashboard-metrics-scraper
-  template:
-    metadata:
-      labels:
-        gardener.cloud/role: optional-addon
-        k8s-app: dashboard-metrics-scraper
-        origin: gardener
-      annotations:
-        {{- if semverCompare "<= 1.22.x" .Capabilities.KubeVersion.GitVersion }}
-        seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
-        {{- end }}
-    spec:
-      containers:
-      - name: dashboard-metrics-scraper
-        image: {{ index .Values.images "kubernetes-dashboard-metrics-scraper" }}
-        ports:
-          - containerPort: 8000
-            protocol: TCP
-        livenessProbe:
-          httpGet:
-            scheme: HTTP
-            path: /
-            port: 8000
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
-        volumeMounts:
-        - mountPath: /tmp
-          name: tmp-volume
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsUser: 1001
-          runAsGroup: 2001
-      securityContext:
-        {{- if semverCompare "> 1.22.x" .Capabilities.KubeVersion.GitVersion }}
-        seccompProfile:
-          type: RuntimeDefault
-        {{- end }}
-        fsGroup: 1
-        supplementalGroups:
-        - 1
-      serviceAccountName: kubernetes-dashboard
-      nodeSelector:
-        kubernetes.io/os: linux
-        worker.gardener.cloud/system-components: "true"
-      volumes:
-      - name: tmp-volume
-        emptyDir: {}
+  annotations:
+    resources.gardener.cloud/mode: Ignore

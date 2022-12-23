@@ -1,6 +1,7 @@
+# TODO(acumino): Delete this Helm chart in a future version.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: kubernetes-dashboard
-  labels:
-    gardener.cloud/purpose: kubernetes-dashboard
+  annotations:
+    resources.gardener.cloud/mode: Ignore

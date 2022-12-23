@@ -1,8 +1,9 @@
+# TODO(acumino): Delete this Helm chart in a future version.
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
   name: kubernetes-dashboard-settings
   namespace: kubernetes-dashboard
-  labels:
-    k8s-app: kubernetes-dashboard
+  annotations:
+    resources.gardener.cloud/mode: Ignore

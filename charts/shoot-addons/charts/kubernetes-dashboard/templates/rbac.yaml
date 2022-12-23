@@ -1,63 +1,29 @@
+# TODO(acumino): Delete this Helm chart in a future version.
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: Role
 metadata:
   name: kubernetes-dashboard
-  namespace: {{ include "kubernetes-dashboard.namespace" . }}
-  labels:
-    k8s-app: kubernetes-dashboard
-rules:
-# Allow Dashboard to get, update and delete Dashboard exclusive secrets.
-- apiGroups: [""]
-  resources: ["secrets"]
-  resourceNames: ["kubernetes-dashboard-key-holder", "kubernetes-dashboard-certs", "kubernetes-dashboard-csrf"]
-  verbs: ["get", "update", "delete"]
-  # Allow Dashboard to get and update 'kubernetes-dashboard-settings' config map.
-- apiGroups: [""]
-  resources: ["configmaps"]
-  resourceNames: ["kubernetes-dashboard-settings"]
-  verbs: ["get", "update"]
-  # Allow Dashboard to get metrics.
-- apiGroups: [""]
-  resources: ["services"]
-  resourceNames: ["heapster", "dashboard-metrics-scraper"]
-  verbs: ["proxy"]
-- apiGroups: [""]
-  resources: ["services/proxy"]
-  resourceNames: ["heapster", "http:heapster:", "https:heapster:", "dashboard-metrics-scraper", "http:dashboard-metrics-scraper"]
-  verbs: ["get"]
+  namespace: kubernetes-dashboard
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
   name: kubernetes-dashboard
-  namespace: {{ include "kubernetes-dashboard.namespace" . }}
-  labels:
-    k8s-app: kubernetes-dashboard
+  namespace: kubernetes-dashboard
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: kubernetes-dashboard
-subjects:
-- kind: ServiceAccount
-  name: kubernetes-dashboard
-  namespace: {{ include "kubernetes-dashboard.namespace" . }}
+    resources.gardener.cloud/mode: Ignore
 
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: kubernetes-dashboard
-  labels:
-    k8s-app: kubernetes-dashboard
-rules:
-# Allow Metrics Scraper to get metrics from the Metrics server
-- apiGroups: ["metrics.k8s.io"]
-  resources: ["pods", "nodes"]
-  verbs: ["get", "list", "watch"]
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 
 ---
 apiVersion: {{ include "rbacversion" . }}
@@ -65,12 +31,4 @@ kind: ClusterRoleBinding
 metadata:
   name: kubernetes-dashboard
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kubernetes-dashboard
-subjects:
-- kind: ServiceAccount
-  name: kubernetes-dashboard
-  namespace: {{ include "kubernetes-dashboard.namespace" . }}
+    resources.gardener.cloud/mode: Ignore
