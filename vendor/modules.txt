@@ -13,8 +13,8 @@ github.com/Masterminds/sprig
 # github.com/NYTimes/gziphandler v1.1.1
 ## explicit; go 1.11
 github.com/NYTimes/gziphandler
-# github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
-## explicit
+# github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
+## explicit; go 1.15
 github.com/ahmetb/gen-crd-api-reference-docs
 # github.com/antlr/antlr4/runtime/Go/antlr v1.4.10
 ## explicit; go 1.16
