@@ -2620,6 +2620,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.networking.type"),
 				}))))
 			})
+
+			It("should fail updating immutable fields", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+
+				newShoot := prepareShootForUpdate(shoot)
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networking.ipFamilies"),
+					"Detail": ContainSubstring(`field is immutable`),
+				}))
+			})
 		})
 
 		Context("maintenance section", func() {

@@ -104,32 +104,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		allErrs = append(allErrs, validateSecretReference(*seedSpec.SecretRef, fldPath.Child("secretRef"))...)
 	}
 
-	networksPath := fldPath.Child("networks")
-
-	var networks []cidrvalidation.CIDR
-	if !inTemplate || len(seedSpec.Networks.Pods) > 0 {
-		networks = append(networks, cidrvalidation.NewCIDR(seedSpec.Networks.Pods, networksPath.Child("pods")))
-	}
-	if !inTemplate || len(seedSpec.Networks.Services) > 0 {
-		networks = append(networks, cidrvalidation.NewCIDR(seedSpec.Networks.Services, networksPath.Child("services")))
-	}
-	if seedSpec.Networks.Nodes != nil {
-		networks = append(networks, cidrvalidation.NewCIDR(*seedSpec.Networks.Nodes, networksPath.Child("nodes")))
-	}
-	if shootDefaults := seedSpec.Networks.ShootDefaults; shootDefaults != nil {
-		if shootDefaults.Pods != nil {
-			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Pods, networksPath.Child("shootDefaults", "pods")))
-		}
-		if shootDefaults.Services != nil {
-			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Services, networksPath.Child("shootDefaults", "services")))
-		}
-	}
-
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(networks...)...)
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
-
-	vpnRange := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRange, field.NewPath(""))
-	allErrs = append(allErrs, vpnRange.ValidateNotOverlap(networks...)...)
+	allErrs = append(allErrs, validateSeedNetworks(seedSpec.Networks, fldPath.Child("networks"), inTemplate)...)
 
 	if seedSpec.Backup != nil {
 		if len(seedSpec.Backup.Provider) == 0 {
@@ -256,15 +231,47 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	return allErrs
 }
 
+func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, inTemplate bool) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if errs := ValidateIPFamilies(seedNetworks.IPFamilies, fldPath.Child("ipFamilies")); len(errs) > 0 {
+		// further validation doesn't make any sense, because we don't know which IP family to check for in the CIDR fields
+		return append(allErrs, errs...)
+	}
+
+	var networks []cidrvalidation.CIDR
+	if !inTemplate || len(seedNetworks.Pods) > 0 {
+		networks = append(networks, cidrvalidation.NewCIDR(seedNetworks.Pods, fldPath.Child("pods")))
+	}
+	if !inTemplate || len(seedNetworks.Services) > 0 {
+		networks = append(networks, cidrvalidation.NewCIDR(seedNetworks.Services, fldPath.Child("services")))
+	}
+	if seedNetworks.Nodes != nil {
+		networks = append(networks, cidrvalidation.NewCIDR(*seedNetworks.Nodes, fldPath.Child("nodes")))
+	}
+	if shootDefaults := seedNetworks.ShootDefaults; shootDefaults != nil {
+		if shootDefaults.Pods != nil {
+			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Pods, fldPath.Child("shootDefaults", "pods")))
+		}
+		if shootDefaults.Services != nil {
+			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Services, fldPath.Child("shootDefaults", "services")))
+		}
+	}
+
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(networks...)...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
+
+	vpnRange := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRange, field.NewPath(""))
+	allErrs = append(allErrs, vpnRange.ValidateNotOverlap(networks...)...)
+
+	return allErrs
+}
+
 // ValidateSeedSpecUpdate validates the specification updates of a Seed object.
 func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Pods, oldSeedSpec.Networks.Pods, fldPath.Child("networks", "pods"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Services, oldSeedSpec.Networks.Services, fldPath.Child("networks", "services"))...)
-	if oldSeedSpec.Networks.Nodes != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Nodes, oldSeedSpec.Networks.Nodes, fldPath.Child("networks", "nodes"))...)
-	}
+	allErrs = append(allErrs, validateSeedNetworksUpdate(newSeedSpec.Networks, oldSeedSpec.Networks, fldPath.Child("networks"))...)
 
 	if oldSeedSpec.DNS.IngressDomain != nil && newSeedSpec.DNS.IngressDomain != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(*newSeedSpec.DNS.IngressDomain, *oldSeedSpec.DNS.IngressDomain, fldPath.Child("dns", "ingressDomain"))...)
@@ -288,6 +295,20 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		}
 	}
 	// If oldSeedSpec doesn't have backup configured, we allow to add it; but not the vice versa.
+
+	return allErrs
+}
+
+func validateSeedNetworksUpdate(newSeedNetworks, oldSeedNetworks core.SeedNetworks, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedNetworks.IPFamilies, oldSeedNetworks.IPFamilies, fldPath.Child("ipFamilies"))...)
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedNetworks.Pods, oldSeedNetworks.Pods, fldPath.Child("pods"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedNetworks.Services, oldSeedNetworks.Services, fldPath.Child("services"))...)
+	if oldSeedNetworks.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedNetworks.Nodes, oldSeedNetworks.Nodes, fldPath.Child("nodes"))...)
+	}
 
 	return allErrs
 }

@@ -4,11 +4,13 @@ rules:
   - k8s.io/apimachinery
   - k8s.io/api
   - k8s.io/component-base/config
+  - k8s.io/component-base/featuregate
   - k8s.io/klog
   - k8s.io/utils/pointer
 - selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis/core
+  - github.com/gardener/gardener/pkg/features
   - github.com/gardener/gardener/pkg/gardenlet/apis
   # imports brought in by defaulting, helpers and validation
   - github.com/gardener/gardener/pkg/utils/timewindow

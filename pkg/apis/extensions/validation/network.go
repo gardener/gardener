@@ -15,12 +15,13 @@
 package validation
 
 import (
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
 
 // ValidateNetwork validates a Network object.
@@ -49,6 +50,11 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 
 	if len(spec.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "field is required"))
+	}
+
+	if errs := ValidateIPFamilies(spec.IPFamilies, fldPath.Child("ipFamilies")); len(errs) > 0 {
+		// further validation doesn't make any sense, because we don't know which IP family to check for in the CIDR fields
+		return append(allErrs, errs...)
 	}
 
 	var cidrs []cidrvalidation.CIDR
@@ -97,6 +103,45 @@ func ValidateNetworkStatus(status *extensionsv1alpha1.NetworkStatus, fldPath *fi
 // ValidateNetworkStatusUpdate validates the status field of a Network object before an update.
 func ValidateNetworkStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.NetworkStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	return allErrs
+}
+
+var availableIPFamilies = sets.NewString(
+	string(extensionsv1alpha1.IPFamilyIPv4),
+	string(extensionsv1alpha1.IPFamilyIPv6),
+)
+
+// ValidateIPFamilies validates the given list of IP families for valid values and combinations.
+func ValidateIPFamilies(ipFamilies []extensionsv1alpha1.IPFamily, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// validate: only supported IP families
+	for i, ipFamily := range ipFamilies {
+		if !availableIPFamilies.Has(string(ipFamily)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), ipFamily, availableIPFamilies.List()))
+		}
+	}
+
+	// validate: no duplicate IP families
+	ipFamiliesSeen := sets.NewString()
+	for i, ipFamily := range ipFamilies {
+		if ipFamiliesSeen.Has(string(ipFamily)) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i), ipFamily))
+		} else {
+			ipFamiliesSeen.Insert(string(ipFamily))
+		}
+	}
+
+	if len(allErrs) > 0 {
+		// further validation doesn't make any sense, because there are unsupported or duplicate IP families
+		return allErrs
+	}
+
+	// validate: only supported single-stack/dual-stack combinations
+	if len(ipFamilies) > 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "dual-stack networking is not supported"))
+	}
 
 	return allErrs
 }

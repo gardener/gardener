@@ -15,15 +15,15 @@
 package validation_test
 
 import (
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	. "github.com/gardener/gardener/pkg/apis/extensions/validation"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	. "github.com/gardener/gardener/pkg/apis/extensions/validation"
 )
 
 var _ = Describe("Network validation tests", func() {
@@ -46,7 +46,7 @@ var _ = Describe("Network validation tests", func() {
 		}
 	})
 
-	Describe("#ValidNetwork", func() {
+	Describe("#ValidateNetwork", func() {
 		It("should forbid empty Network resources", func() {
 			errorList := ValidateNetwork(&extensionsv1alpha1.Network{})
 
@@ -103,7 +103,7 @@ var _ = Describe("Network validation tests", func() {
 		})
 	})
 
-	Describe("#ValidNetworkUpdate", func() {
+	Describe("#ValidateNetworkUpdate", func() {
 		It("should prevent updating anything if deletion time stamp is set", func() {
 			now := metav1.Now()
 			network.DeletionTimestamp = &now
@@ -146,6 +146,69 @@ var _ = Describe("Network validation tests", func() {
 
 			errorList := ValidateNetworkUpdate(newNetwork, network)
 
+			Expect(errorList).To(BeEmpty())
+		})
+	})
+
+	Describe("#ValidateIPFamilies", func() {
+		var fldPath *field.Path
+
+		BeforeEach(func() {
+			fldPath = field.NewPath("ipFamilies")
+		})
+
+		It("should deny unsupported IP families", func() {
+			errorList := ValidateIPFamilies([]extensionsv1alpha1.IPFamily{"foo", "bar"}, fldPath)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal(fldPath.Index(0).String()),
+					"BadValue": BeEquivalentTo("foo"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal(fldPath.Index(1).String()),
+					"BadValue": BeEquivalentTo("bar"),
+				})),
+			))
+		})
+
+		It("should deny duplicate IP families", func() {
+			errorList := ValidateIPFamilies([]extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6, extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6}, fldPath)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeDuplicate),
+					"Field":    Equal(fldPath.Index(2).String()),
+					"BadValue": Equal(extensionsv1alpha1.IPFamilyIPv4),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeDuplicate),
+					"Field":    Equal(fldPath.Index(3).String()),
+					"BadValue": Equal(extensionsv1alpha1.IPFamilyIPv6),
+				})),
+			))
+		})
+
+		It("should deny dual-stack IP families", func() {
+			ipFamilies := []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6}
+			errorList := ValidateIPFamilies(ipFamilies, fldPath)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(fldPath.String()),
+					"BadValue": Equal(ipFamilies),
+					"Detail":   Equal("dual-stack networking is not supported"),
+				})),
+			))
+		})
+
+		It("should allow IPv4 single-stack", func() {
+			errorList := ValidateIPFamilies([]extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4}, fldPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow IPv6 single-stack", func() {
+			errorList := ValidateIPFamilies([]extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}, fldPath)
 			Expect(errorList).To(BeEmpty())
 		})
 	})

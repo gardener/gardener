@@ -298,16 +298,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		allErrs = append(allErrs, validateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Type, oldSpec.Networking.Type, fldPath.Child("networking", "type"))...)
-	if oldSpec.Networking.Pods != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Pods, oldSpec.Networking.Pods, fldPath.Child("networking", "pods"))...)
-	}
-	if oldSpec.Networking.Services != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Services, oldSpec.Networking.Services, fldPath.Child("networking", "services"))...)
-	}
-	if oldSpec.Networking.Nodes != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
-	}
+	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
+
 	return allErrs
 }
 
@@ -562,6 +554,24 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	}
 	if skippingMinorVersion {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
+	}
+
+	return allErrs
+}
+
+func validateNetworkingUpdate(newNetworking, oldNetworking core.Networking, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Type, oldNetworking.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.IPFamilies, oldNetworking.IPFamilies, fldPath.Child("ipFamilies"))...)
+	if oldNetworking.Pods != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Pods, oldNetworking.Pods, fldPath.Child("pods"))...)
+	}
+	if oldNetworking.Services != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Services, oldNetworking.Services, fldPath.Child("services"))...)
+	}
+	if oldNetworking.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Nodes, oldNetworking.Nodes, fldPath.Child("nodes"))...)
 	}
 
 	return allErrs
@@ -858,6 +868,11 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 
 	if len(networking.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
+	}
+
+	if errs := ValidateIPFamilies(networking.IPFamilies, fldPath.Child("ipFamilies")); len(errs) > 0 {
+		// further validation doesn't make any sense, because we don't know which IP family to check for in the CIDR fields
+		return append(allErrs, errs...)
 	}
 
 	if networking.Nodes != nil {
