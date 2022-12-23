@@ -359,6 +359,12 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(Equal(ownerChecks))
 		})
+
+		It("should default ipFamilies setting to IPv4 single-stack", func() {
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.Networks.IPFamilies).To(ConsistOf(IPFamilyIPv4))
+		})
 	})
 
 	Describe("#SetDefaults_SeedSettingDependencyWatchdog", func() {
@@ -554,6 +560,12 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
+		})
+
+		It("should default ipFamilies setting to IPv4 single-stack", func() {
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Networking.IPFamilies).To(ConsistOf(IPFamilyIPv4))
 		})
 
 		It("should set the maintenance field", func() {

@@ -194,6 +194,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       ` + testID + `: ` + testRunID + `
       provider.extensions.gardener.cloud/` + seed.Spec.Provider.Type + `: "true"
     networks:
+      ipFamilies:
+      - IPv4
       nodes: ` + *seed.Spec.Networks.Nodes + `
       pods: ` + seed.Spec.Networks.Pods + `
       services: ` + seed.Spec.Networks.Services + `
@@ -204,6 +206,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       dns:
         ingressDomain: ` + *seed.Spec.DNS.IngressDomain + `
       networks:
+        ipFamilies:
+        - IPv4
         nodes: ` + *seed.Spec.Networks.Nodes + `
         pods: ` + seed.Spec.Networks.Pods + `
         services: ` + seed.Spec.Networks.Services + `

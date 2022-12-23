@@ -139,6 +139,13 @@ func SetDefaults_Seed(obj *Seed) {
 	}
 }
 
+// SetDefaults_SeedNetworks sets default values for SeedNetworks objects.
+func SetDefaults_SeedNetworks(obj *SeedNetworks) {
+	if len(obj.IPFamilies) == 0 {
+		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
+	}
+}
+
 // SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
 func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
 	if obj.Endpoint == nil {
@@ -336,6 +343,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeHorizontal && obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeClusterProportional {
 		obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
+	}
+}
+
+// SetDefaults_Networking sets default values for Networking objects.
+func SetDefaults_Networking(obj *Networking) {
+	if len(obj.IPFamilies) == 0 {
+		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
 	}
 }
 

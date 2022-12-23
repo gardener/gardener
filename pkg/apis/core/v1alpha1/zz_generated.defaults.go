@@ -110,6 +110,7 @@ func SetObjectDefaults_SecretBindingList(in *SecretBindingList) {
 
 func SetObjectDefaults_Seed(in *Seed) {
 	SetDefaults_Seed(in)
+	SetDefaults_SeedNetworks(&in.Spec.Networks)
 	if in.Spec.Settings != nil {
 		if in.Spec.Settings.DependencyWatchdog != nil {
 			SetDefaults_SeedSettingDependencyWatchdog(in.Spec.Settings.DependencyWatchdog)
@@ -137,6 +138,7 @@ func SetObjectDefaults_Shoot(in *Shoot) {
 	if in.Spec.Kubernetes.VerticalPodAutoscaler != nil {
 		SetDefaults_VerticalPodAutoscaler(in.Spec.Kubernetes.VerticalPodAutoscaler)
 	}
+	SetDefaults_Networking(&in.Spec.Networking)
 	if in.Spec.Maintenance != nil {
 		SetDefaults_Maintenance(in.Spec.Maintenance)
 	}
