@@ -481,6 +481,13 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
 
+	if k.values.DefaultNotReadyTolerationSeconds != nil {
+		out = append(out, fmt.Sprintf("--default-not-ready-toleration-seconds=%d", *k.values.DefaultNotReadyTolerationSeconds))
+	}
+	if k.values.DefaultUnreachableTolerationSeconds != nil {
+		out = append(out, fmt.Sprintf("--default-unreachable-toleration-seconds=%d", *k.values.DefaultUnreachableTolerationSeconds))
+	}
+
 	if k.values.EventTTL != nil {
 		out = append(out, fmt.Sprintf("--event-ttl=%s", k.values.EventTTL.Duration))
 	}

@@ -3480,6 +3480,20 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerLogging"),
 						},
 					},
+					"defaultNotReadyTolerationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`). The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled. Defaults to 300.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"defaultUnreachableTolerationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`). The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled. Defaults to 300.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 			},
 		},
@@ -3580,7 +3594,7 @@ func schema_pkg_apis_core_v1alpha1_KubeControllerManagerConfig(ref common.Refere
 					},
 					"podEvictionTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.",
+							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -10851,6 +10865,20 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerLogging"),
 						},
 					},
+					"defaultNotReadyTolerationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`). The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled. Defaults to 300.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"defaultUnreachableTolerationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`). The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled. Defaults to 300.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 			},
 		},
@@ -10951,7 +10979,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					},
 					"podEvictionTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.",
+							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

@@ -171,8 +171,23 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32(200)
 	}
+	if obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.Bool(false)
+	}
 	if obj.Spec.Kubernetes.KubeAPIServer.EventTTL == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour}
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Logging == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Logging = &KubeAPIServerLogging{}
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity = pointer.Int32(2)
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(300)
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(300)
 	}
 
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -180,9 +195,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(obj.Spec.Kubernetes.Kubelet, obj.Spec.Provider.Workers)
-	}
-	if obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout == nil {
-		obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: 2 * time.Minute}
 	}
 	if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
 		obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
@@ -278,18 +290,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	if obj.Spec.Maintenance == nil {
 		obj.Spec.Maintenance = &Maintenance{}
-	}
-
-	if obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.Bool(false)
-	}
-
-	if obj.Spec.Kubernetes.KubeAPIServer.Logging == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.Logging = &KubeAPIServerLogging{}
-	}
-
-	if obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity = pointer.Int32(2)
 	}
 
 	for i, worker := range obj.Spec.Provider.Workers {

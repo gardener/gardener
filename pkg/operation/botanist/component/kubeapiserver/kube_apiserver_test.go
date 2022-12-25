@@ -2772,6 +2772,17 @@ rules:
 					))
 				})
 
+				It("should configure the defaultNotReadyTolerationSeconds and defaultUnreachableTolerationSeconds settings if provided", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{DefaultNotReadyTolerationSeconds: pointer.Int64(120), DefaultUnreachableTolerationSeconds: pointer.Int64(130), Images: images, RuntimeVersion: runtimeVersion, Version: version})
+
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+						"--default-not-ready-toleration-seconds=120",
+						"--default-unreachable-toleration-seconds=130",
+					))
+				})
+
 				It("should configure the KubeAPISeverLogging settings if provided", func() {
 					logging := &gardencorev1beta1.KubeAPIServerLogging{
 						Verbosity:           pointer.Int32(3),

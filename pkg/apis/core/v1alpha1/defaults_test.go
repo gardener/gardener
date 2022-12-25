@@ -482,23 +482,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
 		})
 
-		It("should not default the kube-controller-manager's pod eviction timeout field", func() {
-			podEvictionTimeout := &metav1.Duration{Duration: time.Minute}
-			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{PodEvictionTimeout: podEvictionTimeout}
-
-			SetDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout).To(Equal(podEvictionTimeout))
-		})
-
-		It("should default the kube-controller-manager's pod eviction timeout field", func() {
-			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
-
-			SetDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
-		})
-
 		It("should not default the kube-controller-manager's node monitor grace period", func() {
 			nodeMonitorGracePeriod := &metav1.Duration{Duration: time.Minute}
 			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
@@ -608,6 +591,18 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(&maxMutatingRequestsInflight))
 		})
 
+		It("should disable anonymous authentication by default", func() {
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeFalse()))
+		})
+
+		It("should not default the anonymous authentication field if it is explicitly set", func() {
+			trueVar := true
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeTrue()))
+		})
+
 		It("should default the event ttl field", func() {
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EventTTL).To(Equal(&metav1.Duration{Duration: time.Hour}))
@@ -619,18 +614,6 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EventTTL).To(Equal(eventTTL))
-		})
-
-		It("should disable anonymous authentication by default", func() {
-			SetDefaults_Shoot(obj)
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeFalse()))
-		})
-
-		It("should not default the anonymous authentication field if it is explicitly set", func() {
-			trueVar := true
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}
-			SetDefaults_Shoot(obj)
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeTrue()))
 		})
 
 		It("should default the log verbosity level", func() {
@@ -647,6 +630,32 @@ var _ = Describe("Defaults", func() {
 		It("should not default the access log level", func() {
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.HTTPAccessVerbosity).To(BeNil())
+		})
+
+		It("should default the defaultNotReadyTolerationSeconds field", func() {
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds).To(PointTo(Equal(int64(300))))
+		})
+
+		It("should not default the defaultNotReadyTolerationSeconds field", func() {
+			var tolerationSeconds int64 = 120
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: pointer.Int64(tolerationSeconds)}
+
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds).To(PointTo(Equal(tolerationSeconds)))
+		})
+
+		It("should default the defaultUnreachableTolerationSeconds field", func() {
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds).To(PointTo(Equal(int64(300))))
+		})
+
+		It("should not default the defaultUnreachableTolerationSeconds field", func() {
+			var tolerationSeconds int64 = 120
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: pointer.Int64(tolerationSeconds)}
+
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds).To(PointTo(Equal(tolerationSeconds)))
 		})
 
 		It("should default architecture of worker's machine to amd64", func() {

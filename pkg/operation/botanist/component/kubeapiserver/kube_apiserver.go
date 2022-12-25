@@ -130,6 +130,12 @@ type Values struct {
 	Audit *AuditConfig
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
+	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
+	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
+	DefaultNotReadyTolerationSeconds *int64
+	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
+	// that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).
+	DefaultUnreachableTolerationSeconds *int64
 	// ETCDEncryption contains configuration for the encryption of resources in etcd.
 	ETCDEncryption ETCDEncryptionConfig
 	// EventTTL is the amount of time to retain events.

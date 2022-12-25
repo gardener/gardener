@@ -763,6 +763,13 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 
 		allErrs = append(allErrs, ValidateKubeAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("kubeAPIServer", "logging"))...)
 
+		if defaultNotReadyTolerationSeconds := kubeAPIServer.DefaultNotReadyTolerationSeconds; defaultNotReadyTolerationSeconds != nil {
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultNotReadyTolerationSeconds), fldPath.Child("kubeAPIServer", "defaultNotReadyTolerationSeconds"))...)
+		}
+		if defaultUnreachableTolerationSeconds := kubeAPIServer.DefaultUnreachableTolerationSeconds; defaultUnreachableTolerationSeconds != nil {
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultUnreachableTolerationSeconds), fldPath.Child("kubeAPIServer", "defaultUnreachableTolerationSeconds"))...)
+		}
+
 		if kubeAPIServer.Requests != nil {
 			const maxMaxNonMutatingRequestsInflight = 800
 			if v := kubeAPIServer.Requests.MaxNonMutatingInflight; v != nil {

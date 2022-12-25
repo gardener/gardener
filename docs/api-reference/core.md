@@ -4480,6 +4480,36 @@ KubeAPIServerLogging
 <p>Logging contains configuration for the log level and HTTP access logs.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>defaultNotReadyTolerationSeconds</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
+that is added by default to every pod that does not already have such a toleration (flag <code>--default-not-ready-toleration-seconds</code>).
+The field has effect only when the <code>DefaultTolerationSeconds</code> admission plugin is enabled.
+Defaults to 300.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>defaultUnreachableTolerationSeconds</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
+that is added by default to every pod that does not already have such a toleration (flag <code>--default-unreachable-toleration-seconds</code>).
+The field has effect only when the <code>DefaultTolerationSeconds</code> admission plugin is enabled.
+Defaults to 300.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeAPIServerLogging">KubeAPIServerLogging
@@ -4641,6 +4671,12 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.</p>
+<p>Deprecated: The corresponding kube-controller-manager flag <code>--pod-eviction-timeout</code> is deprecated
+in favor of the kube-apiserver flags <code>--default-not-ready-toleration-seconds</code> and <code>--default-unreachable-toleration-seconds</code>.
+The <code>--pod-eviction-timeout</code> flag does not have effect when the taint besed eviction is enabled. The taint
+based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
+instead of setting this field, set the <code>spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds</code> and
+<code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>.</p>
 </td>
 </tr>
 <tr>

@@ -318,5 +318,11 @@ var _ = Describe("Warnings", func() {
 			})
 		})
 
+		It("should return a warning when podEvictionTimeout is set", func() {
+			shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
+				PodEvictionTimeout: &metav1.Duration{Duration: 2 * time.Minute},
+			}
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")))
+		})
 	})
 })
