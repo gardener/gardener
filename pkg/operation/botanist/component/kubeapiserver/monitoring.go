@@ -24,6 +24,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
+// TODO: The etcd_object_counts metric is removed in K8s 1.25 (https://github.com/kubernetes/kubernetes/pull/110337). Remove this metric when we remove support for K8s 1.25.
+// TODO: The etcd_db_total_size_in_bytes metric is renamed to apiserver_storage_db_total_size_in_bytes in K8s 1.26 (https://github.com/kubernetes/kubernetes/pull/113310). Remove this metric when we remove support for K8s 1.26.
+
 const (
 	monitoringPrometheusJobName = "kube-apiserver"
 
@@ -54,6 +57,7 @@ const (
 	monitoringMetricApiserverWatchEventsTotal                            = "apiserver_watch_events_total"
 	monitoringMetricApiserverWatchDuration                               = "apiserver_watch_duration"
 	monitoringMetricEtcdDbTotalSizeInBytes                               = "etcd_db_total_size_in_bytes"
+	monitoringMetricApiserverStorageDbTotalSizeInBytes                   = "apiserver_storage_db_total_size_in_bytes"
 	monitoringMetricEtcdObjectCounts                                     = "etcd_object_counts"
 	monitoringMetricApiserverStorageObjects                              = "apiserver_storage_objects"
 	monitoringMetricEtcdRequestDurationSeconds                           = "etcd_request_duration_seconds_.+"
@@ -226,6 +230,7 @@ var (
 		monitoringMetricApiserverWatchEventsSizes,
 		monitoringMetricApiserverWatchEventsTotal,
 		monitoringMetricEtcdDbTotalSizeInBytes,
+		monitoringMetricApiserverStorageDbTotalSizeInBytes,
 		monitoringMetricEtcdObjectCounts,
 		monitoringMetricApiserverStorageObjects,
 		monitoringMetricEtcdRequestDurationSeconds,

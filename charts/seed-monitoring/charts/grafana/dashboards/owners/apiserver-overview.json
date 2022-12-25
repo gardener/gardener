@@ -2226,7 +2226,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(etcd_db_total_size_in_bytes{pod=~\"$apiserver\"}) by (endpoint)",
+          "expr": "max(etcd_db_total_size_in_bytes{pod=~\"$apiserver\"}) by (endpoint) or max(apiserver_storage_db_total_size_in_bytes{pod=~\"$apiserver\"}) by (endpoint)",
           "interval": "",
           "legendFormat": "{{endpoint}}",
           "refId": "A"
