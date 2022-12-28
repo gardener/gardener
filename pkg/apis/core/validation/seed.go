@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -239,7 +240,11 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 		return append(allErrs, errs...)
 	}
 
-	var networks []cidrvalidation.CIDR
+	var (
+		primaryIPFamily = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
+		networks        []cidrvalidation.CIDR
+	)
+
 	if !inTemplate || len(seedNetworks.Pods) > 0 {
 		networks = append(networks, cidrvalidation.NewCIDR(seedNetworks.Pods, fldPath.Child("pods")))
 	}
@@ -259,6 +264,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	}
 
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(networks...)...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(networks, string(primaryIPFamily))...)
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
 
 	vpnRange := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRange, field.NewPath(""))

@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
 
@@ -57,7 +58,10 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 		return append(allErrs, errs...)
 	}
 
-	var cidrs []cidrvalidation.CIDR
+	var (
+		primaryIPFamily = extensionsv1alpha1helper.DeterminePrimaryIPFamily(spec.IPFamilies)
+		cidrs           []cidrvalidation.CIDR
+	)
 
 	if len(spec.PodCIDR) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("podCIDR"), "field is required"))
@@ -72,6 +76,7 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 	}
 
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(cidrs...)...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(cidrs, string(primaryIPFamily))...)
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(cidrs, false)...)
 
 	return allErrs
@@ -89,6 +94,7 @@ func ValidateNetworkSpecUpdate(new, old *extensionsv1alpha1.NetworkSpec, deletio
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.PodCIDR, old.PodCIDR, fldPath.Child("podCIDR"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ServiceCIDR, old.ServiceCIDR, fldPath.Child("serviceCIDR"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.IPFamilies, old.IPFamilies, fldPath.Child("ipFamilies"))...)
 
 	return allErrs
 }

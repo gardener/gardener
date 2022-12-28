@@ -68,38 +68,121 @@ var _ = Describe("Network validation tests", func() {
 			}))))
 		})
 
-		It("should forbid Network with invalid CIDRs", func() {
-			c := network.DeepCopy()
-			c.Spec.PodCIDR = "this-is-no-cidr"
-			c.Spec.ServiceCIDR = "this-is-still-no-cidr"
+		Context("IPv4", func() {
+			It("should allow valid network resources", func() {
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(BeEmpty())
+			})
 
-			errorList := ValidateNetwork(c)
+			It("should forbid IPv6 CIDRs with no IP family specified", func() {
+				network.Spec.PodCIDR = "2001:db8:1::/48"
+				network.Spec.ServiceCIDR = "2001:db8:3::/48"
+				network.Spec.IPFamilies = nil
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.podCIDR"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.serviceCIDR"),
-			}))))
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.podCIDR"),
+					"Detail": Equal("must be a valid IPv4 address"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.serviceCIDR"),
+					"Detail": Equal("must be a valid IPv4 address"),
+				}))))
+			})
+
+			It("should forbid IPv6 CIDRs with IPv4 IP family", func() {
+				network.Spec.PodCIDR = "2001:db8:1::/48"
+				network.Spec.ServiceCIDR = "2001:db8:3::/48"
+				network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4}
+
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.podCIDR"),
+					"Detail": Equal("must be a valid IPv4 address"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.serviceCIDR"),
+					"Detail": Equal("must be a valid IPv4 address"),
+				}))))
+			})
+
+			It("should forbid Network with invalid CIDRs", func() {
+				network.Spec.PodCIDR = "this-is-no-cidr"
+				network.Spec.ServiceCIDR = "this-is-still-no-cidr"
+
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.podCIDR"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.serviceCIDR"),
+				}))))
+			})
+
+			It("should forbid Network with overlapping pod and service CIDRs", func() {
+				network.Spec.PodCIDR = network.Spec.ServiceCIDR
+
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.serviceCIDR"),
+				}))))
+			})
 		})
 
-		It("should forbid Network with overlapping pod and service CIDRs", func() {
-			c := network.DeepCopy()
-			c.Spec.PodCIDR = network.Spec.ServiceCIDR
+		Context("IPv6", func() {
+			BeforeEach(func() {
+				network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
+			})
 
-			errorList := ValidateNetwork(c)
+			It("should allow valid network resources", func() {
+				network.Spec.PodCIDR = "2001:db8:1::/48"
+				network.Spec.ServiceCIDR = "2001:db8:3::/48"
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.serviceCIDR"),
-			}))))
-		})
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(BeEmpty())
+			})
 
-		It("should allow valid network resources", func() {
-			errorList := ValidateNetwork(network)
+			It("should forbid IPv4 CIDRs with IPv6 IP family", func() {
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.podCIDR"),
+					"Detail": Equal("must be a valid IPv6 address"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.serviceCIDR"),
+					"Detail": Equal("must be a valid IPv6 address"),
+				}))))
+			})
 
-			Expect(errorList).To(BeEmpty())
+			It("should forbid Network with invalid CIDRs", func() {
+				network.Spec.ServiceCIDR = "2001:db/###8:3::/48"
+				network.Spec.PodCIDR = "2003:db/###8:3::/48"
+
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.podCIDR"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.serviceCIDR"),
+				}))))
+			})
+
+			It("should forbid Network with overlapping pod and service CIDRs", func() {
+				network.Spec.ServiceCIDR = "2001:db8:3::/48"
+				network.Spec.PodCIDR = network.Spec.ServiceCIDR
+
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.serviceCIDR"),
+				}))))
+			})
 		})
 	})
 
@@ -137,6 +220,26 @@ var _ = Describe("Network validation tests", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.serviceCIDR"),
+			}))))
+		})
+
+		It("should prevent updating the ipFamilies", func() {
+			newNetwork := prepareNetworkForUpdate(network)
+			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
+
+			errorList := ValidateNetworkUpdate(newNetwork, network)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.ipFamilies"),
+				"Detail": ContainSubstring("immutable"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.podCIDR"),
+				"Detail": Equal("must be a valid IPv6 address"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.serviceCIDR"),
+				"Detail": Equal("must be a valid IPv6 address"),
 			}))))
 		})
 

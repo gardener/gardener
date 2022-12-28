@@ -28,12 +28,17 @@ import (
 )
 
 var _ = Describe("cidr", func() {
-	Describe("#cidr IPv4", func() {
+	Describe("IPv4", func() {
 		var (
+			ipFamily          string
 			invalidGardenCIDR = "invalid_cidr"
 			validGardenCIDR   = "10.0.0.0/8"
 			path              = field.NewPath("foo")
 		)
+
+		BeforeEach(func() {
+			ipFamily = IPFamilyIPv4
+		})
 
 		Context("NewCIDR", func() {
 			It("should return a non-nil value", func() {
@@ -184,6 +189,30 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
+		Context("ValidateCIDRIPFamily", func() {
+			It("should not return an error for CIDR that matches IP family", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should not return an error if parsing failed", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should return an error for CIDR that doesn't match IP family", func() {
+				cdr := NewCIDR("2001:db8:11::/48", path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(path.String()),
+					"Detail": Equal(`must be a valid IPv4 address`),
+				}))
+			})
+		})
+
 		Context("ValidateSubset", func() {
 			It("should be a subset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
@@ -258,12 +287,17 @@ var _ = Describe("cidr", func() {
 		})
 	})
 
-	Describe("#cidr IPv6", func() {
+	Describe("IPv6", func() {
 		var (
+			ipFamily          string
 			invalidGardenCIDR = "invalid_cidr"
 			validGardenCIDR   = "2001:0db8:85a3::/104"
 			path              = field.NewPath("foo")
 		)
+
+		BeforeEach(func() {
+			ipFamily = IPFamilyIPv6
+		})
 
 		Context("NewCIDR", func() {
 			It("should return a non-nil value", func() {
@@ -397,6 +431,30 @@ var _ = Describe("cidr", func() {
 					"Field":    Equal(path.String()),
 					"BadValue": Equal(invalidGardenCIDR),
 					"Detail":   Equal(`invalid CIDR address: invalid_cidr`),
+				}))
+			})
+		})
+
+		Context("ValidateCIDRIPFamily", func() {
+			It("should not return an error for CIDR that matches IP family", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should not return an error if parsing failed", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should return an error for CIDR that doesn't match IP family", func() {
+				cdr := NewCIDR("10.1.0.0/16", path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(path.String()),
+					"Detail": Equal(`must be a valid IPv6 address`),
 				}))
 			})
 		})

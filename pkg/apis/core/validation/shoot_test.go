@@ -34,11 +34,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -783,56 +786,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should invalid k8s networks", func() {
-				invalidCIDR := "invalid-cidr"
-
-				shoot.Spec.Networking.Nodes = &invalidCIDR
-				shoot.Spec.Networking.Services = &invalidCIDR
-				shoot.Spec.Networking.Pods = &invalidCIDR
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.nodes"),
-					"Detail": ContainSubstring("invalid CIDR address"),
-				}, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.pods"),
-					"Detail": ContainSubstring("invalid CIDR address"),
-				}, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.services"),
-					"Detail": ContainSubstring("invalid CIDR address"),
-				}))
-			})
-
-			It("should forbid non canonical CIDRs", func() {
-				nodeCIDR := "10.250.0.3/16"
-				podCIDR := "100.96.0.4/11"
-				serviceCIDR := "100.64.0.5/13"
-
-				shoot.Spec.Networking.Nodes = &nodeCIDR
-				shoot.Spec.Networking.Services = &serviceCIDR
-				shoot.Spec.Networking.Pods = &podCIDR
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.nodes"),
-					"Detail": Equal("must be valid canonical CIDR"),
-				}, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.pods"),
-					"Detail": Equal("must be valid canonical CIDR"),
-				}, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.services"),
-					"Detail": Equal("must be valid canonical CIDR"),
-				}))
-			})
-
 			It("should forbid an empty worker list", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{}
 
@@ -927,97 +880,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.provider.workers[0].name"),
 				}))))
-			})
-
-			Context("NodeCIDRMask validation", func() {
-				var (
-					defaultMaxPod           int32 = 110
-					maxPod                  int32 = 260
-					defaultNodeCIDRMaskSize int32 = 24
-					testWorker              core.Worker
-				)
-
-				BeforeEach(func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
-					shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &defaultMaxPod}
-					testWorker = *worker.DeepCopy()
-					testWorker.Name = "testworker"
-				})
-
-				It("should not return any errors", func() {
-					worker.Kubernetes = &core.WorkerKubernetes{
-						Kubelet: &core.KubeletConfig{
-							MaxPods: &defaultMaxPod,
-						},
-					}
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(HaveLen(0))
-				})
-
-				Context("Non-default max pod settings", func() {
-					Context("one worker pool", func() {
-						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubernetes = &core.WorkerKubernetes{
-								Kubelet: &core.KubeletConfig{
-									MaxPods: &maxPod,
-								},
-							}
-							shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker)
-
-							errorList := ValidateShoot(shoot)
-
-							Expect(errorList).To(ConsistOfFields(Fields{
-								"Type":   Equal(field.ErrorTypeInvalid),
-								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-								"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-							}))
-						})
-					})
-
-					Context("multiple worker pools", func() {
-						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubernetes = &core.WorkerKubernetes{
-								Kubelet: &core.KubeletConfig{
-									MaxPods: &maxPod,
-								},
-							}
-
-							secondTestWorker := *testWorker.DeepCopy()
-							secondTestWorker.Name = "testworker2"
-							secondTestWorker.Kubernetes = &core.WorkerKubernetes{
-								Kubelet: &core.KubeletConfig{
-									MaxPods: &maxPod,
-								},
-							}
-
-							shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker, secondTestWorker)
-
-							errorList := ValidateShoot(shoot)
-
-							Expect(errorList).To(ConsistOfFields(Fields{
-								"Type":   Equal(field.ErrorTypeInvalid),
-								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-								"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-							}))
-						})
-					})
-
-					Context("Global default max pod", func() {
-						It("should deny NodeCIDR with too few ips", func() {
-							shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &maxPod}
-
-							errorList := ValidateShoot(shoot)
-
-							Expect(errorList).To(ConsistOfFields(Fields{
-								"Type":   Equal(field.ErrorTypeInvalid),
-								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-								"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-							}))
-						})
-					})
-				})
 			})
 
 			It("should allow adding a worker pool", func() {
@@ -2597,6 +2459,97 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("NodeCIDRMask validation", func() {
+			var (
+				defaultMaxPod           int32 = 110
+				maxPod                  int32 = 260
+				defaultNodeCIDRMaskSize int32 = 24
+				testWorker              core.Worker
+			)
+
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &defaultMaxPod}
+				testWorker = *worker.DeepCopy()
+				testWorker.Name = "testworker"
+			})
+
+			It("should not return any errors", func() {
+				worker.Kubernetes = &core.WorkerKubernetes{
+					Kubelet: &core.KubeletConfig{
+						MaxPods: &defaultMaxPod,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(HaveLen(0))
+			})
+
+			Context("Non-default max pod settings", func() {
+				Context("one worker pool", func() {
+					It("should deny NodeCIDR with too few ips", func() {
+						testWorker.Kubernetes = &core.WorkerKubernetes{
+							Kubelet: &core.KubeletConfig{
+								MaxPods: &maxPod,
+							},
+						}
+						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker)
+
+						errorList := ValidateShoot(shoot)
+
+						Expect(errorList).To(ConsistOfFields(Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
+						}))
+					})
+				})
+
+				Context("multiple worker pools", func() {
+					It("should deny NodeCIDR with too few ips", func() {
+						testWorker.Kubernetes = &core.WorkerKubernetes{
+							Kubelet: &core.KubeletConfig{
+								MaxPods: &maxPod,
+							},
+						}
+
+						secondTestWorker := *testWorker.DeepCopy()
+						secondTestWorker.Name = "testworker2"
+						secondTestWorker.Kubernetes = &core.WorkerKubernetes{
+							Kubelet: &core.KubeletConfig{
+								MaxPods: &maxPod,
+							},
+						}
+
+						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker, secondTestWorker)
+
+						errorList := ValidateShoot(shoot)
+
+						Expect(errorList).To(ConsistOfFields(Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
+						}))
+					})
+				})
+
+				Context("Global default max pod", func() {
+					It("should deny NodeCIDR with too few ips", func() {
+						shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &maxPod}
+
+						errorList := ValidateShoot(shoot)
+
+						Expect(errorList).To(ConsistOfFields(Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
+						}))
+					})
+				})
+			})
+		})
+
 		Context("networking section", func() {
 			It("should forbid not specifying a networking type", func() {
 				shoot.Spec.Networking.Type = ""
@@ -2619,6 +2572,175 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.networking.type"),
 				}))))
+			})
+
+			It("should forbid specifying unsupported IP family", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{"IPv5"}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.networking.ipFamilies[0]"),
+				}))))
+			})
+
+			Context("IPv4", func() {
+				It("should allow valid networking configuration", func() {
+					shoot.Spec.Networking.Nodes = pointer.String("10.250.0.0/16")
+					shoot.Spec.Networking.Services = pointer.String("100.64.0.0/13")
+					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/11")
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid invalid network CIDRs", func() {
+					invalidCIDR := "invalid-cidr"
+
+					shoot.Spec.Networking.Nodes = &invalidCIDR
+					shoot.Spec.Networking.Services = &invalidCIDR
+					shoot.Spec.Networking.Pods = &invalidCIDR
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.nodes"),
+						"Detail": ContainSubstring("invalid CIDR address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.pods"),
+						"Detail": ContainSubstring("invalid CIDR address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.services"),
+						"Detail": ContainSubstring("invalid CIDR address"),
+					}))
+				})
+
+				It("should forbid IPv6 CIDRs with IPv4 IP family", func() {
+					shoot.Spec.Networking.Pods = pointer.String("2001:db8:1::/48")
+					shoot.Spec.Networking.Nodes = pointer.String("2001:db8:2::/48")
+					shoot.Spec.Networking.Services = pointer.String("2001:db8:3::/48")
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.nodes"),
+						"Detail": ContainSubstring("must be a valid IPv4 address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.pods"),
+						"Detail": ContainSubstring("must be a valid IPv4 address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.services"),
+						"Detail": ContainSubstring("must be a valid IPv4 address"),
+					}))
+				})
+
+				It("should forbid non canonical CIDRs", func() {
+					shoot.Spec.Networking.Nodes = pointer.String("10.250.0.3/16")
+					shoot.Spec.Networking.Services = pointer.String("100.64.0.5/13")
+					shoot.Spec.Networking.Pods = pointer.String("100.96.0.4/11")
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.nodes"),
+						"Detail": Equal("must be valid canonical CIDR"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.pods"),
+						"Detail": Equal("must be valid canonical CIDR"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.services"),
+						"Detail": Equal("must be valid canonical CIDR"),
+					}))
+				})
+			})
+
+			Context("IPv6", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.IPv6SingleStack, true))
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+				})
+
+				It("should allow valid networking configuration", func() {
+					shoot.Spec.Networking.Pods = pointer.String("2001:db8:1::/48")
+					shoot.Spec.Networking.Nodes = pointer.String("2001:db8:2::/48")
+					shoot.Spec.Networking.Services = pointer.String("2001:db8:3::/48")
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid invalid network CIDRs", func() {
+					invalidCIDR := "invalid-cidr"
+
+					shoot.Spec.Networking.Nodes = &invalidCIDR
+					shoot.Spec.Networking.Services = &invalidCIDR
+					shoot.Spec.Networking.Pods = &invalidCIDR
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.nodes"),
+						"Detail": ContainSubstring("invalid CIDR address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.pods"),
+						"Detail": ContainSubstring("invalid CIDR address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.services"),
+						"Detail": ContainSubstring("invalid CIDR address"),
+					}))
+				})
+
+				It("should forbid IPv4 CIDRs with IPv6 IP family", func() {
+					shoot.Spec.Networking.Nodes = pointer.String("10.250.0.0/16")
+					shoot.Spec.Networking.Services = pointer.String("100.64.0.0/13")
+					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/11")
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.nodes"),
+						"Detail": ContainSubstring("must be a valid IPv6 address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.pods"),
+						"Detail": ContainSubstring("must be a valid IPv6 address"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.services"),
+						"Detail": ContainSubstring("must be a valid IPv6 address"),
+					}))
+				})
+
+				It("should forbid non canonical CIDRs", func() {
+					shoot.Spec.Networking.Pods = pointer.String("2001:db8:1::1/48")
+					shoot.Spec.Networking.Nodes = pointer.String("2001:db8:2::2/48")
+					shoot.Spec.Networking.Services = pointer.String("2001:db8:3::3/48")
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.nodes"),
+						"Detail": Equal("must be valid canonical CIDR"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.pods"),
+						"Detail": Equal("must be valid canonical CIDR"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networking.services"),
+						"Detail": Equal("must be valid canonical CIDR"),
+					}))
+				})
 			})
 
 			It("should fail updating immutable fields", func() {

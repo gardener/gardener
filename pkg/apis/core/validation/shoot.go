@@ -875,11 +875,14 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 		return append(allErrs, errs...)
 	}
 
+	primaryIPFamily := helper.DeterminePrimaryIPFamily(networking.IPFamilies)
+
 	if networking.Nodes != nil {
 		path := fldPath.Child("nodes")
 		cidr := cidrvalidation.NewCIDR(*networking.Nodes, path)
 
 		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
@@ -888,6 +891,7 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 		cidr := cidrvalidation.NewCIDR(*networking.Pods, path)
 
 		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
@@ -896,6 +900,7 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 		cidr := cidrvalidation.NewCIDR(*networking.Services, path)
 
 		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
