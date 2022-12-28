@@ -17,10 +17,10 @@ spec:
       - image: eu.gcr.io/gardener-project/3rd/alpine:3.16.1
         name: load
         command: ["sh", "-c"]
-        {{ if .nodeName }}
-        nodeName: {{ .nodeName }}
-        {{ end }}
         args:
         - while true; do echo "testing"; done;
         securityContext:
           runAsUser: 1001
+      {{ if .nodeName }}
+      nodeName: {{ .nodeName }}
+      {{ end }}
