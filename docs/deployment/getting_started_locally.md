@@ -121,10 +121,10 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-rotate.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-default.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-udpate-node.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-udpate-node.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-udpate-zone.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-udpate-zone.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-update-node.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-update-node.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-update-zone.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-update-zone.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.internal.local.gardener.cloud
 EOF
