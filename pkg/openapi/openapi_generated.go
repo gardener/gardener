@@ -4130,7 +4130,7 @@ func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) comm
 					},
 					"enableStaticTokenKubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster. Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26. Starting Kubernetes 1.27 the field will be locked to false.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -11515,7 +11515,7 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 					},
 					"enableStaticTokenKubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster. Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26. Starting Kubernetes 1.27 the field will be locked to false.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

@@ -208,7 +208,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if obj.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
-		obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
+		if k8sLessThan126, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, "< 1.26"); k8sLessThan126 {
+			obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+		} else {
+			obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+		}
 	}
 
 	if obj.Spec.Addons == nil {
@@ -292,7 +297,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		if k8sVersionGreaterOrEqualThan122, _ := versionutils.CompareVersions(kubernetesVersion, ">=", "1.22"); !k8sVersionGreaterOrEqualThan122 {
 			// Error is ignored here because we cannot do anything meaningful with it.
-			// k8sVersionLessThan116 and k8sVersionGreaterOrEqualThan122 will default to `false`.
+			// k8sVersionGreaterOrEqualThan122 will default to `false`.
 			continue
 		}
 

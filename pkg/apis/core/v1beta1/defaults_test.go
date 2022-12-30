@@ -749,10 +749,33 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.SystemComponents).To(Equal(&SystemComponents{CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeHorizontal}}}))
 		})
 
-		It("should default the enableStaticTokenKubeconfig field", func() {
-			SetDefaults_Shoot(obj)
+		Context("static token kubeconfig", func() {
+			It("should not default the enableStaticTokenKubeconfig field when it is set", func() {
+				obj.Spec.Kubernetes = Kubernetes{
+					Version:                     "1.24.0",
+					EnableStaticTokenKubeconfig: pointer.Bool(false),
+				}
 
-			Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeTrue()))
+				SetDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeFalse()))
+			})
+
+			It("should default the enableStaticTokenKubeconfig field to true for k8s version < 1.26", func() {
+				obj.Spec.Kubernetes = Kubernetes{Version: "1.25.0"}
+
+				SetDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeTrue()))
+			})
+
+			It("should default the enableStaticTokenKubeconfig field to false for k8s version >= 1.26", func() {
+				obj.Spec.Kubernetes = Kubernetes{Version: "1.26.0"}
+
+				SetDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeFalse()))
+			})
 		})
 
 		Context("k8s version < 1.25", func() {
@@ -794,20 +817,6 @@ var _ = Describe("Defaults", func() {
 					SetDefaults_Shoot(obj)
 
 					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
-				})
-			})
-		})
-
-		Context("k8s version >= 1.25", func() {
-			BeforeEach(func() {
-				obj.Spec.Kubernetes.Version = "1.25.0"
-			})
-
-			Context("allowPrivilegedContainers field is not set", func() {
-				It("should not set the field", func() {
-					SetDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
 				})
 			})
 		})

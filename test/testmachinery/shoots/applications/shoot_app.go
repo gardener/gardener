@@ -35,15 +35,14 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -58,7 +57,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 	f := framework.NewShootFramework(nil)
 
 	f.Default().Release().CIt("should download shoot kubeconfig successfully", func(ctx context.Context) {
-		err := framework.DownloadKubeconfig(ctx, f.SeedClient, f.ShootSeedNamespace(), gardencorev1beta1.GardenerName, "")
+		err := framework.DownloadKubeconfig(ctx, f.SeedClient, f.ShootSeedNamespace(), v1beta1constants.SecretNameGardener, "")
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Shoot Kubeconfig downloaded successfully from seed")
@@ -85,20 +84,20 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 	f.Default().Release().CIt("Dashboard should be available", func(ctx context.Context) {
 		shoot := f.Shoot
 		if !shoot.Spec.Addons.KubernetesDashboard.Enabled {
-			ginkgo.Fail("The test requires .spec.addons.kubernetesDashboard.enabled to be be true")
+			ginkgo.Fail("The test requires .spec.addons.kubernetesDashboard.enabled to be true")
 		}
 
 		url := fmt.Sprintf("https://api.%s/api/v1/namespaces/%s/services/https:kubernetes-dashboard:/proxy", *f.Shoot.Spec.DNS.Domain, "kubernetes-dashboard")
-		kubeconfigData, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gardenerutils.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
+		serviceAccount := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.SecretNameGardener,
+				Namespace: metav1.NamespaceSystem,
+			},
+		}
+		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, pointer.Int64(3600))
 		framework.ExpectNoError(err)
-		kubeconfig := &clientcmdv1.Config{}
-		_, _, err = clientcmdlatest.Codec.Decode([]byte(kubeconfigData), nil, kubeconfig)
-		framework.ExpectNoError(err)
-		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
-		Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
-		dashboardToken := kubeconfig.AuthInfos[0].AuthInfo.Token
 
-		err = framework.TestHTTPEndpointWithToken(ctx, url, dashboardToken)
+		err = framework.TestHTTPEndpointWithToken(ctx, url, token)
 		framework.ExpectNoError(err)
 	}, dashboardAvailableTimeout)
 

@@ -1257,8 +1257,9 @@ message Kubernetes {
   // +optional
   optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
 
-  // EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
-  // (default: true).
+  // EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
+  // Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
+  // Starting Kubernetes 1.27 the field will be locked to false.
   // +optional
   optional bool enableStaticTokenKubeconfig = 10;
 }
