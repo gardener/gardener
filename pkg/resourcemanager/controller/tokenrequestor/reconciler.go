@@ -180,6 +180,7 @@ func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 		},
 	}
 
+	// TODO (shafeeqes): Use SubResourceClient once fakeSubResourceClient supports Create
 	return r.TargetCoreV1Client.ServiceAccounts(sa.Namespace).CreateToken(ctx, sa.Name, tokenRequest, metav1.CreateOptions{})
 }
 

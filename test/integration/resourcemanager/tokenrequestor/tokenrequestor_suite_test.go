@@ -17,6 +17,7 @@ package tokenrequestor_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -24,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -55,6 +57,8 @@ var (
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
+
+	fakeClock *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -102,7 +106,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&tokenrequestor.Reconciler{
+		Clock:      fakeClock,
+		JitterFunc: func(duration time.Duration, f float64) time.Duration { return time.Second },
 		Config: config.TokenRequestorControllerConfig{
 			ConcurrentSyncs: pointer.Int(5),
 		},

@@ -53,12 +53,11 @@ func CreateShootClientFromDynamicServiceAccountToken(ctx context.Context, shootC
 			},
 		}
 
-		result, err := shootClient.Kubernetes().CoreV1().ServiceAccounts(serviceAccount.Namespace).CreateToken(ctx, serviceAccount.Name, tokenRequest, metav1.CreateOptions{})
-		if err != nil {
+		if err := shootClient.Client().SubResource("token").Create(ctx, serviceAccount, tokenRequest); err != nil {
 			return "", err
 		}
 
-		return result.Status.Token, nil
+		return tokenRequest.Status.Token, nil
 	})
 }
 
