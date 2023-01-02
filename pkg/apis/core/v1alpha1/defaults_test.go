@@ -488,21 +488,74 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
 		})
 
-		It("should not default the kube-controller-manager's node monitor grace period", func() {
-			nodeMonitorGracePeriod := &metav1.Duration{Duration: time.Minute}
-			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
+		Describe("kubeControllerManager settings", func() {
+			It("should not overwrite the kube-controller-manager's node monitor grace period", func() {
+				nodeMonitorGracePeriod := &metav1.Duration{Duration: time.Minute}
+				obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
 
-			SetObjectDefaults_Shoot(obj)
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
-		})
+				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
+			})
 
-		It("should default the kube-controller-manager's node monitor grace period", func() {
-			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
+			It("should default the kube-controller-manager's node monitor grace period", func() {
+				obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 
-			SetObjectDefaults_Shoot(obj)
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
+				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
+			})
+
+			Describe("nodeCIDRMaskSize", func() {
+				Context("IPv4", func() {
+					It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
+						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+							MaxPods: pointer.Int32(250),
+						}
+
+						SetObjectDefaults_Shoot(obj)
+
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(pointer.Int32(23)))
+					})
+
+					It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
+						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+							MaxPods: pointer.Int32(64),
+						}
+						obj.Spec.Provider.Workers = []Worker{{
+							Name: "1",
+							Kubernetes: &WorkerKubernetes{
+								Kubelet: &KubeletConfig{
+									MaxPods: pointer.Int32(100),
+								},
+							},
+						}, {
+							Name: "2",
+							Kubernetes: &WorkerKubernetes{
+								Kubelet: &KubeletConfig{
+									MaxPods: pointer.Int32(260),
+								},
+							},
+						}}
+
+						SetObjectDefaults_Shoot(obj)
+
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(pointer.Int32(22)))
+					})
+				})
+
+				Context("IPv6", func() {
+					BeforeEach(func() {
+						obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv6}
+					})
+
+					It("should default nodeCIDRMaskSize to 64", func() {
+						SetObjectDefaults_Shoot(obj)
+
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(pointer.Int32(64)))
+					})
+				})
+			})
 		})
 
 		It("should default the kubeScheduler.profile field", func() {
