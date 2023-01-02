@@ -152,14 +152,14 @@ kubectl   --kubeconfig="$SEED_KUBECONFIG" get    namespace garden &>/dev/null ||
   kubectl --kubeconfig="$SEED_KUBECONFIG" create namespace garden
 
 # apply RBAC resources in seed cluster
-helm template gardenlet "$GARDENLET_CHARTS_DIR" -f "$gardenletChartValues" |
+helm template gardenlet "$GARDENLET_CHARTS_DIR" -f "$gardenletChartValues" -n garden |
   yq eval 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' - |
   kubectl --kubeconfig="$SEED_KUBECONFIG" auth reconcile --remove-extra-permissions --remove-extra-subjects -f -
-helm template gardenlet "$GARDENLET_CHARTS_DIR" -s templates/serviceaccount.yaml -f "$gardenletChartValues" |
+helm template gardenlet "$GARDENLET_CHARTS_DIR" -s templates/serviceaccount.yaml -f "$gardenletChartValues" -n garden |
   kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
 
 # apply gardener-system-critical priority class in seed cluster
-helm template gardenlet "$GARDENLET_CHARTS_DIR" -s templates/priorityclass.yaml -f "$gardenletChartValues" |
+helm template gardenlet "$GARDENLET_CHARTS_DIR" -s templates/priorityclass.yaml -f "$gardenletChartValues" -n garden |
   kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
 
 rm -f "$gardenletChartValues"
