@@ -392,7 +392,7 @@ var _ = Describe("health check", func() {
 
 			mr.Status.Conditions = conditions
 
-			exitCondition := checker.CheckManagedResource(condition, mr, nil)
+			exitCondition := checker.CheckManagedResource(condition, mr, &metav1.Duration{Duration: 1 * time.Minute})
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("no conditions",
@@ -424,6 +424,23 @@ var _ = Describe("health check", func() {
 			},
 			true,
 			BeNil()),
+		Entry("both progressing and healthy conditions are true for more than ManagedResourceProgressingThreshold",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   resourcesv1alpha1.ResourcesProgressing,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesApplied,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+			},
+			true,
+			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceStuckInProgressingError, "ManagedResource  progressing state is true for more than 1m0s time"))),
 		Entry("one false condition ResourcesApplied",
 			[]gardencorev1beta1.Condition{
 				{
