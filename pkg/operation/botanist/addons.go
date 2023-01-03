@@ -117,33 +117,6 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 	}
 }
 
-// GenerateNginxIngressConfig generates the values which are required to render the chart of
-// the nginx-ingress properly.
-func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	var (
-		enabled = v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
-		values  map[string]interface{}
-	)
-
-	if enabled {
-		values = map[string]interface{}{
-			"controller": map[string]interface{}{
-				"customConfig": b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config,
-				"service": map[string]interface{}{
-					"loadBalancerSourceRanges": b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
-					"externalTrafficPolicy":    *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy,
-				},
-			},
-		}
-
-		if b.APIServerSNIEnabled() {
-			values["kubeAPIServerHost"] = b.outOfClusterAPIServerFQDN()
-		}
-	}
-
-	return common.GenerateAddonConfig(values, enabled), nil
-}
-
 // DeployManagedResourceForAddons deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 	for name, chartRenderFunc := range map[string]func(context.Context) (*chartrenderer.RenderedChart, error){
@@ -243,25 +216,8 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 
 	kubernetesDashboardEnabled := v1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons)
 
-	nginxIngressConfig, err := b.GenerateNginxIngressConfig()
-	if err != nil {
-		return nil, err
-	}
-	nginxIngress, err := b.InjectShootShootImages(nginxIngressConfig, images.ImageNameNginxIngressController, images.ImageNameIngressDefaultBackend)
-	if err != nil {
-		return nil, err
-	}
-
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"global":               global,
 		"kubernetes-dashboard": common.GenerateAddonConfig(nil, kubernetesDashboardEnabled),
-		"nginx-ingress":        nginxIngress,
 	})
-}
-
-// outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver
-// with dot "." suffix. It'll prevent extra requests to the DNS in case the record is not
-// available.
-func (b *Botanist) outOfClusterAPIServerFQDN() string {
-	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
 }
