@@ -36,6 +36,7 @@
 * [DNS Autoscaling](usage/dns-autoscaling.md)
 * [DNS Search Path Optimization](usage/dns-search-path-optimization.md)
 * [Dockershim removal](usage/docker-shim-removal.md)
+* [Endpoints and Ports of a Shoot Control-Plane](usage/control-plane-endpoints-and-ports.md)
 * [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [Hibernate a Cluster](usage/shoot_hibernate.md)
