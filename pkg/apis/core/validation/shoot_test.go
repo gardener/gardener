@@ -932,74 +932,156 @@ var _ = Describe("Shoot Validation Tests", func() {
 				worker1.Name = "worker1"
 				worker2.Name = "worker2"
 
-				It("should allow valid total number of worker nodes", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
-					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/20")
-					worker1.Maximum = 4
-					worker2.Maximum = 4
+				Context("IPv4", func() {
+					It("should allow valid total number of worker nodes", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
+						shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/20")
+						worker1.Maximum = 4
+						worker2.Maximum = 4
 
-					shoot.Spec.Provider.Workers = []core.Worker{
-						*worker1,
-						*worker2,
-					}
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
 
-					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
-					Expect(errorList).To(BeEmpty())
+						Expect(errorList).To(BeEmpty())
+					})
+
+					It("should allow valid total number of worker nodes", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
+						shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
+						worker1.Maximum = 128
+						worker2.Maximum = 128
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
+
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+
+						Expect(errorList).To(BeEmpty())
+					})
+
+					It("should not allow invalid total number of worker nodes", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(23)
+						shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/20")
+						worker1.Maximum = 16
+						worker2.Maximum = 16
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
+
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.provider.workers"),
+							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 8 nodes"),
+						}))))
+					})
+
+					It("should not allow invalid total number of worker nodes with default nodeCIDRMaskSize", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
+						shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
+						worker1.Maximum = 128
+						worker2.Maximum = 129
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
+
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.provider.workers"),
+							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 256 nodes"),
+						}))))
+					})
 				})
 
-				It("should allow valid total number of worker nodes", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
-					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
-					worker1.Maximum = 128
-					worker2.Maximum = 128
+				Context("IPv6", func() {
+					BeforeEach(func() {
+						shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+					})
 
-					shoot.Spec.Provider.Workers = []core.Worker{
-						*worker1,
-						*worker2,
-					}
+					It("should allow valid total number of worker nodes", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(66)
+						shoot.Spec.Networking.Pods = pointer.String("2001:db8:1::/48")
+						worker1.Maximum = 4
+						worker2.Maximum = 4
 
-					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
 
-					Expect(errorList).To(BeEmpty())
-				})
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
-				It("should not allow invalid total number of worker nodes", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
-					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/20")
-					worker1.Maximum = 16
-					worker2.Maximum = 16
+						Expect(errorList).To(BeEmpty())
+					})
 
-					shoot.Spec.Provider.Workers = []core.Worker{
-						*worker1,
-						*worker2,
-					}
+					It("should allow valid total number of worker nodes", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(66)
+						shoot.Spec.Networking.Pods = pointer.String("2001:db8:1::/48")
+						worker1.Maximum = 128
+						worker2.Maximum = 128
 
-					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
 
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers"),
-					}))))
-				})
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
-				It("should not allow invalid total number of worker nodes", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
-					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
-					worker1.Maximum = 128
-					worker2.Maximum = 129
+						Expect(errorList).To(BeEmpty())
+					})
 
-					shoot.Spec.Provider.Workers = []core.Worker{
-						*worker1,
-						*worker2,
-					}
+					It("should not allow invalid total number of worker nodes", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(66)
+						shoot.Spec.Networking.Pods = pointer.String("2001:db8:1::/63")
+						worker1.Maximum = 16
+						worker2.Maximum = 16
 
-					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
 
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers"),
-					}))))
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.provider.workers"),
+							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 8 nodes"),
+						}))))
+					})
+
+					It("should not allow invalid total number of worker nodes with default nodeCIDRMaskSize", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
+						shoot.Spec.Networking.Pods = pointer.String("2001:db8:1::/56")
+						worker1.Maximum = 128
+						worker2.Maximum = 129
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							*worker1,
+							*worker2,
+						}
+
+						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.provider.workers"),
+							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 256 nodes"),
+						}))))
+					})
 				})
 			})
 		})
