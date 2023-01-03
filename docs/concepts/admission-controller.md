@@ -25,7 +25,7 @@ Since users directly apply Kubernetes native objects to the Garden cluster, it a
 One example is the creation of `Shoot` resources with large annotation values (up to 256 kB per value), which can cause severe out-of-memory issues for the `gardenlet` component.
 [Vertical autoscaling](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) can help to mitigate such situations, but we cannot expect to scale infinitely, and thus need means to block the attack itself.
 
-The Resource Size Validator checks arbitrary incoming admission requests against a configured maximum size for the resource's group-version-kind combination and denies the request if the contained object exceeds the quota.
+The Resource Size Validator checks arbitrary incoming admission requests against a configured maximum size for the resource's group-version-kind combination. It denies the request if the object exceeds the quota.
 
 Example for Gardener Admission Controller configuration:
 ```yaml
