@@ -1,14 +1,15 @@
 # Endpoints and Ports of a Shoot Control-Plane
 
-With the reversed VPN tunnel, there are no endpoints with open ports in the shoot cluster required by gardener.
-In order to allow communication to the shoots control-plane in the seed cluster, there are shared endpoints for all shoots of a seed cluster.
+With the [reversed VPN](./reversed-vpn-tunnel.md) tunnel, there are no endpoints with open ports in the shoot cluster required by gardener.
+In order to allow communication to the shoots control-plane in the seed cluster, there are endpoints shared by multiple shoots of a seed cluster.
+Depending on the configured zones or [exposure classes](./exposureclasses.md) there are different endpoints in a seed cluster. The IP address can be determined by a DNS query for the API-server URL.
 The main entry-point into the seed cluster is the loadbalancer of the Istio ingress-gateway service. Depending on the infrastructure provider, there can be one IP address per zone.
 
-The Istio ingress-gateway exposes the following TCP ports:
+The loadbalancer of the Istio ingress-gateway service exposes the following TCP ports:
 
 * **443** for requests to the shoot API-server. The request is dispatched according to the set TLS SNI extension.
-* **8443** for requests to the shoot API-server via `api-server-proxy`. 
-* **8132** to establish the reversed VPN connection.
+* **8443** for requests to the shoot API-server via `api-server-proxy`, dispatched based on the proxy protocol target, which is the IP address of kubernetes.default.svc.cluster.local in the shoot.
+* **8132** to establish the reversed VPN connection. It's dispatched according an HTTP header value.
 
 ## Kube API-server via SNI 
 
@@ -25,10 +26,11 @@ Details can be found in [GEP-08](../proposals/08-shoot-apiserver-via-sni.md).
 ![API-server-proxy](./images/api-server-proxy.png)
 
 Inside the shoot cluster, the API-server can also be reached by the cluster internal name `kubernetes.default.svc.cluster.local`. 
-The pods `api-server-proxy` are deployed in the host network as daemonset and intercepts connections to the kubernetes service IP address.
+The pods `api-serverproxy` are deployed in the host network as daemonset and intercept connections to the kubernetes service IP address.
 The destination address is changed to the cluster IP address of the service `kube-apiserver.<shoot-namespace>.svc.cluster.local` in the seed cluster.
-The connections are forwarded via an HTTP tunnel to the Istio ingress-gateway in the seed cluster.
+The connections are forwarded via the [HaProxy Proxy Protocol](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/listener_filters/proxy_protocol) to the Istio ingress-gateway in the seed cluster.
 The Istio ingress-gateway forwards the connection to the respective shoot API-server by it's cluster IP address.
+As TLS termination happens at the API-server, the traffic is end-to-end encrypted the same way as with SNI.
 
 Details can be found in [GEP-11](../proposals/11-apiserver-network-proxy.md).
 
@@ -42,5 +44,5 @@ The VPN client connects to the Istio ingress-gateway and is forwarded to the VPN
 Once the VPN tunnel between the VPN client in the shoot and the VPN server in the seed cluster is established, the API-server can connect to nodes, 
 services and pods in the shoot cluster.
 
-More details can be found [usage document](./reversed-vpn-tunnel.md) and [GEP-14](../proposals/14-reversed-cluster-vpn.md).
+More details can be found in the [usage document](./reversed-vpn-tunnel.md) and [GEP-14](../proposals/14-reversed-cluster-vpn.md).
 
