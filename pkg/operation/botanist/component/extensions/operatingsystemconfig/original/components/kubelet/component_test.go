@@ -411,7 +411,7 @@ maxOpenFiles: 1000000
 maxPods: 110
 memorySwap: {}
 nodeStatusReportFrequency: 0s
-nodeStatusUpdateFrequency: 10s
+nodeStatusUpdateFrequency: 0s
 resolvConf: /etc/resolv.conf`
 
 	if rotateCertificates {

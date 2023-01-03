@@ -86,7 +86,6 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		KubeReserved:                     params.KubeReserved,
 		MaxOpenFiles:                     1000000,
 		MaxPods:                          *params.MaxPods,
-		NodeStatusUpdateFrequency:        metav1.Duration{Duration: 10 * time.Second},
 		PodsPerCore:                      0,
 		PodPidsLimit:                     params.PodPidsLimit,
 		ProtectKernelDefaults:            *params.ProtectKernelDefaults,
