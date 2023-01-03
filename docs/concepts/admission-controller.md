@@ -15,14 +15,14 @@ This handler checks if the incoming request contains a Kubernetes secret with a 
 
 ### Namespace Validator
 
-Namespaces are the backing entities of Gardener projects in which shoot clusters objects reside.
+Namespaces are the backing entities of Gardener projects in which shoot cluster objects reside.
 This validation handler protects active namespaces against premature deletion requests.
 Therefore, it denies deletion requests if a namespace still contains shoot clusters or if it belongs to a non-deleting Gardener project (without `.metadata.deletionTimestamp`).
 
 ### Resource Size Validator
 
-Since users directly apply Kubernetes native objects to the Garden cluster, it also involves the risk of being vulnerable to DoS attacks because these resources are read continuously watched and read by controllers.
-One example is the creation of `Shoot` resources with large annotation values (up to 256 kB per value) which can cause severe out-of-memory issues for the gardenlet component.
+Since users directly apply Kubernetes native objects to the Garden cluster, it also involves the risk of being vulnerable to DoS attacks because these resources are continuously watched and read by controllers.
+One example is the creation of `Shoot` resources with large annotation values (up to 256 kB per value), which can cause severe out-of-memory issues for the `gardenlet` component.
 [Vertical autoscaling](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) can help to mitigate such situations, but we cannot expect to scale infinitely, and thus need means to block the attack itself.
 
 The Resource Size Validator checks arbitrary incoming admission requests against a configured maximum size for the resource's group-version-kind combination and denies the request if the contained object exceeds the quota.

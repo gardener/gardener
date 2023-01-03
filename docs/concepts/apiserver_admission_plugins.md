@@ -15,7 +15,7 @@ _(both enabled by default)_
 
 These admission controllers react on `CREATE` operations for `Shoot`s.
 If the `Shoot` does not specify any OIDC configuration (`.spec.kubernetes.kubeAPIServer.oidcConfig=nil`), then it tries to find a matching `ClusterOpenIDConnectPreset` or `OpenIDConnectPreset`, respectively.
-If there are multiples that match, then the one with the highest weight "wins".
+If there are multiple matches, then the one with the highest weight "wins".
 In this case, the admission controller will default the OIDC configuration in the `Shoot`.
 
 ## `ControllerRegistrationResources`
