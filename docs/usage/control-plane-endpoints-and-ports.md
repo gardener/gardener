@@ -3,9 +3,9 @@
 With the [reversed VPN](./reversed-vpn-tunnel.md) tunnel, there are no endpoints with open ports in the shoot cluster required by gardener.
 In order to allow communication to the shoots control-plane in the seed cluster, there are endpoints shared by multiple shoots of a seed cluster.
 Depending on the configured zones or [exposure classes](./exposureclasses.md) there are different endpoints in a seed cluster. The IP address can be determined by a DNS query for the API-server URL.
-The main entry-point into the seed cluster is the loadbalancer of the Istio ingress-gateway service. Depending on the infrastructure provider, there can be one IP address per zone.
+The main entry-point into the seed cluster is the load balancer of the Istio ingress-gateway service. Depending on the infrastructure provider, there can be one IP address per zone.
 
-The loadbalancer of the Istio ingress-gateway service exposes the following TCP ports:
+The load balancer of the Istio ingress-gateway service exposes the following TCP ports:
 
 * **443** for requests to the shoot API-server. The request is dispatched according to the set TLS SNI extension.
 * **8443** for requests to the shoot API-server via `api-server-proxy`, dispatched based on the proxy protocol target, which is the IP address of kubernetes.default.svc.cluster.local in the shoot.
@@ -15,7 +15,7 @@ The loadbalancer of the Istio ingress-gateway service exposes the following TCP 
 
 ![API-server via SNI](./images/api-server-sni.png)
 
-DNS entries for `api.<external-domain>` and `api.<shoot>.<project>.<internal-domain>` point to the loadbalancer of an Istio ingress-gateway service.
+DNS entries for `api.<external-domain>` and `api.<shoot>.<project>.<internal-domain>` point to the load balancer of an Istio ingress-gateway service.
 The kubernetes client sets the server name to `api.<external-domain>` or `api.<shoot>.<project>.<internal-domain>`.
 Based on SNI, the connection is forwarded to the respective API-server at TCP layer. There is no TLS termination at the Istio ingress-gateway.
 TLS termination happens on the shoots API-server. Traffic is end-to-end encrypted between the client and the API-server. The certificate authority and authentication are defined in the corresponding `kubeconfig`.
