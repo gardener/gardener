@@ -21,7 +21,7 @@ etcd-backup-restore supports full snapshot and delta snapshots over full snapsho
     - At `5min` interval.
     - If aggregated events size since last snapshot goes beyond `100Mib`.
 - Backup History / Garbage backup deletion policy:
-    - Gardener configure backup restore to have `Exponential` garbage collection policy.
+    - Gardener configures backup restore to have `Exponential` garbage collection policy.
     - As per policy, the following backups are retained:
       - All full backups and delta backups for the previous hour.
       - Latest full snapshot of each previous hour for the day.

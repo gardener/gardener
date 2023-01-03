@@ -1,6 +1,6 @@
 # Gardener Admission Controller
 
-While the Gardener API server works with [admission plugins](./apiserver_admission_plugins.md) to validate and mutate resources belonging to Gardener related API groups, e.g. `core.gardener.cloud`, the same is needed for resources belonging to non-Gardener API groups as well, e.g. `Secret`s in the `core` API group.
+While the Gardener API server works with [admission plugins](./apiserver_admission_plugins.md) to validate and mutate resources belonging to Gardener related API groups, e.g. `core.gardener.cloud`, the same is needed for resources belonging to non-Gardener API groups as well, e.g. secrets in the `core` API group.
 Therefore, the Gardener Admission Controller runs a http(s) server with the following handlers which serve as validating/mutating endpoints for [admission webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
 It is also used to serve http(s) handlers for authorization webhooks.
 
@@ -22,7 +22,7 @@ Therefore, it denies deletion requests if a namespace still contains shoot clust
 ### Resource Size Validator
 
 Since users directly apply Kubernetes native objects to the Garden cluster, it also involves the risk of being vulnerable to DoS attacks because these resources are continuously watched and read by controllers.
-One example is the creation of `Shoot` resources with large annotation values (up to 256 kB per value), which can cause severe out-of-memory issues for the `gardenlet` component.
+One example is the creation of shoot resources with large annotation values (up to 256 kB per value), which can cause severe out-of-memory issues for the gardenlet component.
 [Vertical autoscaling](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) can help to mitigate such situations, but we cannot expect to scale infinitely, and thus need means to block the attack itself.
 
 The Resource Size Validator checks arbitrary incoming admission requests against a configured maximum size for the resource's group-version-kind combination. It denies the request if the object exceeds the quota.

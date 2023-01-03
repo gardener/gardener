@@ -15,7 +15,7 @@ After registration, it exposes the following resources:
 Each shoot has to reference a `CloudProfile` to declare the environment it should be created in.
 In a `CloudProfile`, the gardener operator specifies certain constraints like available machine types, regions, which Kubernetes versions they want to offer, etc.
 End-users can read `CloudProfile`s to see these values, but only operators can change the content or create/delete them.
-When a shoot is created or updated, then an admission plugin checks that only values that are allowed are used via the referenced `CloudProfile`.
+When a shoot is created or updated, then an admission plugin checks that only allowed values are used via the referenced `CloudProfile`.
 
 Additionally, a `CloudProfile` may contain a `providerConfig`, which is a special configuration dedicated for the infrastructure provider.
 Gardener does not evaluate or understand this config, but extension controllers might need it for declaration of provider-specific constraints, or global settings.
@@ -26,7 +26,7 @@ Please see [this](../../example/30-cloudprofile.yaml) example manifest and consu
 
 `Seed`s are resources that represent seed clusters.
 Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.20 and passes the Kubernetes conformance tests.
-The Gardener operator has to either deploy the `gardenlet` into the cluster they want to use as seed (recommended, then the `gardenlet` will create the `Seed` object itself after bootstrapping) or provide the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and create the `Seed` resource themselves.
+The Gardener operator has to either deploy the gardenlet into the cluster they want to use as seed (recommended, then the gardenlet will create the `Seed` object itself after bootstrapping) or provide the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and create the `Seed` resource themselves.
 
 Please see [this](../../example/45-secret-seed-backup.yaml), [this](../../example/50-seed.yaml), and optionally [this](../../example/40-secret-seed.yaml) example manifests.
 

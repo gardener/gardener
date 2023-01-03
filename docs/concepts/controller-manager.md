@@ -95,7 +95,7 @@ The need to prolong the time-to-live for Shoot cluster events frequently arises 
 This controller leaves events involving Shoots untouched, while deleting all other events after a configured time.
 In order to activate it, provide the following configuration:
 
-* `concurrentSyncs`: The amount of go routines scheduled for reconciling events.
+* `concurrentSyncs`: The amount of goroutines scheduled for reconciling events.
 * `ttlNonShootEvents`: When an event reaches this time-to-live it gets deleted unless it is a Shoot-related event (defaults to `1h`, equivalent to the `event-ttl` default).
 
 > :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored. The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
@@ -292,7 +292,7 @@ It ignores [failed `Shoot`s](../usage/shoot_status.md#last-operation) and those 
 
 This reconciler is responsible for maintaining shoot clusters based on the time window defined in their `.spec.maintenance.timeWindow`.
 It might auto-update the Kubernetes version or the operating system versions specified in the worker pools (`.spec.provider.workers`).
-It could also add some operation or task annotations For more information, see [Shoot Maintenance](../usage/shoot_maintenance.md).
+It could also add some operation or task annotations. For more information, see [Shoot Maintenance](../usage/shoot_maintenance.md).
 
 #### "Quota" Reconciler
 
