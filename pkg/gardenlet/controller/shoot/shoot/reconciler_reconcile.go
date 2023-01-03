@@ -98,6 +98,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		kubeProxyEnabled                = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
 		deployKubeAPIServerTaskTimeout  = defaultTimeout
+		shootSSHAccessDisabled          = gardencorev1beta1helper.ShootWantsSSHAccessDisabled(o.Shoot.GetInfo())
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
@@ -446,10 +447,20 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				DoIf(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
+		deleteBastions = g.Add(flow.Task{
+			Name:         "Deleting Bastions if EnsureSSHAccessDisabled is set in workers settings",
+			Fn:           flow.TaskFn(botanist.DeleteBastions).DoIf(shootSSHAccessDisabled),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
+		})
+		waitUntilBastionsDeleted = g.Add(flow.Task{
+			Name:         "Waiting until Bastions have been deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilBastionsDeleted).DoIf(shootSSHAccessDisabled),
+			Dependencies: flow.NewTaskIDs(deleteBastions),
+		})
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, waitUntilBastionsDeleted),
 		})
 		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
 			Name:         "Waiting until operating system configurations for worker nodes have been reconciled",

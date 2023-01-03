@@ -1,0 +1,121 @@
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package botanist_test
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/operation"
+	. "github.com/gardener/gardener/pkg/operation/botanist"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
+	"github.com/hashicorp/go-multierror"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
+
+var _ = Describe("Bastions", func() {
+	var (
+		fakeClient         client.Client
+		botanist           *Botanist
+		namespace          *corev1.Namespace
+		ctx                = context.TODO()
+		bastion1, bastion2 *v1alpha1.Bastion
+
+		deleteBastionsWithDelay = func(ctx context.Context, delay time.Duration, bastions ...*v1alpha1.Bastion) {
+			defer GinkgoRecover()
+			time.Sleep(delay)
+			for _, bastion := range bastions {
+				Expect(fakeClient.Delete(ctx, bastion)).To(Succeed())
+			}
+		}
+	)
+
+	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		botanist = &Botanist{Operation: &operation.Operation{}}
+		k8sSeedClient := fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
+		botanist.SeedClientSet = k8sSeedClient
+		botanist.Shoot = &shootpkg.Shoot{
+			SeedNamespace: namespace.Name,
+		}
+
+		bastion1 = &v1alpha1.Bastion{
+			ObjectMeta: metav1.ObjectMeta{Name: "bastion1", Namespace: namespace.Name},
+		}
+		bastion2 = &v1alpha1.Bastion{
+			ObjectMeta: metav1.ObjectMeta{Name: "bastion2", Namespace: namespace.Name},
+		}
+	})
+
+	Describe("#DeleteBastions", func() {
+		It("should delete all bastions", func() {
+			Expect(fakeClient.Create(ctx, bastion1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, bastion2)).To(Succeed())
+
+			Expect(botanist.DeleteBastions(ctx)).To(Succeed())
+
+			bastionList := &metav1.PartialObjectMetadataList{}
+			bastionList.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("BastionList"))
+			Expect(fakeClient.List(ctx, bastionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(len(bastionList.Items)).To(Equal(0))
+		})
+	})
+
+	Describe("#WaitUntilBastionsDeleted", func() {
+		It("should wait for all bastions of the shoot to be deleted", func() {
+			Expect(fakeClient.Create(ctx, bastion1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, bastion2)).To(Succeed())
+
+			go deleteBastionsWithDelay(ctx, time.Second*3, bastion1, bastion2)
+
+			timeoutContext, cancel := context.WithTimeout(ctx, time.Second*30)
+			defer cancel()
+			Expect(botanist.WaitUntilBastionsDeleted(timeoutContext)).To(Succeed())
+			bastionList := &metav1.PartialObjectMetadataList{}
+			bastionList.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("BastionList"))
+			Expect(fakeClient.List(ctx, bastionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(len(bastionList.Items)).To(Equal(0))
+		})
+
+		It("should timeout because not all bastions are deleted", func() {
+			Expect(fakeClient.Create(ctx, bastion1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, bastion2)).To(Succeed())
+
+			go deleteBastionsWithDelay(ctx, time.Second*1, bastion1)
+
+			timeoutContext, cancel := context.WithTimeout(ctx, time.Second*6)
+			defer cancel()
+			err := botanist.WaitUntilBastionsDeleted(timeoutContext)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&retry.Error{}))
+			multiError := errors.Unwrap(err)
+			Expect(multiError).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(multiError.(*multierror.Error).Errors).To(ConsistOf(fmt.Errorf("bastion %s/%s still exists", namespace.Name, bastion2.Name)))
+		})
+	})
+})

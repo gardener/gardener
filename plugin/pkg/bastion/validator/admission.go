@@ -153,6 +153,12 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
 	}
 
+	// ensure shoot SSH access is not disabled
+	if shoot.Spec.Provider.WorkersSettings != nil && shoot.Spec.Provider.WorkersSettings.EnsureSSHAccessDisabled != nil && *shoot.Spec.Provider.WorkersSettings.EnsureSSHAccessDisabled {
+		fieldErr := field.Invalid(shootPath, shootName, "ssh access is disabled for worker nodes")
+		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
+	}
+
 	// update bastion
 	bastion.Spec.SeedName = shoot.Spec.SeedName
 	bastion.Spec.ProviderType = &shoot.Spec.Provider.Type
