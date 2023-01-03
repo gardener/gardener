@@ -2,36 +2,38 @@
 
 ## Table of Contents
 
-* [Table of Contents](#table-of-contents)
-* [Summary](#summary)
-* [Motivation](#motivation)
-    * [Goals](#goals)
-    * [Non-Goals](#non-goals)
-* [Proposal](#proposal)
-    * [Modification of existing `CloudProfile` and `Shoot` resources](#modification-of-existing-cloudprofile-and-shoot-resources)
-        * [CloudProfiles](#cloudprofiles)
-        * [Shoots](#shoots)
-    * [CRD definitions and workflow adaptation](#crd-definitions-and-workflow-adaptation)
-        * [Custom resource definitions](#custom-resource-definitions)
-            * [DNS records](#dns-records)
-            * [Infrastructure provisioning](#infrastructure-provisioning)
-            * [Backup infrastructure provisioning](#backup-infrastructure-provisioning)
-            * [Cloud config (user-data) for bootstrapping machines](#cloud-config-user-data-for-bootstrapping-machines)
-            * [Worker pools definition](#worker-pools-definition)
-            * [Generic resources](#generic-resources)
-        * [Shoot state](#shoot-state)
-        * [Shoot health checks/conditions](#shoot-health-checksconditions)
-        * [Reconciliation flow](#reconciliation-flow)
-        * [Deletion flow](#deletion-flow)
-    * [Gardenlet](#gardenlet)
-    * [Shoot control plane movement/migration](#shoot-control-plane-movementmigration)
-* [Registration of external controllers at Gardener](#registration-of-external-controllers-at-gardener)
-* [Other cloud-specific parts](#other-cloud-specific-parts)
-    * [Defaulting and validation admission plugins](#defaulting-and-validation-admission-plugins)
-    * [DNS Hosted Zone admission plugin](#dns-hosted-zone-admission-plugin)
-    * [Shoot Quota admission plugin](#shoot-quota-admission-plugin)
-    * [Shoot maintenance controller](#shoot-maintenance-controller)
-* [Alternatives](#alternatives)
+- [Gardener extensibility and extraction of cloud-specific/OS-specific knowledge (#308, #262)](#gardener-extensibility-and-extraction-of-cloud-specificos-specific-knowledge-308-262)
+  - [Table of Contents](#table-of-contents)
+  - [Summary](#summary)
+  - [Motivation](#motivation)
+    - [Goals](#goals)
+    - [Non-Goals](#non-goals)
+  - [Proposal](#proposal)
+    - [Modification of existing `CloudProfile` and `Shoot` resources](#modification-of-existing-cloudprofile-and-shoot-resources)
+      - [CloudProfiles](#cloudprofiles)
+      - [Shoots](#shoots)
+    - [CRD definitions and workflow adaptation](#crd-definitions-and-workflow-adaptation)
+      - [Custom resource definitions](#custom-resource-definitions)
+        - [DNS records](#dns-records)
+        - [Infrastructure provisioning](#infrastructure-provisioning)
+        - [Backup infrastructure provisioning](#backup-infrastructure-provisioning)
+        - [Cloud config (user-data) for bootstrapping machines](#cloud-config-user-data-for-bootstrapping-machines)
+        - [Worker pools definition](#worker-pools-definition)
+        - [Generic resources](#generic-resources)
+      - [Shoot state](#shoot-state)
+      - [Shoot health checks/conditions](#shoot-health-checksconditions)
+      - [Reconciliation flow](#reconciliation-flow)
+      - [Deletion flow](#deletion-flow)
+    - [Gardenlet](#gardenlet)
+    - [Shoot control plane movement/migration](#shoot-control-plane-movementmigration)
+    - [BackupInfrastructure migration](#backupinfrastructure-migration)
+  - [Registration of external controllers at Gardener](#registration-of-external-controllers-at-gardener)
+  - [Other cloud-specific parts](#other-cloud-specific-parts)
+    - [Defaulting and validation admission plugins](#defaulting-and-validation-admission-plugins)
+    - [DNS Hosted Zone admission plugin](#dns-hosted-zone-admission-plugin)
+    - [Shoot Quota admission plugin](#shoot-quota-admission-plugin)
+    - [Shoot maintenance controller](#shoot-maintenance-controller)
+  - [Alternatives](#alternatives)
 
 ## Summary
 
@@ -229,7 +231,7 @@ spec:
 ### CRD definitions and workflow adaptation
 
 In the following we are outlining the CRD definitions which define the API between Gardener and the dedicated controllers.
-After that we will take a look at the current [reconciliation](../../pkg/gardenlet/controller/shoot/shoot_control_reconcile.go)/[deletion](../../pkg/gardenlet/controller/shoot/shoot_control_delete.go) flow and describe how it would look like in case we would implement this proposal.
+After that we will take a look at the current [reconciliation](../../pkg/gardenlet/controller/shoot/shoot/reconciler_reconcile.go)/[deletion](../../pkg/gardenlet/controller/shoot/shoot/reconciler_delete.go) flow and describe how it would look like in case we would implement this proposal.
 
 #### Custom resource definitions
 

@@ -14,8 +14,8 @@ This document lists all existing admission plugins with a short explanation of w
 _(both enabled by default)_
 
 These admission controllers react on `CREATE` operations for `Shoot`s.
-If the `Shoot` does not specify any OIDC configuration (`.spec.kubernetes.kubeAPIServer.oidcConfig=nil`) then it tries to find a matching `ClusterOpenIDConnectPreset` or `OpenIDConnectPreset`, respectively.
-If there are multiples that match then the one with the highest weight "wins".
+If the `Shoot` does not specify any OIDC configuration (`.spec.kubernetes.kubeAPIServer.oidcConfig=nil`), then it tries to find a matching `ClusterOpenIDConnectPreset` or `OpenIDConnectPreset`, respectively.
+If there are multiple matches, then the one with the highest weight "wins".
 In this case, the admission controller will default the OIDC configuration in the `Shoot`.
 
 ## `ControllerRegistrationResources`
@@ -48,7 +48,7 @@ This prevents users from accidental/undesired deletions.
 _(enabled by default)_
 
 This admission controller reacts on `Create` operations for `Shoots`s.
-It mutates `Shoot` resources which has an `ExposureClass` referenced by merging their both `shootSelectors` and/or `tolerations` into the `Shoot` resource.
+It mutates `Shoot` resources which have an `ExposureClass` referenced by merging both their `shootSelectors` and/or `tolerations` into the `Shoot` resource.
 
 ## `ExtensionValidator`
 
@@ -62,7 +62,7 @@ This prevents misconfigurations that would otherwise allow users to create such 
 
 _(enabled by default)_
 
-This admission controller reacts on `CREATE` and `UPDATE` operations for  `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `Seed`s, `SecretBinding`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
+This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `Seed`s, `SecretBinding`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
 
 ## `ProjectValidator`
 
@@ -77,7 +77,7 @@ It prevents creating `Project`s with a non-empty `.spec.namespace` if the value 
 
 _(enabled by default)_
 
-This admission controller enables [object count ResourceQuotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/#object-count-quota) for Gardener resources, e.g. `Shoots`, `SecretBindings`, `Projects`, etc..
+This admission controller enables [object count ResourceQuotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/#object-count-quota) for Gardener resources, e.g. `Shoots`, `SecretBindings`, `Projects`, etc.
 > :warning: In addition to this admission plugin, the [ResourceQuota controller](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/admission_control_resource_quota.md#resource-quota-controller) must be enabled for the Kube-Controller-Manager of your Garden cluster. 
 
 ## `ResourceReferenceManager`
@@ -113,8 +113,7 @@ It also validates that the DNS configuration (`.spec.dns`) is not set if the see
 _(disabled by default)_
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
-If enabled, it will enable node local dns within the shoot cluster (see [this doc](../usage/node-local-dns.md))
-by setting `spec.systemComponents.nodeLocalDNS.enabled=true` for newly created Shoots.
+If enabled, it will enable node local dns within the shoot cluster (for more information, see [NodeLocalDNS Configuration](../usage/node-local-dns.md)) by setting `spec.systemComponents.nodeLocalDNS.enabled=true` for newly created Shoots.
 Already existing Shoots and new Shoots that explicitly disable node local dns (`spec.systemComponents.nodeLocalDNS.enabled=false`)
 will not be affected by this admission plugin.
 
@@ -132,7 +131,7 @@ Applicable `Quota`s are referred in the `SecretBinding` that is used by the `Sho
 _(disabled by default)_
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
-If enabled, it will enable the managed `VerticalPodAutoscaler` components (see [this doc](../usage/shoot_autoscaling.md#vertical-pod-auto-scaling))
+If enabled, it will enable the managed `VerticalPodAutoscaler` components (for more information, see [Vertical Pod Auto-Scaling](../usage/shoot_autoscaling.md#vertical-pod-auto-scaling)) 
 by setting `spec.kubernetes.verticalPodAutoscaler.enabled=true` for newly created Shoots.
 Already existing Shoots and new Shoots that explicitly disable VPA (`spec.kubernetes.verticalPodAutoscaler.enabled=false`)
 will not be affected by this admission plugin.
@@ -183,5 +182,5 @@ It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed`
 _(disabled by default)_
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
-If enabled, it adds a set of common suffixes configured in its admission plugin configuration to the `Shoot` (`spec.systemComponents.coreDNS.rewriting.commonSuffixes`) (see [this doc](../usage/dns-search-path-optimization.md)).
+If enabled, it adds a set of common suffixes configured in its admission plugin configuration to the `Shoot` (`spec.systemComponents.coreDNS.rewriting.commonSuffixes`) (for more information, see [DNS Search Path Optimization](../usage/dns-search-path-optimization.md)).
 Already existing `Shoot`s will not be affected by this admission plugin.

@@ -2,7 +2,7 @@
 
 The `gardener-controller-manager` (often refered to as "GCM") is a component that runs next to the Gardener API server, similar to the Kubernetes Controller Manager.
 It runs several controllers that do not require talking to any seed or shoot cluster.
-Also, as of today it exposes an HTTP server that is serving several health check endpoints and metrics.
+Also, as of today, it exposes an HTTP server that is serving several health check endpoints and metrics.
 
 This document explains the various functionalities of the `gardener-controller-manager` and their purpose.
 
@@ -18,9 +18,9 @@ The `Bastion` controller is responsible for deleting expired or rotten `Bastion`
 
 The `maxLifetime` defaults to 24 hours and is an option in the `BastionControllerConfiguration` which is part of `gardener-controller-manager`s `ControllerManagerControllerConfiguration`, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
 
-The controller also deletes `Bastion`s in case the referenced `Shoot`
+The controller also deletes `Bastion`s in case the referenced `Shoot`:
 
-- does no longer exist
+- no longer exists
 - is marked for deletion (i.e., have a non-`nil` `.metadata.deletionTimestamp`)
 - was migrated to another seed (i.e., `Shoot.spec.seedName` is different than `Bastion.spec.seedName`).
 
@@ -32,9 +32,9 @@ Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) 
 
 ### [`CertificateSigningRequest` Controller](../../pkg/controllermanager/controller/certificatesigningrequest)
 
-After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/) process.
+After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster, it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/) process.
 
-On startup the gardenlet uses a `kubeconfig` with a [bootstrap token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) which authenticates it as being part of the `system:bootstrappers` group. This kubeconfig is used to create a [`CertificateSigningRequest`]( https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) (CSR) against the Gardener API server.
+On startup, the gardenlet uses a `kubeconfig` with a [bootstrap token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) which authenticates it as being part of the `system:bootstrappers` group. This kubeconfig is used to create a [`CertificateSigningRequest`](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) (CSR) against the Gardener API server.
 
 The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organisation, common name and usages which the gardenlet would request.
 
@@ -49,7 +49,7 @@ Consequently, to ensure that `CloudProfile`s in-use are always present in the sy
 
 ### [`ControllerDeployment` Controller](../../pkg/controllermanager/controller/controllerdeployment)
 
-Extensions are registered in garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer [here](../extensions/controllerregistration.md).
+Extensions are registered in the garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer to [Registering Extension Controllers](../extensions/controllerregistration.md).
 
 This controller ensures that `ControllerDeployment` in-use always exists until the last `ControllerRegistration` referencing them gets deleted. The controller adds a finalizer which is only released when there is no `ControllerRegistration` referencing the `ControllerDeployment` anymore.
 
@@ -64,7 +64,7 @@ The controller has three reconciliation loops.
 This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistrations` are required for them and reconciles the corresponding `ControllerInstallation` resources to reach the determined state.
 To begin with, it computes the kind/type combinations of extensions required for the seed.
 For this, the controller examines a live list of `ControllerRegistration`s, `ControllerInstallation`s, `BackupBucket`s, `BackupEntry`s, `Shoot`s, and `Secret`s from the garden cluster.
-For example, it examines the shoots running on the seed and deducts kind/type like `Infrastructure/gcp`.
+For example, it examines the shoots running on the seed and deducts the kind/type, like `Infrastructure/gcp`.
 It also decides whether they should always be deployed based on the `.spec.deployment.policy`.
 For the configuration options, please see this [section](../extensions/controllerregistration.md#deployment-configuration-options).
 
@@ -82,17 +82,17 @@ In case no related `ControllerInstallation` is present, it removes the finalizer
 #### "Seed" Reconciler
 
 This loop also watches the `Seed` object and adds finalizers to it at creation.
-If a `.metadata.deletionTimestamp` is set for the seed then the controller checks for existing `ControllerInstallation` objects which reference this seed.
-If no such objects exist then it removes the finalizer and allows the deletion.
+If a `.metadata.deletionTimestamp` is set for the seed, then the controller checks for existing `ControllerInstallation` objects which reference this seed.
+If no such objects exist, then it removes the finalizer and allows the deletion.
 
 ### [`Event` Controller](../../pkg/controllermanager/controller/event)
 
-With the Gardener Event Controller you can prolong the lifespan of events related to Shoot clusters.
+With the Gardener Event Controller, you can prolong the lifespan of events related to Shoot clusters.
 This is an optional controller which will become active once you provide the below mentioned configuration.
 
 All events in K8s are deleted after a configurable time-to-live (controlled via a [kube-apiserver argument](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) called `--event-ttl` (defaulting to 1 hour)).
 The need to prolong the time-to-live for Shoot cluster events frequently arises when debugging customer issues on live systems.
-This controller leaves events involving Shoots untouched while deleting all other events after a configured time.
+This controller leaves events involving Shoots untouched, while deleting all other events after a configured time.
 In order to activate it, provide the following configuration:
 
 * `concurrentSyncs`: The amount of goroutines scheduled for reconciling events.
@@ -102,28 +102,28 @@ In order to activate it, provide the following configuration:
 
 ### [`ExposureClass` Controller](../../pkg/controllermanager/controller/exposureclass)
 
-`ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds. For more [refer](../usage/exposureclasses.md).
+`ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds. For more information, see [ExposureClasses](../usage/exposureclasses.md).
 
-Consequently, to ensure that `ExposureClass`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `ExposureClass` anymore.
+Consequently, to ensure that `ExposureClass`es in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `ExposureClass` anymore.
 
 ### [`ManagedSeedSet` Controller](../../pkg/controllermanager/controller/managedseedset)
 
 `ManagedSeedSet` objects maintain a stable set of replicas of `ManagedSeed`s, i.e. they guarantee the availability of a specified number of identical `ManagedSeed`s on an equal number of identical `Shoot`s.
-`ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more info refer to the [`ManagedSeedSet` proposal document](../../docs/proposals/13-automated-seed-management.md#managedseedsets).
+The `ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more information, refer to the [`ManagedSeedSet` proposal document](../../docs/proposals/13-automated-seed-management.md#managedseedsets).
 
 1. The reconciler first gets all the replicas of the given `ManagedSeedSet` in the `ManagedSeedSet`'s namespace and with the matching selector. Each replica is a struct that contains a `ManagedSeed`, its corresponding `Seed` and `Shoot` objects.
-1. Then the pending replica is retrieved if it exists.
-1. Next it determines the ready, postponed and deletable replica.
+1. Then the pending replica is retrieved, if it exists.
+1. Next it determines the ready, postponed, and deletable replicas.
     - A replica is considered `ready` when a `Seed` owned by a `ManagedSeed` has been registered either directly or by deploying `gardenlet` into a `Shoot`, the `Seed` is `Ready` and the `Shoot`'s status is `Healthy`.
     - If a replica is not ready and it is not pending, i.e. it is not specified in the `ManagedSeed`'s `status.pendingReplica` field, then it is added to the `postponed` replicas.
-    - A replica is deletable if it has no scheduled `Shoot`s and replica's `Shoot` and `ManagedSeed` do not have the `seedmanagement.gardener.cloud/protect-from-deletion` annotation.
+    - A replica is deletable if it has no scheduled `Shoot`s and the replica's `Shoot` and `ManagedSeed` do not have the `seedmanagement.gardener.cloud/protect-from-deletion` annotation.
 1. Finally, it checks the actual and target replica counts. If the actual count is less than the target count, the controller scales up the replicas by creating new replicas to match the desired target count. If the actual count is more than the target, the controller deletes replicas to match the desired count. Before scale-out or scale-in, the controller first reconciles the pending replica (there can always only be one) and makes sure the replica is ready before moving on to the next one.
     * `Scale-out`(actual count < target count)
         - During the scale-out phase, the controller first creates the `Shoot` object from the `ManagedSeedSet`'s `spec.shootTemplate` field and adds the replica to the `status.pendingReplica` of the `ManagedSeedSet`.
         - For the subsequent reconciliation steps, the controller makes sure that the pending replica is ready before proceeding to the next replica. Once the `Shoot` is created successfully, the `ManagedSeed` object is created from the `ManagedSeedSet`'s `spec.template`. The `ManagedSeed` object is reconciled by the `ManagedSeed` controller and a `Seed` object is created for the replica. Once the replica's `Seed` becomes ready and the `Shoot` becomes healthy, the replica also becomes ready.
     * `Scale-in`(actual count > target count)
         - During the scale-in phase, the controller first determines the replica that can be deleted. From the deletable replicas, it chooses the one with the lowest priority and deletes it. Priority is determined in the following order:
-            - First, compare replica statuses. Replicas with "less advanced" status are considered lower priority. For example, a replica with `StatusShootReconciling` status has a lower value than a replica with `StatusShootReconciled` status. Hence, in this case, replica with `StatusShootReconciling` status will have lower priority and will be considered for deletion.
+            - First, compare replica statuses. Replicas with "less advanced" status are considered lower priority. For example, a replica with `StatusShootReconciling` status has a lower value than a replica with `StatusShootReconciled` status. Hence, in this case, a replica with a `StatusShootReconciling` status will have lower priority and will be considered for deletion.
             - Then, the replicas are compared with the readiness of their `Seed`s. Replicas with non-ready `Seed`s are considered lower priority.
             - Then, the replicas are compared with the health statuses of their `Shoot`s. Replicas with "worse" statuses are considered lower priority.
             - Finally, the replica ordinals are compared. Replicas with lower ordinals are considered lower priority.
@@ -145,18 +145,18 @@ This reconciler manages a dedicated `Namespace` for each `Project`.
 The namespace name can either be specified explicitly in `.spec.namespace` (must be prefixed with `garden-`) or it will be determined by the controller.
 If `.spec.namespace` is set, it tries to create it. If it already exists, it tries to adopt it.
 This will only succeed if the `Namespace` was previously labeled with `gardener.cloud/role=project` and `project.gardener.cloud/name=<project-name>`.
-This is to prevent that end-users can adopt arbitrary namespaces and escalate their privileges, e.g. the `kube-system` namespace.
+This is to prevent end-users from being able to adopt arbitrary namespaces and escalate their privileges, e.g. the `kube-system` namespace.
 
-After the namespace was created/adopted the controller creates several `ClusterRole`s and `ClusterRoleBinding`s that allow the project members to access related resources based on their roles.
+After the namespace was created/adopted, the controller creates several `ClusterRole`s and `ClusterRoleBinding`s that allow the project members to access related resources based on their roles.
 These RBAC resources are prefixed with `gardener.cloud:system:project{-member,-viewer}:<project-name>`.
-Gardener administrators and extension developers can define their own roles, see [this document](../extensions/project-roles.md) for more information.
+Gardener administrators and extension developers can define their own roles. For more information, see [Extending Project Roles](../extensions/project-roles.md) for more information.
 
 In addition, operators can configure the Project controller to maintain a default [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) for project namespaces.
 Quotas can especially limit the creation of user facing resources, e.g. `Shoots`, `SecretBindings`, `Secrets` and thus protect the Garden cluster from massive resource exhaustion but also enable operators to align quotas with respective enterprise policies.
 
 > :warning: **Gardener itself is not exempted from configured quotas**. For example, Gardener creates `Secrets` for every shoot cluster in the project namespace and at the same time increases the available quota count. Please mind this additional resource consumption.
 
-The controller configuration provides a template section `controllers.project.quotas` where such a ResourceQuota (see example below) can be deposited.
+The controller configuration provides a template section `controllers.project.quotas` where such a ResourceQuota (see the example below) can be deposited.
 
 ```yaml
 controllers:
@@ -185,15 +185,15 @@ The `.status.phase` of the `Project` resources is set to `Ready` or `Failed` by 
 Also, it generates `Event`s to provide further information about its operations.
 
 When a `Project` is marked for deletion, the controller ensures that there are no `Shoots` left in the project namespace.
-Once all `Shoots` are gone, the `Namespace` and `Project` is released.
+Once all `Shoots` are gone, the `Namespace` and `Project` are released.
 
 #### "Stale Projects" Reconciler
 
-As Gardener is a large-scale Kubernetes as a Service it is designed for being used by a large amount of end-users.
+As Gardener is a large-scale Kubernetes as a Service, it is designed for being used by a large amount of end-users.
 Over time, it is likely to happen that some of the hundreds or thousands of `Project` resources are no longer actively used.
 
 Gardener offers the "stale projects" reconciler which will take care of identifying such stale projects, marking them with a "warning", and eventually deleting them after a certain time period.
-This reconciler is enabled by default and works as following:
+This reconciler is enabled by default and works as follows:
 
 1. Projects are considered as "stale"/not actively used when all of the following conditions apply: The namespace associated with the `Project` does not have any...
     1. `Shoot` resources.
@@ -202,21 +202,21 @@ This reconciler is enabled by default and works as following:
     1. `Quota` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. The time period when the project was used for the last time (`status.lastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
 
-If a project is considered "stale" then its `.status.staleSinceTimestamp` will be set to the time when it was first detected to be stale.
-If it gets actively used again this timestamp will be removed.
-After some time the `.status.staleAutoDeleteTimestamp` will be set to a timestamp after which Gardener will auto-delete the `Project` resource if it still is not actively used.
+If a project is considered "stale", then its `.status.staleSinceTimestamp` will be set to the time when it was first detected to be stale.
+If it gets actively used again, this timestamp will be removed.
+After some time, the `.status.staleAutoDeleteTimestamp` will be set to a timestamp after which Gardener will auto-delete the `Project` resource if it still is not actively used.
 
 The component configuration of the `gardener-controller-manager` offers to configure the following options:
 
-* `minimumLifetimeDays`: Don't consider newly created `Project`s as "stale" too early to give people/end-users some time to onboard and get familiar with the system. The "stale project" reconciler won't set any timestamp for `Project`s younger than `minimumLifetimeDays`. When you change this value then projects marked as "stale" may be no longer marked as "stale" in case they are young enough, or vice versa.
-* `staleGracePeriodDays`: Don't compute auto-delete timestamps for stale `Project`s that are unused for only less than `staleGracePeriodDays`. This is to not unnecessarily make people/end-users nervous "just because" they haven't actively used their `Project` for a given amount of time. When you change this value then already assigned auto-delete timestamps may be removed again if the new grace period is not yet exceeded.
-* `staleExpirationTimeDays`: Expiration time after which stale `Project`s are finally auto-deleted (after `.status.staleSinceTimestamp`). If this value is changed and an auto-delete timestamp got already assigned to the projects then the new value will only take effect if it's increased. Hence, decreasing the `staleExpirationTimeDays` will not decrease already assigned auto-delete timestamps.
+* `minimumLifetimeDays`: Don't consider newly created `Project`s as "stale" too early to give people/end-users some time to onboard and get familiar with the system. The "stale project" reconciler won't set any timestamp for `Project`s younger than `minimumLifetimeDays`. When you change this value, then projects marked as "stale" may be no longer marked as "stale" in case they are young enough, or vice versa.
+* `staleGracePeriodDays`: Don't compute auto-delete timestamps for stale `Project`s that are unused for less than `staleGracePeriodDays`. This is to not unnecessarily make people/end-users nervous "just because" they haven't actively used their `Project` for a given amount of time. When you change this value, then already assigned auto-delete timestamps may be removed if the new grace period is not yet exceeded.
+* `staleExpirationTimeDays`: Expiration time after which stale `Project`s are finally auto-deleted (after `.status.staleSinceTimestamp`). If this value is changed and an auto-delete timestamp got already assigned to the projects, then the new value will only take effect if it's increased. Hence, decreasing the `staleExpirationTimeDays` will not decrease already assigned auto-delete timestamps.
 
 > Gardener administrators/operators can exclude specific `Project`s from the stale check by annotating the related `Namespace` resource with `project.gardener.cloud/skip-stale-check=true`.
 
 #### "Activity" Reconciler
 
-Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Secret`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
+Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Secret`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case, the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
 
 The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
@@ -226,8 +226,8 @@ The `Project Activity Reconciler` is implemented to take care of such cases. An 
 The controller adds finalizers to the referenced objects to ensure they don't get deleted while still being referenced.
 Similarly, to ensure that `SecretBinding`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `SecretBinding` anymore.
 
-Referenced `Secret`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true` where `<type>` is the value of the `.provider.type` of the `SecretBinding`.
-Also, all referenced `Secret`s as well as `Quota`s will be labeled with `reference.gardener.cloud/secretbinding=true` to allow easily filtering for objects referenced by `SecretBinding`s.
+Referenced `Secret`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true`, where `<type>` is the value of the `.provider.type` of the `SecretBinding`.
+Also, all referenced `Secret`s, as well as `Quota`s, will be labeled with `reference.gardener.cloud/secretbinding=true` to allow for easily filtering for objects referenced by `SecretBinding`s.
 
 ### [`Seed` Controller](../../pkg/controllermanager/controller/seed)
 
@@ -235,12 +235,12 @@ The Seed controller in the `gardener-controller-manager` reconciles `Seed` objec
 
 #### "Main" Reconciler
 
-This reconciliation loop takes care about seed related operations in the Garden cluster. When a new `Seed` object is created
+This reconciliation loop takes care of seed related operations in the Garden cluster. When a new `Seed` object is created,
 the reconciler creates a new `Namespace` in the garden cluster `seed-<seed-name>`. `Namespaces` dedicated to single
 seed clusters allow us to segregate access permissions i.e., a `gardenlet` must not have permissions to access objects in
 all `Namespaces` in the Garden cluster.
 There are objects in a Garden environment which are created once by the operator e.g., default domain secret,
-alerting credentials, and required for operations happening in the `gardenlet`. Therefore, we not only need a seed specific
+alerting credentials, and are required for operations happening in the `gardenlet`. Therefore, we not only need a seed specific
 `Namespace` but also a copy of these "shared" objects.
 
 The "main" reconciler takes care about this replication:
@@ -254,7 +254,7 @@ The "main" reconciler takes care about this replication:
 Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
 It's the reconciler's task to check the `status` subresource of all existing `BackupBucket`s that reference this `Seed`.
 If at least one `BackupBucket` has `.status.lastError != nil`, the `BackupBucketsReady` condition on the `Seed` will be set to `False`, and consequently the `Seed` is considered as `NotReady`.
-If the `SeedBackupBucketsCheckControllerConfiguration` (which is part of `gardener-controller-manager`s component configuration) contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `Progressing` and eventually to `False` once the `conditionThreshold` expires, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
+If the `SeedBackupBucketsCheckControllerConfiguration` (which is part of `gardener-controller-manager`s component configuration) contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `Progressing` and eventually to `False` once the `conditionThreshold` expires. See [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
 Once the `BackupBucket` is healthy again, the seed will be re-queued and the condition will turn `true`.
 
 #### "Extensions Check" Reconciler
@@ -272,9 +272,9 @@ which are renewed regularly by the `gardenlet`.
 In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`:
 
 1. The reconciler assumes that the `gardenlet` stopped operating and updates the `GardenletReady` condition to `Unknown`.
-2. Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
+2. Additionally, the conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well,
    because a striking `gardenlet` won't be able to maintain these conditions any more.
-3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
+3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed`, then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
 
 ### [`Shoot` Controller](../../pkg/controllermanager/controller/shoot)
 
@@ -292,12 +292,12 @@ It ignores [failed `Shoot`s](../usage/shoot_status.md#last-operation) and those 
 
 This reconciler is responsible for maintaining shoot clusters based on the time window defined in their `.spec.maintenance.timeWindow`.
 It might auto-update the Kubernetes version or the operating system versions specified in the worker pools (`.spec.provider.workers`).
-It could also add some operation or task annotations, read more [here](../usage/shoot_maintenance.md).
+It could also add some operation or task annotations. For more information, see [Shoot Maintenance](../usage/shoot_maintenance.md).
 
 #### "Quota" Reconciler
 
 This reconciler might auto-delete shoot clusters in case their referenced `SecretBinding` is itself referencing a `Quota` with `.spec.clusterLifetimeDays != nil`.
-If the shoot cluster is older than the configured lifetime then it gets deleted.
+If the shoot cluster is older than the configured lifetime, then it gets deleted.
 It maintains the expiration time of the `Shoot` in the value of the `shoot.gardener.cloud/expiration-timestamp` annotation.
 This annotation might be overridden, however only by at most twice the value of the `.spec.clusterLifetimeDays`.
 
@@ -321,8 +321,8 @@ Further checks might be added in the future.
 #### "Retry" Reconciler
 
 This reconciler is responsible for retrying certain failed `Shoot`s.
-Currently, the reconciler retries only failed `Shoot`s with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`, see [this document](../usage/shoot_status.md#error-codes) for more details.
+Currently, the reconciler retries only failed `Shoot`s with an error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`. See [Shoot Status](../usage/shoot_status.md#error-codes) for more details.
 
 #### "Status Label" Reconciler
 
-This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s, see [this document](../usage/shoot_status.md#status-label) for more details.
+This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s. See [Shoot Status](../usage/shoot_status.md#status-label) for more details.

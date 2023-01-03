@@ -22,7 +22,7 @@ Note that there can only be one `Garden` resource per system at a time.
 In production scenarios, you probably wouldn't use the Kubernetes cluster running `gardener-operator` and the Gardener control plane (called "runtime cluster") as seed cluster at the same time.
 However, such setup is technically possible and might simplify certain situations (e.g., development, evaluation, ...).
 
-If the runtime cluster is a seed cluster at the same time, [`gardenlet`'s `Seed` controller](../gardenlet.md#seed-controller) will not manage the components which were already deployed (and reconciled) by `gardener-operator`.
+If the runtime cluster is a seed cluster at the same time, [`gardenlet`'s `Seed` controller](./gardenlet.md#seed-controller) will not manage the components which were already deployed (and reconciled) by `gardener-operator`.
 As of today, this applies to:
 
 - `gardener-resource-manager`
@@ -122,7 +122,7 @@ As of today, the `gardener-operator` only has one controller which is now descri
 
 The reconciler first generates a general CA certificate which is valid for ~`30d` and auto-rotated when 80% of its lifetime is reached.
 Afterwards, it brings up the so-called "garden system components".
-The [`gardener-resource-manager`](../resource-manager.md) is deployed first since its `ManagedResource` controller will be used to bring up the remainders.
+The [`gardener-resource-manager`](./resource-manager.md) is deployed first since its `ManagedResource` controller will be used to bring up the remainders.
 
 Other system components are:
 
