@@ -131,8 +131,9 @@ func (r *Reconciler) reconcileBackupEntry(
 		mustReconcileExtensionSecret      = false
 		reconciliationSuccessful          = true
 
-		extensionSecret = r.emptyExtensionSecret(backupEntry)
-		component       = r.newExtensionComponent(log, backupEntry)
+		lastObservedError error
+		extensionSecret   = r.emptyExtensionSecret(backupEntry)
+		component         = r.newExtensionComponent(log, backupEntry)
 
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
@@ -207,6 +208,7 @@ func (r *Reconciler) reconcileBackupEntry(
 	} else if extensionBackupEntry.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, don't update the status
 		reconciliationSuccessful = false
+		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
 		// check for errors, and if none are present, reconciliation has succeeded
 		lastOperationState := extensionBackupEntry.Status.LastOperation.State
@@ -218,26 +220,24 @@ func (r *Reconciler) reconcileBackupEntry(
 			}
 			reconciliationSuccessful = false
 
-			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
+			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupEntry.Status.LastError != nil {
-				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
+				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
 			}
+		}
+	}
 
-			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
-			reconcileErr := &gardencorev1beta1.LastError{
-				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
-				Description: lastObservedError.Error(),
-			}
+	if lastObservedError != nil {
+		lastObservedError := v1beta1helper.NewErrorWithCodes(lastObservedError, v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+		reconcileErr := &gardencorev1beta1.LastError{
+			Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
+			Description: lastObservedError.Error(),
+		}
 
-			r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+		r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
 
-			description := reconcileErr.Description
-			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
-				description += ". Operation will be retried."
-			}
-			if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, operationType, description, reconcileErr); updateErr != nil {
-				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
-			}
+		if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, operationType, reconcileErr.Description, reconcileErr); updateErr != nil {
+			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
 		}
 	}
 
@@ -249,7 +249,7 @@ func (r *Reconciler) reconcileBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if reconciliationSuccessful {
+	if reconciliationSuccessful && extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}

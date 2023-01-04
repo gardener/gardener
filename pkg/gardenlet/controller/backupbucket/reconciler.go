@@ -130,6 +130,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		mustReconcileExtensionSecret       = false
 		reconciliationSuccessful           = true
 
+		lastObservedError         error
 		extensionSecret           = r.emptyExtensionSecret(backupBucket.Name)
 		extensionBackupBucketSpec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -182,6 +183,7 @@ func (r *Reconciler) reconcileBackupBucket(
 	} else if extensionBackupBucket.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, don't update the status
 		reconciliationSuccessful = false
+		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
 		// check for errors, and if none are present, sync generated Secret to garden
 		lastOperationState := extensionBackupBucket.Status.LastOperation.State
@@ -193,30 +195,28 @@ func (r *Reconciler) reconcileBackupBucket(
 			}
 			reconciliationSuccessful = false
 
-			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
+			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupBucket.Status.LastError != nil {
-				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
-			}
-
-			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
-			reconcileErr := &gardencorev1beta1.LastError{
-				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
-				Description: lastObservedError.Error(),
-			}
-
-			r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
-
-			description := reconcileErr.Description
-			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
-				description += ". Operation will be retried."
-			}
-			if updateErr := r.updateBackupBucketStatusError(ctx, backupBucket, description, reconcileErr); updateErr != nil {
-				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
+				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
 			}
 		} else if lastOperationState == gardencorev1beta1.LastOperationStateSucceeded {
 			if err := r.syncGeneratedSecretToGarden(ctx, backupBucket, extensionBackupBucket); err != nil {
 				return reconcile.Result{}, err
 			}
+		}
+	}
+
+	if lastObservedError != nil {
+		lastObservedError := v1beta1helper.NewErrorWithCodes(lastObservedError, v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+		reconcileErr := &gardencorev1beta1.LastError{
+			Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
+			Description: lastObservedError.Error(),
+		}
+
+		r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+
+		if updateErr := r.updateBackupBucketStatusError(ctx, backupBucket, reconcileErr.Description, reconcileErr); updateErr != nil {
+			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
 		}
 	}
 
@@ -234,7 +234,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		return reconcile.Result{}, nil
 	}
 
-	if reconciliationSuccessful {
+	if reconciliationSuccessful && extensionBackupBucket.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		if updateErr := r.updateBackupBucketStatusSucceeded(ctx, backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}

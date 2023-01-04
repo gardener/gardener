@@ -105,7 +105,6 @@ func (r *Reconciler) reconcileBastion(
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
-	// ensure finalizer is set
 	if !controllerutil.ContainsFinalizer(bastion, finalizerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, bastion, finalizerName); err != nil {
@@ -113,11 +112,10 @@ func (r *Reconciler) reconcileBastion(
 		}
 	}
 
-	// prepare extension resource
-	extBastion := newBastionExtension(bastion, shoot)
-	extensionsIngress := make([]extensionsv1alpha1.BastionIngressPolicy, len(bastion.Spec.Ingress))
+	extensionBastion := newBastionExtension(bastion, shoot)
+	extensionIngress := make([]extensionsv1alpha1.BastionIngressPolicy, len(bastion.Spec.Ingress))
 	for i, ingress := range bastion.Spec.Ingress {
-		extensionsIngress[i] = extensionsv1alpha1.BastionIngressPolicy{
+		extensionIngress[i] = extensionsv1alpha1.BastionIngressPolicy{
 			IPBlock: ingress.IPBlock,
 		}
 	}
@@ -131,25 +129,25 @@ func (r *Reconciler) reconcileBastion(
 				Type: *bastion.Spec.ProviderType,
 			},
 			UserData: createUserData(bastion),
-			Ingress:  extensionsIngress,
+			Ingress:  extensionIngress,
 		}
 	)
 
-	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(extBastion), extBastion); err != nil {
+	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
 		// if the extension Bastion doesn't exist yet, create it
 		mustReconcileExtensionBastion = true
-	} else if !reflect.DeepEqual(extBastion.Spec, extensionBastionSpec) {
+	} else if !reflect.DeepEqual(extensionBastion.Spec, extensionBastionSpec) {
 		// if the extensionBastionSpec has changed, reconcile it
 		mustReconcileExtensionBastion = true
-	} else if extBastion.Status.LastOperation == nil {
+	} else if extensionBastion.Status.LastOperation == nil {
 		reconciliationSuccessful = false
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
-		lastOperationState := extBastion.Status.LastOperation.State
-		if extBastion.Status.LastError != nil ||
+		lastOperationState := extensionBastion.Status.LastOperation.State
+		if extensionBastion.Status.LastError != nil ||
 			lastOperationState == gardencorev1beta1.LastOperationStateError ||
 			lastOperationState == gardencorev1beta1.LastOperationStateFailed {
 			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
@@ -158,14 +156,14 @@ func (r *Reconciler) reconcileBastion(
 			reconciliationSuccessful = false
 
 			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
-			if extBastion.Status.LastError != nil {
-				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extBastion.Status.LastError.Description), extBastion.Status.LastError.Codes...)
+			if extensionBastion.Status.LastError != nil {
+				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBastion.Status.LastError.Description), extensionBastion.Status.LastError.Codes...)
 			}
 		}
 	}
 
 	if lastObservedError != nil {
-		message := fmt.Sprintf("Error while waiting for %s %s/%s to become ready", extensionsv1alpha1.BastionResource, extBastion.Namespace, extBastion.Name)
+		message := fmt.Sprintf("Error while waiting for %s %s/%s to become ready", extensionsv1alpha1.BastionResource, extensionBastion.Namespace, extensionBastion.Name)
 		err := v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 
 		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
@@ -174,28 +172,27 @@ func (r *Reconciler) reconcileBastion(
 	}
 
 	if mustReconcileExtensionBastion {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extBastion, func() error {
-			metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-			metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().String())
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionBastion, func() error {
+			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().String())
 
-			extBastion.Spec = extensionBastionSpec
+			extensionBastion.Spec = extensionBastionSpec
 			return nil
 		}); err != nil {
 			if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 				log.Error(patchErr, "Failed patching ready condition")
 			}
-
 			return fmt.Errorf("failed to ensure bastion extension resource: %w", err)
 		}
 		// return early here, the Bastion status will be updated by the reconciliation caused by the extension Bastion status update.
 		return nil
 	}
 
-	if reconciliationSuccessful && extBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+	if reconciliationSuccessful && extensionBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		// copy over the extension's status to the operation bastion and set the condition
 		patch := client.MergeFrom(bastion.DeepCopy())
 		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
-		bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
+		bastion.Status.Ingress = extensionBastion.Status.Ingress.DeepCopy()
 		bastion.Status.ObservedGeneration = &bastion.Generation
 		if err := r.GardenClient.Status().Patch(ctx, bastion, patch); err != nil {
 			return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
@@ -220,9 +217,8 @@ func (r *Reconciler) cleanupBastion(
 	}
 
 	// delete bastion extension resource in seed cluster
-	extBastion := newBastionExtension(bastion, shoot)
-
-	if err := r.SeedClient.Delete(ctx, extBastion); err != nil {
+	extensionBastion := newBastionExtension(bastion, shoot)
+	if err := r.SeedClient.Delete(ctx, extensionBastion); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Successfully deleted")
 
