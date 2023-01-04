@@ -376,6 +376,7 @@ spec:
 #     enabled: true # {true,false}
 #     forceTCPToClusterDNS: true # {true,false}
 #     forceTCPToUpstreamDNS: true # {true,false}
+#     disableForwardToUpstreamDNS: true # {true,false}
 # controlPlane:
 #   highAvailability:
 #     failureTolerance:
