@@ -44,7 +44,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 	var (
 		ctx = context.TODO()
 
-		managedResourceName = "kubernetes-dashboard"
+		managedResourceName = "shoot-addon-kubernetes-dashboard"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 		scraperImage        = "scraper-image:scraper-tag"
@@ -187,7 +187,7 @@ metadata:
   namespace: kubernetes-dashboard
 `
 
-		secret1YAML = `apiVersion: v1
+		secretCertsYAML = `apiVersion: v1
 kind: Secret
 metadata:
   creationTimestamp: null
@@ -198,7 +198,7 @@ metadata:
 type: Opaque
 `
 
-		secret2YAML = `apiVersion: v1
+		secretCSRFYAML = `apiVersion: v1
 data:
   csrf: ""
 kind: Secret
@@ -211,7 +211,7 @@ metadata:
 type: Opaque
 `
 
-		secret3YAML = `apiVersion: v1
+		secretKeyHolderYAML = `apiVersion: v1
 kind: Secret
 metadata:
   creationTimestamp: null
@@ -533,9 +533,9 @@ status: {}
 			Expect(string(managedResourceSecret.Data["clusterrole____kubernetes-dashboard.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____kubernetes-dashboard.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-certs.yaml"])).To(Equal(secret1YAML))
-			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-csrf.yaml"])).To(Equal(secret2YAML))
-			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-key-holder.yaml"])).To(Equal(secret3YAML))
+			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-certs.yaml"])).To(Equal(secretCertsYAML))
+			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-csrf.yaml"])).To(Equal(secretCSRFYAML))
+			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-key-holder.yaml"])).To(Equal(secretKeyHolderYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kubernetes-dashboard__kubernetes-dashboard-settings.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["service__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(serviceDashboardYAML))
 			Expect(string(managedResourceSecret.Data["service__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(serviceMetricsScraperYAML))

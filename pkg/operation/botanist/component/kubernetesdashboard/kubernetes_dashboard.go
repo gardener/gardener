@@ -45,7 +45,7 @@ const (
 	labelKey    = "k8s-app"
 	labelValue  = "kubernetes-dashboard"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = name
+	ManagedResourceName = "shoot-addon-kubernetes-dashboard"
 )
 
 // Values is a set of configuration values for the kubernetes-dashboard component.
@@ -232,7 +232,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		secret1 = &corev1.Secret{
+		secretCerts = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-certs",
 				Namespace: namespace,
@@ -241,7 +241,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			Type: corev1.SecretTypeOpaque,
 		}
 
-		secret2 = &corev1.Secret{
+		secretCSRF = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-csrf",
 				Namespace: namespace,
@@ -253,7 +253,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			},
 		}
 
-		secret3 = &corev1.Secret{
+		secretKeyHolder = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-key-holder",
 				Namespace: namespace,
@@ -539,9 +539,9 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		clusterRole,
 		clusterRoleBinding,
 		serviceAccount,
-		secret1,
-		secret2,
-		secret3,
+		secretCerts,
+		secretCSRF,
+		secretKeyHolder,
 		configMap,
 		deploymentDashboard,
 		deploymentMetricsScraper,

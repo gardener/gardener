@@ -71,8 +71,20 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
+		It("should return an error because the kubernetes-dashboard image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{
+				{Name: "kubernetes-dashboard-metrics-scraper"},
+			}
+
+			kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
+			Expect(kubernetesDashboard).To(BeNil())
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return an error because the kubernetes-dashboard-metrics-scraper image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{
+				{Name: "kubernetes-dashboard"},
+			}
 
 			kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
 			Expect(kubernetesDashboard).To(BeNil())
