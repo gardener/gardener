@@ -245,7 +245,7 @@ metadata:
   namespace: kubernetes-dashboard
 spec:
   replicas: 1
-  revisionHistoryLimit: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       k8s-app: kubernetes-dashboard
@@ -329,14 +329,7 @@ status: {}
 			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
-`
-			if version.ConstraintK8sLessEqual122.Check(kubernetesVersion) {
-				out += `  annotations:
-    seccomp.security.alpha.kubernetes.io/pod: runtime/default
-`
-			}
-
-			out += `  creationTimestamp: null
+  creationTimestamp: null
   labels:
     gardener.cloud/role: optional-addon
     k8s-app: dashboard-metrics-scraper
@@ -345,14 +338,20 @@ metadata:
   namespace: kubernetes-dashboard
 spec:
   replicas: 1
-  revisionHistoryLimit: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       k8s-app: dashboard-metrics-scraper
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
+`
+			if version.ConstraintK8sLessEqual122.Check(kubernetesVersion) {
+				out += `      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+`
+			}
+			out += `      creationTimestamp: null
       labels:
         gardener.cloud/role: optional-addon
         k8s-app: dashboard-metrics-scraper
@@ -543,20 +542,22 @@ status: {}
 		})
 
 		Context("kubernetes version > 1.22.0", func() {
-			Context("w/o apiserver host, w/o authentication mode", func() {
+			Context("w/o apiserver host, w/o authentication mode, w/o vpa", func() {
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(nil, "")))
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(deploymentMetricsScraperYAMLFor(values.KubernetesVersion)))
 				})
 			})
 
-			Context("w/ apiserver host, w/ authentication mode", func() {
+			Context("w/ apiserver host, w/ authentication mode, w/ vpa", func() {
 				var (
 					apiserverHost      = "apiserver.host"
 					authenticationMode = "basic"
 				)
 
 				BeforeEach(func() {
+					vpaEnabled = true
+					values.VPAEnabled = true
 					values.APIServerHost = &apiserverHost
 					values.AuthenticationMode = authenticationMode
 					component = New(c, namespace, values)
@@ -565,63 +566,36 @@ status: {}
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(&apiserverHost, authenticationMode)))
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(deploymentMetricsScraperYAMLFor(values.KubernetesVersion)))
-				})
-			})
-
-			Context("w/ vpa enabled", func() {
-				BeforeEach(func() {
-					vpaEnabled = true
-					values.VPAEnabled = true
-					component = New(c, namespace, values)
-				})
-
-				Context("w/o apiserver host, w/o authentication mode", func() {
-					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(nil, "")))
-						Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(deploymentMetricsScraperYAMLFor(values.KubernetesVersion)))
-					})
 				})
 			})
 		})
 
 		Context("kubernetes version <= 1.22.0", func() {
-			Context("w/o apiserver host, w/o authentication mode", func() {
+			Context("w/o apiserver host, w/o authentication mode, w/o vpa", func() {
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(nil, "")))
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(deploymentMetricsScraperYAMLFor(values.KubernetesVersion)))
 				})
 			})
 
-			Context("w/ apiserver host w/ authentication mode", func() {
+			Context("w/ apiserver host w/ authentication mode, w/ vpa", func() {
 				var (
 					apiserverHost      = "apiserver.host"
 					authenticationMode = "basic"
 				)
 
 				BeforeEach(func() {
+					vpaEnabled = true
+					values.VPAEnabled = true
 					values.APIServerHost = &apiserverHost
 					values.AuthenticationMode = authenticationMode
+					values.KubernetesVersion = semver.MustParse("1.22.0")
 					component = New(c, namespace, values)
 				})
 
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(&apiserverHost, authenticationMode)))
 					Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(deploymentMetricsScraperYAMLFor(values.KubernetesVersion)))
-				})
-			})
-
-			Context("w/ vpa enabled", func() {
-				BeforeEach(func() {
-					vpaEnabled = true
-					values.VPAEnabled = true
-					component = New(c, namespace, values)
-				})
-
-				Context("w/o apiserver host, w/o authentication mode", func() {
-					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(nil, "")))
-						Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(deploymentMetricsScraperYAMLFor(values.KubernetesVersion)))
-					})
 				})
 			})
 		})

@@ -15,12 +15,12 @@
 package botanist_test
 
 import (
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
@@ -32,12 +32,11 @@ import (
 
 var _ = Describe("Kubernetes Dashboard", func() {
 	var (
-		ctrl     *gomock.Controller
-		botanist *Botanist
+		seedClient client.Client
+		botanist   *Botanist
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -52,16 +51,9 @@ var _ = Describe("Kubernetes Dashboard", func() {
 		})
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#DefaultKubernetesDashboard", func() {
-		var kubernetesClient *mockkubernetes.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
-			botanist.SeedClientSet = kubernetesClient
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 			botanist.Shoot.DisableDNS = true
 		})
@@ -69,7 +61,6 @@ var _ = Describe("Kubernetes Dashboard", func() {
 		It("should successfully create a Kubernetes Dashboard interface", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
 
-			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{
 				{Name: "kubernetes-dashboard"},
 				{Name: "kubernetes-dashboard-metrics-scraper"},

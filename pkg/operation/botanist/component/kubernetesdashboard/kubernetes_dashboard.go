@@ -135,7 +135,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -169,7 +169,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 				Annotations: map[string]string{
 					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
 				},
@@ -191,7 +191,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   name,
-				Labels: getLabels2(name),
+				Labels: map[string]string{labelKey: name},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -227,7 +227,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
@@ -236,7 +236,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-certs",
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
@@ -245,7 +245,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-csrf",
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
@@ -257,7 +257,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-key-holder",
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
@@ -266,7 +266,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-settings",
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 			},
 		}
 
@@ -277,10 +277,10 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(name),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Replicas:             pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels2(name),
+					MatchLabels: map[string]string{labelKey: name},
 				},
 				Strategy: appsv1.DeploymentStrategy{
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -387,10 +387,10 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(scraperName),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Replicas:             pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels2(scraperName),
+					MatchLabels: map[string]string{labelKey: scraperName},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -457,7 +457,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
-				Labels:    getLabels2(name),
+				Labels:    map[string]string{labelKey: name},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
@@ -466,7 +466,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						TargetPort: intstr.FromInt(8443),
 					},
 				},
-				Selector: getLabels2(name),
+				Selector: map[string]string{labelKey: name},
 			},
 		}
 
@@ -474,7 +474,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      scraperName,
 				Namespace: namespace,
-				Labels:    getLabels2(scraperName),
+				Labels:    map[string]string{labelKey: scraperName},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
@@ -483,7 +483,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						TargetPort: intstr.FromInt(8000),
 					},
 				},
-				Selector: getLabels2(scraperName),
+				Selector: map[string]string{labelKey: scraperName},
 			},
 		}
 
@@ -518,10 +518,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 	}
 
 	if version.ConstraintK8sLessEqual122.Check(k.values.KubernetesVersion) {
-		deploymentMetricsScraper.Annotations = map[string]string{corev1.SeccompPodAnnotationKey: corev1.SeccompProfileRuntimeDefault}
-	}
-
-	if version.ConstraintK8sGreaterEqual123.Check(k.values.KubernetesVersion) {
+		deploymentMetricsScraper.Spec.Template.Annotations = map[string]string{corev1.SeccompPodAnnotationKey: corev1.SeccompProfileRuntimeDefault}
+	} else {
 		deploymentMetricsScraper.Spec.Template.Spec.Containers[0].SecurityContext.SeccompProfile = &corev1.SeccompProfile{
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
@@ -558,11 +556,5 @@ func getLabels(labelValue string) map[string]string {
 		"origin":                    "gardener",
 		labelKey:                    labelValue,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleOptionalAddon,
-	}
-}
-
-func getLabels2(labelValue string) map[string]string {
-	return map[string]string{
-		labelKey: labelValue,
 	}
 }
