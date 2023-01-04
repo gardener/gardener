@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -272,7 +272,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 
 		deploymentDashboard = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      v1beta1constants.DeploymentNameKubernetesDashboard,
 				Namespace: namespace,
 				Labels:    getLabels(name),
 			},
@@ -308,7 +308,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						},
 						Containers: []corev1.Container{
 							{
-								Name:            name,
+								Name:            v1beta1constants.DeploymentNameKubernetesDashboard,
 								Image:           k.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
@@ -382,7 +382,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 
 		deploymentMetricsScraper = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      scraperName,
+				Name:      v1beta1constants.DeploymentNameDashboardMetricsScraper,
 				Namespace: namespace,
 				Labels:    getLabels(scraperName),
 			},
@@ -406,7 +406,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						},
 						Containers: []corev1.Container{
 							{
-								Name:  scraperName,
+								Name:  v1beta1constants.DeploymentNameDashboardMetricsScraper,
 								Image: k.values.MetricsScraperImage,
 								Ports: []corev1.ContainerPort{
 									{
