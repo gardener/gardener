@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -128,6 +128,7 @@ func (r *Reconciler) reconcileBackupEntry(
 
 	var (
 		mustReconcileExtensionBackupEntry = false
+		mustReconcileExtensionSecret      = false
 		reconciliationSuccessful          = true
 
 		extensionSecret = r.emptyExtensionSecret(backupEntry)
@@ -158,15 +159,20 @@ func (r *Reconciler) reconcileBackupEntry(
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
+		// if the extension secret doesn't exist yet, create it
+		mustReconcileExtensionSecret = true
 	} else {
-		// if the backupBucket secret data has changed, reconcile extension backupEntry
+		// if the backupBucket secret data has changed, reconcile extension backupEntry and extension secret
 		if !reflect.DeepEqual(extensionSecret.Data, gardenSecret.Data) {
 			mustReconcileExtensionBackupEntry = true
+			mustReconcileExtensionSecret = true
 		}
 	}
 
-	if err := r.reconcileBackupEntryExtensionSecret(ctx, backupBucket, backupEntry, gardenSecret); err != nil {
-		return reconcile.Result{}, err
+	if mustReconcileExtensionSecret {
+		if err := r.reconcileBackupEntryExtensionSecret(ctx, extensionSecret, gardenSecret); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	extensionBackupEntrySpec := extensionsv1alpha1.BackupEntrySpec{
@@ -183,14 +189,20 @@ func (r *Reconciler) reconcileBackupEntry(
 		BackupBucketProviderStatus: backupBucket.Status.ProviderStatus,
 	}
 
+	secretLastUpdateTime, err := time.Parse(time.RFC3339, extensionSecret.Annotations[v1beta1constants.GardenerTimestamp])
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
 		// if the extension BackupEntry doesn't exist yet, create it
 		mustReconcileExtensionBackupEntry = true
-	} else if !reflect.DeepEqual(extensionBackupEntry.Spec, extensionBackupEntrySpec) {
-		// if the extensionBackupEntry spec has changed, reconcile it
+	} else if !reflect.DeepEqual(extensionBackupEntry.Spec, extensionBackupEntrySpec) ||
+		(extensionBackupEntry.Status.LastOperation != nil && extensionBackupEntry.Status.LastOperation.LastUpdateTime.Time.UTC().Before(secretLastUpdateTime)) {
+		// if the spec of the extensionBackupEntry has changed or it has not been reconciled after the last updation of secret, reconcile it
 		mustReconcileExtensionBackupEntry = true
 	} else if extensionBackupEntry.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, don't update the status
@@ -289,7 +301,7 @@ func (r *Reconciler) deleteBackupEntry(
 			return reconcile.Result{}, err
 		}
 
-		if err := r.reconcileBackupEntryExtensionSecret(ctx, backupBucket, backupEntry, gardenSecret); err != nil {
+		if err := r.reconcileBackupEntryExtensionSecret(ctx, extensionSecret, gardenSecret); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -605,10 +617,9 @@ func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardenco
 	return gardenSecret, nil
 }
 
-func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, backupEntry *gardencorev1beta1.BackupEntry, gardenSecret *corev1.Secret) error {
-	// create secret for extension BackupEntry in seed
-	extensionSecret := r.emptyExtensionSecret(backupEntry)
+func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
+		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339))
 		extensionSecret.Data = gardenSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
