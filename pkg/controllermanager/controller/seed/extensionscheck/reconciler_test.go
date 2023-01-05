@@ -22,10 +22,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -282,10 +282,5 @@ var _ = Describe("Reconciler", func() {
 })
 
 func matchConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"Type":    Equal(gardencorev1beta1.SeedExtensionsReady),
-		"Status":  Equal(status),
-		"Reason":  Equal(reason),
-		"Message": ContainSubstring(message),
-	})
+	return And(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(status), WithReason(reason), WithMessage(message))
 }

@@ -38,9 +38,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/care"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
@@ -295,11 +295,8 @@ var _ = Describe("Seed health", func() {
 })
 
 func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"Status":  Equal(status),
-		"Reason":  Equal(reason),
-		"Message": ContainSubstring(message),
-	})
+	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+
 }
 
 func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {

@@ -43,6 +43,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/care"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var (
@@ -135,9 +136,7 @@ func newNode(name string, healthy bool, labels labels.Set, annotations map[strin
 }
 
 func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"Status": Equal(status),
-	})
+	return WithStatus(status)
 }
 
 func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {
@@ -145,25 +144,15 @@ func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) 
 	for _, deploy := range deployments {
 		names = append(names, deploy.Name)
 	}
-	return MatchFields(IgnoreExtras, Fields{
-		"Status":  Equal(gardencorev1beta1.ConditionFalse),
-		"Message": ContainSubstring("%s", names),
-	})
+	return And(WithStatus(gardencorev1beta1.ConditionFalse), WithMessage(fmt.Sprintf("%s", names)))
 }
 
 func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"Status": Equal(status),
-		"Codes":  Equal(codes),
-	})
+	return And(WithStatus(status), WithCodes(codes...))
 }
 
 func beConditionWithStatusAndMsg(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"Status":  Equal(status),
-		"Reason":  Equal(reason),
-		"Message": ContainSubstring(message),
-	})
+	return And(WithStatus(status), WithReason(reason), WithMessage(message))
 }
 
 var _ = Describe("health check", func() {
@@ -1156,9 +1145,7 @@ var _ = Describe("health check", func() {
 					ExtensionNamespace: "shoot-namespace-in-seed",
 				},
 			},
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status": Equal(gardencorev1beta1.ConditionUnknown),
-			})),
+			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionUnknown)),
 		),
 		Entry("should determine that health check report is outdated",
 			// 2 minute threshold for outdated health check reports
@@ -1180,9 +1167,7 @@ var _ = Describe("health check", func() {
 					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now().Add(time.Minute * -3)},
 				},
 			},
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status": Equal(gardencorev1beta1.ConditionUnknown),
-			})),
+			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionUnknown)),
 		),
 		Entry("health check reports status progressing",
 			nil,
@@ -1199,11 +1184,7 @@ var _ = Describe("health check", func() {
 					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now()},
 				},
 			},
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status":  Equal(gardencorev1beta1.ConditionProgressing),
-				"Reason":  Equal("FooBar"),
-				"Message": Equal("Baz"),
-			})),
+			PointTo(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, "FooBar", "Baz")),
 		),
 		Entry("health check reports status false",
 			nil,
@@ -1218,11 +1199,7 @@ var _ = Describe("health check", func() {
 					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now()},
 				},
 			},
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status":  Equal(gardencorev1beta1.ConditionFalse),
-				"Reason":  Equal("FooUnhealthyReport"),
-				"Message": ContainSubstring("failing health check"),
-			})),
+			PointTo(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "FooUnhealthyReport", "failing health check")),
 		),
 		Entry("health check reports status unknown",
 			nil,
@@ -1237,11 +1214,7 @@ var _ = Describe("health check", func() {
 					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now()},
 				},
 			},
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status":  Equal(gardencorev1beta1.ConditionFalse),
-				"Reason":  Equal("FooUnhealthyReport"),
-				"Message": ContainSubstring("failing health check"),
-			})),
+			PointTo(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "FooUnhealthyReport", "failing health check")),
 		),
 	)
 

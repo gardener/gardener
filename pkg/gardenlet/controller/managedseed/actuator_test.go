@@ -34,12 +34,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -574,12 +574,10 @@ var _ = Describe("Actuator", func() {
 
 			status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(status.Conditions).To(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-					"Status": Equal(gardencorev1beta1.ConditionFalse),
-					"Reason": Equal(gardencorev1beta1.EventReconciling),
-				}),
+			Expect(status.Conditions).To(ContainCondition(
+				OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithReason(gardencorev1beta1.EventReconciling),
 			))
 			Expect(wait).To(Equal(true))
 		})
@@ -605,17 +603,17 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
+				Expect(status.Conditions).To(And(
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
 				))
 				Expect(wait).To(Equal(false))
 			})
@@ -638,17 +636,17 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
+				Expect(status.Conditions).To(And(
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
 				))
 				Expect(wait).To(Equal(false))
 			})
@@ -672,17 +670,17 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
+				Expect(status.Conditions).To(And(
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
 				))
 				Expect(wait).To(Equal(false))
 			})
@@ -714,17 +712,17 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
+				Expect(status.Conditions).To(And(
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
 				))
 				Expect(wait).To(Equal(false))
 			})
@@ -746,17 +744,17 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionTrue),
-						"Reason": Equal(gardencorev1beta1.EventReconciled),
-					}),
+				Expect(status.Conditions).To(And(
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
 				))
 				Expect(wait).To(Equal(false))
 			})
@@ -781,12 +779,10 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleting),
-					}),
+				Expect(status.Conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason(gardencorev1beta1.EventDeleting),
 				))
 				Expect(wait).To(Equal(false))
 				Expect(removeFinalizer).To(Equal(false))
@@ -804,12 +800,10 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleting),
-					}),
+				Expect(status.Conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason(gardencorev1beta1.EventDeleting),
 				))
 				Expect(wait).To(Equal(true))
 				Expect(removeFinalizer).To(Equal(false))
@@ -825,13 +819,12 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleting),
-					}),
-				))
+				Expect(status.Conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason(gardencorev1beta1.EventDeleting),
+				),
+				)
 				Expect(wait).To(Equal(true))
 				Expect(removeFinalizer).To(Equal(false))
 			})
@@ -847,12 +840,10 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleting),
-					}),
+				Expect(status.Conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason(gardencorev1beta1.EventDeleting),
 				))
 				Expect(wait).To(Equal(true))
 				Expect(removeFinalizer).To(Equal(false))
@@ -867,12 +858,10 @@ var _ = Describe("Actuator", func() {
 
 				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						"Status": Equal(gardencorev1beta1.ConditionFalse),
-						"Reason": Equal(gardencorev1beta1.EventDeleted),
-					}),
+				Expect(status.Conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason(gardencorev1beta1.EventDeleted),
 				))
 				Expect(wait).To(Equal(false))
 				Expect(removeFinalizer).To(Equal(true))

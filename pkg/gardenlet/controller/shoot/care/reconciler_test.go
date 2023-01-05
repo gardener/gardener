@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -551,27 +552,27 @@ func nopGarbageCollectorFunc() NewGarbageCollectorFunc {
 }
 
 func consistOfConditionsInUnknownStatus(message string) types.GomegaMatcher {
-	return ConsistOf(
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootAPIServerAvailable),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootControlPlaneHealthy),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootEveryNodeReady),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootSystemComponentsHealthy),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
+	return And(
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootAPIServerAvailable),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootControlPlaneHealthy),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootEveryNodeReady),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootSystemComponentsHealthy),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
 	)
 }
 

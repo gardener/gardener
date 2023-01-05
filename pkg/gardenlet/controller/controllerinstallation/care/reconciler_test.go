@@ -23,10 +23,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -180,12 +180,7 @@ func conditionWithTypeStatusAndReason(condType gardencorev1beta1.ConditionType, 
 }
 
 func conditionWithTypeStatusReasonAndMesssage(condType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason, message string) gomegatypes.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"Type":    Equal(condType),
-		"Status":  Equal(status),
-		"Reason":  Equal(reason),
-		"Message": ContainSubstring(message),
-	})
+	return And(OfType(condType), WithStatus(status), WithReason(reason), WithMessage(message))
 }
 
 func healthyManagedResource() *resourcesv1alpha1.ManagedResource {

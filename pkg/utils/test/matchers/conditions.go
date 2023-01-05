@@ -51,7 +51,14 @@ func WithReason(reason string) gomegatypes.GomegaMatcher {
 // WithMessage returns a matcher for checking whether a condition has a certain message.
 func WithMessage(message string) gomegatypes.GomegaMatcher {
 	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Message": Equal(message),
+		"Message": ContainSubstring(message),
+	})
+}
+
+// WithCodes returns a matcher for checking whether a condition contains certain error codes.
+func WithCodes(codes ...gardencorev1beta1.ErrorCode) gomegatypes.GomegaMatcher {
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+		"Codes": ContainElements(codes),
 	})
 }
 
