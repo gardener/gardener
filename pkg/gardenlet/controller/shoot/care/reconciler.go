@@ -60,6 +60,7 @@ type Reconciler struct {
 	SeedClientSet         kubernetes.Interface
 	ShootClientMap        clientmap.ClientMap
 	Config                config.GardenletConfiguration
+	Clock                 clock.Clock
 	ImageVector           imagevector.ImageVector
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
@@ -105,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	var conditions []gardencorev1beta1.Condition
 	for _, cond := range conditionTypes {
-		conditions = append(conditions, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, cond))
+		conditions = append(conditions, gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Conditions, cond))
 	}
 
 	// Initialize constraints
@@ -116,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	var constraints []gardencorev1beta1.Condition
 	for _, constr := range constraintTypes {
-		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, constr))
+		constraints = append(constraints, gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Constraints, constr))
 	}
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
@@ -230,12 +231,12 @@ func (r *Reconciler) patchStatus(ctx context.Context, shoot *gardencorev1beta1.S
 func (r *Reconciler) patchStatusToUnknown(ctx context.Context, shoot *gardencorev1beta1.Shoot, message string, conditions, constraints []gardencorev1beta1.Condition) error {
 	updatedConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
-		updatedConditions = append(updatedConditions, gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(cond, message))
+		updatedConditions = append(updatedConditions, gardencorev1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, cond, message))
 	}
 
 	updatedConstraints := make([]gardencorev1beta1.Condition, 0, len(constraints))
 	for _, constr := range constraints {
-		updatedConstraints = append(updatedConstraints, gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(constr, message))
+		updatedConstraints = append(updatedConstraints, gardencorev1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, constr, message))
 	}
 
 	if !gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) && !gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {

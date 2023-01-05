@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -44,6 +45,7 @@ type Reconciler struct {
 	TargetClient client.Client
 	TargetScheme *runtime.Scheme
 	Config       config.HealthControllerConfig
+	Clock        clock.Clock
 	ClassFilter  *resourcemanagerpredicate.ClassFilter
 
 	// ensureWatchForGVK ensures that the controller is watching the given object to reconcile corresponding
@@ -104,7 +106,7 @@ func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 	defer cancel()
 
 	var (
-		conditionResourcesHealthy = v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+		conditionResourcesHealthy = v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		oldCondition              = conditionResourcesHealthy.DeepCopy()
 	)
 
@@ -139,7 +141,7 @@ func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 			}
 			objectLog.Info("Finished ManagedResource health checks", "status", "unhealthy", "reason", reason, "message", message)
 
-			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
+			conditionResourcesHealthy = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
 			mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesHealthy)
 			if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -173,7 +175,7 @@ func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 				objectLog.Error(err, "Error executing health check for object")
 			}
 
-			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
+			conditionResourcesHealthy = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
 			mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesHealthy)
 			if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -183,7 +185,7 @@ func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 		}
 	}
 
-	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, "ResourcesHealthy", "All resources are healthy.")
+	conditionResourcesHealthy = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, "ResourcesHealthy", "All resources are healthy.")
 	if !apiequality.Semantic.DeepEqual(oldCondition, conditionResourcesHealthy) {
 		mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesHealthy)
 		if err := r.SourceClient.Status().Update(ctx, mr); err != nil {

@@ -20,6 +20,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -63,6 +64,9 @@ func (r *Reconciler) AddToManager(
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
 	if r.GardenNamespaceGarden == "" {
 		r.GardenNamespaceGarden = v1beta1constants.GardenNamespace
 	}
@@ -80,6 +84,7 @@ func (r *Reconciler) AddToManager(
 			gardenCluster.GetClient(),
 			seedCluster.GetClient(),
 			r.ShootClientMap,
+			r.Clock,
 			NewValuesHelper(&r.Config, r.ImageVector),
 			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
 			r.ChartsPath,

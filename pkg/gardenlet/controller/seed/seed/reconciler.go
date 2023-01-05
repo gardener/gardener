@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -45,6 +46,7 @@ type Reconciler struct {
 	GardenClient                         client.Client
 	SeedClientSet                        kubernetes.Interface
 	Config                               config.GardenletConfiguration
+	Clock                                clock.Clock
 	Recorder                             record.EventRecorder
 	Identity                             *gardencorev1beta1.Gardener
 	ImageVector                          imagevector.ImageVector
@@ -75,8 +77,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
 	if err != nil {
 		log.Error(err, "Failed to create a Seed object")
-		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, fmt.Sprintf("Failed to create a Seed object (%s).", err.Error()))
+		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, fmt.Sprintf("Failed to create a Seed object (%s).", err.Error()))
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after failed creation of Seed object: %w", err)
 		}

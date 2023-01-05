@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -116,7 +117,7 @@ var _ = Describe("Actuator", func() {
 		shootClientSet.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
 
 		log = logr.Discard()
-		actuator = newActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, vh, recorder, charts.Path, namespace)
+		actuator = newActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, clock.RealClock{}, vh, recorder, charts.Path, namespace)
 
 		ctx = context.TODO()
 

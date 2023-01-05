@@ -16,6 +16,7 @@ package managedresource_test
 
 import (
 	"encoding/json"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testclock "k8s.io/utils/clock/testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -46,6 +48,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 	)
 
 	var (
+		fakeClock *testclock.FakeClock
+
 		// resourceName is used as a base name for all resources in the current test case
 		resourceName string
 		objectKey    client.ObjectKey
@@ -96,6 +100,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 				SecretRefs: []corev1.LocalObjectReference{{Name: secretForManagedResource.Name}},
 			},
 		}
+
+		fakeClock = testclock.NewFakeClock(time.Now())
 	})
 
 	JustBeforeEach(func() {
@@ -209,8 +215,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 			oldConditions := managedResource.DeepCopy().Status.Conditions
 			managedResource.Status.Conditions = v1beta1helper.MergeConditions(
 				oldConditions,
-				v1beta1helper.UpdatedCondition(v1beta1helper.GetOrInitCondition(oldConditions, resourcesv1alpha1.ResourcesHealthy), gardencorev1beta1.ConditionTrue, "test", "test"),
-				v1beta1helper.UpdatedCondition(v1beta1helper.GetOrInitCondition(oldConditions, resourcesv1alpha1.ResourcesProgressing), gardencorev1beta1.ConditionFalse, "test", "test"),
+				v1beta1helper.UpdatedConditionWithClock(fakeClock, v1beta1helper.GetOrInitConditionWithClock(fakeClock, oldConditions, resourcesv1alpha1.ResourcesHealthy), gardencorev1beta1.ConditionTrue, "test", "test"),
+				v1beta1helper.UpdatedConditionWithClock(fakeClock, v1beta1helper.GetOrInitConditionWithClock(fakeClock, oldConditions, resourcesv1alpha1.ResourcesProgressing), gardencorev1beta1.ConditionFalse, "test", "test"),
 			)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})

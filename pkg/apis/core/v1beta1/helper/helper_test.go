@@ -33,7 +33,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("helper", func() {
@@ -41,6 +40,7 @@ var _ = Describe("helper", func() {
 		trueVar                 = true
 		falseVar                = false
 		expirationDateInThePast = metav1.Time{Time: time.Now().AddDate(0, 0, -1)}
+		fakeClock               = testclock.NewFakeClock(time.Now())
 	)
 
 	Describe("errors", func() {
@@ -50,9 +50,9 @@ var _ = Describe("helper", func() {
 			afterTestTime = func(t metav1.Time) bool { return t.After(testTime.Time) }
 		)
 
-		DescribeTable("#UpdatedCondition",
+		DescribeTable("#UpdatedConditionWithClock",
 			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes []gardencorev1beta1.ErrorCode, matcher gomegatypes.GomegaMatcher) {
-				updated := UpdatedCondition(condition, status, reason, message, codes...)
+				updated := UpdatedConditionWithClock(fakeClock, condition, status, reason, message, codes...)
 
 				Expect(updated).To(matcher)
 			},
@@ -246,22 +246,18 @@ var _ = Describe("helper", func() {
 			})
 		})
 
-		Describe("#GetOrInitCondition", func() {
+		Describe("#GetOrInitConditionWithClock", func() {
 			It("should get the existing condition", func() {
 				var (
 					c          = gardencorev1beta1.Condition{Type: "foo"}
 					conditions = []gardencorev1beta1.Condition{c}
 				)
 
-				Expect(GetOrInitCondition(conditions, "foo")).To(Equal(c))
+				Expect(GetOrInitConditionWithClock(fakeClock, conditions, "foo")).To(Equal(c))
 			})
 
 			It("should return a new, initialized condition", func() {
-				DeferCleanup(test.WithVars(
-					&Clock, testclock.NewFakeClock(time.Now().Round(time.Second)),
-				))
-
-				Expect(GetOrInitCondition(nil, "foo")).To(Equal(InitCondition("foo")))
+				Expect(GetOrInitConditionWithClock(fakeClock, nil, "foo")).To(Equal(InitConditionWithClock(fakeClock, "foo")))
 			})
 		})
 

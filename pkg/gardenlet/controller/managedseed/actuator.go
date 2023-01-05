@@ -42,6 +42,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -61,6 +62,7 @@ type actuator struct {
 	gardenClient         client.Client
 	seedClient           client.Client
 	shootClientMap       clientmap.ClientMap
+	clock                clock.Clock
 	vp                   ValuesHelper
 	recorder             record.EventRecorder
 	chartsPath           string
@@ -73,6 +75,7 @@ func newActuator(
 	gardenAPIReader client.Reader,
 	gardenClient, seedClient client.Client,
 	shootClientMap clientmap.ClientMap,
+	clock clock.Clock,
 	vp ValuesHelper,
 	recorder record.EventRecorder,
 	chartsPath string,
@@ -84,6 +87,7 @@ func newActuator(
 		gardenClient:         gardenClient,
 		seedClient:           seedClient,
 		shootClientMap:       shootClientMap,
+		clock:                clock,
 		vp:                   vp,
 		recorder:             recorder,
 		chartsPath:           chartsPath,
@@ -109,7 +113,7 @@ func (a *actuator) Reconcile(
 		if err != nil {
 			log.Error(err, "Error during reconciliation")
 			a.recorder.Eventf(ms, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
-			updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
+			updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
 		}
 	}()
 
@@ -127,11 +131,11 @@ func (a *actuator) Reconcile(
 
 		msg := fmt.Sprintf("Waiting for shoot %q to be reconciled", client.ObjectKeyFromObject(shoot).String())
 		a.recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, msg)
-		updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconciling, msg)
+		updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconciling, msg)
 
 		return status, true, nil
 	}
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
+	updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
 		fmt.Sprintf("Shoot %q has been reconciled", client.ObjectKeyFromObject(shoot).String()))
 
 	// Get shoot client
@@ -179,7 +183,7 @@ func (a *actuator) Reconcile(
 		}
 	}
 
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
+	updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
 		fmt.Sprintf("Seed %s has been registered", ms.Name))
 	return status, false, nil
 }
@@ -202,12 +206,12 @@ func (a *actuator) Delete(
 		if err != nil {
 			log.Error(err, "Error during deletion")
 			a.recorder.Eventf(ms, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
-			updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error())
+			updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error())
 		}
 	}()
 
 	// Update SeedRegistered condition
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting,
+	updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting,
 		fmt.Sprintf("Unregistering seed %s", ms.Name))
 
 	// Get shoot
@@ -318,7 +322,7 @@ func (a *actuator) Delete(
 		return status, true, false, nil
 	}
 
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted,
+	updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted,
 		fmt.Sprintf("Seed %s has been unregistred", ms.Name))
 	return status, false, true, nil
 }
@@ -841,8 +845,8 @@ func shootReconciled(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Generation == shoot.Status.ObservedGeneration && lastOp != nil && lastOp.State == gardencorev1beta1.LastOperationStateSucceeded
 }
 
-func updateCondition(status *seedmanagementv1alpha1.ManagedSeedStatus, ct gardencorev1beta1.ConditionType, cs gardencorev1beta1.ConditionStatus, reason, message string) {
-	condition := gardencorev1beta1helper.GetOrInitCondition(status.Conditions, ct)
-	condition = gardencorev1beta1helper.UpdatedCondition(condition, cs, reason, message)
+func updateCondition(clock clock.Clock, status *seedmanagementv1alpha1.ManagedSeedStatus, ct gardencorev1beta1.ConditionType, cs gardencorev1beta1.ConditionStatus, reason, message string) {
+	condition := gardencorev1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, ct)
+	condition = gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, cs, reason, message)
 	status.Conditions = gardencorev1beta1helper.MergeConditions(status.Conditions, condition)
 }

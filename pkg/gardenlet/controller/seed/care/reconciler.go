@@ -20,6 +20,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -41,6 +42,7 @@ type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
 	Config       config.SeedCareControllerConfiguration
+	Clock        clock.Clock
 	Namespace    *string
 	SeedName     string
 }
@@ -67,7 +69,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	conditionTypes := []gardencorev1beta1.ConditionType{gardencorev1beta1.SeedSystemComponentsHealthy}
 	var conditions []gardencorev1beta1.Condition
 	for _, cond := range conditionTypes {
-		conditions = append(conditions, gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, cond))
+		conditions = append(conditions, gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, cond))
 	}
 
 	// Trigger health check

@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -52,6 +53,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if r.TargetScheme == nil {
 		r.TargetScheme = targetCluster.GetScheme()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up

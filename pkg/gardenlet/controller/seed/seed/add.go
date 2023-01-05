@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -39,6 +40,9 @@ const ControllerName = "seed"
 func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 	if r.Recorder == nil {
 		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")

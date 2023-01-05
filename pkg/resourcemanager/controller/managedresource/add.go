@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,6 +52,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if r.TargetScheme == nil {
 		r.TargetScheme = targetCluster.GetScheme()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 	if r.TargetRESTMapper == nil {
 		r.TargetRESTMapper = targetCluster.GetRESTMapper()
