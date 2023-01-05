@@ -218,6 +218,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.Addons.NginxIngress, err = b.DefaultNginxIngress()
+	if err != nil {
+		return nil, err
+	}
 
 	return b, nil
 }

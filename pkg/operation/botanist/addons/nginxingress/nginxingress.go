@@ -20,6 +20,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -32,7 +33,18 @@ const (
 )
 
 // Values is a set of configuration values for the nginx-ingress component.
-type Values struct{}
+type Values struct {
+	// ImageController is the container image used for nginx-ingress controller.
+	ImageController string
+	// ImageDefaultBackend is the container image used for default ingress backend.
+	ImageDefaultBackend string
+	// KubernetesVersion is the version of kubernetes for the shoot cluster.
+	KubernetesVersion *semver.Version
+	// ConfigData contains the configuration details for the nginx-ingress controller
+	ConfigData map[string]string
+	// KubeAPIServerHost is the host of the kube-apiserver.
+	KubeAPIServerHost string
+}
 
 // New creates a new instance of DeployWaiter for nginx-ingress
 func New(

@@ -43,6 +43,13 @@ var _ = Describe("NginxIngress", func() {
 
 		managedResourceName = "shoot-addon-nginx-ingress"
 		namespace           = "some-namespace"
+		imageController     = "some-image:some-tag"
+		imageDefaultBackend = "some-image2:some-tag2"
+		configMapData       = map[string]string{
+			"foo":  "bar",
+			"dot":  "3",
+			"dash": "false",
+		}
 
 		c         client.Client
 		values    Values
@@ -54,7 +61,11 @@ var _ = Describe("NginxIngress", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		values = Values{}
+		values = Values{
+			ImageController:     imageController,
+			ImageDefaultBackend: imageDefaultBackend,
+			ConfigData:          configMapData,
+		}
 		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
