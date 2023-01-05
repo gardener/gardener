@@ -138,6 +138,11 @@ const (
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
 	DeploymentNameVPAUpdater = "vpa-updater"
 
+	// DeploymentNameKubernetesDashboard is a constant for the name of the kubernetes dashboard deployment.
+	DeploymentNameKubernetesDashboard = "kubernetes-dashboard"
+	// DeploymentNameDashboardMetricsScraper is a constant for the name of the dashboard metrics scraper deployment.
+	DeploymentNameDashboardMetricsScraper = "dashboard-metrics-scraper"
+
 	// DeploymentNameMachineControllerManager is a constant for the name of a Kubernetes deployment object that contains
 	// the machine-controller-manager pod.
 	DeploymentNameMachineControllerManager = "machine-controller-manager"

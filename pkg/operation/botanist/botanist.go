@@ -213,6 +213,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 
+	// Addons
+	o.Shoot.Components.Addons.KubernetesDashboard, err = b.DefaultKubernetesDashboard()
+	if err != nil {
+		return nil, err
+	}
+
 	return b, nil
 }
 

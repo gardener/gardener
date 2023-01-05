@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
@@ -109,6 +110,7 @@ type Components struct {
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
 	HVPA                     component.MonitoringComponent
+	Addons                   *Addons
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -162,6 +164,11 @@ type SystemComponents struct {
 type Logging struct {
 	ShootRBACProxy   component.Deployer
 	ShootEventLogger component.Deployer
+}
+
+// Addons contains references for the addons.
+type Addons struct {
+	KubernetesDashboard kubernetesdashboard.Interface
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

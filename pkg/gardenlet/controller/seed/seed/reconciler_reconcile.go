@@ -69,6 +69,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
@@ -569,6 +570,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 			metricsserver.CentralLoggingConfiguration,
 			nodeproblemdetector.CentralLoggingConfiguration,
 			vpnshoot.CentralLoggingConfiguration,
+			// shoot addon components
+			kubernetesdashboard.CentralLoggingConfiguration,
 		}
 
 		if gardenlethelper.IsEventLoggingEnabled(&r.Config) {

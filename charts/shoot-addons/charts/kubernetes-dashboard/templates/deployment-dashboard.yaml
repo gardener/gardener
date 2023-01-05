@@ -1,82 +1,8 @@
+# TODO(acumino): Delete this Helm chart in a future version.
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: kubernetes-dashboard
-  namespace: {{ include "kubernetes-dashboard.namespace" . }}
-  labels:
-    gardener.cloud/role: optional-addon
-    origin: gardener
-    k8s-app: kubernetes-dashboard
-spec:
-  revisionHistoryLimit: 1
-  replicas: 1
-  selector:
-    matchLabels:
-      k8s-app: kubernetes-dashboard
-  strategy:
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-    type: RollingUpdate
-  template:
-    metadata:
-      labels:
-        gardener.cloud/role: optional-addon
-        origin: gardener
-        k8s-app: kubernetes-dashboard
-    spec:
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
-        kubernetes.io/os: linux
-      securityContext:
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-        runAsUser: 1001
-        runAsGroup: 2001
-        fsGroup: 1
-        supplementalGroups:
-        - 1
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-      - name: kubernetes-dashboard
-        image: {{ index .Values.images "kubernetes-dashboard" }}
-        imagePullPolicy: IfNotPresent
-        args:
-        - --auto-generate-certificates
-        - --authentication-mode={{ .Values.authenticationMode }}
-        - --namespace={{ include "kubernetes-dashboard.namespace" . }}
-        {{- if .Values.kubeAPIServerHost }}
-        env:
-        - name: KUBERNETES_SERVICE_HOST
-          value: {{ .Values.kubeAPIServerHost}}
-        {{- end }}
-        ports:
-        - containerPort: 8443
-          protocol: TCP
-        volumeMounts:
-        - name: kubernetes-dashboard-certs
-          mountPath: /certs
-          # Create on-disk volume to store exec logs
-        - mountPath: /tmp
-          name: tmp-volume
-        livenessProbe:
-          httpGet:
-            scheme: HTTPS
-            path: /
-            port: 8443
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
-        resources:
-          requests:
-            cpu: 50m
-            memory: 50Mi
-          limits:
-            memory: 256Mi
-      volumes:
-      - name: kubernetes-dashboard-certs
-        secret:
-          secretName: kubernetes-dashboard-certs
-      - name: tmp-volume
-        emptyDir: {}
-      serviceAccountName: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+  annotations:
+    resources.gardener.cloud/mode: Ignore

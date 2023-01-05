@@ -58,14 +58,6 @@ filter-kubernetes.conf: |-
       Record hostname ${NODE_NAME}
       Record unit kubelet-monitor
 
-  # Shoot controlplane filters
-  [FILTER]
-      Name                parser
-      Match               kubernetes.*addons-kubernetes-dashboard*kubernetes-dashboard*
-      Key_Name            log
-      Parser              kubernetesdashboardParser
-      Reserve_Data        True
-
   # System components filters
   [FILTER]
       Name                parser
@@ -191,13 +183,6 @@ parsers.conf: |-
       Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
       Time_Key    time
       Time_Format %Y-%m-%dT%H:%M:%S.%L
-
-  [PARSER]
-      Name        kubernetesdashboardParser
-      Format      regex
-      Regex       ^(?<time>\d{4}\/\d{2}\/\d{2}\s+[^\s]*)\s+(?<log>.*)
-      Time_Key    time
-      Time_Format %Y/%m/%d %H:%M:%S
 
   [PARSER]
       Name        nodeexporterParser

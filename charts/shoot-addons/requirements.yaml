@@ -1,8 +1,4 @@
 dependencies:
-- name: kubernetes-dashboard
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: kubernetes-dashboard.enabled
 - name: nginx-ingress
   repository: http://localhost:10191
   version: 0.1.0

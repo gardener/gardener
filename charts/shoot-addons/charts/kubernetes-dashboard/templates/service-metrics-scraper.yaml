@@ -1,14 +1,10 @@
+# TODO(acumino): Delete this Helm chart in a future version.
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: dashboard-metrics-scraper
   namespace: kubernetes-dashboard
-  labels:
-    k8s-app: dashboard-metrics-scraper
-spec:
-  ports:
-    - port: 8000
-      targetPort: 8000
-  selector:
-    k8s-app: dashboard-metrics-scraper
+  annotations:
+    resources.gardener.cloud/mode: Ignore
+
