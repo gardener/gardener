@@ -1949,26 +1949,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 						secondWorker.Name += "2"
 						secondWorker.Kubernetes.Kubelet.MaxPods = pointer.Int32(220)
 						shoot.Spec.Provider.Workers = []core.Worker{*firstWorker, *secondWorker}
-
-						// /24 CIDR can host 254 pod IPs (prefix is small enough for the largest maxPods setting)
-						defaultNodeCIDRMaskSize = 24
-						// /25 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
-						tooLargeNodeCIDRMaskSize = 25
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(defaultNodeCIDRMaskSize)
 					})
 
-					It("should allow the default maxPods and nodeCIDRMaskSize", func() {
-						Expect(ValidateShoot(shoot)).To(HaveLen(0))
+					Context("IPv4", func() {
+						BeforeEach(func() {
+							// /24 CIDR can host 254 pod IPs (prefix is small enough for the largest maxPods setting)
+							defaultNodeCIDRMaskSize = 24
+							// /25 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
+							tooLargeNodeCIDRMaskSize = 25
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(defaultNodeCIDRMaskSize)
+						})
+
+						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
+							Expect(ValidateShoot(shoot)).To(HaveLen(0))
+						})
+
+						It("should deny too large nodeCIDRMaskSize", func() {
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(tooLargeNodeCIDRMaskSize)
+
+							Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring("only supports 126 IP addresses"),
+							}))
+						})
 					})
 
-					It("should deny too large nodeCIDRMaskSize", func() {
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(tooLargeNodeCIDRMaskSize)
+					Context("IPv6", func() {
+						BeforeEach(func() {
+							DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.IPv6SingleStack, true))
+							shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
-						Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("only supports 126 IP addresses"),
-						}))
+							// /64 CIDR can host a lot of pod IPs (prefix is small enough for the largest maxPods setting)
+							defaultNodeCIDRMaskSize = 64
+							// /121 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
+							tooLargeNodeCIDRMaskSize = 121
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(defaultNodeCIDRMaskSize)
+						})
+
+						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
+							Expect(ValidateShoot(shoot)).To(HaveLen(0))
+						})
+
+						It("should deny too large nodeCIDRMaskSize", func() {
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(tooLargeNodeCIDRMaskSize)
+
+							Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring("only supports 126 IP addresses"),
+							}))
+						})
 					})
 				})
 			})
