@@ -25,19 +25,20 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/clock"
 )
 
 // CheckAPIServerAvailability checks if the API server of a cluster is reachable and measure the response time.
 func CheckAPIServerAvailability(
 	ctx context.Context,
+	clock clock.Clock,
 	log logr.Logger,
 	condition gardencorev1beta1.Condition,
 	restClient rest.Interface,
 	conditioner conditionerFunc,
 ) gardencorev1beta1.Condition {
-	now := Now()
 	response := restClient.Get().AbsPath("/healthz").Do(ctx)
-	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
+	responseDurationText := fmt.Sprintf("[response_time:%dms]", clock.Now().Sub(clock.Now()).Nanoseconds()/time.Millisecond.Nanoseconds())
 	if response.Error() != nil {
 		message := fmt.Sprintf("Request to API server /healthz endpoint failed. %s (%s)", responseDurationText, response.Error().Error())
 		return conditioner("HealthzRequestFailed", message)
@@ -61,8 +62,5 @@ func CheckAPIServerAvailability(
 	}
 
 	message := "API server /healthz endpoint responded with success status code."
-	return v1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
+	return v1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
 }
-
-// Now determines the current time.
-var Now = time.Now

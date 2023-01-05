@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -86,12 +87,10 @@ var (
 	loggingSelector      = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleLogging)
 )
 
-// Now determines the current time.
-var Now = time.Now
-
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
 	reader                             client.Reader
+	clock                              clock.Clock
 	conditionThresholds                map[gardencorev1beta1.ConditionType]time.Duration
 	staleExtensionHealthCheckThreshold *metav1.Duration
 	lastOperation                      *gardencorev1beta1.LastOperation
@@ -102,6 +101,7 @@ type HealthChecker struct {
 // NewHealthChecker creates a new health checker.
 func NewHealthChecker(
 	reader client.Reader,
+	clock clock.Clock,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
@@ -110,6 +110,7 @@ func NewHealthChecker(
 ) *HealthChecker {
 	return &HealthChecker{
 		reader:                             reader,
+		clock:                              clock,
 		conditionThresholds:                conditionThresholds,
 		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
 		lastOperation:                      lastOperation,
@@ -287,10 +288,10 @@ func (b *HealthChecker) checkManagedResourceConditions(condition gardencorev1bet
 	return nil
 }
 
-func shootHibernatedConditions(conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func shootHibernatedConditions(clock clock.Clock, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
-		hibernationConditions = append(hibernationConditions, gardencorev1beta1helper.UpdatedCondition(cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
+		hibernationConditions = append(hibernationConditions, gardencorev1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
 }
@@ -383,33 +384,33 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 	switch condition.Status {
 	case gardencorev1beta1.ConditionTrue:
 		if _, ok := b.conditionThresholds[condition.Type]; !ok {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 
 	case gardencorev1beta1.ConditionProgressing:
 		threshold, ok := b.conditionThresholds[condition.Type]
 		if !ok {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
-		if b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		if b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && b.clock.Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold {
+			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
-		if delta := Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		if delta := b.clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
+			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+		return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 
 	case gardencorev1beta1.ConditionFalse:
 		threshold, ok := b.conditionThresholds[condition.Type]
 		if ok &&
-			((b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold) ||
+			((b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && b.clock.Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold) ||
 				(reason != condition.Reason)) {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
 	}
 
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+	return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 }
 
 // CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
@@ -559,14 +560,14 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 			if lastHeartbeatTime == nil {
 				lastHeartbeatTime = &metav1.MicroTime{Time: cond.Condition.LastUpdateTime.Time}
 			}
-			if Now().UTC().Sub(lastHeartbeatTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
-				c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, time.Now().UTC().Sub(lastHeartbeatTime.UTC()).Round(time.Minute).String(), lastHeartbeatTime.UTC().Round(time.Minute).String()))
+			if b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
+				c := gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()).Round(time.Minute).String(), lastHeartbeatTime.UTC().Round(time.Minute).String()))
 				return &c
 			}
 		}
 
 		if cond.Condition.Status == gardencorev1beta1.ConditionProgressing {
-			c := gardencorev1beta1helper.UpdatedCondition(condition, cond.Condition.Status, cond.ExtensionType+cond.Condition.Reason, cond.Condition.Message, cond.Condition.Codes...)
+			c := gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, cond.Condition.Status, cond.ExtensionType+cond.Condition.Reason, cond.Condition.Message, cond.Condition.Codes...)
 			return &c
 		}
 
@@ -580,9 +581,9 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 }
 
 // NewConditionOrError returns the given new condition or returns an unknown error condition if an error occurred or `newCondition` is nil.
-func NewConditionOrError(oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
+func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
 	if err != nil || newCondition == nil {
-		return gardencorev1beta1helper.UpdatedConditionUnknownError(oldCondition, err)
+		return gardencorev1beta1helper.UpdatedConditionUnknownErrorWithClock(clock, oldCondition, err)
 	}
 	return *newCondition
 }
@@ -611,11 +612,11 @@ func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationTy
 }
 
 // PardonConditions pardons the given condition if the Shoot is either in create (except successful create) or delete state.
-func PardonConditions(conditions []gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) []gardencorev1beta1.Condition {
+func PardonConditions(clock clock.Clock, conditions []gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) []gardencorev1beta1.Condition {
 	pardoningConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
 		if (lastOp == nil || isUnstableLastOperation(lastOp, lastErrors)) && cond.Status == gardencorev1beta1.ConditionFalse {
-			pardoningConditions = append(pardoningConditions, gardencorev1beta1helper.UpdatedCondition(cond, gardencorev1beta1.ConditionProgressing, cond.Reason, cond.Message, cond.Codes...))
+			pardoningConditions = append(pardoningConditions, gardencorev1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionProgressing, cond.Reason, cond.Message, cond.Codes...))
 			continue
 		}
 		pardoningConditions = append(pardoningConditions, cond)

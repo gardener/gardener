@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -53,6 +54,7 @@ var _ = Describe("Reconciler", func() {
 		request                reconcile.Request
 
 		reconciler reconcile.Reconciler
+		fakeClock  *testclock.FakeClock
 	)
 
 	BeforeEach(func() {
@@ -78,12 +80,14 @@ var _ = Describe("Reconciler", func() {
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
+		fakeClock = testclock.NewFakeClock(time.Now())
 		reconciler = &Reconciler{
 			GardenClient: gardenClient,
 			SeedClient:   seedClient,
 			Config: config.ControllerInstallationCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
 			},
+			Clock:           fakeClock,
 			GardenNamespace: gardenNamespace,
 		}
 	})

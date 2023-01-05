@@ -73,7 +73,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	}
 
 	// Trigger health check
-	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Namespace).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
 
 	// Update Seed status conditions if necessary
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {

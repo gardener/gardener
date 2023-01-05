@@ -158,7 +158,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			shootHealth := NewHealthCheck(o, initializeShootClients)
+			shootHealth := NewHealthCheck(o, initializeShootClients, r.Clock)
 			updatedConditions = shootHealth.Check(
 				ctx,
 				r.conditionThresholdsToProgressingMapping(),

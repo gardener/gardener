@@ -39,11 +39,11 @@ type HealthCheck interface {
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(op *operation.Operation, init care.ShootClientInit) HealthCheck
+type NewHealthCheckFunc func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(op *operation.Operation, init care.ShootClientInit) HealthCheck {
-	return care.NewHealth(op, init)
+var defaultNewHealthCheck NewHealthCheckFunc = func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
+	return care.NewHealth(op, init, clock)
 }
 
 // ConstraintCheck is an interface used to perform constraint checks.

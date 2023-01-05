@@ -44,6 +44,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -55,6 +56,7 @@ var _ = Describe("Shoot Care Control", func() {
 		gardenClient  client.Client
 		reconciler    reconcile.Reconciler
 		gardenletConf config.GardenletConfiguration
+		fakeClock     *testclock.FakeClock
 
 		shootName, shootNamespace, seedName string
 
@@ -79,6 +81,8 @@ var _ = Describe("Shoot Care Control", func() {
 				SeedName: &seedName,
 			},
 		}
+
+		fakeClock = testclock.NewFakeClock(time.Now())
 	})
 
 	AfterEach(func() {
@@ -149,6 +153,7 @@ var _ = Describe("Shoot Care Control", func() {
 						GardenClient:  gardenClient,
 						SeedClientSet: fakeclientset.NewClientSet(),
 						Config:        gardenletConf,
+						Clock:         fakeClock,
 						SeedName:      seedName,
 					}
 
@@ -175,6 +180,7 @@ var _ = Describe("Shoot Care Control", func() {
 						GardenClient:  gardenClient,
 						SeedClientSet: fakeclientset.NewClientSet(),
 						Config:        gardenletConf,
+						Clock:         fakeClock,
 						SeedName:      seedName,
 					}
 
@@ -213,6 +219,7 @@ var _ = Describe("Shoot Care Control", func() {
 					SeedClientSet:  fakeclientset.NewClientSet(),
 					ShootClientMap: shootClientMap,
 					Config:         gardenletConf,
+					Clock:          fakeClock,
 					SeedName:       seedName,
 				}
 			})
@@ -498,7 +505,7 @@ func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(op *operation.Operation, init care.ShootClientInit) HealthCheck {
+	return func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
 		return fn
 	}
 }
