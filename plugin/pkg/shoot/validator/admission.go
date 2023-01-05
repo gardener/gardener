@@ -791,7 +791,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 
 			kubeletVersion, err := helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
 			if err != nil {
-				allErrs = append(allErrs, field.Invalid(idxPath, worker.Kubernetes, "cannot determine effective Kubernetes version for worker pool"))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("kubernetes", "version"), worker.Kubernetes.Version, "cannot determine effective Kubernetes version for worker pool"))
 				// exit early, all other validation errors will be misleading
 				return allErrs
 			}

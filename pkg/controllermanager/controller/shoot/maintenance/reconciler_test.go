@@ -376,6 +376,15 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 		})
 
+		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint constraint (control plane K8s version)", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String("< 1.26")
+			shoot.Spec.Kubernetes.Version = "1.25.1"
+
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.1.1")
+		})
+
 		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint constraint (worker K8s version)", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String(">= 1.26")
 			shoot.Spec.Kubernetes.Version = "1.26.0"
@@ -387,6 +396,19 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
+		})
+
+		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint constraint (worker K8s version)", func() {
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String(">= 1.26")
+			shoot.Spec.Kubernetes.Version = "1.27.0"
+			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+				Version: pointer.String("1.26.0"),
+			}
+
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.1.1")
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - cloud profile has no matching (machineImage.name & machineImage.version) machine image defined (the shoots image has been deleted from the cloudProfile) -> update to latest machineImage with same name", func() {
