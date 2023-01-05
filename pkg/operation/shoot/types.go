@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
@@ -167,7 +168,7 @@ type Logging struct {
 
 // Addons contains references for the addons.
 type Addons struct {
-	KubernetesDashboard component.Deployer
+	KubernetesDashboard kubernetesdashboard.Interface
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

@@ -15,16 +15,20 @@
 package botanist_test
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockkubernetesdashboard "github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -32,14 +36,17 @@ import (
 
 var _ = Describe("Kubernetes Dashboard", func() {
 	var (
-		seedClient client.Client
-		botanist   *Botanist
+		ctrl     *gomock.Controller
+		botanist *Botanist
+		shoot    *gardencorev1beta1.Shoot
 	)
 
 	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
-		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Addons: &gardencorev1beta1.Addons{
 					KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{},
@@ -48,14 +55,24 @@ var _ = Describe("Kubernetes Dashboard", func() {
 					Version: "1.22.1",
 				},
 			},
-		})
+		}
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
 	})
 
 	Describe("#DefaultKubernetesDashboard", func() {
-		BeforeEach(func() {
-			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
+		var kubernetesClient *mockkubernetes.MockInterface
 
+		BeforeEach(func() {
+			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClient.EXPECT().Version().AnyTimes()
+			kubernetesClient.EXPECT().Client().AnyTimes()
+
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot.DisableDNS = true
+			botanist.Shoot.SetInfo(shoot)
 		})
 
 		It("should successfully create a Kubernetes Dashboard interface", func() {
@@ -89,6 +106,66 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
 			Expect(kubernetesDashboard).To(BeNil())
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#DeployKubernetesDashboard", func() {
+		var (
+			kubernetesdashboard *mockkubernetesdashboard.MockInterface
+
+			ctx     = context.TODO()
+			fakeErr = fmt.Errorf("fake err")
+		)
+
+		BeforeEach(func() {
+			kubernetesdashboard = mockkubernetesdashboard.NewMockInterface(ctrl)
+			botanist.Shoot.Components = &shootpkg.Components{
+				Addons: &shootpkg.Addons{
+					KubernetesDashboard: kubernetesdashboard,
+				},
+			}
+		})
+
+		Context("KubernetesDashboard wanted", func() {
+			BeforeEach(func() {
+				shoot.Spec.Addons.KubernetesDashboard.Addon = gardencorev1beta1.Addon{
+					Enabled: true,
+				}
+				botanist.Shoot.SetInfo(shoot)
+			})
+
+			It("should fail when the deploy function fails", func() {
+				kubernetesdashboard.EXPECT().Deploy(ctx).Return(fakeErr)
+
+				Expect(botanist.DeployKubernetesDashboard(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should successfully deploy", func() {
+				kubernetesdashboard.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubernetesDashboard(ctx)).To(Succeed())
+			})
+		})
+
+		Context("KubernetesDashboard not wanted", func() {
+			BeforeEach(func() {
+				shoot.Spec.Addons.KubernetesDashboard.Addon = gardencorev1beta1.Addon{
+					Enabled: false,
+				}
+				botanist.Shoot.SetInfo(shoot)
+			})
+
+			It("should fail when the destroy function fails", func() {
+				kubernetesdashboard.EXPECT().Destroy(ctx).Return(fakeErr)
+
+				Expect(botanist.DeployKubernetesDashboard(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should successfully destroy", func() {
+				kubernetesdashboard.EXPECT().Destroy(ctx)
+
+				Expect(botanist.DeployKubernetesDashboard(ctx)).To(Succeed())
+			})
 		})
 	})
 })

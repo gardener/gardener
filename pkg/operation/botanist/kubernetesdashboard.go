@@ -18,7 +18,6 @@ import (
 	"context"
 
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -26,7 +25,7 @@ import (
 )
 
 // DefaultKubernetesDashboard returns a deployer for kubernetes-dashboard.
-func (b *Botanist) DefaultKubernetesDashboard() (component.DeployWaiter, error) {
+func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, error) {
 	image, err := b.ImageVector.FindImage(images.ImageNameKubernetesDashboard, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

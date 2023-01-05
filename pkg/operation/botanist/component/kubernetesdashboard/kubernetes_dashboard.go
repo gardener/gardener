@@ -48,6 +48,11 @@ const (
 	ManagedResourceName = "shoot-addon-kubernetes-dashboard"
 )
 
+// Interface contains functions for a kubernetes-dashboard deployer.
+type Interface interface {
+	component.DeployWaiter
+}
+
 // Values is a set of configuration values for the kubernetes-dashboard component.
 type Values struct {
 	// APIServerHost is the host of the kube-apiserver.
@@ -69,7 +74,7 @@ func New(
 	client client.Client,
 	namespace string,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	return &kubernetesDashboard{
 		client:    client,
 		namespace: namespace,
