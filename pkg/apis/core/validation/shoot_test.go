@@ -1899,31 +1899,78 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(32)
+			Describe("nodeCIDRMaskSize validation", func() {
+				It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(32)
 
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				}))))
-			})
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+						"Detail": ContainSubstring("nodeCIDRMaskSize must be between 16 and 28"),
+					}))))
+				})
 
-			It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(0)
+				It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(0)
 
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				}))))
-			})
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+						"Detail": ContainSubstring("nodeCIDRMaskSize must be between 16 and 28"),
+					}))))
+				})
 
-			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(22)
+				It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(22)
 
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(BeEmpty())
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				Context("cross validation with maxPods", func() {
+					var (
+						defaultNodeCIDRMaskSize  int32
+						tooLargeNodeCIDRMaskSize int32
+					)
+
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: pointer.Int32(110)}
+
+						firstWorker := shoot.Spec.Provider.Workers[0].DeepCopy()
+						firstWorker.Kubernetes = &core.WorkerKubernetes{
+							Kubelet: &core.KubeletConfig{
+								MaxPods: pointer.Int32(110),
+							},
+						}
+
+						secondWorker := firstWorker.DeepCopy()
+						secondWorker.Name += "2"
+						secondWorker.Kubernetes.Kubelet.MaxPods = pointer.Int32(220)
+						shoot.Spec.Provider.Workers = []core.Worker{*firstWorker, *secondWorker}
+
+						// /24 CIDR can host 254 pod IPs (prefix is small enough for the largest maxPods setting)
+						defaultNodeCIDRMaskSize = 24
+						// /25 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
+						tooLargeNodeCIDRMaskSize = 25
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(defaultNodeCIDRMaskSize)
+					})
+
+					It("should allow the default maxPods and nodeCIDRMaskSize", func() {
+						Expect(ValidateShoot(shoot)).To(HaveLen(0))
+					})
+
+					It("should deny too large nodeCIDRMaskSize", func() {
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(tooLargeNodeCIDRMaskSize)
+
+						Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+							"Detail": ContainSubstring("only supports 126 IP addresses"),
+						}))
+					})
+				})
 			})
 
 			It("should prevent setting a negative pod eviction timeout", func() {
@@ -2538,97 +2585,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
 					"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
 				}))))
-			})
-		})
-
-		Context("NodeCIDRMask validation", func() {
-			var (
-				defaultMaxPod           int32 = 110
-				maxPod                  int32 = 260
-				defaultNodeCIDRMaskSize int32 = 24
-				testWorker              core.Worker
-			)
-
-			BeforeEach(func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
-				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &defaultMaxPod}
-				testWorker = *worker.DeepCopy()
-				testWorker.Name = "testworker"
-			})
-
-			It("should not return any errors", func() {
-				worker.Kubernetes = &core.WorkerKubernetes{
-					Kubelet: &core.KubeletConfig{
-						MaxPods: &defaultMaxPod,
-					},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(0))
-			})
-
-			Context("Non-default max pod settings", func() {
-				Context("one worker pool", func() {
-					It("should deny NodeCIDR with too few ips", func() {
-						testWorker.Kubernetes = &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								MaxPods: &maxPod,
-							},
-						}
-						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker)
-
-						errorList := ValidateShoot(shoot)
-
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-						}))
-					})
-				})
-
-				Context("multiple worker pools", func() {
-					It("should deny NodeCIDR with too few ips", func() {
-						testWorker.Kubernetes = &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								MaxPods: &maxPod,
-							},
-						}
-
-						secondTestWorker := *testWorker.DeepCopy()
-						secondTestWorker.Name = "testworker2"
-						secondTestWorker.Kubernetes = &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								MaxPods: &maxPod,
-							},
-						}
-
-						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker, secondTestWorker)
-
-						errorList := ValidateShoot(shoot)
-
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-						}))
-					})
-				})
-
-				Context("Global default max pod", func() {
-					It("should deny NodeCIDR with too few ips", func() {
-						shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &maxPod}
-
-						errorList := ValidateShoot(shoot)
-
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-						}))
-					})
-				})
 			})
 		})
 
