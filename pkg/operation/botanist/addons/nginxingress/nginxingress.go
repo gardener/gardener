@@ -19,8 +19,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -35,7 +37,8 @@ const (
 
 	labelAppValue = "nginx-ingress"
 
-	clusterRoleName = "addons-nginx-ingress"
+	clusterRoleName    = "addons-nginx-ingress"
+	serviceAccountName = "addons-nginx-ingress"
 )
 
 // Values is a set of configuration values for the nginx-ingress component.
@@ -106,6 +109,19 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceAccountName,
+				Namespace: n.namespace,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp:         labelAppValue,
+					"release":                         "addons",
+					"addonmanager.kubernetes.io/mode": "Reconcile",
+				},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
+
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: clusterRoleName,
@@ -161,5 +177,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 	return registry.AddAllAndSerialize(
 		clusterRole,
+		serviceAccount,
 	)
 }

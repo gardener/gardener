@@ -58,6 +58,19 @@ var _ = Describe("NginxIngress", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
+		serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+  namespace: ` + namespace + `
+`
+
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -191,7 +204,9 @@ rules:
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(1))
+			Expect(managedResourceSecret.Data).To(HaveLen(2))
+
+			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 		})
 	})
