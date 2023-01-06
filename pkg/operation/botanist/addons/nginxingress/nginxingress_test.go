@@ -165,6 +165,36 @@ subjects:
   name: addons-nginx-ingress
   namespace: ` + namespace + `
 `
+		serviceControllerYAML = `apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    release: addons
+  name: addons-nginx-ingress-controller
+  namespace: ` + namespace + `
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: nginx-ingress
+    component: controller
+    release: addons
+  type: LoadBalancer
+status:
+  loadBalancer: {}
+`
 	)
 
 	BeforeEach(func() {
@@ -224,11 +254,12 @@ subjects:
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Data).To(HaveLen(4))
 
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["service__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
 		})
 	})
 

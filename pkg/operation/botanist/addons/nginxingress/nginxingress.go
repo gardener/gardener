@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,6 +42,12 @@ const (
 	clusterRoleName        = "addons-nginx-ingress"
 	serviceAccountName     = "addons-nginx-ingress"
 	clusterRoleBindingName = "addons-nginx-ingress"
+	serviceNameController  = "addons-nginx-ingress-controller"
+
+	servicePortControllerHttp    int32 = 80
+	containerPortControllerHttp  int32 = 80
+	servicePortControllerHttps   int32 = 443
+	containerPortControllerHttps int32 = 443
 )
 
 // Values is a set of configuration values for the nginx-ingress component.
@@ -55,6 +62,11 @@ type Values struct {
 	ConfigData map[string]string
 	// KubeAPIServerHost is the host of the kube-apiserver.
 	KubeAPIServerHost string
+	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress.
+	LoadBalancerSourceRanges []string
+	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
+	// exposing the nginx-ingress.
+	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -196,11 +208,49 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Namespace: serviceAccount.Namespace,
 			}},
 		}
+
+		serviceController = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceNameController,
+				Namespace: n.namespace,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelAppValue,
+					"release":                 "addons",
+					"component":               "controller",
+				},
+				Annotations: map[string]string{"service.beta.kubernetes.io/aws-load-balancer-proxy-protocol": "*"},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:                     corev1.ServiceTypeLoadBalancer,
+				LoadBalancerSourceRanges: n.values.LoadBalancerSourceRanges,
+				ExternalTrafficPolicy:    n.values.ExternalTrafficPolicy,
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "http",
+						Port:       servicePortControllerHttp,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(int(containerPortControllerHttp)),
+					},
+					{
+						Name:       "https",
+						Port:       servicePortControllerHttps,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(int(containerPortControllerHttps)),
+					},
+				},
+				Selector: map[string]string{
+					v1beta1constants.LabelApp: labelAppValue,
+					"release":                 "addons",
+					"component":               "controller",
+				},
+			},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
 		clusterRole,
 		clusterRoleBinding,
 		serviceAccount,
+		serviceController,
 	)
 }

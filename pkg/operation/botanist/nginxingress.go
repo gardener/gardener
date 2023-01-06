@@ -40,10 +40,12 @@ func (b *Botanist) DefaultNginxIngress() (
 	}
 
 	values := nginxingress.Values{
-		ImageController:     imageController.String(),
-		ImageDefaultBackend: imageDefaultBackend.String(),
-		KubernetesVersion:   b.Shoot.KubernetesVersion,
-		ConfigData:          b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config,
+		ImageController:          imageController.String(),
+		ImageDefaultBackend:      imageDefaultBackend.String(),
+		KubernetesVersion:        b.Shoot.KubernetesVersion,
+		ConfigData:               b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config,
+		LoadBalancerSourceRanges: b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
+		ExternalTrafficPolicy:    *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy,
 	}
 
 	if b.APIServerSNIEnabled() {
