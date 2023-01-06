@@ -26,6 +26,16 @@ tests:
     values: '95+0x120'
   - series: 'node_nf_conntrack_entries_limit'
     values: '100+0x120'
+  # PodsRequestCPUApproachNodeCapacity
+  - series: 'kube_pod_container_resource_requests_cpu_cores{node="node1"}'
+    values: '1+0x100'
+  - series: 'kube_node_status_allocatable{resource="cpu",node="node1"}'
+    values: '1+0x120'
+  # PodsRequestMemoryApproachNodeCapacity
+  - series: 'kube_pod_container_resource_requests_memory_bytes{node="node1"}'
+    values: '1+0x100'
+  - series: 'kube_node_status_allocatable{resource="memory",node="node1"}'
+    values: '1+0x120'
   alert_rule_test:
   - eval_time: 1h
     alertname: K8SNodeOutOfDisk
@@ -104,3 +114,25 @@ tests:
       exp_annotations:
         description: The nf_conntrack table is 95% full.
         summary: Number of tracked connections is near the limit
+  - eval_time: 1h
+    alertname: PodsRequestCPUApproachNodeCapacity
+    exp_alerts:
+    - exp_labels:
+        service: node-exporter
+        severity: critical
+        type: shoot
+        visibility: operator
+      exp_annotations:
+        summary: Pods request CPU approach Node capacity.
+        description: Pods request CPU is approaching Node node1 capacity.
+  - eval_time: 1h
+    alertname: PodsRequestMemoryApproachNodeCapacity
+    exp_alerts:
+    - exp_labels:
+        service: node-exporter
+        severity: critical
+        type: shoot
+        visibility: operator
+      exp_annotations:
+        summary: Pods request memory approach Node capacity.
+        description: Pods request memory is approaching Node node1 capacity.

@@ -49,6 +49,30 @@ groups:
       summary: Node is under disk pressure.
       description: Node {{ $labels.node }} is under disk pressure
 
+  - alert: PodsRequestCPUApproachNodeCapacity
+    expr: sum by (node)(kube_pod_container_resource_requests_cpu_cores) / sum by (node)(kube_node_status_allocatable{resource="cpu"}) > 80
+    for: 1h
+    labels:
+      service: node-exporter
+      severity: critical
+      type: shoot
+      visibility: operator
+    annotations:
+      summary: Pods request CPU approach Node capacity.
+      description: Pods request CPU is approaching Node {{ $labels.node }} capacity.
+
+  - alert: PodsRequestMemoryApproachNodeCapacity
+    expr: sum by (node)(kube_pod_container_resource_requests_memory_bytes) / sum by (node)(kube_node_status_allocatable{resource="memory"}) > 80
+    for: 1h
+    labels:
+      service: node-exporter
+      severity: critical
+      type: shoot
+      visibility: operator
+    annotations:
+      summary: Pods request memory approach Node capacity.
+      description: Pods request memory is approaching Node {{ $labels.node }} capacity.
+
   - record: instance:conntrack_entries_usage:percent
     expr: (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) * 100
 
