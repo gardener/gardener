@@ -884,7 +884,7 @@
           "refId": "G"
         },
         {
-          "expr": "  count by (node) (kube_pod_info{type=\"shoot\"})\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
+          "expr": "  sum without (kubernetes_io_hostname) (label_replace(sum (kubelet_running_pods) by (kubernetes_io_hostname), \"node\",\"$1\",\"kubernetes_io_hostname\", \"(.+)\")\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
