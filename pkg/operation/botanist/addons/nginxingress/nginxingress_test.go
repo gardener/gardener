@@ -145,6 +145,26 @@ rules:
   - list
   - watch
 `
+
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: addons-nginx-ingress
+subjects:
+- kind: ServiceAccount
+  name: addons-nginx-ingress
+  namespace: ` + namespace + `
+`
 	)
 
 	BeforeEach(func() {
@@ -204,10 +224,11 @@ rules:
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(2))
+			Expect(managedResourceSecret.Data).To(HaveLen(3))
 
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
 		})
 	})
 

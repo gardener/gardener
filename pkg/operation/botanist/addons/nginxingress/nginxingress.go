@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -37,8 +38,9 @@ const (
 
 	labelAppValue = "nginx-ingress"
 
-	clusterRoleName    = "addons-nginx-ingress"
-	serviceAccountName = "addons-nginx-ingress"
+	clusterRoleName        = "addons-nginx-ingress"
+	serviceAccountName     = "addons-nginx-ingress"
+	clusterRoleBindingName = "addons-nginx-ingress"
 )
 
 // Values is a set of configuration values for the nginx-ingress component.
@@ -173,10 +175,32 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterRoleBindingName,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelAppValue,
+					"release":                 "addons",
+				},
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
 		clusterRole,
+		clusterRoleBinding,
 		serviceAccount,
 	)
 }
