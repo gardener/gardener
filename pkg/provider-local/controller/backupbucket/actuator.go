@@ -52,6 +52,12 @@ func (a *actuator) Reconcile(_ context.Context, log logr.Logger, bb *extensionsv
 	if err := os.Mkdir(filePath, fileMode); err != nil && !os.IsExist(err) {
 		return err
 	}
+
+	// ensure the backup-bucket directory has the correct set of permissions, even if they have been changed externally
+	if err := os.Chmod(filePath, fileMode); err != nil {
+		return err
+	}
+
 	return nil
 }
 
