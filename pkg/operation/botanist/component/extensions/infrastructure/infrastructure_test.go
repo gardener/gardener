@@ -164,10 +164,11 @@ var _ = Describe("#Interface", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			deployWaiter.SetSSHPublicKey(sshPublicKey)
+			deployWaiter.SetSSHPublicKey([]byte(""))
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
 
 			actual := &extensionsv1alpha1.Infrastructure{}
+			expected.Spec.SSHPublicKey = []byte("")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
 			expected.SetAnnotations(map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().String(),

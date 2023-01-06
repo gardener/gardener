@@ -638,7 +638,8 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
-	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) {
+	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) ||
+		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled != c.shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 

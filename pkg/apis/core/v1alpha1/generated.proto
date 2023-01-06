@@ -1898,6 +1898,13 @@ message ResourceWatchCacheSize {
   optional int32 size = 3;
 }
 
+// SSHAccess containes setting to enable/disable SSH access to the worker nodes.
+message SSHAccess {
+  // Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
+  // Defaults to true.
+  optional bool enabled = 1;
+}
+
 // SecretBinding represents a binding to a secret in the same or another namespace.
 message SecretBinding {
   // Standard object metadata.
@@ -2894,10 +2901,9 @@ message WorkerSystemComponents {
   optional bool allow = 1;
 }
 
-// WorkersSettings contains settings for all workers.
 message WorkersSettings {
-  // EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.
+  // SSHAccess containes setting to enable/disable SSH access to the worker nodes.
   // +optional
-  optional bool ensureSSHAccessDisabled = 1;
+  optional SSHAccess sshAccess = 1;
 }
 

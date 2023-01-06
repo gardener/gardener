@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshddisabler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount"
 )
 
@@ -40,7 +40,7 @@ func Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1al
 		files []extensionsv1alpha1.File
 	)
 
-	for _, component := range ComponentsFn(ctx.CRIName) {
+	for _, component := range ComponentsFn(ctx.CRIName, ctx.SSHAccessEnabled) {
 		u, f, err := component.Config(ctx)
 		if err != nil {
 			return nil, nil, err
@@ -54,7 +54,7 @@ func Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1al
 }
 
 // Components computes the original operating system config components.
-func Components(criName extensionsv1alpha1.CRIName) []components.Component {
+func Components(criName extensionsv1alpha1.CRIName, sshAccessEnabled bool) []components.Component {
 	components := []components.Component{
 		promtail.New(),
 		varlibmount.New(),
@@ -63,8 +63,11 @@ func Components(criName extensionsv1alpha1.CRIName) []components.Component {
 		journald.New(),
 		kernelconfig.New(),
 		kubelet.New(),
-		gardeneruser.New(),
-		sshddisabler.New(),
+		sshdensurer.New(),
+	}
+
+	if sshAccessEnabled {
+		components = append(components, gardeneruser.New())
 	}
 
 	if criName == extensionsv1alpha1.CRINameContainerD {

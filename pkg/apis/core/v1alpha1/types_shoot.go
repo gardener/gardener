@@ -1462,11 +1462,17 @@ type ContainerRuntime struct {
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 }
 
-// WorkersSettings contains settings for all workers.
 type WorkersSettings struct {
-	// EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.
+	// SSHAccess containes setting to enable/disable SSH access to the worker nodes.
 	// +optional
-	EnsureSSHAccessDisabled *bool `json:"ensureSSHAccessDisabled,omitempty" protobuf:"varint,1,opt,name=ensureSSHAccessDisabled"`
+	SSHAccess *SSHAccess `json:"sshAccess,omitempty" protobuf:"bytes,1,opt,name=sshAccess"`
+}
+
+// SSHAccess containes setting to enable/disable SSH access to the worker nodes.
+type SSHAccess struct {
+	// Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
+	// Defaults to true.
+	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 }
 
 var (

@@ -137,7 +137,8 @@ spec:
     #   - KernelDeadlock
     #   - DiskPressure
     workersSettings:
-  #   ensureSSHAccessDisabled: true
+    # sshAccess:
+    #   enabled: false
   kubernetes:
     version: 1.20.1
   # enableStaticTokenKubeconfig: true

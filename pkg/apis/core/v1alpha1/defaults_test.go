@@ -722,7 +722,7 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{EnsureSSHAccessDisabled: pointer.Bool(false)}))
+			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: true}}))
 		})
 
 		It("should set the system components and coredns autoscaling fields", func() {

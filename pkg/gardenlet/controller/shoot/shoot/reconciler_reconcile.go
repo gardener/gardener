@@ -98,7 +98,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		kubeProxyEnabled                = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
 		deployKubeAPIServerTaskTimeout  = defaultTimeout
-		shootSSHAccessDisabled          = gardencorev1beta1helper.ShootWantsSSHAccessDisabled(o.Shoot.GetInfo())
+		shootSSHAccessEnabled           = gardencorev1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo())
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
@@ -448,13 +448,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		deleteBastions = g.Add(flow.Task{
-			Name:         "Deleting Bastions if EnsureSSHAccessDisabled is set in workers settings",
-			Fn:           flow.TaskFn(botanist.DeleteBastions).DoIf(shootSSHAccessDisabled),
+			Name:         "Deleting Bastions if SSHAccess is disabled in workers settings",
+			Fn:           flow.TaskFn(botanist.DeleteBastions).SkipIf(shootSSHAccessEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
 		})
 		waitUntilBastionsDeleted = g.Add(flow.Task{
 			Name:         "Waiting until Bastions have been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilBastionsDeleted).DoIf(shootSSHAccessDisabled),
+			Fn:           flow.TaskFn(botanist.WaitUntilBastionsDeleted).SkipIf(shootSSHAccessEnabled),
 			Dependencies: flow.NewTaskIDs(deleteBastions),
 		})
 		deployOperatingSystemConfig = g.Add(flow.Task{

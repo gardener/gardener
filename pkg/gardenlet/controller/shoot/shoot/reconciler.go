@@ -732,6 +732,10 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		shoot.Status.Credentials.Rotation.Kubeconfig = nil
 	}
 
+	if !v1beta1helper.ShootEnablesSSHAccess(shoot) && shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
+		shoot.Status.Credentials.Rotation.SSHKeypair = nil
+	}
+
 	return r.GardenClient.Status().Patch(ctx, shoot, patch)
 }
 

@@ -1425,9 +1425,9 @@ func IsMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == gardencorev1beta1.FailureToleranceTypeZone
 }
 
-// ShootWantsSSHAccessDisabled returns true if EnsureSSHAccessDisabled from the WorkersSettings is set to true.
-func ShootWantsSSHAccessDisabled(shoot *gardencorev1beta1.Shoot) bool {
-	return shoot.Spec.Provider.WorkersSettings != nil && shoot.Spec.Provider.WorkersSettings.EnsureSSHAccessDisabled != nil && *shoot.Spec.Provider.WorkersSettings.EnsureSSHAccessDisabled
+// ShootEnablesSSHAccess returns true if SSHAccess from the WorkersSettings is set to true.
+func ShootEnablesSSHAccess(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled
 }
 
 // GetFailureToleranceType determines the failure tolerance type of the given shoot.

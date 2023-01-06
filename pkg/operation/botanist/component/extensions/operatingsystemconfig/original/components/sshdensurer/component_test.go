@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sshddisabler_test
+package sshdensurer_test
 
 import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshddisabler"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/utils"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -36,24 +36,24 @@ var _ = Describe("Component", func() {
 			component = New()
 		})
 
-		It("should return the expected units and files when EnsureSSHAccessDisabled is set to true", func() {
-			ctx = components.Context{EnsureSSHAccessDisabled: true}
+		It("should return the expected units and files when SSHAccessEnabled is set to true", func() {
+			ctx = components.Context{SSHAccessEnabled: true}
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(units).To(ConsistOf(
 				[]extensionsv1alpha1.Unit{
 					{
-						Name:    "sshddisabler.service",
+						Name:    "sshd-ensurer.service",
 						Command: pointer.String("start"),
 						Content: pointer.String(`[Unit]
-Description=Disable ssh access and kill any currently established ssh connections
+Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
 Type=simple
 Restart=always
 RestartSec=15
-ExecStart=/var/lib/sshd-disabler/run.sh
+ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
 					},
@@ -62,12 +62,12 @@ WantedBy=multi-user.target`),
 			Expect(files).To(ConsistOf(
 				[]extensionsv1alpha1.File{
 					{
-						Path:        "/var/lib/sshd-disabler/run.sh",
+						Path:        "/var/lib/sshd-ensurer/run.sh",
 						Permissions: pointer.Int32(0755),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
-								Data:     utils.EncodeBase64([]byte(script)),
+								Data:     utils.EncodeBase64([]byte(enableScript)),
 							},
 						},
 					},
@@ -75,33 +75,66 @@ WantedBy=multi-user.target`),
 			))
 		})
 
-		It("should return the expected units and files when EnsureSSHAccessDisabled is set to false", func() {
-			ctx = components.Context{EnsureSSHAccessDisabled: false}
+		It("should return the expected units and files when SSHAccessEnabled is set to false", func() {
+			ctx = components.Context{SSHAccessEnabled: false}
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(units).To(ConsistOf(
 				[]extensionsv1alpha1.Unit{
 					{
-						Name:    "sshddisabler.service",
+						Name:    "sshd-ensurer.service",
 						Command: pointer.String("start"),
 						Content: pointer.String(`[Unit]
-Description=Disable ssh access and kill any currently established ssh connections
+Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
 Type=simple
-ExecStart=/bin/echo "service sshddisabler is disabled in workers settings."
+Restart=always
+RestartSec=15
+ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
 					},
 				},
 			))
-			Expect(files).To(BeNil())
+			Expect(files).To(ConsistOf(
+				[]extensionsv1alpha1.File{
+					{
+						Path:        "/var/lib/sshd-ensurer/run.sh",
+						Permissions: pointer.Int32(0755),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     utils.EncodeBase64([]byte(disableScript)),
+							},
+						},
+					},
+				},
+			))
 		})
 	})
 })
 
-const script = `#!/bin/bash -eu
+const (
+	enableScript = `#!/bin/bash -eu
+set -e
+
+# Enable sshd service if disabled
+if ! systemctl is-enabled --quiet sshd.service ; then
+    # When sshd.service is disabled on gardenlinux the service is deleted
+    # On gardenlinux sshd.service is enabled by enabling ssh.service
+    if ! systemctl enable sshd.service ; then
+        systemctl enable ssh.service
+    fi
+fi
+
+# Start sshd service if not active
+if ! systemctl is-active --quiet sshd.service ; then
+    systemctl start sshd.service
+fi
+`
+	disableScript = `#!/bin/bash -eu
 set -e
 
 # Disable sshd service if enabled
@@ -118,3 +151,4 @@ fi
 # Kill all currently established ssh connections
 pkill sshd || true
 `
+)

@@ -7650,6 +7650,37 @@ int32
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SSHAccess">SSHAccess
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.WorkersSettings">WorkersSettings</a>)
+</p>
+<p>
+<p>SSHAccess containes setting to enable/disable SSH access to the worker nodes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
+Defaults to true.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SchedulingProfile">SchedulingProfile
 (<code>string</code> alias)</p></h3>
 <p>
@@ -11408,7 +11439,6 @@ bool
 <a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>)
 </p>
 <p>
-<p>WorkersSettings contains settings for all workers.</p>
 </p>
 <table>
 <thead>
@@ -11420,14 +11450,16 @@ bool
 <tbody>
 <tr>
 <td>
-<code>ensureSSHAccessDisabled</code></br>
+<code>sshAccess</code></br>
 <em>
-bool
+<a href="#core.gardener.cloud/v1beta1.SSHAccess">
+SSHAccess
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>EnsureSSHAccessDisabled indicates whether the ssh access to the worker nodes should be disabled.</p>
+<p>SSHAccess containes setting to enable/disable SSH access to the worker nodes.</p>
 </td>
 </tr>
 </tbody>

@@ -62,7 +62,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		promtailEnabled, lokiIngressHost = true, b.ComputeLokiHost()
 	}
 
-	ensureSSHAccessDisabled := v1beta1helper.ShootWantsSSHAccessDisabled(b.Shoot.GetInfo())
+	sshAccessEnabled := v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())
 
 	return operatingsystemconfig.New(
 		b.Logger,
@@ -73,15 +73,15 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			OriginalValues: operatingsystemconfig.OriginalValues{
-				ClusterDNSAddress:       clusterDNSAddress,
-				ClusterDomain:           gardencorev1beta1.DefaultDomain,
-				Images:                  oscImages,
-				KubeletConfig:           b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
-				MachineTypes:            b.Shoot.CloudProfile.Spec.MachineTypes,
-				EnsureSSHAccessDisabled: ensureSSHAccessDisabled,
-				PromtailEnabled:         promtailEnabled,
-				LokiIngressHostName:     lokiIngressHost,
-				NodeLocalDNSEnabled:     v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
+				ClusterDNSAddress:   clusterDNSAddress,
+				ClusterDomain:       gardencorev1beta1.DefaultDomain,
+				Images:              oscImages,
+				KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
+				MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
+				SSHAccessEnabled:    sshAccessEnabled,
+				PromtailEnabled:     promtailEnabled,
+				LokiIngressHostName: lokiIngressHost,
+				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 			},
 		},
 		operatingsystemconfig.DefaultInterval,
@@ -101,17 +101,19 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)))
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretutils.DataKeyCertificateBundle]))
 
-	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
-	}
-	publicKeys := []string{string(sshKeypairSecret.Data[secretutils.DataKeySSHAuthorizedKeys])}
+	if v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()) {
+		sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
+		}
+		publicKeys := []string{string(sshKeypairSecret.Data[secretutils.DataKeySSHAuthorizedKeys])}
 
-	if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
-		publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secretutils.DataKeySSHAuthorizedKeys]))
-	}
+		if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
+			publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secretutils.DataKeySSHAuthorizedKeys]))
+		}
 
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
+		b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
+	}
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.GetShootState())

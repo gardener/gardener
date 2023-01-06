@@ -120,8 +120,8 @@ type OriginalValues struct {
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKeys is a list of public SSH keys.
 	SSHPublicKeys []string
-	// EnsureSSHAccessDisabled ensures that ssh access is disabled for the worker nodes.
-	EnsureSSHAccessDisabled bool
+	// SSHAccessEnabled states whether sshd.service service in systemd should be enabled and running for the worker nodes.
+	SSHAccessEnabled bool
 	// PromtailEnabled states whether Promtail shall be enabled.
 	PromtailEnabled bool
 	// LokiIngressHostName is the ingress host name of the shoot's Loki.
@@ -517,7 +517,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
 		kubernetesVersion:       kubernetesVersion,
 		sshPublicKeys:           o.values.SSHPublicKeys,
-		ensureSSHAccessDisabled: o.values.EnsureSSHAccessDisabled,
+		sshAccessEnabled:        o.values.SSHAccessEnabled,
 		lokiIngressHostName:     o.values.LokiIngressHostName,
 		promtailEnabled:         o.values.PromtailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
@@ -578,7 +578,7 @@ type deployer struct {
 	kubeletDataVolumeName   *string
 	kubernetesVersion       *semver.Version
 	sshPublicKeys           []string
-	ensureSSHAccessDisabled bool
+	sshAccessEnabled        bool
 	lokiIngressHostName     string
 	promtailEnabled         bool
 	nodeLocalDNSEnabled     bool
@@ -628,7 +628,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubeletDataVolumeName:   d.kubeletDataVolumeName,
 			KubernetesVersion:       d.kubernetesVersion,
 			SSHPublicKeys:           d.sshPublicKeys,
-			EnsureSSHAccessDisabled: d.ensureSSHAccessDisabled,
+			SSHAccessEnabled:        d.sshAccessEnabled,
 			PromtailEnabled:         d.promtailEnabled,
 			LokiIngress:             d.lokiIngressHostName,
 			APIServerURL:            d.apiServerURL,

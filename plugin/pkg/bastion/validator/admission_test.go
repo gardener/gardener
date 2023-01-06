@@ -230,9 +230,9 @@ var _ = Describe("Bastion", func() {
 			))
 		})
 
-		It("should forbid the Bastion creation if the Shoot's SSH access is not disabled", func() {
+		It("should forbid the Bastion creation if the Shoot's SSH access is disabled", func() {
 			shoot.Spec.Provider.WorkersSettings = &gardencore.WorkersSettings{
-				EnsureSSHAccessDisabled: pointer.Bool(true),
+				SSHAccess: &gardencore.SSHAccess{Enabled: false},
 			}
 
 			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
