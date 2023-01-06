@@ -18,18 +18,24 @@ import (
 	"context"
 	"time"
 
+	"github.com/Masterminds/semver"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/Masterminds/semver"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
-	name = "addons-nginx-ingress"
 	// ManagedResourceName is the name of the nginx-ingress addon managed resource.
 	ManagedResourceName = "shoot-addon-nginx-ingress"
+
+	labelAppValue = "nginx-ingress"
+
+	clusterRoleName = "addons-nginx-ingress"
 )
 
 // Values is a set of configuration values for the nginx-ingress component.
@@ -99,7 +105,61 @@ func (n *nginxIngress) WaitCleanup(ctx context.Context) error {
 func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterRoleName,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelAppValue,
+					"release":                 "addons",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"endpoints", "nodes", "pods", "secrets"},
+					Verbs:     []string{"list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"nodes"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"services", "configmaps"},
+					Verbs:     []string{"get", "list", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"extensions", "networking.k8s.io"},
+					Resources: []string{"ingresses"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "patch"},
+				},
+				{
+					APIGroups: []string{"extensions", "networking.k8s.io"},
+					Resources: []string{"ingresses/status"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{"networking.k8s.io"},
+					Resources: []string{"ingressclasses"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"list", "watch"},
+				},
+			},
+		}
 	)
 
-	return registry.AddAllAndSerialize()
+	return registry.AddAllAndSerialize(
+		clusterRole,
+	)
 }
