@@ -13,9 +13,6 @@ spec:
         acceptedIssuers:
         - foo1
         - foo2
-        # Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
-        signingKeySecretName:
-          name: my-signing-key-secret
         extendTokenExpiration: true
         maxTokenExpiration: 45d
 ...
@@ -39,33 +36,6 @@ You can remove `A` from the `acceptedIssuers` when all active tokens were issued
 This can be ensured by using [projected token volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) with a short validity, or by rolling out all pods.
 Additionally, all [`ServiceAccount` token secrets](https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets) should be recreated.
 Apart from this you should wait for at least `12h` to make sure the control plane and system components receive a new token from Gardener.
-
-## Signing Key Secret
-
-> 🚨 This field is deprecated and will be removed in a future version of Gardener. Do not use it.
-
-The `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.signingKeySecretName.name` specifies the name of `Secret` in the same namespace as the `Shoot` in the garden cluster.
-It should look as follows:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: <name>
-  namespace: <namespace>
-data:
-  signing-key: base64(signing-key-pem)
-```
-
-The provided key will be used for configuring both the `--service-account-signing-key-file` and `--service-account-key-file` flags of the `kube-apiserver`.
-
-According to the [upstream specification](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection), they have the following effects:
-
-> - `--service-account-key-file`: File containing PEM-encoded x509 RSA or ECDSA private or public keys, used to verify ServiceAccount tokens. The specified file can contain multiple keys, and the flag can be specified multiple times with different files. If specified multiple times, tokens signed by any of the specified keys are considered valid by the Kubernetes API server.
-> - `--service-account-signing-key-file`: Path to the file that contains the current private key of the service account token issuer. The issuer signs issued ID tokens with this private key.
-
-Note that rotation of this key is not yet supported, hence usage is not recommended.
-By default, Gardener will generate a service account signing key for the cluster.
 
 ## Token Expirations
 

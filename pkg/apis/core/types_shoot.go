@@ -595,11 +595,6 @@ type ServiceAccountConfig struct {
 	// identifier in "iss" claim of issued tokens. This value is used to generate new service account tokens.
 	// This value is a string or URI. Defaults to URI of the API server.
 	Issuer *string
-	// SigningKeySecret is a reference to a secret that contains an optional private key of the
-	// service account token issuer. The issuer will sign issued ID tokens with this private key.
-	// Only useful if service account tokens are also issued by another external system.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
-	SigningKeySecret *corev1.LocalObjectReference
 	// ExtendTokenExpiration turns on projected service account expiration extension during token generation, which
 	// helps safe transition from legacy token to bound service account token feature. If this flag is enabled,
 	// admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition,

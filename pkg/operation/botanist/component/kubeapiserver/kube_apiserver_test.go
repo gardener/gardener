@@ -1103,42 +1103,6 @@ subjects:
 				}))
 			})
 
-			It("should successfully deploy the ServiceAccountSigningKey secret resource", func() {
-				var (
-					signingKey           = []byte("some-signingkey")
-					serviceAccountConfig = ServiceAccountConfig{SigningKey: signingKey}
-				)
-
-				kapi = New(kubernetesInterface, namespace, sm, Values{ServiceAccount: serviceAccountConfig, RuntimeVersion: runtimeVersion, Version: version})
-
-				expectedSecretServiceAccountSigningKey := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-sa-signing-key", Namespace: namespace},
-					Data:       map[string][]byte{"signing-key": signingKey},
-				}
-				Expect(kutil.MakeUnique(expectedSecretServiceAccountSigningKey)).To(Succeed())
-
-				actualSecretServiceAccountSigningKey := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretServiceAccountSigningKey), actualSecretServiceAccountSigningKey)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretServiceAccountSigningKey.Name)))
-
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretServiceAccountSigningKey), actualSecretServiceAccountSigningKey)).To(Succeed())
-				Expect(actualSecretServiceAccountSigningKey).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            expectedSecretServiceAccountSigningKey.Name,
-						Namespace:       expectedSecretServiceAccountSigningKey.Namespace,
-						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-						ResourceVersion: "1",
-					},
-					Immutable: pointer.Bool(true),
-					Data:      expectedSecretServiceAccountSigningKey.Data,
-				}))
-			})
-
 			It("should successfully deploy the ETCD encryption configuration secret resource", func() {
 				etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
 kind: EncryptionConfiguration
@@ -2641,30 +2605,6 @@ rules:
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("oidc-cabundle")})))
 					Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("oidc-cabundle")})))
-				})
-
-				It("should properly configure the settings related ot the service account signing key if provided", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version, ServiceAccount: ServiceAccountConfig{SigningKey: []byte("")}})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
-						"--service-account-signing-key-file=/srv/kubernetes/service-account-signing-key/signing-key",
-						"--service-account-key-file=/srv/kubernetes/service-account-signing-key/signing-key",
-					))
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
-						Name:      "service-account-signing-key",
-						MountPath: "/srv/kubernetes/service-account-signing-key",
-					}))
-
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
-						Name: "service-account-signing-key",
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: "kube-apiserver-sa-signing-key-cd372fb8",
-							},
-						},
-					}))
 				})
 
 				It("should not configure the settings related to the service account signing key if not provided", func() {

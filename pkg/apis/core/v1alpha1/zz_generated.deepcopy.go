@@ -3993,11 +3993,6 @@ func (in *ServiceAccountConfig) DeepCopyInto(out *ServiceAccountConfig) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.SigningKeySecret != nil {
-		in, out := &in.SigningKeySecret, &out.SigningKeySecret
-		*out = new(v1.LocalObjectReference)
-		**out = **in
-	}
 	if in.ExtendTokenExpiration != nil {
 		in, out := &in.ExtendTokenExpiration, &out.ExtendTokenExpiration
 		*out = new(bool)
