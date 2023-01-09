@@ -363,6 +363,71 @@ status: {}
 `
 			return out
 		}
+
+		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+  namespace: ` + namespace + `
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - pods
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resourceNames:
+  - ingress-controller-leader-nginx
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - update
+`
+
+		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+  namespace: ` + namespace + `
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: addons-nginx-ingress
+subjects:
+- kind: ServiceAccount
+  name: addons-nginx-ingress
+  namespace: ` + namespace + `
+`
 	)
 
 	BeforeEach(func() {
@@ -421,6 +486,8 @@ status: {}
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
 			Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["role__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
 		})
 
 		Context("Kubernetes version >= 1.22", func() {
@@ -429,7 +496,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(7))
+				Expect(managedResourceSecret.Data).To(HaveLen(9))
 
 				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
@@ -442,7 +509,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(managedResourceSecret.Data).To(HaveLen(8))
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
 			})

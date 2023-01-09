@@ -54,6 +54,8 @@ const (
 	configMapName            = "addons-nginx-ingress-controller"
 	deploymentNameController = "addons-nginx-ingress-controller"
 	ingressClassName         = "nginx"
+	roleName                 = "addons-nginx-ingress"
+	roleBindingName          = "addons-nginx-ingress"
 	serviceNameController    = "addons-nginx-ingress-controller"
 	containerNameController  = "nginx-ingress-controller"
 	serviceNameBackend       = "addons-nginx-ingress-nginx-ingress-k8s-backend"
@@ -369,6 +371,64 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleName,
+				Namespace: n.namespace,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelAppValue,
+					labelKeyRelease:           labelValueAddons,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps", "namespaces", "pods", "secrets"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"endpoints"},
+					Verbs:     []string{"create", "get", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{""},
+					Resources:     []string{"configmaps"},
+					ResourceNames: []string{"ingress-controller-leader-nginx"},
+					Verbs:         []string{"get", "update"},
+				},
+			},
+		}
+
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleBindingName,
+				Namespace: n.namespace,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelAppValue,
+					labelKeyRelease:           labelValueAddons,
+				},
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     role.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
+
 		serviceController = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceNameController,
@@ -435,6 +495,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		configMap,
 		deploymentController,
 		ingressClass,
+		role,
+		roleBinding,
 		serviceAccount,
 		serviceController,
 	)

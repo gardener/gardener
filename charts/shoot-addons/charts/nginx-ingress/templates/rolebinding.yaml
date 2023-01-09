@@ -1,22 +1,7 @@
-{{- if .Values.rbac.create -}}
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
-  labels:
-    app: {{ template "nginx-ingress.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
-  annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  name: {{ template "nginx-ingress.fullname" . }}
+  name: addons-nginx-ingress
   namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ template "nginx-ingress.fullname" . }}
-subjects:
-  - kind: ServiceAccount
-    name: {{ template "nginx-ingress.fullname" . }}
-    namespace: {{ .Release.Namespace }}
-{{- end -}}
+  annotations:
+    resources.gardener.cloud/mode: Ignore
