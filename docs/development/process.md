@@ -16,13 +16,6 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
 
 Version | Week No     | Begin Validation Phase | Due Date           | Release Responsible                              |
 ------- | ----------- | ---------------------- | -------------------| ------------------------------------------------ |
-v1.56   | Week 37-38  | September 12, 2022     | September 25, 2022 | [@shafeeqes](https://github.com/shafeeqes)       |
-v1.57   | Week 39-40  | September 26, 2022     | October 9, 2022    | [@ary1992](https://github.com/ary1992)           |
-v1.58   | Week 41-42  | October 10, 2022       | October 23, 2022   | [@plkokanov](https://github.com/plkokanov)       |
-v1.59   | Week 43-44  | October 24, 2022       | November 6, 2022   | [@rfranzke](https://github.com/rfranzke)         |
-v1.60   | Week 45-46  | November 7, 2022       | November 20, 2022  | [@acumino](https://github.com/acumino)           |
-v1.61   | Week 47-48  | November 21, 2022      | December 4, 2022   | [@ialidzhikov](https://github.com/ialidzhikov)   |
-v1.62   | Week 49-50  | December 5, 2022       | December 18, 2022  | [@oliver-goetz](https://github.com/oliver-goetz) |
 v1.63   | Week 01-04  | January 2, 2023        | January 29, 2023   | [@shafeeqes](https://github.com/shafeeqes)       |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
@@ -72,6 +65,13 @@ The release responsible is the main contact person for coordinating new feature 
   v1.53   | Week 31-32  | August 1, 2022         | August 14, 2022    | [@kris94](https://github.com/kris94)               |
   v1.54   | Week 33-34  | August 15, 2022        | August 28, 2022    | [@ialidzhikov](https://github.com/ialidzhikov)     |
   v1.55   | Week 35-36  | August 29, 2022        | September 11, 2022 | [@oliver-goetz](https://github.com/oliver-goetz)   |
+  v1.56   | Week 37-38  | September 12, 2022     | September 25, 2022 | [@shafeeqes](https://github.com/shafeeqes)         |
+  v1.57   | Week 39-40  | September 26, 2022     | October 9, 2022    | [@ary1992](https://github.com/ary1992)             |
+  v1.58   | Week 41-42  | October 10, 2022       | October 23, 2022   | [@plkokanov](https://github.com/plkokanov)         |
+  v1.59   | Week 43-44  | October 24, 2022       | November 6, 2022   | [@rfranzke](https://github.com/rfranzke)           |
+  v1.60   | Week 45-46  | November 7, 2022       | November 20, 2022  | [@acumino](https://github.com/acumino)             |
+  v1.61   | Week 47-48  | November 21, 2022      | December 4, 2022   | [@ialidzhikov](https://github.com/ialidzhikov)     |
+  v1.62   | Week 49-50  | December 5, 2022       | December 18, 2022  | [@oliver-goetz](https://github.com/oliver-goetz)   |
 </details>
 
 ### Release Validation
