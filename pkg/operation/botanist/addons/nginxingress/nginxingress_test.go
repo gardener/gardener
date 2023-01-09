@@ -516,6 +516,28 @@ subjects:
   name: addons-nginx-ingress
   namespace: ` + namespace + `
 `
+
+		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: addons-nginx-ingress-controller
+  namespace: ` + namespace + `
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: addons-nginx-ingress-controller
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
 	)
 
 	BeforeEach(func() {
@@ -602,6 +624,16 @@ subjects:
 				Expect(managedResourceSecret.Data).To(HaveLen(10))
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
+			})
+		})
+
+		Context("VPA is enabled", func() {
+			BeforeEach(func() {
+				values.VPAEnabled = true
+			})
+
+			It("should successfully deploy VPA resource", func() {
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
 			})
 		})
 	})

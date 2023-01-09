@@ -20,12 +20,14 @@ import (
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -62,6 +64,7 @@ const (
 	containerNameBackend     = "nginx-ingress-nginx-ingress-k8s-backend"
 	serviceNameBackend       = "addons-nginx-ingress-nginx-ingress-k8s-backend"
 	deploymentNameBackend    = "addons-nginx-ingress-nginx-ingress-k8s-backend"
+	vpaName                  = "addons-nginx-ingress-controller"
 
 	servicePortControllerHttp    int32 = 80
 	containerPortControllerHttp  int32 = 80
@@ -88,6 +91,8 @@ type Values struct {
 	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
 	// exposing the nginx-ingress.
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
+	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
+	VPAEnabled bool
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -574,7 +579,39 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		ingressClass *networkingv1.IngressClass
+		vpa          *vpaautoscalingv1.VerticalPodAutoscaler
 	)
+
+	if n.values.VPAEnabled {
+		updateMode := vpaautoscalingv1.UpdateModeAuto
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      vpaName,
+				Namespace: n.namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       deploymentController.Name,
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &updateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
 
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
 		ingressClass = &networkingv1.IngressClass{
@@ -608,6 +645,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		serviceAccount,
 		serviceController,
 		serviceBackend,
+		vpa,
 	)
 }
 
