@@ -17,10 +17,12 @@ package nginxingress
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -52,11 +54,47 @@ var _ = Describe("NginxIngress", func() {
 		}
 
 		c         client.Client
-		values    Values
 		component component.DeployWaiter
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		values = Values{
+			ImageController:     imageController,
+			ImageDefaultBackend: imageDefaultBackend,
+			ConfigData:          configMapData,
+		}
+
+		configMapYAML = `apiVersion: v1
+data:
+  dash: "false"
+  dot: "3"
+  foo: bar
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    release: addons
+  name: addons-nginx-ingress-controller
+  namespace: ` + namespace + `
+`
+
+		ingressClassYAML = `apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    gardener.cloud/role: optional-addon
+    origin: gardener
+    release: addons
+  name: nginx
+spec:
+  controller: k8s.io/nginx
+`
 
 		serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
@@ -165,6 +203,7 @@ subjects:
   name: addons-nginx-ingress
   namespace: ` + namespace + `
 `
+
 		serviceControllerYAML = `apiVersion: v1
 kind: Service
 metadata:
@@ -195,16 +234,139 @@ spec:
 status:
   loadBalancer: {}
 `
+
+		deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
+			out := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    gardener.cloud/role: optional-addon
+    origin: gardener
+    release: addons
+  name: addons-nginx-ingress-controller
+  namespace: ` + namespace + `
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      component: controller
+      release: addons
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        checksum/config: ` + utils.ComputeChecksum(configMapData) + `
+      creationTimestamp: null
+      labels:
+        app: nginx-ingress
+        component: controller
+        gardener.cloud/role: optional-addon
+        origin: gardener
+        release: addons
+    spec:
+      containers:
+      - args:
+        - /nginx-ingress-controller
+        - --default-backend-service=` + namespace + `/addons-nginx-ingress-nginx-ingress-k8s-backend
+        - --enable-ssl-passthrough=true
+        - --publish-service=` + namespace + `/addons-nginx-ingress-controller
+        - --election-id=ingress-controller-seed-leader
+        - --update-status=true
+        - --annotations-prefix=nginx.ingress.kubernetes.io
+        - --ingress-class=nginx
+        - --configmap=` + namespace + `/addons-nginx-ingress-controller`
+
+			if k8sVersionGreaterEqual122 {
+				out += `
+        - --controller-class=k8s.io/nginx
+        - --watch-ingress-without-class=true`
+			}
+
+			out += `
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: ` + imageController + `
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: nginx-ingress-controller
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 443
+          name: https
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: 4Gi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: true
+          capabilities:
+            add:
+            - NET_BIND_SERVICE`
+
+			if k8sVersionGreaterEqual122 {
+				out += `
+            - SYS_CHROOT`
+			}
+
+			out += `
+            drop:
+            - ALL
+          runAsUser: 101
+          seccompProfile:
+            type: Unconfined
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
+      priorityClassName: system-cluster-critical
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccountName: addons-nginx-ingress
+      terminationGracePeriodSeconds: 60
+status: {}
+`
+			return out
+		}
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		values = Values{
-			ImageController:     imageController,
-			ImageDefaultBackend: imageDefaultBackend,
-			ConfigData:          configMapData,
-		}
-		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -223,6 +385,8 @@ status:
 
 	Describe("#Deploy", func() {
 		JustBeforeEach(func() {
+			component = New(c, namespace, values)
+
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
@@ -251,20 +415,44 @@ status:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-		})
-
-		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(4))
 
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
+			Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
+		})
+
+		Context("Kubernetes version >= 1.22", func() {
+			BeforeEach(func() {
+				values.KubernetesVersion = semver.MustParse("v1.22.12")
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
+
+				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+			})
+		})
+
+		Context("Kubernetes version < 1.22", func() {
+			BeforeEach(func() {
+				values.KubernetesVersion = semver.MustParse("1.20")
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
+
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
+			})
 		})
 	})
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
+			component = New(c, namespace, Values{})
+
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
@@ -285,6 +473,8 @@ status:
 		)
 
 		BeforeEach(func() {
+			component = New(c, namespace, Values{})
+
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
 			resetVars = test.WithVars(
 				&retry.Until, fakeOps.Until,
