@@ -3,7 +3,7 @@
 With the [reversed VPN](./reversed-vpn-tunnel.md) tunnel, there are no endpoints with open ports in the shoot cluster required by gardener.
 In order to allow communication to the shoots control-plane in the seed cluster, there are endpoints shared by multiple shoots of a seed cluster.
 Depending on the configured zones or [exposure classes](./exposureclasses.md) there are different endpoints in a seed cluster. The IP address(es) can be determined by a DNS query for the API-server URL.
-The main entry-point into the seed cluster is the load balancer of the Istio ingress-gateway service. Depending on the infrastructure provider, there can be one IP address per zone.
+The main entry-point into the seed cluster is the load balancer of the Istio ingress-gateway service. Depending on the infrastructure provider, there can be one IP address per availability zone.
 
 The load balancer of the Istio ingress-gateway service exposes the following TCP ports:
 
