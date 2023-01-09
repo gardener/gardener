@@ -349,11 +349,6 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed creating garden cluster object: %w", err)
 	}
 
-	log.Info("Setting up ready check for garden informer sync")
-	if err := g.mgr.AddReadyzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthz(gardenCluster.GetCache())); err != nil {
-		return err
-	}
-
 	log.Info("Cleaning bootstrap authentication data used to request a certificate if needed")
 	if len(g.kubeconfigBootstrapResult.CSRName) > 0 && len(g.kubeconfigBootstrapResult.SeedName) > 0 {
 		if err := bootstrap.DeleteBootstrapAuth(ctx, gardenCluster.GetClient(), gardenCluster.GetClient(), g.kubeconfigBootstrapResult.CSRName, g.kubeconfigBootstrapResult.SeedName); err != nil {
