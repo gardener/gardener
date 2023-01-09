@@ -41,7 +41,7 @@ parse_flags() {
 setup_loopback_device() {
   if ! command -v ip &>/dev/null; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-      echo "'ip' command not found. Please install 'ip' command using 'brew install iproute2mac'" 1>&2
+      echo "'ip' command not found. Please install 'ip' command, refer https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#installing-iproute2'" 1>&2
       exit 1
     fi
     echo "Skipping loopback device setup because 'ip' command is not available..."
