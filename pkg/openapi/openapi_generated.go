@@ -4555,6 +4555,13 @@ func schema_pkg_apis_core_v1alpha1_MachineImageVersion(ref common.ReferenceCallb
 							},
 						},
 					},
+					"kubeletVersionConstraint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version. If the field is not specified, it is assumed that the machine image in this version supports all kubelet versions. Examples: - '>= 1.26' - supports only kubelet versions greater than or equal to 1.26 - '< 1.26' - supports only kubelet versions less than 1.26",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
@@ -11860,6 +11867,13 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 									},
 								},
 							},
+						},
+					},
+					"kubeletVersionConstraint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version. If the field is not specified, it is assumed that the machine image in this version supports all kubelet versions. Examples: - '>= 1.26' - supports only kubelet versions greater than or equal to 1.26 - '< 1.26' - supports only kubelet versions less than 1.26",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

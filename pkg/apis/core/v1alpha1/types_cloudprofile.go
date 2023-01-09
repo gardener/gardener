@@ -124,6 +124,13 @@ type MachineImageVersion struct {
 	// Architectures is the list of CPU architectures of the machine image in this version.
 	// +optional
 	Architectures []string `json:"architectures,omitempty" protobuf:"bytes,3,opt,name=architectures"`
+	// KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version.
+	// If the field is not specified, it is assumed that the machine image in this version supports all kubelet versions.
+	// Examples:
+	// - '>= 1.26' - supports only kubelet versions greater than or equal to 1.26
+	// - '< 1.26' - supports only kubelet versions less than 1.26
+	// +optional
+	KubeletVersionConstraint *string `json:"kubeletVersionConstraint,omitempty" protobuf:"bytes,4,opt,name=kubeletVersionConstraint"`
 }
 
 // ExpirableVersion contains a version and an expiration date.

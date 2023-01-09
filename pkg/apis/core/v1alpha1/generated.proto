@@ -1449,6 +1449,14 @@ message MachineImageVersion {
   // Architectures is the list of CPU architectures of the machine image in this version.
   // +optional
   repeated string architectures = 3;
+
+  // KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version.
+  // If the field is not specified, it is assumed that the machine image in this version supports all kubelet versions.
+  // Examples:
+  // - '>= 1.26' - supports only kubelet versions greater than or equal to 1.26
+  // - '< 1.26' - supports only kubelet versions less than 1.26
+  // +optional
+  optional string kubeletVersionConstraint = 4;
 }
 
 // MachineType contains certain properties of a machine type.

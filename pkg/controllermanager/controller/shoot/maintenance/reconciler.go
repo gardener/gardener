@@ -285,6 +285,11 @@ func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanc
 func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) ([]string, error) {
 	var reasonsForUpdate []string
 
+	controlPlaneVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+
 	for i, worker := range shoot.Spec.Provider.Workers {
 		workerImage := worker.Machine.Image
 		workerLog := log.WithValues("worker", worker.Name, "image", workerImage.Name, "version", workerImage.Version)
@@ -294,8 +299,14 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 			return nil, err
 		}
 
+		kubeletVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
+		if err != nil {
+			return nil, err
+		}
+
 		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
 		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
+		filteredMachineImageVersionsFromCloudProfile = filterForKubeleteVersionConstraint(filteredMachineImageVersionsFromCloudProfile, kubeletVersion)
 		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(workerLog, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
 		if err != nil {
 			return nil, err
@@ -456,6 +467,25 @@ func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, 
 
 		if !areAllWorkerCRsPartOfCloudProfileVersion(workerCRI.ContainerRuntimes, criFromCloudProfileVersion.ContainerRuntimes) {
 			continue
+		}
+
+		filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+	}
+
+	return &filteredMachineImages
+}
+
+func filterForKubeleteVersionConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, kubeletVersion *semver.Version) *gardencorev1beta1.MachineImage {
+	filteredMachineImages := gardencorev1beta1.MachineImage{Name: machineImageFromCloudProfile.Name,
+		Versions: []gardencorev1beta1.MachineImageVersion{}}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		if cloudProfileVersion.KubeletVersionConstraint != nil {
+			// CloudProfile cannot contain an invalid kubeletVersionConstraint
+			constraint, _ := semver.NewConstraint(*cloudProfileVersion.KubeletVersionConstraint)
+			if !constraint.Check(kubeletVersion) {
+				continue
+			}
 		}
 
 		filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
