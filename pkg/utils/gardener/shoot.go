@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilsets "k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
@@ -45,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	setsutils "github.com/gardener/gardener/pkg/utils/sets"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -496,7 +496,7 @@ func GetShootSeedNames(obj client.Object) (*string, *string) {
 // on the given workers. Tolerations are only considered for workers which have `SystemComponents.Allow: true`.
 func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []corev1.Toleration {
 	var (
-		tolerations = setsutils.New[corev1.Toleration]()
+		tolerations = utilsets.New[corev1.Toleration]()
 
 		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
 		// before they are added to the tolerations set.

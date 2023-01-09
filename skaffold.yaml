@@ -167,7 +167,6 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
-        - pkg/utils/sets
         - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
@@ -373,7 +372,6 @@ build:
         - pkg/utils/managedresources/builder
         - pkg/utils/retry
         - pkg/utils/secrets
-        - pkg/utils/sets
         - pkg/utils/secrets/manager
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
@@ -439,7 +437,6 @@ build:
         - pkg/utils/gardener
         - pkg/utils/retry
         - pkg/utils/secrets
-        - pkg/utils/sets
         - pkg/utils/timewindow
         - pkg/utils/validation/cidr
         - pkg/utils/version
@@ -514,7 +511,6 @@ build:
         - pkg/utils/kubernetes/bootstraptoken
         - pkg/utils/retry
         - pkg/utils/secrets
-        - pkg/utils/sets
         - pkg/utils/timewindow
         - pkg/utils/version
         - third_party/apiserver/pkg/apis/audit/v1alpha1
@@ -721,7 +717,6 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
-        - pkg/utils/sets
         - pkg/utils/timewindow
         - pkg/utils/version
         - vendor
@@ -1005,7 +1000,6 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
-        - pkg/utils/sets
         - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
@@ -1105,7 +1099,6 @@ build:
         - pkg/utils/kubernetes/unstructured
         - pkg/utils/retry
         - pkg/utils/secrets
-        - pkg/utils/sets
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
