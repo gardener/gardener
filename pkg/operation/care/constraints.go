@@ -95,7 +95,7 @@ func (c *Constraint) Check(
 	updatedConstraints := c.constraintsChecks(ctx, constraints)
 	lastOp := c.shoot.GetInfo().Status.LastOperation
 	lastErrors := c.shoot.GetInfo().Status.LastErrors
-	return PardonConditions(updatedConstraints, lastOp, lastErrors)
+	return PardonConditions(c.clock, updatedConstraints, lastOp, lastErrors)
 }
 
 func (c *Constraint) constraintsChecks(

@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -40,6 +41,7 @@ type Reconciler struct {
 	SourceClient client.Client
 	TargetClient client.Client
 	Config       config.HealthControllerConfig
+	Clock        clock.Clock
 	ClassFilter  *resourcemanagerpredicate.ClassFilter
 }
 
@@ -96,7 +98,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	checkCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 
 	for _, ref := range mr.Status.Resources {
 		// only Deployment, StatefulSet and DaemonSet are considered for Progressing condition
@@ -137,7 +139,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 			objectLog.Info("ManagedResource rollout is progressing, detected progressing object", "status", "progressing", "reason", reason, "message", message)
 
-			conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionTrue, reason, message)
+			conditionResourcesProgressing = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesProgressing, gardencorev1beta1.ConditionTrue, reason, message)
 			mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesProgressing)
 			if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)

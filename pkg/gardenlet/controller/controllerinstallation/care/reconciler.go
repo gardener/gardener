@@ -21,6 +21,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -37,6 +38,7 @@ type Reconciler struct {
 	GardenClient    client.Client
 	SeedClient      client.Client
 	Config          config.ControllerInstallationCareControllerConfiguration
+	Clock           clock.Clock
 	GardenNamespace string
 }
 
@@ -58,9 +60,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	var (
-		conditionControllerInstallationInstalled   = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationInstalled)
-		conditionControllerInstallationHealthy     = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
-		conditionControllerInstallationProgressing = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationProgressing)
+		conditionControllerInstallationInstalled   = gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationInstalled)
+		conditionControllerInstallationHealthy     = gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationProgressing)
 	)
 
 	managedResource := &resourcesv1alpha1.ManagedResource{
@@ -72,9 +74,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
 		msg := fmt.Sprintf("Failed to get ManagedResource %q: %s", client.ObjectKeyFromObject(managedResource).String(), err.Error())
-		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
-		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
-		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationProgressing, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationProgressing, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 
 		patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())
 		controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled, conditionControllerInstallationProgressing)
@@ -91,21 +93,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if err := health.CheckManagedResourceApplied(managedResource); err != nil {
-		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending", err.Error())
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending", err.Error())
 	} else {
-		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful", "The controller was successfully installed in the seed cluster.")
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful", "The controller was successfully installed in the seed cluster.")
 	}
 
 	if err := health.CheckManagedResourceHealthy(managedResource); err != nil {
-		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy", err.Error())
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy", err.Error())
 	} else {
-		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
 	}
 
 	if err := health.CheckManagedResourceProgressing(managedResource); err != nil {
-		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationProgressing, gardencorev1beta1.ConditionTrue, "ControllerNotRolledOut", err.Error())
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationProgressing, gardencorev1beta1.ConditionTrue, "ControllerNotRolledOut", err.Error())
 	} else {
-		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationProgressing, gardencorev1beta1.ConditionFalse, "ControllerRolledOut", "The controller has been rolled out successfully.")
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationProgressing, gardencorev1beta1.ConditionFalse, "ControllerRolledOut", "The controller has been rolled out successfully.")
 	}
 
 	patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())

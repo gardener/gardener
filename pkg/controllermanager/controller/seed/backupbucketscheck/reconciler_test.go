@@ -24,6 +24,7 @@ import (
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	backupbucketstrategy "github.com/gardener/gardener/pkg/registry/core/backupbucket"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -124,12 +125,12 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should set condition to `True` when none was given", func() {
-				matchExpectedCondition = MatchFields(IgnoreExtras, Fields{
-					"Message": Equal("Backup Buckets are available."),
-					"Reason":  Equal("BackupBucketsAvailable"),
-					"Status":  Equal(gardencorev1beta1.ConditionTrue),
-					"Type":    Equal(gardencorev1beta1.SeedBackupBucketsReady),
-				})
+				matchExpectedCondition = And(
+					WithMessage("Backup Buckets are available."),
+					WithReason("BackupBucketsAvailable"),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					OfType(gardencorev1beta1.SeedBackupBucketsReady),
+				)
 			})
 
 			It("should set condition to `True` when it was false", func() {
@@ -143,12 +144,12 @@ var _ = Describe("Reconciler", func() {
 				}
 				Expect(c.Update(ctx, seed)).To(Succeed())
 
-				matchExpectedCondition = MatchFields(IgnoreExtras, Fields{
-					"Message": Equal("Backup Buckets are available."),
-					"Reason":  Equal("BackupBucketsAvailable"),
-					"Status":  Equal(gardencorev1beta1.ConditionTrue),
-					"Type":    Equal(gardencorev1beta1.SeedBackupBucketsReady),
-				})
+				matchExpectedCondition = And(
+					WithMessage("Backup Buckets are available."),
+					WithReason("BackupBucketsAvailable"),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					OfType(gardencorev1beta1.SeedBackupBucketsReady),
+				)
 			})
 		})
 

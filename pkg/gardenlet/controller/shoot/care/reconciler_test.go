@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -44,6 +45,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -55,6 +57,7 @@ var _ = Describe("Shoot Care Control", func() {
 		gardenClient  client.Client
 		reconciler    reconcile.Reconciler
 		gardenletConf config.GardenletConfiguration
+		fakeClock     *testclock.FakeClock
 
 		shootName, shootNamespace, seedName string
 
@@ -79,6 +82,8 @@ var _ = Describe("Shoot Care Control", func() {
 				SeedName: &seedName,
 			},
 		}
+
+		fakeClock = testclock.NewFakeClock(time.Now())
 	})
 
 	AfterEach(func() {
@@ -149,6 +154,7 @@ var _ = Describe("Shoot Care Control", func() {
 						GardenClient:  gardenClient,
 						SeedClientSet: fakeclientset.NewClientSet(),
 						Config:        gardenletConf,
+						Clock:         fakeClock,
 						SeedName:      seedName,
 					}
 
@@ -175,6 +181,7 @@ var _ = Describe("Shoot Care Control", func() {
 						GardenClient:  gardenClient,
 						SeedClientSet: fakeclientset.NewClientSet(),
 						Config:        gardenletConf,
+						Clock:         fakeClock,
 						SeedName:      seedName,
 					}
 
@@ -213,6 +220,7 @@ var _ = Describe("Shoot Care Control", func() {
 					SeedClientSet:  fakeclientset.NewClientSet(),
 					ShootClientMap: shootClientMap,
 					Config:         gardenletConf,
+					Clock:          fakeClock,
 					SeedName:       seedName,
 				}
 			})
@@ -498,7 +506,7 @@ func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(op *operation.Operation, init care.ShootClientInit) HealthCheck {
+	return func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
 		return fn
 	}
 }
@@ -544,27 +552,27 @@ func nopGarbageCollectorFunc() NewGarbageCollectorFunc {
 }
 
 func consistOfConditionsInUnknownStatus(message string) types.GomegaMatcher {
-	return ConsistOf(
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootAPIServerAvailable),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootControlPlaneHealthy),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootEveryNodeReady),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
-		MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(gardencorev1beta1.ShootSystemComponentsHealthy),
-			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
-			"Message": Equal(message),
-		}),
+	return And(
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootAPIServerAvailable),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootControlPlaneHealthy),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootEveryNodeReady),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
+		ContainCondition(
+			OfType(gardencorev1beta1.ShootSystemComponentsHealthy),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		),
 	)
 }
 

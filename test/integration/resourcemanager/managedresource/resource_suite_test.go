@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -51,8 +52,9 @@ func TestManagedResourceController(t *testing.T) {
 const testID = "resource-controller-test"
 
 var (
-	ctx = context.Background()
-	log logr.Logger
+	ctx       = context.Background()
+	log       logr.Logger
+	fakeClock *testclock.FakeClock
 
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
@@ -115,6 +117,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	fakeClock = testclock.NewFakeClock(time.Now())
 	By("registering controller")
 	filter = predicate.NewClassFilter(resourcemanagerconfigv1alpha1.DefaultResourceClass)
 	Expect((&managedresource.Reconciler{
@@ -123,6 +126,7 @@ var _ = BeforeSuite(func() {
 			SyncPeriod:          &metav1.Duration{Duration: 500 * time.Millisecond},
 			ManagedByLabelValue: pointer.String("gardener"),
 		},
+		Clock:                         fakeClock,
 		ClassFilter:                   filter,
 		RequeueAfterOnDeletionPending: pointer.Duration(50 * time.Millisecond),
 		GarbageCollectorActivated:     true,

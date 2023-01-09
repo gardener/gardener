@@ -28,6 +28,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,6 +40,7 @@ type Reconciler struct {
 	GardenClient          client.Client
 	Actuator              Actuator
 	Config                config.GardenletConfiguration
+	Clock                 clock.Clock
 	ShootClientMap        clientmap.ClientMap
 	ImageVector           imagevector.ImageVector
 	ChartsPath            string

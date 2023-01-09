@@ -39,6 +39,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,14 +58,16 @@ var requiredManagedResourcesSeed = sets.NewString(
 type SeedHealth struct {
 	seed       *gardencorev1beta1.Seed
 	seedClient client.Client
+	clock      clock.Clock
 	namespace  *string
 }
 
 // NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, namespace *string) *SeedHealth {
+func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string) *SeedHealth {
 	return &SeedHealth{
 		seedClient: seedClient,
 		seed:       seed,
+		clock:      clock,
 		namespace:  namespace,
 	}
 }
@@ -84,9 +87,9 @@ func (h *SeedHealth) CheckSeed(
 		}
 	}
 
-	checker := NewHealthChecker(h.seedClient, thresholdMappings, nil, nil, nil, nil)
+	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, nil, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
-	return []gardencorev1beta1.Condition{NewConditionOrError(systemComponentsCondition, newSystemComponentsCondition, err)}
+	return []gardencorev1beta1.Condition{NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
 func (h *SeedHealth) checkSeedSystemComponents(
@@ -136,7 +139,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		}
 	}
 
-	c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
+	c := gardencorev1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
 	return &c, nil
 }
 

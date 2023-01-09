@@ -114,8 +114,8 @@ func (r *Reconciler) delete(
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
-		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
+		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
 		}

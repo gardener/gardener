@@ -21,14 +21,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -114,11 +112,6 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddBackupBucketSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	fakeClock = testclock.NewFakeClock(time.Now())
-	// This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and
-	// lastTransitionTimestamp.
-	DeferCleanup(test.WithVars(
-		&gardencorev1beta1helper.Clock, fakeClock,
-	))
 
 	By("registering controller")
 	Expect((&backupbucketscheck.Reconciler{

@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -51,6 +52,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	}
 	if r.SeedClient == nil {
 		r.SeedClient = seedCluster.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 	r.Lock = &sync.RWMutex{}
 	r.KindToRequiredTypes = make(map[string]sets.String)

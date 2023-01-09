@@ -38,11 +38,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/care"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -69,8 +70,9 @@ var (
 
 var _ = Describe("Seed health", func() {
 	var (
-		ctx context.Context
-		c   client.Client
+		ctx       context.Context
+		c         client.Client
+		fakeClock *testclock.FakeClock
 
 		seed *gardencorev1beta1.Seed
 
@@ -109,8 +111,11 @@ var _ = Describe("Seed health", func() {
 			},
 		}
 
+		fakeClock = testclock.NewFakeClock(time.Now())
+
 		seedSystemComponentsHealthyCondition = gardencorev1beta1.Condition{
-			Type: gardencorev1beta1.SeedSystemComponentsHealthy,
+			Type:               gardencorev1beta1.SeedSystemComponentsHealthy,
+			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
 		}
 	})
 
@@ -123,7 +128,7 @@ var _ = Describe("Seed health", func() {
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
-				healthCheck := care.NewHealthForSeed(seed, c, nil)
+				healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil)
 				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
@@ -143,7 +148,7 @@ var _ = Describe("Seed health", func() {
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
-				healthCheck := care.NewHealthForSeed(seed, c, nil)
+				healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil)
 				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
@@ -152,11 +157,9 @@ var _ = Describe("Seed health", func() {
 
 		Context("When there are issues with seed managed resources", func() {
 			var (
-				now time.Time
-
 				tests = func(reason, message string) {
 					It("should set SeedSystemComponentsHealthy condition to False if there is no Progressing threshold duration mapping", func() {
-						healthCheck := care.NewHealthForSeed(seed, c, nil)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil)
 						updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -164,12 +167,10 @@ var _ = Describe("Seed health", func() {
 					})
 
 					It("should set SeedSystemComponentsHealthy condition to Progressing if time is within threshold duration and condition is currently False", func() {
-						defer test.WithVars(
-							&care.Now, func() time.Time { return now.Add(30 * time.Second) },
-						)()
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionFalse
+						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForSeed(seed, c, nil)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil)
 						updatedConditions := healthCheck.CheckSeed(
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
@@ -181,12 +182,25 @@ var _ = Describe("Seed health", func() {
 					})
 
 					It("should set SeedSystemComponentsHealthy condition to Progressing if time is within threshold duration and condition is currently True", func() {
-						defer test.WithVars(
-							&care.Now, func() time.Time { return now.Add(30 * time.Second) },
-						)()
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionTrue
+						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForSeed(seed, c, nil)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil)
+						updatedConditions := healthCheck.CheckSeed(
+							ctx,
+							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+							map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute},
+						)
+
+						Expect(len(updatedConditions)).ToNot(BeZero())
+						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
+					})
+
+					It("should not set SeedSystemComponentsHealthy condition to false if Progressing threshold duration has not expired", func() {
+						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
+						fakeClock.Step(30 * time.Second)
+
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil)
 						updatedConditions := healthCheck.CheckSeed(
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
@@ -198,13 +212,10 @@ var _ = Describe("Seed health", func() {
 					})
 
 					It("should set SeedSystemComponentsHealthy condition to false if Progressing threshold duration has expired", func() {
-						defer test.WithVars(
-							&care.Now, func() time.Time { return now.Add(90 * time.Second) },
-						)()
-
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
+						fakeClock.Step(90 * time.Second)
 
-						healthCheck := care.NewHealthForSeed(seed, c, nil)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil)
 						updatedConditions := healthCheck.CheckSeed(
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
@@ -284,11 +295,8 @@ var _ = Describe("Seed health", func() {
 })
 
 func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"Status":  Equal(status),
-		"Reason":  Equal(reason),
-		"Message": ContainSubstring(message),
-	})
+	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+
 }
 
 func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {

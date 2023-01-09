@@ -35,16 +35,6 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-// Clock defines the clock for the helper functions
-// Deprecated: Use ...WithClock(...) functions instead.
-var Clock clock.Clock = clock.RealClock{}
-
-// InitCondition initializes a new Condition with an Unknown status.
-// Deprecated: Use InitConditionWithClock(...) instead.
-func InitCondition(conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
-	return InitConditionWithClock(Clock, conditionType)
-}
-
 // InitConditionWithClock initializes a new Condition with an Unknown status. It allows passing a custom clock for testing.
 func InitConditionWithClock(clock clock.Clock, conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
 	now := metav1.Time{Time: clock.Now()}
@@ -70,13 +60,6 @@ func GetCondition(conditions []gardencorev1beta1.Condition, conditionType garden
 	return nil
 }
 
-// GetOrInitCondition tries to retrieve the condition with the given condition type from the given conditions.
-// If the condition could not be found, it returns an initialized condition of the given type.
-// Deprecated: Use GetOrInitConditionWithClock(...) instead.
-func GetOrInitCondition(conditions []gardencorev1beta1.Condition, conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
-	return GetOrInitConditionWithClock(Clock, conditions, conditionType)
-}
-
 // GetOrInitConditionWithClock tries to retrieve the condition with the given condition type from the given conditions.
 // If the condition could not be found, it returns an initialized condition of the given type. It allows passing a custom clock for testing.
 func GetOrInitConditionWithClock(clock clock.Clock, conditions []gardencorev1beta1.Condition, conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
@@ -84,12 +67,6 @@ func GetOrInitConditionWithClock(clock clock.Clock, conditions []gardencorev1bet
 		return *condition
 	}
 	return InitConditionWithClock(clock, conditionType)
-}
-
-// UpdatedCondition updates the properties of one specific condition.
-// Deprecated: Use UpdatedConditionWithClock(...) instead.
-func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	return UpdatedConditionWithClock(Clock, condition, status, reason, message, codes...)
 }
 
 // UpdatedConditionWithClock updates the properties of one specific condition. It allows passing a custom clock for testing.
@@ -108,21 +85,9 @@ func UpdatedConditionWithClock(clock clock.Clock, condition gardencorev1beta1.Co
 	return newCondition
 }
 
-// UpdatedConditionUnknownError updates the condition to 'Unknown' status and the message of the given error.
-// Deprecated: Use UpdatedConditionUnknownErrorWithClock(...) instead.
-func UpdatedConditionUnknownError(condition gardencorev1beta1.Condition, err error, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	return UpdatedConditionUnknownErrorWithClock(Clock, condition, err, codes...)
-}
-
 // UpdatedConditionUnknownErrorWithClock updates the condition to 'Unknown' status and the message of the given error. It allows passing a custom clock for testing.
 func UpdatedConditionUnknownErrorWithClock(clock clock.Clock, condition gardencorev1beta1.Condition, err error, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	return UpdatedConditionUnknownErrorMessageWithClock(clock, condition, err.Error(), codes...)
-}
-
-// UpdatedConditionUnknownErrorMessage updates the condition with 'Unknown' status and the given message.
-// Deprecated: Use UpdatedConditionUnknownErrorMessageWithClock(...) instead.
-func UpdatedConditionUnknownErrorMessage(condition gardencorev1beta1.Condition, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	return UpdatedConditionUnknownErrorMessageWithClock(Clock, condition, message, codes...)
 }
 
 // UpdatedConditionUnknownErrorMessageWithClock updates the condition with 'Unknown' status and the given message. It allows passing a custom clock for testing.

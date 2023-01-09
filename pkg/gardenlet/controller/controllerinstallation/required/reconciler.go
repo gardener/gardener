@@ -21,6 +21,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,6 +39,7 @@ type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
 	Config       config.ControllerInstallationRequiredControllerConfiguration
+	Clock        clock.Clock
 	SeedName     string
 
 	Lock                *sync.RWMutex
@@ -98,16 +100,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())
 	}
 
-	if err := updateControllerInstallationRequiredCondition(ctx, r.GardenClient, controllerInstallation, *required, message); err != nil {
+	if err := updateControllerInstallationRequiredCondition(ctx, r.GardenClient, r.Clock, controllerInstallation, *required, message); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func updateControllerInstallationRequiredCondition(ctx context.Context, c client.StatusClient, controllerInstallation *gardencorev1beta1.ControllerInstallation, required bool, message string) error {
+func updateControllerInstallationRequiredCondition(ctx context.Context, c client.StatusClient, clock clock.Clock, controllerInstallation *gardencorev1beta1.ControllerInstallation, required bool, message string) error {
 	var (
-		conditionRequired = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationRequired)
+		conditionRequired = gardencorev1beta1helper.GetOrInitConditionWithClock(clock, controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationRequired)
 
 		status = gardencorev1beta1.ConditionTrue
 		reason = "ExtensionObjectsExist"
@@ -121,7 +123,7 @@ func updateControllerInstallationRequiredCondition(ctx context.Context, c client
 	patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())
 	controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(
 		controllerInstallation.Status.Conditions,
-		gardencorev1beta1helper.UpdatedCondition(conditionRequired, status, reason, message),
+		gardencorev1beta1helper.UpdatedConditionWithClock(clock, conditionRequired, status, reason, message),
 	)
 
 	return c.Status().Patch(ctx, controllerInstallation, patch)

@@ -16,6 +16,7 @@ package progressing
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -41,6 +42,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
