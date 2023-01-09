@@ -578,7 +578,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg by (label_worker_gardener_cloud_pool) (\n    count by (node) (kube_pod_info{type=\"shoot\"})\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
+          "expr": "avg by (label_worker_gardener_cloud_pool) (\n    sum by (node) (\n      label_replace(\n        sum by (kubernetes_io_hostname) (kubelet_running_pods),\n        \"node\",\n        \"$1\",\n        \"kubernetes_io_hostname\",\n        \"(.+)\"\n      )\n    )\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{label_worker_gardener_cloud_pool}}",
@@ -884,7 +884,7 @@
           "refId": "G"
         },
         {
-          "expr": "  count by (node) (kube_pod_info{type=\"shoot\"})\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
+          "expr": "sum without (kubernetes_io_hostname) (\n  label_replace(\n    sum by (kubernetes_io_hostname) (kubelet_running_pods),\n    \"node\",\n    \"$1\",\n    \"kubernetes_io_hostname\",\n    \"(.+)\"\n  )\n)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
