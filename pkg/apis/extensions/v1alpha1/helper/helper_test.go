@@ -46,6 +46,7 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("valid IPv4 address", "1.2.3.4", extensionsv1alpha1.DNSRecordTypeA),
+		Entry("valid IPv6 address", "2001:db8:f00::1", extensionsv1alpha1.DNSRecordTypeAAAA),
 		Entry("anything else", "foo", extensionsv1alpha1.DNSRecordTypeCNAME),
 	)
 

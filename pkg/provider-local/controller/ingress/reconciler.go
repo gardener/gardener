@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils"
@@ -113,7 +115,7 @@ func dnsRecordsForIngress(ingress *networkingv1.Ingress, ip string, scheme *runt
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
 					Type: local.Type,
 				},
-				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				RecordType: helper.GetDNSRecordType(ip),
 				Name:       host,
 				Values:     []string{ip},
 				SecretRef: corev1.SecretReference{
