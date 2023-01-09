@@ -109,6 +109,29 @@ metadata:
   namespace: ` + namespace + `
 `
 
+		serviceBackendYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: nginx-ingress-k8s-backend
+    release: addons
+  name: addons-nginx-ingress-nginx-ingress-k8s-backend
+  namespace: ` + namespace + `
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: nginx-ingress
+    component: nginx-ingress-k8s-backend
+    release: addons
+  type: ClusterIP
+status:
+  loadBalancer: {}
+`
+
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -233,6 +256,71 @@ spec:
   type: LoadBalancer
 status:
   loadBalancer: {}
+`
+
+		deploymentBackendYAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: nginx-ingress-k8s-backend
+    gardener.cloud/role: optional-addon
+    origin: gardener
+    release: addons
+  name: addons-nginx-ingress-nginx-ingress-k8s-backend
+  namespace: ` + namespace + `
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      component: nginx-ingress-k8s-backend
+      release: addons
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nginx-ingress
+        component: nginx-ingress-k8s-backend
+        gardener.cloud/role: optional-addon
+        origin: gardener
+        release: addons
+    spec:
+      containers:
+      - image: ` + imageDefaultBackend + `
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthy
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        name: nginx-ingress-nginx-ingress-k8s-backend
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          limits:
+            memory: 100Mi
+          requests:
+            cpu: 20m
+            memory: 20Mi
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
+      priorityClassName: system-cluster-critical
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroups:
+        - 1
+      terminationGracePeriodSeconds: 60
+status: {}
 `
 
 		deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
@@ -485,9 +573,11 @@ subjects:
 			Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
+			Expect(string(managedResourceSecret.Data["service__"+namespace+"__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
 			Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["role__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
 			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
 		})
 
 		Context("Kubernetes version >= 1.22", func() {
@@ -496,7 +586,7 @@ subjects:
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(9))
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
 
 				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
@@ -509,7 +599,7 @@ subjects:
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(8))
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
 			})
