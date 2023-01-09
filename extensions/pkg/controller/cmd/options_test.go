@@ -602,7 +602,6 @@ var _ = Describe("Options", func() {
 					LeaderElectionResourceLock: leaderElectionResourceLock,
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
-					RecoverPanic:               pointer.Bool(true),
 				}
 
 				opts := manager.Options{}

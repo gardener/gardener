@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/utils/pointer"
 	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -197,8 +198,6 @@ type ManagerOptions struct {
 	MetricsBindAddress string
 	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes.
 	HealthBindAddress string
-	// RecoverPanic indicates if panics should be recovered.
-	RecoverPanic *bool
 	// LogLevel defines the level/severity for the logs. Must be one of [info,debug,error]
 	LogLevel string
 	// LogFormat defines the format for the logs. Must be one of [json,text]
@@ -254,7 +253,6 @@ func (m *ManagerOptions) Complete() error {
 		m.WebhookCertDir,
 		m.MetricsBindAddress,
 		m.HealthBindAddress,
-		m.RecoverPanic,
 		logger}
 	return nil
 }
@@ -284,8 +282,6 @@ type ManagerConfig struct {
 	MetricsBindAddress string
 	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes.
 	HealthBindAddress string
-	// RecoverPanic indicates if panics should be recovered.
-	RecoverPanic *bool
 	// Logger is a logr.Logger compliant logger
 	Logger logr.Logger
 }
@@ -302,7 +298,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.MetricsBindAddress = c.MetricsBindAddress
 	opts.HealthProbeBindAddress = c.HealthBindAddress
 	opts.Logger = c.Logger
-	opts.Controller = controllerconfigv1alpha1.ControllerConfigurationSpec{RecoverPanic: c.RecoverPanic}
+	opts.Controller = controllerconfigv1alpha1.ControllerConfigurationSpec{RecoverPanic: pointer.Bool(true)}
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.
