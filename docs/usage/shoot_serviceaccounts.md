@@ -13,9 +13,6 @@ spec:
         acceptedIssuers:
         - foo1
         - foo2
-        # Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
-        signingKeySecretName:
-          name: my-signing-key-secret
         extendTokenExpiration: true
         maxTokenExpiration: 45d
 ...

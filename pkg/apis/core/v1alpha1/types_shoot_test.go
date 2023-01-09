@@ -23,8 +23,8 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
-var _ = Describe("ManagedSeed", func() {
-	Describe("ManagedSeedSpec", func() {
+var _ = Describe("Shoot", func() {
+	Describe("ServiceAccountConfig", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(ServiceAccountConfig{}).Type()
 			for i := 0; i < obj.NumField(); i++ {
