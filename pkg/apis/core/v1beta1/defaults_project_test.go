@@ -24,7 +24,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("#SetDefaults_Project", func() {
+var _ = Describe("Project defaulting", func() {
 	var obj *Project
 
 	BeforeEach(func() {
@@ -41,7 +41,7 @@ var _ = Describe("#SetDefaults_Project", func() {
 
 				obj.Spec.Owner = owner
 
-				SetDefaults_Project(obj)
+				SetObjectDefaults_Project(obj)
 
 				if owner != nil {
 					Expect(obj.Spec.Owner.APIGroup).To(Equal(expectedAPIGroup))
@@ -88,7 +88,7 @@ var _ = Describe("#SetDefaults_Project", func() {
 
 			obj.Spec.Members = []ProjectMember{member1, member2, member3, member4}
 
-			SetDefaults_Project(obj)
+			SetObjectDefaults_Project(obj)
 
 			Expect(obj.Spec.Members[0].APIGroup).To(Equal(member1.Subject.APIGroup))
 			Expect(obj.Spec.Members[1].APIGroup).To(BeEmpty())
@@ -115,7 +115,7 @@ var _ = Describe("#SetDefaults_Project", func() {
 
 		obj.Spec.Members = []ProjectMember{member1, member2}
 
-		SetDefaults_Project(obj)
+		SetObjectDefaults_Project(obj)
 
 		for _, m := range obj.Spec.Members {
 			Expect(m.Role).NotTo(HaveLen(0))
@@ -126,7 +126,7 @@ var _ = Describe("#SetDefaults_Project", func() {
 	It("should not add the 'protected' toleration if the namespace is not 'garden' (w/o existing project tolerations)", func() {
 		obj.Spec.Namespace = pointer.String("foo")
 
-		SetDefaults_Project(obj)
+		SetObjectDefaults_Project(obj)
 
 		Expect(obj.Spec.Tolerations).To(BeNil())
 	})
@@ -138,7 +138,7 @@ var _ = Describe("#SetDefaults_Project", func() {
 			Whitelist: []Toleration{{Key: "bar"}},
 		}
 
-		SetDefaults_Project(obj)
+		SetObjectDefaults_Project(obj)
 
 		Expect(obj.Spec.Tolerations.Defaults).To(Equal([]Toleration{{Key: "foo"}}))
 		Expect(obj.Spec.Tolerations.Whitelist).To(Equal([]Toleration{{Key: "bar"}}))
@@ -148,7 +148,7 @@ var _ = Describe("#SetDefaults_Project", func() {
 		obj.Spec.Namespace = pointer.String(v1beta1constants.GardenNamespace)
 		obj.Spec.Tolerations = nil
 
-		SetDefaults_Project(obj)
+		SetObjectDefaults_Project(obj)
 
 		Expect(obj.Spec.Tolerations.Defaults).To(Equal([]Toleration{{Key: SeedTaintProtected}}))
 		Expect(obj.Spec.Tolerations.Whitelist).To(Equal([]Toleration{{Key: SeedTaintProtected}}))
@@ -161,7 +161,7 @@ var _ = Describe("#SetDefaults_Project", func() {
 			Whitelist: []Toleration{{Key: "bar"}},
 		}
 
-		SetDefaults_Project(obj)
+		SetObjectDefaults_Project(obj)
 
 		Expect(obj.Spec.Tolerations.Defaults).To(Equal([]Toleration{{Key: "foo"}, {Key: SeedTaintProtected}}))
 		Expect(obj.Spec.Tolerations.Whitelist).To(Equal([]Toleration{{Key: "bar"}, {Key: SeedTaintProtected}}))
