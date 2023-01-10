@@ -638,11 +638,14 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
+	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
 	// We rely that SSHAccess is defaulted in the shoot creation, that is why we do not check for nils for the new shoot object.
-	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) ||
-		(c.oldShoot.Spec.Provider.WorkersSettings != nil &&
-			c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess != nil &&
-			c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled != c.shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled) {
+	if c.oldShoot.Spec.Provider.WorkersSettings != nil &&
+		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess != nil &&
+		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled != c.shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 

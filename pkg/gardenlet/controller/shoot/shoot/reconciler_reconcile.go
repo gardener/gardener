@@ -452,15 +452,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeleteBastions).SkipIf(shootSSHAccessEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
 		})
-		waitUntilBastionsDeleted = g.Add(flow.Task{
-			Name:         "Waiting until Bastions have been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilBastionsDeleted).SkipIf(shootSSHAccessEnabled),
-			Dependencies: flow.NewTaskIDs(deleteBastions),
-		})
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, waitUntilBastionsDeleted),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions),
 		})
 		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
 			Name:         "Waiting until operating system configurations for worker nodes have been reconciled",

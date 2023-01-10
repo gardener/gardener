@@ -146,7 +146,7 @@ var _ = Describe("Original", func() {
 			}))
 		})
 
-		It("should compute the units and files without gardener-user", func() {
+		It("should compute the units and files without gardener-user because SSH is disabled", func() {
 			var order []string
 			for _, component := range Components(extensionsv1alpha1.CRINameContainerD, false) {
 				order = append(order, component.Name())

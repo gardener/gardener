@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/sprig"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 )
 
@@ -44,17 +45,13 @@ func init() {
 		New(tplEnableSSHName).
 		Funcs(sprig.TxtFuncMap()).
 		Parse(tplEnableSSHScript)
-	if err != nil {
-		panic(err)
-	}
+	utilruntime.Must(err)
 
 	tplDisableSSH, err = template.
 		New(tplDisableSSHName).
 		Funcs(sprig.TxtFuncMap()).
 		Parse(tplDisableSSHScript)
-	if err != nil {
-		panic(err)
-	}
+	utilruntime.Must(err)
 }
 
 const (
@@ -76,11 +73,11 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	var script bytes.Buffer
 
 	if ctx.SSHAccessEnabled {
-		if err := tplEnableSSH.Execute(&script, map[string]interface{}{}); err != nil {
+		if err := tplEnableSSH.Execute(&script, nil); err != nil {
 			return nil, nil, err
 		}
 	} else {
-		if err := tplDisableSSH.Execute(&script, map[string]interface{}{}); err != nil {
+		if err := tplDisableSSH.Execute(&script, nil); err != nil {
 			return nil, nil, err
 		}
 	}

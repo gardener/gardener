@@ -23,5 +23,5 @@ import (
 
 func TestSSHDEnsurer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components SSHD Disabler Suite")
+	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components SSHDEnsurer Suite")
 }

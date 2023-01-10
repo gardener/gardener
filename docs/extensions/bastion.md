@@ -12,7 +12,7 @@ To make multiple SSH sessions possible, the existence of the `Bastion` is not di
 
 However, `Bastion`s have an expiry date, after which they will be garbage collected.
 
-When ssh access is set to `false` for the `Shoot` in the workers settings `Bastion` resources are deleted during shoot reconciliation and new ones are prevented from being created.
+When SSH access is set to `false` for the `Shoot` in the workers settings (see [this document](../usage/shoot_workers_settings.md)), `Bastion` resources are deleted during `Shoot` reconciliation and new `Bastion`s are prevented from being created.
 
 ## What needs to be implemented to support a new infrastructure provider?
 

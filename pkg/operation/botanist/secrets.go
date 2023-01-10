@@ -308,29 +308,25 @@ func (b *Botanist) syncShootCredentialToGarden(
 }
 
 func (b *Botanist) deleteSSHKeypair(ctx context.Context) error {
-	if err := b.deleteShootCredentialFromGarden(ctx, gutil.ShootProjectSecretSuffixSSHKeypair); err != nil {
-		return err
-	}
-
-	if err := b.deleteShootCredentialFromGarden(ctx, gutil.ShootProjectSecretSuffixOldSSHKeypair); err != nil {
+	if err := b.deleteShootCredentialFromGarden(ctx, gutil.ShootProjectSecretSuffixSSHKeypair, gutil.ShootProjectSecretSuffixOldSSHKeypair); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *Botanist) deleteShootCredentialFromGarden(ctx context.Context, nameSuffix string) error {
-	gardenSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
-			Namespace: b.Shoot.GetInfo().Namespace,
-		},
+func (b *Botanist) deleteShootCredentialFromGarden(ctx context.Context, nameSuffixes ...string) error {
+	var secretsToDelete []client.Object
+	for _, nameSuffix := range nameSuffixes {
+		secretsToDelete = append(secretsToDelete, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
+				Namespace: b.Shoot.GetInfo().Namespace,
+			},
+		})
 	}
 
-	if err := b.GardenClient.Delete(ctx, gardenSecret); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-	return nil
+	return kutil.DeleteObjects(ctx, b.ShootClientSet.Client(), secretsToDelete...)
 }
 
 func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) error {

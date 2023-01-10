@@ -62,8 +62,6 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		promtailEnabled, lokiIngressHost = true, b.ComputeLokiHost()
 	}
 
-	sshAccessEnabled := v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())
-
 	return operatingsystemconfig.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -78,7 +76,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				Images:              oscImages,
 				KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
 				MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
-				SSHAccessEnabled:    sshAccessEnabled,
+				SSHAccessEnabled:    v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
 				PromtailEnabled:     promtailEnabled,
 				LokiIngressHostName: lokiIngressHost,
 				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
