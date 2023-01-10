@@ -168,7 +168,7 @@ webhooks:
       operator: DoesNotExist
   sideEffects: None
   failurePolicy: Fail
-  matchPolicy: Exact
+  matchPolicy: Equivalent
   reinvocationPolicy: Never
   timeoutSeconds: 10
 - name: system-components-config.resources.gardener.cloud

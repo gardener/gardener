@@ -54,7 +54,7 @@ webhooks:
       path: /webhooks/high-availability-config
       port: 443
   failurePolicy: Fail
-  matchPolicy: Exact
+  matchPolicy: Equivalent
   name: high-availability-config.resources.gardener.cloud
   namespaceSelector:
     matchLabels:

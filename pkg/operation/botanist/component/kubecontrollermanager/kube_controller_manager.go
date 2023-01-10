@@ -412,7 +412,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), hvpa, func() error {
 			hvpa.Labels = utils.MergeStringMaps(
-				hvpa.GetLabels(),
+				hvpa.Labels,
 				getLabels(),
 				map[string]string{
 					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,

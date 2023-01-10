@@ -308,23 +308,12 @@ func mutateReplicas(
 	currentReplicas *int32,
 	setReplicas func(*int32),
 ) error {
-	// do not mutate replicas if they are set to 0 (hibernation case)
-	if pointer.Int32Deref(currentReplicas, 0) == 0 {
-		return nil
+	replicas, err := getReplicaCount(obj, currentReplicas, failureToleranceType)
+	if err != nil {
+		return err
 	}
-
-	replicas := kutil.GetReplicaCount(failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
 	if replicas == nil {
 		return nil
-	}
-
-	// check if custom replica overwrite is desired
-	if replicasOverwrite := obj.GetAnnotations()[resourcesv1alpha1.HighAvailabilityConfigReplicas]; replicasOverwrite != "" {
-		v, err := strconv.Atoi(replicasOverwrite)
-		if err != nil {
-			return err
-		}
-		replicas = pointer.Int32(int32(v))
 	}
 
 	// only mutate replicas if object is not horizontally scaled or if current replica count is lower than what we have
@@ -335,6 +324,28 @@ func mutateReplicas(
 	}
 
 	return nil
+}
+
+func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureToleranceType *gardencorev1beta1.FailureToleranceType) (*int32, error) {
+	// do not mutate replicas if they are set to 0 (hibernation case or HPA disabled)
+	if pointer.Int32Deref(currentOrMinReplicas, 0) == 0 {
+		return nil, nil
+	}
+
+	replicas := kutil.GetReplicaCount(failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
+	if replicas == nil {
+		return nil, nil
+	}
+
+	// check if custom replica overwrite is desired
+	if replicasOverwrite := obj.GetAnnotations()[resourcesv1alpha1.HighAvailabilityConfigReplicas]; replicasOverwrite != "" {
+		v, err := strconv.Atoi(replicasOverwrite)
+		if err != nil {
+			return nil, err
+		}
+		replicas = pointer.Int32(int32(v))
+	}
+	return replicas, nil
 }
 
 func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPIVersion, targetKind, targetName string) (bool, int32, error) {
@@ -454,39 +465,28 @@ func mutateAutoscalingReplicas(
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	obj client.Object,
 	getMinReplicas func() *int32,
-	mutateMinReplicas func(*int32),
+	setMinReplicas func(*int32),
 	getMaxReplicas func() int32,
-	mutateMaxReplicas func(int32),
+	setMaxReplicas func(int32),
 ) error {
-	// do not mutate replicas if they are set to 0 (HPA disabled case)
-	if pointer.Int32Deref(getMinReplicas(), 0) == 0 && getMaxReplicas() == 0 {
-		return nil
+	replicas, err := getReplicaCount(obj, getMinReplicas(), failureToleranceType)
+	if err != nil {
+		return err
 	}
-
-	replicas := kutil.GetReplicaCount(failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
 	if replicas == nil {
 		return nil
-	}
-
-	// check if custom replica overwrite is desired
-	if replicasOverwrite := obj.GetAnnotations()[resourcesv1alpha1.HighAvailabilityConfigReplicas]; replicasOverwrite != "" {
-		v, err := strconv.Atoi(replicasOverwrite)
-		if err != nil {
-			return err
-		}
-		replicas = pointer.Int32(int32(v))
 	}
 
 	// For compatibility reasons, only overwrite minReplicas if the current count is lower than the calculated count.
 	// TODO(timuthy): Reconsider if this should be removed in a future version.
 	if pointer.Int32Deref(getMinReplicas(), 0) < *replicas {
 		log.Info("Mutating minReplicas", "minReplicas", replicas)
-		mutateMinReplicas(replicas)
+		setMinReplicas(replicas)
 	}
 
 	if getMaxReplicas() < pointer.Int32Deref(getMinReplicas(), 0) {
 		log.Info("Mutating maxReplicas", "maxReplicas", replicas)
-		mutateMaxReplicas(*replicas)
+		setMaxReplicas(*replicas)
 	}
 
 	return nil

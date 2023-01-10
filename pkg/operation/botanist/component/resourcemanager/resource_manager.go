@@ -1701,7 +1701,7 @@ func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
+		matchPolicy   = admissionregistrationv1.Equivalent
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
 	)
 
