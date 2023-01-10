@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,13 +78,13 @@ const (
 
 // Values is a set of configuration values for the nginx-ingress component.
 type Values struct {
-	// ImageController is the container image used for nginx-ingress controller.
-	ImageController string
-	// ImageDefaultBackend is the container image used for default ingress backend.
-	ImageDefaultBackend string
-	// KubernetesVersion is the version of kubernetes for the shoot cluster.
+	// NginxControllerImage is the container image used for nginx-ingress controller.
+	NginxControllerImage string
+	// DefaultBackendImage is the container image used for default ingress backend.
+	DefaultBackendImage string
+	// KubernetesVersion is the kubernetes version of the shoot.
 	KubernetesVersion *semver.Version
-	// ConfigData contains the configuration details for the nginx-ingress controller
+	// ConfigData contains the configuration details for the nginx-ingress controller.
 	ConfigData map[string]string
 	// KubeAPIServerHost is the host of the kube-apiserver.
 	KubeAPIServerHost string
@@ -300,7 +300,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						},
 						Containers: []corev1.Container{{
 							Name:            containerNameBackend,
-							Image:           n.values.ImageDefaultBackend,
+							Image:           n.values.DefaultBackendImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -377,7 +377,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						NodeSelector:                  map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 						Containers: []corev1.Container{{
 							Name:                     containerNameController,
-							Image:                    n.values.ImageController,
+							Image:                    n.values.NginxControllerImage,
 							ImagePullPolicy:          corev1.PullIfNotPresent,
 							Args:                     n.getArgs(configMap),
 							TerminationMessagePath:   corev1.TerminationMessagePathDefault,

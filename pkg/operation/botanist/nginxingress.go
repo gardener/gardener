@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,10 +26,7 @@ import (
 )
 
 // DefaultNginxIngress returns a deployer for the nginxingress.
-func (b *Botanist) DefaultNginxIngress() (
-	component.DeployWaiter,
-	error,
-) {
+func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 	imageController, err := b.ImageVector.FindImage(images.ImageNameNginxIngressController, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
@@ -40,8 +37,8 @@ func (b *Botanist) DefaultNginxIngress() (
 	}
 
 	values := nginxingress.Values{
-		ImageController:          imageController.String(),
-		ImageDefaultBackend:      imageDefaultBackend.String(),
+		NginxControllerImage:     imageController.String(),
+		DefaultBackendImage:      imageDefaultBackend.String(),
 		KubernetesVersion:        b.Shoot.KubernetesVersion,
 		ConfigData:               b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config,
 		LoadBalancerSourceRanges: b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges,

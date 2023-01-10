@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,11 +43,11 @@ var _ = Describe("NginxIngress", func() {
 	var (
 		ctx = context.TODO()
 
-		managedResourceName = "shoot-addon-nginx-ingress"
-		namespace           = "some-namespace"
-		imageController     = "some-image:some-tag"
-		imageDefaultBackend = "some-image2:some-tag2"
-		configMapData       = map[string]string{
+		managedResourceName  = "shoot-addon-nginx-ingress"
+		namespace            = "some-namespace"
+		nginxControllerImage = "some-image:some-tag"
+		defaultBackendImage  = "some-image2:some-tag2"
+		configMapData        = map[string]string{
 			"foo":  "bar",
 			"dot":  "3",
 			"dash": "false",
@@ -60,10 +60,10 @@ var _ = Describe("NginxIngress", func() {
 		managedResourceSecret *corev1.Secret
 
 		values = Values{
-			ImageController:     imageController,
-			ImageDefaultBackend: imageDefaultBackend,
-			ConfigData:          configMapData,
-			PSPDisabled:         true,
+			NginxControllerImage: nginxControllerImage,
+			DefaultBackendImage:  defaultBackendImage,
+			ConfigData:           configMapData,
+			PSPDisabled:          true,
 		}
 
 		configMapYAML = `apiVersion: v1
@@ -291,7 +291,7 @@ spec:
         release: addons
     spec:
       containers:
-      - image: ` + imageDefaultBackend + `
+      - image: ` + defaultBackendImage + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -386,7 +386,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: ` + imageController + `
+        image: ` + nginxControllerImage + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
