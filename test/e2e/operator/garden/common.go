@@ -116,3 +116,13 @@ func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Gard
 		return runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 	}).WithPolling(2 * time.Second).Should(BeNotFoundError())
 }
+
+func cleanupVolumes(ctx context.Context) {
+	Expect(runtimeClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace("garden"))).To(Succeed())
+
+	CEventually(ctx, func(g Gomega) []corev1.PersistentVolume {
+		pvList := &corev1.PersistentVolumeList{}
+		g.Expect(runtimeClient.List(ctx, pvList)).To(Succeed())
+		return pvList.Items
+	}).WithPolling(2 * time.Second).Should(HaveLen(0))
+}

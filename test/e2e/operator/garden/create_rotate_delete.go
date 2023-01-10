@@ -20,7 +20,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -115,6 +114,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 		Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
 		waitForGardenToBeDeleted(ctx, garden)
-		Expect(runtimeClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace("garden"))).To(Succeed())
+		cleanupVolumes(ctx)
 	})
 })
