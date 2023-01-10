@@ -143,6 +143,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region":                                 schema_pkg_apis_core_v1alpha1_Region(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceData":                           schema_pkg_apis_core_v1alpha1_ResourceData(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize":                 schema_pkg_apis_core_v1alpha1_ResourceWatchCacheSize(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SSHAccess":                              schema_pkg_apis_core_v1alpha1_SSHAccess(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBinding":                          schema_pkg_apis_core_v1alpha1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBindingList":                      schema_pkg_apis_core_v1alpha1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBindingProvider":                  schema_pkg_apis_core_v1alpha1_SecretBindingProvider(ref),
@@ -197,6 +198,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker":                                 schema_pkg_apis_core_v1alpha1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes":                       schema_pkg_apis_core_v1alpha1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents":                 schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkersSettings":                        schema_pkg_apis_core_v1alpha1_WorkersSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                   schema_pkg_apis_core_v1beta1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons":                                  schema_pkg_apis_core_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin":                         schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref),
@@ -298,6 +300,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                               schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Region":                                  schema_pkg_apis_core_v1beta1_Region(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize":                  schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess":                               schema_pkg_apis_core_v1beta1_SSHAccess(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding":                           schema_pkg_apis_core_v1beta1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingList":                       schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingProvider":                   schema_pkg_apis_core_v1beta1_SecretBindingProvider(ref),
@@ -351,6 +354,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                  schema_pkg_apis_core_v1beta1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes":                        schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents":                  schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings":                         schema_pkg_apis_core_v1beta1_WorkersSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion":                          schema_pkg_apis_operations_v1alpha1_Bastion(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy":             schema_pkg_apis_operations_v1alpha1_BastionIngressPolicy(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionList":                      schema_pkg_apis_operations_v1alpha1_BastionList(ref),
@@ -5502,12 +5506,18 @@ func schema_pkg_apis_core_v1alpha1_Provider(ref common.ReferenceCallback) common
 							},
 						},
 					},
+					"workersSettings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkersSettings contains settings for all workers.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkersSettings"),
+						},
+					},
 				},
 				Required: []string{"type", "workers"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkersSettings", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -5788,6 +5798,28 @@ func schema_pkg_apis_core_v1alpha1_ResourceWatchCacheSize(ref common.ReferenceCa
 					},
 				},
 				Required: []string{"resource", "size"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SSHAccess(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd. Defaults to true.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
 			},
 		},
 	}
@@ -8373,6 +8405,27 @@ func schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref common.ReferenceCa
 				Required: []string{"allow"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_WorkersSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkersSettings contains settings for all workers.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"sshAccess": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SSHAccess"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SSHAccess"},
 	}
 }
 
@@ -12816,12 +12869,18 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 							},
 						},
 					},
+					"workersSettings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkersSettings contains settings for all workers.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings"),
+						},
+					},
 				},
 				Required: []string{"type", "workers"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -13056,6 +13115,28 @@ func schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref common.ReferenceCal
 					},
 				},
 				Required: []string{"resource", "size"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SSHAccess(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd. Defaults to true.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
 			},
 		},
 	}
@@ -15566,6 +15647,27 @@ func schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref common.ReferenceCal
 				Required: []string{"allow"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_WorkersSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkersSettings contains settings for all workers.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"sshAccess": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess"},
 	}
 }
 

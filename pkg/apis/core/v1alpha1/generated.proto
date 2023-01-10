@@ -1817,6 +1817,10 @@ message Provider {
   // +patchMergeKey=name
   // +patchStrategy=merge
   repeated Worker workers = 4;
+
+  // WorkersSettings contains settings for all workers.
+  // +optional
+  optional WorkersSettings workersSettings = 5;
 }
 
 // Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.
@@ -1892,6 +1896,13 @@ message ResourceWatchCacheSize {
 
   // CacheSize specifies the watch cache size that should be configured for the specified resource.
   optional int32 size = 3;
+}
+
+// SSHAccess contains settings regarding ssh access to the worker nodes.
+message SSHAccess {
+  // Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
+  // Defaults to true.
+  optional bool enabled = 1;
 }
 
 // SecretBinding represents a binding to a secret in the same or another namespace.
@@ -2888,5 +2899,12 @@ message WorkerKubernetes {
 message WorkerSystemComponents {
   // Allow determines whether the pool should be allowed to host system components or not (defaults to true)
   optional bool allow = 1;
+}
+
+// WorkersSettings contains settings for all workers.
+message WorkersSettings {
+  // SSHAccess contains settings regarding ssh access to the worker nodes.
+  // +optional
+  optional SSHAccess sshAccess = 1;
 }
 

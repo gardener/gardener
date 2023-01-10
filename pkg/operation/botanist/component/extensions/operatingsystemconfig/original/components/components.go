@@ -43,6 +43,7 @@ type Context struct {
 	KubeletDataVolumeName   *string
 	KubernetesVersion       *semver.Version
 	SSHPublicKeys           []string
+	SSHAccessEnabled        bool
 	LokiIngress             string
 	PromtailEnabled         bool
 	APIServerURL            string

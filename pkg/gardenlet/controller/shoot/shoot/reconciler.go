@@ -728,8 +728,14 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		})
 	}
 
-	if pointer.BoolEqual(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, pointer.Bool(false)) && shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
-		shoot.Status.Credentials.Rotation.Kubeconfig = nil
+	if shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
+		if pointer.BoolEqual(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, pointer.Bool(false)) {
+			shoot.Status.Credentials.Rotation.Kubeconfig = nil
+		}
+
+		if !v1beta1helper.ShootEnablesSSHAccess(shoot) {
+			shoot.Status.Credentials.Rotation.SSHKeypair = nil
+		}
 	}
 
 	return r.GardenClient.Status().Patch(ctx, shoot, patch)

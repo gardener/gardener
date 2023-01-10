@@ -12,6 +12,8 @@ To make multiple SSH sessions possible, the existence of the `Bastion` is not di
 
 However, `Bastion`s have an expiry date, after which they will be garbage collected.
 
+When SSH access is set to `false` for the `Shoot` in the workers settings (see [this document](../usage/shoot_workers_settings.md)), `Bastion` resources are deleted during `Shoot` reconciliation and new `Bastion`s are prevented from being created.
+
 ## What needs to be implemented to support a new infrastructure provider?
 
 As part of the shoot flow Gardener will create a special CRD in the seed cluster that needs to be reconciled by an extension controller, for example:

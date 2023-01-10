@@ -305,6 +305,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 	}
 
+	if obj.Spec.Provider.WorkersSettings == nil {
+		obj.Spec.Provider.WorkersSettings = &WorkersSettings{}
+	}
+	if obj.Spec.Provider.WorkersSettings.SSHAccess == nil {
+		obj.Spec.Provider.WorkersSettings.SSHAccess = &SSHAccess{Enabled: true}
+	}
+
 	if obj.Spec.SystemComponents == nil {
 		obj.Spec.SystemComponents = &SystemComponents{}
 	}

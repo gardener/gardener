@@ -76,6 +76,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				Images:              oscImages,
 				KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
 				MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
+				SSHAccessEnabled:    v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
 				PromtailEnabled:     promtailEnabled,
 				LokiIngressHostName: lokiIngressHost,
 				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
@@ -98,17 +99,19 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)))
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretutils.DataKeyCertificateBundle]))
 
-	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
-	}
-	publicKeys := []string{string(sshKeypairSecret.Data[secretutils.DataKeySSHAuthorizedKeys])}
+	if v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()) {
+		sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
+		}
+		publicKeys := []string{string(sshKeypairSecret.Data[secretutils.DataKeySSHAuthorizedKeys])}
 
-	if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
-		publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secretutils.DataKeySSHAuthorizedKeys]))
-	}
+		if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
+			publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secretutils.DataKeySSHAuthorizedKeys]))
+		}
 
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
+		b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
+	}
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.GetShootState())

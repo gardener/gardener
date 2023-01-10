@@ -164,6 +164,29 @@ var _ = Describe("Secrets", func() {
 				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
 			})
+
+			It("should delete ssh-keypair secrets when ssh access is set to false in workers settings", func() {
+				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + ".ssh-keypair", Namespace: seedNamespace}})).To(Succeed())
+				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + ".ssh-keypair.old", Namespace: seedNamespace}})).To(Succeed())
+
+				shoot := botanist.Shoot.GetInfo()
+				shoot.Spec = gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						WorkersSettings: &gardencorev1beta1.WorkersSettings{
+							SSHAccess: &gardencorev1beta1.SSHAccess{
+								Enabled: false,
+							},
+						},
+					},
+				}
+				botanist.Shoot.SetInfo(shoot)
+
+				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+
+				gardenSecret := &corev1.Secret{}
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(BeNotFoundError())
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(BeNotFoundError())
+			})
 		})
 
 		Context("when shoot is in restoration phase", func() {

@@ -80,7 +80,7 @@ var _ = Describe("Original", func() {
 		It("should call the Config() functions of all components and return the units", func() {
 			oldComponentsFn := ComponentsFn
 			defer func() { ComponentsFn = oldComponentsFn }()
-			ComponentsFn = func(extensionsv1alpha1.CRIName) []components.Component {
+			ComponentsFn = func(extensionsv1alpha1.CRIName, bool) []components.Component {
 				return []components.Component{component1, component2}
 			}
 
@@ -106,9 +106,10 @@ var _ = Describe("Original", func() {
 	})
 
 	Describe("#Components", func() {
+
 		It("should compute the units and files w/ docker", func() {
 			var order []string
-			for _, component := range Components(extensionsv1alpha1.CRINameDocker) {
+			for _, component := range Components(extensionsv1alpha1.CRINameDocker, true) {
 				order = append(order, component.Name())
 			}
 
@@ -120,13 +121,14 @@ var _ = Describe("Original", func() {
 				"journald",
 				"kernel-config",
 				"kubelet",
+				"sshd-ensurer",
 				"gardener-user",
 			}))
 		})
 
 		It("should compute the units and files w/ docker", func() {
 			var order []string
-			for _, component := range Components(extensionsv1alpha1.CRINameContainerD) {
+			for _, component := range Components(extensionsv1alpha1.CRINameContainerD, true) {
 				order = append(order, component.Name())
 			}
 
@@ -138,7 +140,27 @@ var _ = Describe("Original", func() {
 				"journald",
 				"kernel-config",
 				"kubelet",
+				"sshd-ensurer",
 				"gardener-user",
+				"containerd-initializer",
+			}))
+		})
+
+		It("should compute the units and files without gardener-user because SSH is disabled", func() {
+			var order []string
+			for _, component := range Components(extensionsv1alpha1.CRINameContainerD, false) {
+				order = append(order, component.Name())
+			}
+
+			Expect(order).To(Equal([]string{
+				"promtail",
+				"var-lib-mount",
+				"root-certificates",
+				"containerd",
+				"journald",
+				"kernel-config",
+				"kubelet",
+				"sshd-ensurer",
 				"containerd-initializer",
 			}))
 		})

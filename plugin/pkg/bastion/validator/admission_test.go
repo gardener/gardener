@@ -230,6 +230,25 @@ var _ = Describe("Bastion", func() {
 			))
 		})
 
+		It("should forbid the Bastion creation if the Shoot's SSH access is disabled", func() {
+			shoot.Spec.Provider.WorkersSettings = &gardencore.WorkersSettings{
+				SSHAccess: &gardencore.SSHAccess{Enabled: false},
+			}
+
+			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, shoot, nil
+			})
+
+			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shootRef.name"),
+				})),
+			))
+		})
+
 		It("should allow the Bastion update on finalizers even if the Shoot is in deletion", func() {
 			now := metav1.Now()
 			shoot.DeletionTimestamp = &now

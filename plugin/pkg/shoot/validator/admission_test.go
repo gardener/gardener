@@ -275,6 +275,11 @@ var _ = Describe("validator", func() {
 								Zones: []string{"europe-a"},
 							},
 						},
+						WorkersSettings: &core.WorkersSettings{
+							SSHAccess: &core.SSHAccess{
+								Enabled: true,
+							},
+						},
 						InfrastructureConfig: &runtime.RawExtension{Raw: []byte(`{
 "kind": "InfrastructureConfig",
 "apiVersion": "some.random.config/v1beta1"}`)},
@@ -926,6 +931,20 @@ var _ = Describe("validator", func() {
 			It("should add deploy infrastructure task because infrastructure config has changed", func() {
 				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 					Raw: []byte("infrastructure"),
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because SSHAccess in WorkersSettings config has changed", func() {
+				shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{
+					SSHAccess: &core.SSHAccess{
+						Enabled: false,
+					},
 				}
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)

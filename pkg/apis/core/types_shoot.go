@@ -1017,6 +1017,8 @@ type Provider struct {
 	InfrastructureConfig *runtime.RawExtension
 	// Workers is a list of worker groups.
 	Workers []Worker
+	// WorkersSettings contains settings for all workers.
+	WorkersSettings *WorkersSettings
 }
 
 // Worker is the base definition of a worker group.
@@ -1174,6 +1176,19 @@ var (
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
 )
+
+// WorkersSettings contains settings for all workers.
+type WorkersSettings struct {
+	// SSHAccess contains settings regarding ssh access to the worker nodes.
+	SSHAccess *SSHAccess
+}
+
+// SSHAccess contains settings regarding ssh access to the worker nodes.
+type SSHAccess struct {
+	// Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
+	// Defaults to true.
+	Enabled bool
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // System components relevant types                                                             //
