@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -109,7 +109,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func updateControllerInstallationRequiredCondition(ctx context.Context, c client.StatusClient, clock clock.Clock, controllerInstallation *gardencorev1beta1.ControllerInstallation, required bool, message string) error {
 	var (
-		conditionRequired = gardencorev1beta1helper.GetOrInitConditionWithClock(clock, controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationRequired)
+		conditionRequired = v1beta1helper.GetOrInitConditionWithClock(clock, controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationRequired)
 
 		status = gardencorev1beta1.ConditionTrue
 		reason = "ExtensionObjectsExist"
@@ -121,9 +121,9 @@ func updateControllerInstallationRequiredCondition(ctx context.Context, c client
 	}
 
 	patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())
-	controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(
+	controllerInstallation.Status.Conditions = v1beta1helper.MergeConditions(
 		controllerInstallation.Status.Conditions,
-		gardencorev1beta1helper.UpdatedConditionWithClock(clock, conditionRequired, status, reason, message),
+		v1beta1helper.UpdatedConditionWithClock(clock, conditionRequired, status, reason, message),
 	)
 
 	return c.Status().Patch(ctx, controllerInstallation, patch)

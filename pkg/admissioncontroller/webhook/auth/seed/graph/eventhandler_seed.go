@@ -19,7 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -51,12 +51,12 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) {
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldSeed.Spec.SecretRef, newSeed.Spec.SecretRef) ||
-				!gardencorev1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
+				!v1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
 				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
 			}
 
-			newGardenletReadyCondition := gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+			newGardenletReadyCondition := v1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
 
 			// When the GardenletReady condition transitions to 'Unknown' then the client certificate might be expired.
 			// Hence, check if seed belongs to a ManagedSeed and reconcile it to potentially allow re-bootstrapping it.

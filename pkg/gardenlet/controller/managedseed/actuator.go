@@ -22,7 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	v1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
@@ -466,7 +466,7 @@ func (a *actuator) getGardenletDeployment(ctx context.Context, shootClient kuber
 
 func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, shoot *gardencorev1beta1.Shoot) error {
 	// If VPA is enabled, check if the shoot namespace in the seed contains a vpa-admission-controller deployment
-	if gardencorev1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(spec.Settings) {
+	if v1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(spec.Settings) {
 		seedVPAAdmissionControllerExists, err := a.seedVPADeploymentExists(ctx, a.seedClient, shoot)
 		if err != nil {
 			return err
@@ -846,7 +846,7 @@ func shootReconciled(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func updateCondition(clock clock.Clock, status *seedmanagementv1alpha1.ManagedSeedStatus, ct gardencorev1beta1.ConditionType, cs gardencorev1beta1.ConditionStatus, reason, message string) {
-	condition := gardencorev1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, ct)
-	condition = gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, cs, reason, message)
-	status.Conditions = gardencorev1beta1helper.MergeConditions(status.Conditions, condition)
+	condition := v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, ct)
+	condition = v1beta1helper.UpdatedConditionWithClock(clock, condition, cs, reason, message)
+	status.Conditions = v1beta1helper.MergeConditions(status.Conditions, condition)
 }

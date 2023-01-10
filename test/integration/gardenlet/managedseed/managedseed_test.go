@@ -16,7 +16,7 @@ package managedseed_test
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -307,7 +307,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		It("should set the ShootReconciled status of ManagedSeed to false because the shoot is not yet reconciled", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				condition := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
+				condition := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
 				g.Expect(condition).NotTo(BeNil())
 				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciling))
@@ -323,7 +323,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		It("should set the ShootReconciled status to true,create seed secrets specified in spec.backup.secretRef and spec.secretRef field of seed template and deploy gardenlet ", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				condition := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
+				condition := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
 				g.Expect(condition).NotTo(BeNil())
 				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
 				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))

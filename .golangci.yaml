@@ -131,6 +131,8 @@ linters-settings:
         alias: gardencore
       - pkg: github.com/gardener/gardener/pkg/apis/core/([\w\d]+)
         alias: gardencore${1}
+      - pkg: github.com/gardener/gardener/pkg/apis/core/([\w\d]+)/helper
+        alias: ${1}helper
       - pkg: github.com/gardener/gardener/pkg/apis/([^c]\w+)/([\w\d]+)
         alias: $1$2
       - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config

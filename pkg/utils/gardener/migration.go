@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -39,7 +39,7 @@ func IsObjectBeingMigrated(
 		if err := reader.Get(ctx, kubernetesutils.Key(*statusSeedName), seed); err != nil {
 			return false
 		}
-		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
+		return v1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
 	}
 
 	return false

@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -116,7 +116,7 @@ func (r *Reconciler) reconcile(
 
 	patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
-	dataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	dataList := v1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	dataList.Upsert(&gardencorev1alpha1.GardenerResourceData{
 		Name:   secret.Name,
 		Labels: secret.Labels,
@@ -145,7 +145,7 @@ func (r *Reconciler) delete(
 
 		patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
-		dataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+		dataList := v1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 		dataList.Delete(secret.Name)
 		shootState.Spec.Gardener = dataList
 

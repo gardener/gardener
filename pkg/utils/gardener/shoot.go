@@ -38,7 +38,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -181,7 +181,7 @@ func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEn
 
 	labels[v1beta1constants.LabelNodeLocalDNS] = strconv.FormatBool(nodeLocalDNSEnabled)
 
-	if gardencorev1beta1helper.SystemComponentsAllowed(&workerPool) {
+	if v1beta1helper.SystemComponentsAllowed(&workerPool) {
 		labels[v1beta1constants.LabelWorkerPoolSystemComponents] = "true"
 	}
 
@@ -504,7 +504,7 @@ func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []co
 	)
 
 	for _, worker := range workers {
-		if gardencorev1beta1helper.SystemComponentsAllowed(&worker) {
+		if v1beta1helper.SystemComponentsAllowed(&worker) {
 			for _, taint := range worker.Taints {
 				toleration := kubernetesutils.TolerationForTaint(taint)
 				tolerations.Insert(comparableTolerations.Transform(toleration))

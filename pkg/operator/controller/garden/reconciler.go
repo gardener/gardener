@@ -32,7 +32,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/features"
@@ -76,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	conditionReconciled := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
+	conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
 	if err := r.updateStatusOperationStart(ctx, garden, conditionReconciled); err != nil {
 		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
 	}
@@ -127,19 +127,19 @@ func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 
 func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition) error {
 	patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	garden.Status.Conditions = gardencorev1beta1helper.MergeConditions(garden.Status.Conditions, condition)
+	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, condition)
 	return r.RuntimeClient.Status().Patch(ctx, garden, patch)
 }
 
 func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition, err error) error {
-	if patchErr := r.patchConditions(ctx, garden, gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, condition, gardencorev1beta1.ConditionFalse, conditionReasonPrefix(garden)+"Failed", err.Error())); patchErr != nil {
+	if patchErr := r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, condition, gardencorev1beta1.ConditionFalse, conditionReasonPrefix(garden)+"Failed", err.Error())); patchErr != nil {
 		log.Error(patchErr, "Could not patch status", "condition", condition)
 	}
 	return err
 }
 
 func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
-	garden.Status.Conditions = gardencorev1beta1helper.MergeConditions(garden.Status.Conditions, gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", "Garden operation is currently being processed."))
+	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", "Garden operation is currently being processed."))
 	garden.Status.Gardener = r.Identity
 	garden.Status.ObservedGeneration = garden.Generation
 
@@ -181,7 +181,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 }
 
 func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
-	garden.Status.Conditions = gardencorev1beta1helper.MergeConditions(garden.Status.Conditions, gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
+	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
 
 	now := metav1.NewTime(r.Clock.Now().UTC())
 

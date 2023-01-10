@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -102,7 +102,7 @@ func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock,
 		isIgnored:                             gardenerutils.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot),
 		isFailed:                              gardenerutils.IsShootFailedAndUpToDate(shoot),
 		isUpToDate:                            gardenerutils.IsObservedAtLatestGenerationAndSucceeded(shoot),
-		confineSpecUpdateRollout:              gardencorev1beta1helper.ShootConfinesSpecUpdateRollout(shoot.Spec.Maintenance),
+		confineSpecUpdateRollout:              v1beta1helper.ShootConfinesSpecUpdateRollout(shoot.Spec.Maintenance),
 		maintenanceTimeWindow:                 gardenerutils.EffectiveShootMaintenanceTimeWindow(shoot),
 		isNowInEffectiveMaintenanceTimeWindow: gardenerutils.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock),
 		alreadyReconciledDuringThisTimeWindow: gardenerutils.LastReconciliationDuringThisTimeWindow(shoot, clock),

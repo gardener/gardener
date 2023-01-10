@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -538,7 +538,7 @@ var _ = Describe("Health controller tests", func() {
 })
 
 func setCondition(managedResource *resourcesv1alpha1.ManagedResource, conditionType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus) {
-	managedResource.Status.Conditions = gardencorev1beta1helper.MergeConditions(managedResource.Status.Conditions, gardencorev1beta1.Condition{
+	managedResource.Status.Conditions = v1beta1helper.MergeConditions(managedResource.Status.Conditions, gardencorev1beta1.Condition{
 		Type:               conditionType,
 		Status:             status,
 		LastUpdateTime:     metav1.Now(),

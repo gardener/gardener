@@ -24,7 +24,7 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 	auditv1alpha1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1alpha1"
@@ -196,7 +196,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 
 	configMapIsReferenced := false
 	for _, shoot := range shootList.Items {
-		if gardencorev1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer) == request.Name {
+		if v1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer) == request.Name {
 			configMapIsReferenced = true
 			break
 		}

@@ -17,7 +17,7 @@ package botanist
 import (
 	"context"
 
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 )
@@ -38,7 +38,7 @@ func (b *Botanist) DefaultDependencyWatchdogAccess() component.Deployer {
 
 // DeployDependencyWatchdogAccess deploys the DependencyWatchdogAccess resources.
 func (b *Botanist) DeployDependencyWatchdogAccess(ctx context.Context) error {
-	if !gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
+	if !v1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
 		return b.Shoot.Components.DependencyWatchdogAccess.Destroy(ctx)
 	}
 

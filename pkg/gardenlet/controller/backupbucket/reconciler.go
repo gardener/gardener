@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -106,7 +106,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
 	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
@@ -183,12 +183,12 @@ func (r *Reconciler) reconcileBackupBucket(
 
 			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupBucket.Status.LastError != nil {
-				lastError = gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
+				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
 			}
 
-			lastObservedError := gardencorev1beta1helper.NewErrorWithCodes(lastError, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
+			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 			reconcileErr := &gardencorev1beta1.LastError{
-				Codes:       gardencorev1beta1helper.ExtractErrorCodes(lastObservedError),
+				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
 				Description: lastObservedError.Error(),
 			}
 
@@ -244,7 +244,7 @@ func (r *Reconciler) deleteBackupBucket(
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
 	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 	}
@@ -438,7 +438,7 @@ func (r *Reconciler) updateBackupBucketStatusSucceeded(ctx context.Context, back
 
 	backupBucket.Status.LastError = nil
 	backupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
+		Type:           v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
 		State:          gardencorev1beta1.LastOperationStateSucceeded,
 		Progress:       100,
 		Description:    message,
@@ -453,7 +453,7 @@ func (r *Reconciler) updateBackupBucketStatusError(ctx context.Context, backupBu
 	patch := client.MergeFrom(backupBucket.DeepCopy())
 
 	backupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
+		Type:           v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
 		State:          gardencorev1beta1.LastOperationStateError,
 		Progress:       50,
 		Description:    message,

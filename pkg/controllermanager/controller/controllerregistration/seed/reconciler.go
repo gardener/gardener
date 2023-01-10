@@ -22,7 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -341,7 +341,7 @@ func installedAndRequiredRegistrationNames(controllerInstallationList *gardencor
 		if controllerInstallation.Spec.SeedRef.Name != seedName {
 			continue
 		}
-		if !gardencorev1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
+		if !v1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
 			continue
 		}
 		requiredControllerRegistrationNames.Insert(controllerInstallation.Spec.RegistrationRef.Name)
@@ -590,13 +590,13 @@ func getShoots(ctx context.Context, c client.Reader, seed *gardencorev1beta1.See
 	if err := c.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
 		return nil, err
 	}
-	shootListAsItems := gardencorev1beta1helper.ShootItems(*shootList)
+	shootListAsItems := v1beta1helper.ShootItems(*shootList)
 
 	shootList2 := &gardencorev1beta1.ShootList{}
 	if err := c.List(ctx, shootList2, client.MatchingFields{core.ShootStatusSeedName: seed.Name}); err != nil {
 		return nil, err
 	}
-	shootListAsItems2 := gardencorev1beta1helper.ShootItems(*shootList2)
+	shootListAsItems2 := v1beta1helper.ShootItems(*shootList2)
 
 	return shootListAsItems.Union(&shootListAsItems2), nil
 }

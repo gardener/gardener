@@ -46,7 +46,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -107,7 +107,7 @@ func (r *Reconciler) reconcile(
 ) {
 	var (
 		seed                      = seedObj.GetInfo()
-		conditionSeedBootstrapped = gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+		conditionSeedBootstrapped = v1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 	)
 
 	// Initialize capacity and allocatable
@@ -154,7 +154,7 @@ func (r *Reconciler) reconcile(
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 	seedKubernetesVersion, err := r.checkMinimumK8SVersion(r.SeedClientSet.Version())
 	if err != nil {
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
+		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after check for minimum Kubernetes version failed: %w", err)
 		}
@@ -163,21 +163,21 @@ func (r *Reconciler) reconcile(
 
 	gardenSecrets, err := garden.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.Name), true)
 	if err != nil {
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
+		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after reading garden secrets failed: %w", err)
 		}
 		return reconcile.Result{}, err
 	}
 
-	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionProgressing, "BootstrapProgressing", "Seed cluster is currently being bootstrapped.")
+	conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionProgressing, "BootstrapProgressing", "Seed cluster is currently being bootstrapped.")
 	if err = r.patchSeedStatus(ctx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status of %s condition to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionProgressing, err)
 	}
 
 	// Bootstrap the Seed cluster.
 	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, gardenSecrets); err != nil {
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
+		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after reconciliation flow failed: %w", err)
 		}
@@ -188,9 +188,9 @@ func (r *Reconciler) reconcile(
 	// after being successfully bootstrapped in case the system components got updated. The SeedSystemComponentsHealthy condition
 	// will be set to either True, False or Progressing by the seed care reconciler depending on the health of the system components
 	// after the necessary checks are completed.
-	conditionSeedSystemComponentsHealthy := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
-	conditionSeedSystemComponentsHealthy = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Pending health check of system components after successful bootstrap of seed cluster.")
-	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
+	conditionSeedSystemComponentsHealthy := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
+	conditionSeedSystemComponentsHealthy = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Pending health check of system components after successful bootstrap of seed cluster.")
+	conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
 	if err = r.patchSeedStatus(ctx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status of %s condition to %s and %s conditions to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionTrue, conditionSeedSystemComponentsHealthy.Type, gardencorev1beta1.ConditionProgressing, err)
 	}
@@ -836,7 +836,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	if !gardencorev1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
+	if !v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
 		nginxIngress := nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
 
 		if err := component.OpDestroyAndWait(nginxIngress).Destroy(ctx); err != nil {
@@ -911,12 +911,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",
-			Fn:           flow.TaskFn(func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) }).DoIf(gardencorev1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
+			Fn:           flow.TaskFn(func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) }).DoIf(v1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying managed ingress DNS record (if existing)",
-			Fn:           flow.TaskFn(func(ctx context.Context) error { return destroyDNSResources(ctx, dnsRecord) }).DoIf(!gardencorev1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
+			Fn:           flow.TaskFn(func(ctx context.Context) error { return destroyDNSResources(ctx, dnsRecord) }).DoIf(!v1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
@@ -1242,7 +1242,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	}
 
 	var ingressLoadBalancerAddress string
-	if gardencorev1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
+	if v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
 		providerConfig, err := getConfig(seed.GetInfo())
 		if err != nil {
 			return nil, err

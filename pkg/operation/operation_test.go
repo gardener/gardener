@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -239,7 +239,7 @@ var _ = Describe("operation", func() {
 		})
 
 		It("should save the gardener resource list in the shootstate", func() {
-			gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList{
+			gardenerResourceList := v1alpha1helper.GardenerResourceDataList{
 				{
 					Name: "test",
 					Type: "test",

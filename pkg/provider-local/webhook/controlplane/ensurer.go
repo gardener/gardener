@@ -24,7 +24,7 @@ import (
 
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -53,7 +53,7 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc extensionscontex
 	}
 
 	kindClusterName := "gardener-local-control-plane"
-	if gardencorev1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
+	if v1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
 		kindClusterName = "gardener-local-ha-control-plane"
 	}
 

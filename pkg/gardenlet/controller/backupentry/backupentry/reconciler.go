@@ -39,7 +39,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -121,7 +121,7 @@ func (r *Reconciler) reconcileBackupEntry(
 		}
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
 	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, backupEntry, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
@@ -208,12 +208,12 @@ func (r *Reconciler) reconcileBackupEntry(
 
 			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupEntry.Status.LastError != nil {
-				lastError = gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
+				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
 			}
 
-			lastObservedError := gardencorev1beta1helper.NewErrorWithCodes(lastError, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
+			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 			reconcileErr := &gardencorev1beta1.LastError{
-				Codes:       gardencorev1beta1helper.ExtractErrorCodes(lastObservedError),
+				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
 				Description: lastObservedError.Error(),
 			}
 
@@ -268,7 +268,7 @@ func (r *Reconciler) deleteBackupEntry(
 	gracePeriod := computeGracePeriod(*r.Config.DeletionGracePeriodHours, r.Config.DeletionGracePeriodShootPurposes, gardencore.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
 	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || r.Clock.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
-		operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
+		operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
 		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
@@ -397,12 +397,12 @@ func (r *Reconciler) migrateBackupEntry(
 
 				lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperation.State)
 				if extensionBackupEntry.Status.LastError != nil {
-					lastError = gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
+					lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
 				}
 
-				lastObservedError := gardencorev1beta1helper.NewErrorWithCodes(lastError, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
+				lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 				migrateError := &gardencorev1beta1.LastError{
-					Codes:       gardencorev1beta1helper.ExtractErrorCodes(lastObservedError),
+					Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
 					Description: lastObservedError.Error(),
 				}
 
@@ -537,7 +537,7 @@ func (r *Reconciler) updateBackupEntryStatusPending(ctx context.Context, be *gar
 
 	be.Status.ObservedGeneration = be.Generation
 	be.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
+		Type:           v1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
 		State:          gardencorev1beta1.LastOperationStatePending,
 		Progress:       0,
 		Description:    message,

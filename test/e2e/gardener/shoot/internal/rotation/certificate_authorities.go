@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/rotation"
@@ -127,7 +127,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *CAVerifier) ExpectPreparingStatus(g Gomega) {
-	g.Expect(gardencorev1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
+	g.Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
@@ -191,7 +191,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *CAVerifier) ExpectCompletingStatus(g Gomega) {
-	g.Expect(gardencorev1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
+	g.Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
@@ -199,7 +199,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
 	caRotation := v.Shoot.Status.Credentials.Rotation.CertificateAuthorities
-	Expect(gardencorev1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
+	Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
 	Expect(caRotation.LastCompletionTime.Time.UTC().After(caRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
 	By("Verifying CA secrets of gardenlet after completion")

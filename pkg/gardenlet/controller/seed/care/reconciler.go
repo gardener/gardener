@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
 
@@ -69,14 +69,14 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	conditionTypes := []gardencorev1beta1.ConditionType{gardencorev1beta1.SeedSystemComponentsHealthy}
 	var conditions []gardencorev1beta1.Condition
 	for _, cond := range conditionTypes {
-		conditions = append(conditions, gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, cond))
+		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, cond))
 	}
 
 	// Trigger health check
 	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
 
 	// Update Seed status conditions if necessary
-	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
+	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
 		// Rebuild seed conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
 		conditions = buildSeedConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
@@ -104,7 +104,7 @@ func (r *Reconciler) conditionThresholdsToProgressingMapping() map[gardencorev1b
 // buildSeedConditions builds and returns the seed conditions using the given seed conditions as a base,
 // by first removing all conditions with the given types and then merging the given conditions (which must be of the same types).
 func buildSeedConditions(seedConditions []gardencorev1beta1.Condition, conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
-	result := gardencorev1beta1helper.RemoveConditions(seedConditions, conditionTypes...)
-	result = gardencorev1beta1helper.MergeConditions(result, conditions...)
+	result := v1beta1helper.RemoveConditions(seedConditions, conditionTypes...)
+	result = v1beta1helper.MergeConditions(result, conditions...)
 	return result
 }

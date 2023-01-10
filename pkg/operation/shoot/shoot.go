@@ -25,7 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
@@ -176,13 +176,13 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.Secret = secret
 
 	shoot.DisableDNS = b.disableDNS
-	shoot.HibernationEnabled = gardencorev1beta1helper.HibernationIsEnabled(shootObject)
+	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.SeedNamespace = ComputeTechnicalID(b.projectName, shootObject)
 	shoot.InternalClusterDomain = ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
 	shoot.ExternalClusterDomain = ConstructExternalClusterDomain(shootObject)
-	shoot.IgnoreAlerts = gardencorev1beta1helper.ShootIgnoresAlerts(shootObject)
-	shoot.WantsAlertmanager = gardencorev1beta1helper.ShootWantsAlertManager(shootObject)
-	shoot.WantsVerticalPodAutoscaler = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
+	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
+	shoot.WantsAlertmanager = v1beta1helper.ShootWantsAlertManager(shootObject)
+	shoot.WantsVerticalPodAutoscaler = v1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
 	shoot.Components = &Components{
 		Extensions:       &Extensions{},
 		ControlPlane:     &ControlPlane{},
@@ -218,7 +218,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.VPNHighAvailabilityNumberOfSeedServers = 2
 	shoot.VPNHighAvailabilityNumberOfShootClients = 2
 
-	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)
+	needsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +231,9 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.Networks = networks
 
 	shoot.NodeLocalDNSEnabled = helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
-	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
+	shoot.Purpose = v1beta1helper.GetPurpose(shootObject)
 
-	shoot.PSPDisabled = gardencorev1beta1helper.IsPSPDisabled(shoot.GetInfo())
+	shoot.PSPDisabled = v1beta1helper.IsPSPDisabled(shoot.GetInfo())
 
 	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
 	if err != nil {
@@ -413,7 +413,7 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 		return apiServerAddress
 	}
 
-	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
+	if v1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
@@ -487,7 +487,7 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 	var (
 		externalDomain  = &garden.Domain{Domain: *shoot.Spec.DNS.Domain}
 		defaultDomain   = garden.DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
-		primaryProvider = gardencorev1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
+		primaryProvider = v1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
 	)
 
 	switch {

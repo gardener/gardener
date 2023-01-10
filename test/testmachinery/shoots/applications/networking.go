@@ -32,7 +32,7 @@ import (
 	"io"
 	"time"
 
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
@@ -67,7 +67,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		}
 		ginkgo.By("Deploy the net test daemon set")
 		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "network-nginx-serviceaccount.yaml.tpl", templateParams))
-		if !gardencorev1beta1helper.IsPSPDisabled(f.Shoot) {
+		if !v1beta1helper.IsPSPDisabled(f.Shoot) {
 			framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "network-nginx-rolebinding-privileged.yaml.tpl", templateParams))
 		}
 		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.NginxDaemonSetName, templateParams))

@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -84,12 +84,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	log.Info("Setting Seed status to 'Unknown' as gardenlet stopped reporting seed status")
 
-	bldr, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
+	bldr, err := v1beta1helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	conditionGardenletReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+	conditionGardenletReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
 	if conditionGardenletReady != nil {
 		bldr.WithOldCondition(*conditionGardenletReady)
 	}
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	bldr.WithReason("SeedStatusUnknown")
 	bldr.WithMessage("Gardenlet stopped posting seed status.")
 	if newCondition, update := bldr.WithClock(r.Clock).Build(); update {
-		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
+		seed.Status.Conditions = v1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
 		if err := r.Client.Status().Update(ctx, seed); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -177,20 +177,20 @@ func setShootStatusToUnknown(ctx context.Context, clock clock.Clock, c client.St
 	)
 
 	for conditionType := range conditions {
-		c := gardencorev1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, conditionType)
-		c = gardencorev1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
+		c := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, conditionType)
+		c = v1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
 		conditions[conditionType] = c
 	}
 
 	for conditionType := range constraints {
-		c := gardencorev1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, conditionType)
-		c = gardencorev1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
+		c := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, conditionType)
+		c = v1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
 		constraints[conditionType] = c
 	}
 
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
-	shoot.Status.Conditions = gardencorev1beta1helper.MergeConditions(shoot.Status.Conditions, conditionMapToConditions(conditions)...)
-	shoot.Status.Constraints = gardencorev1beta1helper.MergeConditions(shoot.Status.Constraints, conditionMapToConditions(constraints)...)
+	shoot.Status.Conditions = v1beta1helper.MergeConditions(shoot.Status.Conditions, conditionMapToConditions(conditions)...)
+	shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, conditionMapToConditions(constraints)...)
 	return c.Status().Patch(ctx, shoot, patch)
 }
 

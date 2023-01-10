@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -299,7 +299,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 			return nil, err
 		}
 
-		kubeletVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
+		kubeletVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
 		if err != nil {
 			return nil, err
 		}
@@ -357,7 +357,7 @@ func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUp
 
 func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1beta1.CloudProfile, isExpired bool) (string, error) {
 	// get latest version that qualifies for a patch update
-	newerPatchVersionFound, latestPatchVersion, err := gardencorev1beta1helper.GetKubernetesVersionForPatchUpdate(profile, kubernetesVersion)
+	newerPatchVersionFound, latestPatchVersion, err := v1beta1helper.GetKubernetesVersionForPatchUpdate(profile, kubernetesVersion)
 	if err != nil {
 		return "", fmt.Errorf("failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error())
 	}
@@ -367,7 +367,7 @@ func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1b
 	// no newer patch version found & is expired -> forcefully update to latest patch of next minor version
 	if isExpired {
 		// get latest version that qualifies for a minor update
-		newMinorAvailable, latestPatchVersionNewMinor, err := gardencorev1beta1helper.GetKubernetesVersionForMinorUpdate(profile, kubernetesVersion)
+		newMinorAvailable, latestPatchVersionNewMinor, err := v1beta1helper.GetKubernetesVersionForMinorUpdate(profile, kubernetesVersion)
 		if err != nil {
 			return "", fmt.Errorf("failure while determining newer Kubernetes minor version in the CloudProfile: %s", err.Error())
 		}
@@ -382,7 +382,7 @@ func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1b
 }
 
 func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile) (shouldBeUpdated bool, reason string, isExpired bool, error error) {
-	versionExistsInCloudProfile, version, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(profile, kubernetesVersion)
+	versionExistsInCloudProfile, version, err := v1beta1helper.KubernetesVersionExistsInCloudProfile(profile, kubernetesVersion)
 	if err != nil {
 		return false, "", false, err
 	}
@@ -525,7 +525,7 @@ func isWorkerCRPartOfCloudProfileVersionCRs(wanted gardencorev1beta1.ContainerRu
 }
 
 func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMachineImage *gardencorev1beta1.ShootMachineImage) (gardencorev1beta1.MachineImage, error) {
-	machineImagesFound, machineImageFromCloudProfile := gardencorev1beta1helper.DetermineMachineImageForName(cloudProfile, shootMachineImage.Name)
+	machineImagesFound, machineImageFromCloudProfile := v1beta1helper.DetermineMachineImageForName(cloudProfile, shootMachineImage.Name)
 	if !machineImagesFound {
 		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: no machineImage with name %q (specified in shoot) could be found in the cloudProfile %q", shootMachineImage.Name, cloudProfile.Name)
 	}
@@ -535,7 +535,7 @@ func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMa
 
 // shouldMachineImageBeUpdated determines if a machine image should be updated based on whether it exists in the CloudProfile, auto update applies or a force update is required.
 func shouldMachineImageBeUpdated(log logr.Logger, autoUpdateMachineImageVersion bool, machineImage *gardencorev1beta1.MachineImage, shootMachineImage *gardencorev1beta1.ShootMachineImage) (shouldBeUpdated bool, reason string, updatedMachineImage *gardencorev1beta1.ShootMachineImage, error error) {
-	versionExistsInCloudProfile, versionIndex := gardencorev1beta1helper.ShootMachineImageVersionExists(*machineImage, *shootMachineImage)
+	versionExistsInCloudProfile, versionIndex := v1beta1helper.ShootMachineImageVersionExists(*machineImage, *shootMachineImage)
 	var reasonForUpdate string
 
 	forceUpdateRequired := ForceMachineImageUpdateRequired(shootMachineImage, *machineImage)
@@ -544,7 +544,7 @@ func shouldMachineImageBeUpdated(log logr.Logger, autoUpdateMachineImageVersion 
 		shootSemanticVersion := *semver.MustParse(*shootMachineImage.Version)
 
 		// get latest version qualifying for Shoot machine image update
-		qualifyingVersionFound, latestShootMachineImage, err := gardencorev1beta1helper.GetLatestQualifyingShootMachineImage(*machineImage, gardencorev1beta1helper.FilterLowerVersion(shootSemanticVersion))
+		qualifyingVersionFound, latestShootMachineImage, err := v1beta1helper.GetLatestQualifyingShootMachineImage(*machineImage, v1beta1helper.FilterLowerVersion(shootSemanticVersion))
 		if err != nil {
 			return false, "", nil, fmt.Errorf("an error occured while determining the latest Shoot Machine Image for machine image %q: %w", machineImage.Name, err)
 		}

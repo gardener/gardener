@@ -16,7 +16,7 @@ package retry
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -79,5 +79,5 @@ func isShootFailed(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func shootFailedDueToRateLimits(shoot *gardencorev1beta1.Shoot) bool {
-	return isShootFailed(shoot) && gardencorev1beta1helper.HasErrorCode(shoot.Status.LastErrors, gardencorev1beta1.ErrorInfraRateLimitsExceeded)
+	return isShootFailed(shoot) && v1beta1helper.HasErrorCode(shoot.Status.LastErrors, gardencorev1beta1.ErrorInfraRateLimitsExceeded)
 }

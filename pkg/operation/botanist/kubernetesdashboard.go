@@ -17,7 +17,7 @@ package botanist
 import (
 	"context"
 
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -56,7 +56,7 @@ func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, 
 
 // DeployKubernetesDashboard deploys the Kubernetes Dashboard component.
 func (b *Botanist) DeployKubernetesDashboard(ctx context.Context) error {
-	if !gardencorev1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons) {
+	if !v1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons) {
 		return b.Shoot.Components.Addons.KubernetesDashboard.Destroy(ctx)
 	}
 

@@ -22,7 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -291,7 +291,7 @@ func (b *HealthChecker) checkManagedResourceConditions(condition gardencorev1bet
 func shootHibernatedConditions(clock clock.Clock, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
-		hibernationConditions = append(hibernationConditions, gardencorev1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
+		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
 }
@@ -308,7 +308,7 @@ func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOpe
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.String, error) {
-	shootWantsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shoot)
+	shootWantsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
 	}
 
-	if gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+	if v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
 		for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
 			requiredControlPlaneDeployments.Insert(vpaDeployment)
 		}
@@ -384,33 +384,33 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 	switch condition.Status {
 	case gardencorev1beta1.ConditionTrue:
 		if _, ok := b.conditionThresholds[condition.Type]; !ok {
-			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 
 	case gardencorev1beta1.ConditionProgressing:
 		threshold, ok := b.conditionThresholds[condition.Type]
 		if !ok {
-			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
 		if b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && b.clock.Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold {
-			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
 		if delta := b.clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
-			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+		return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 
 	case gardencorev1beta1.ConditionFalse:
 		threshold, ok := b.conditionThresholds[condition.Type]
 		if ok &&
 			((b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && b.clock.Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold) ||
 				(reason != condition.Reason)) {
-			return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
 	}
 
-	return gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+	return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 }
 
 // CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
@@ -437,7 +437,7 @@ func (b *HealthChecker) CheckClusterNodes(
 	for _, worker := range workers {
 		nodes := workerPoolToNodes[worker.Name]
 
-		kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(b.kubernetesVersion, worker.Kubernetes)
+		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.kubernetesVersion, worker.Kubernetes)
 		if err != nil {
 			return nil, err
 		}
@@ -561,13 +561,13 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 				lastHeartbeatTime = &metav1.MicroTime{Time: cond.Condition.LastUpdateTime.Time}
 			}
 			if b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
-				c := gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()).Round(time.Minute).String(), lastHeartbeatTime.UTC().Round(time.Minute).String()))
+				c := v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()).Round(time.Minute).String(), lastHeartbeatTime.UTC().Round(time.Minute).String()))
 				return &c
 			}
 		}
 
 		if cond.Condition.Status == gardencorev1beta1.ConditionProgressing {
-			c := gardencorev1beta1helper.UpdatedConditionWithClock(b.clock, condition, cond.Condition.Status, cond.ExtensionType+cond.Condition.Reason, cond.Condition.Message, cond.Condition.Codes...)
+			c := v1beta1helper.UpdatedConditionWithClock(b.clock, condition, cond.Condition.Status, cond.ExtensionType+cond.Condition.Reason, cond.Condition.Message, cond.Condition.Codes...)
 			return &c
 		}
 
@@ -583,7 +583,7 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 // NewConditionOrError returns the given new condition or returns an unknown error condition if an error occurred or `newCondition` is nil.
 func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
 	if err != nil || newCondition == nil {
-		return gardencorev1beta1helper.UpdatedConditionUnknownErrorWithClock(clock, oldCondition, err)
+		return v1beta1helper.UpdatedConditionUnknownErrorWithClock(clock, oldCondition, err)
 	}
 	return *newCondition
 }
@@ -616,7 +616,7 @@ func PardonConditions(clock clock.Clock, conditions []gardencorev1beta1.Conditio
 	pardoningConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
 		if (lastOp == nil || isUnstableLastOperation(lastOp, lastErrors)) && cond.Status == gardencorev1beta1.ConditionFalse {
-			pardoningConditions = append(pardoningConditions, gardencorev1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionProgressing, cond.Reason, cond.Message, cond.Codes...))
+			pardoningConditions = append(pardoningConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionProgressing, cond.Reason, cond.Message, cond.Codes...))
 			continue
 		}
 		pardoningConditions = append(pardoningConditions, cond)

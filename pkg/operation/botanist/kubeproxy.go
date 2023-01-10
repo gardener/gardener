@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -93,7 +93,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 	poolKeyToPoolInfo := make(map[string]kubeproxy.WorkerPool)
 
 	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
-		kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
+		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
 		if err != nil {
 			return nil, err
 		}

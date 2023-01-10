@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	contextutils "github.com/gardener/gardener/pkg/utils/context"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -130,8 +130,8 @@ func RelevantConditionsChanged(
 
 			for _, condition := range relevantConditionTypes {
 				if wasConditionStatusReasonOrMessageUpdated(
-					gardencorev1beta1helper.GetCondition(oldConditions, condition),
-					gardencorev1beta1helper.GetCondition(newConditions, condition),
+					v1beta1helper.GetCondition(oldConditions, condition),
+					v1beta1helper.GetCondition(newConditions, condition),
 				) {
 					return true
 				}
@@ -178,7 +178,7 @@ func ExtensionStatusChanged() predicate.Predicate {
 			// If the object has the operation annotation, this means it's not picked up by the extension controller.
 			// migrate and restore annotations are removed for the extensions only at the end of the operation,
 			// so if the oldObject doesn't have the same annotation, don't enqueue it.
-			if gardencorev1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
+			if v1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
 				operation := e.ObjectNew.GetAnnotations()[v1beta1constants.GardenerOperation]
 				if operation == v1beta1constants.GardenerOperationMigrate || operation == v1beta1constants.GardenerOperationRestore {
 					// if the oldObject doesn't have the same annotation skip

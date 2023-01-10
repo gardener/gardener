@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
 
@@ -36,7 +36,7 @@ func CheckManagedSeed(managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	}
 
 	for _, conditionType := range managedSeedConditionTypes {
-		condition := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, conditionType)
+		condition := v1beta1helper.GetCondition(managedSeed.Status.Conditions, conditionType)
 		if condition == nil {
 			return requiredConditionMissing(string(conditionType))
 		}

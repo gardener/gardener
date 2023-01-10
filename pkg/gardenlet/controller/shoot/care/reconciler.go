@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -106,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	var conditions []gardencorev1beta1.Condition
 	for _, cond := range conditionTypes {
-		conditions = append(conditions, gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Conditions, cond))
+		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Conditions, cond))
 	}
 
 	// Initialize constraints
@@ -117,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	var constraints []gardencorev1beta1.Condition
 	for _, constr := range constraintTypes {
-		constraints = append(constraints, gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Constraints, constr))
+		constraints = append(constraints, v1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Constraints, constr))
 	}
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
@@ -197,7 +197,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// Update Shoot status (conditions, constraints) if necessary
-	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) || gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
+	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) || v1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
 		log.V(1).Info("Updating status conditions and constraints")
 		// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
 		// correct types will be updated, and any other conditions will remain intact
@@ -231,15 +231,15 @@ func (r *Reconciler) patchStatus(ctx context.Context, shoot *gardencorev1beta1.S
 func (r *Reconciler) patchStatusToUnknown(ctx context.Context, shoot *gardencorev1beta1.Shoot, message string, conditions, constraints []gardencorev1beta1.Condition) error {
 	updatedConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
-		updatedConditions = append(updatedConditions, gardencorev1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, cond, message))
+		updatedConditions = append(updatedConditions, v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, cond, message))
 	}
 
 	updatedConstraints := make([]gardencorev1beta1.Condition, 0, len(constraints))
 	for _, constr := range constraints {
-		updatedConstraints = append(updatedConstraints, gardencorev1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, constr, message))
+		updatedConstraints = append(updatedConstraints, v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, constr, message))
 	}
 
-	if !gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) && !gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
+	if !v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) && !v1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
 		return nil
 	}
 
@@ -249,8 +249,8 @@ func (r *Reconciler) patchStatusToUnknown(ctx context.Context, shoot *gardencore
 // buildShootConditions builds and returns the shoot conditions using the given shoot conditions as a base,
 // by first removing all conditions with the given types and then merging the given conditions (which must be of the same types).
 func buildShootConditions(shootConditions []gardencorev1beta1.Condition, conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
-	result := gardencorev1beta1helper.RemoveConditions(shootConditions, conditionTypes...)
-	result = gardencorev1beta1helper.MergeConditions(result, conditions...)
+	result := v1beta1helper.RemoveConditions(shootConditions, conditionTypes...)
+	result = v1beta1helper.MergeConditions(result, conditions...)
 	return result
 }
 

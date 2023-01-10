@@ -20,10 +20,10 @@ import (
 	"net"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
@@ -143,7 +143,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		kubeapiserver.Values{
 			EnabledAdmissionPlugins:        enabledAdmissionPlugins,
 			DisabledAdmissionPlugins:       disabledAdmissionPlugins,
-			AnonymousAuthenticationEnabled: gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
+			AnonymousAuthenticationEnabled: v1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
 			APIAudiences:                   apiAudiences,
 			Audit:                          auditConfig,
 			Autoscaling:                    b.computeKubeAPIServerAutoscalingConfig(),
@@ -306,7 +306,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		minReplicas = 2
 	}
 
-	if gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
 	}
 
@@ -467,11 +467,11 @@ const (
 
 func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context) (kubeapiserver.ETCDEncryptionConfig, error) {
 	config := kubeapiserver.ETCDEncryptionConfig{
-		RotationPhase:         gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		RotationPhase:         v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
 		EncryptWithCurrentKey: true,
 	}
 
-	if gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
+	if v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
 		deployment := &metav1.PartialObjectMetadata{}
 		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
 		if err := b.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
@@ -496,7 +496,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(config *gardencorev1
 		defaultIssuer = "https://" + externalHostname
 		out           = kubeapiserver.ServiceAccountConfig{
 			Issuer:        defaultIssuer,
-			RotationPhase: gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+			RotationPhase: v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
 		}
 	)
 
@@ -600,7 +600,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	switch gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) {
+	switch v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
 		if !etcdEncryptionConfig.EncryptWithCurrentKey {
 			if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx); err != nil {
@@ -666,7 +666,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	// TODO(rfranzke): Remove in a future release.
 	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
-		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+		gardenerResourceDataList := v1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
 		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
 		gardenerResourceDataList.Delete("service-account-key")
 		*gardenerResourceData = gardenerResourceDataList

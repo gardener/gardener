@@ -30,7 +30,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -77,8 +77,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
 	if err != nil {
 		log.Error(err, "Failed to create a Seed object")
-		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, fmt.Sprintf("Failed to create a Seed object (%s).", err.Error()))
+		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, fmt.Sprintf("Failed to create a Seed object (%s).", err.Error()))
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after failed creation of Seed object: %w", err)
 		}
@@ -123,7 +123,7 @@ func (r *Reconciler) patchSeedStatus(
 ) error {
 	patch := client.StrategicMergeFrom(seed.DeepCopy())
 
-	seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
+	seed.Status.Conditions = v1beta1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
 	seed.Status.ObservedGeneration = seed.Generation
 	seed.Status.Gardener = r.Identity
 	seed.Status.ClientCertificateExpirationTimestamp = r.ClientCertificateExpirationTimestamp

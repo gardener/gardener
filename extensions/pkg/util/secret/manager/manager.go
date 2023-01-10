@@ -25,7 +25,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -72,7 +72,7 @@ func (a secretsManager) Generate(ctx context.Context, config secretsutils.Config
 	if certConfig, ok := config.(*secretsutils.CertificateSecretConfig); ok && certConfig.CertType == secretsutils.CACert {
 		// CAs are always rotated in phases (not in-place)
 		opts = append(opts, secretsmanager.Rotate(secretsmanager.KeepOld))
-		if gardencorev1beta1helper.GetShootCARotationPhase(a.cluster.Shoot.Status.Credentials) == gardencorev1beta1.RotationCompleting {
+		if v1beta1helper.GetShootCARotationPhase(a.cluster.Shoot.Status.Credentials) == gardencorev1beta1.RotationCompleting {
 			// we are completing rotation, cleanup the old CA secret
 			opts = append(opts, secretsmanager.IgnoreOldSecrets())
 		}

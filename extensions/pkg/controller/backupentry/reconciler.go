@@ -21,7 +21,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
@@ -96,7 +96,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, be):
@@ -204,7 +204,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
 	if err := r.statusUpdater.Processing(ctx, log, be, operationType, "Deleting the BackupEntry"); err != nil {
 		return reconcile.Result{}, err
 	}

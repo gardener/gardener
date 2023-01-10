@@ -19,7 +19,7 @@ import (
 	"strconv"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -52,7 +52,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		nodelocaldns.Values{
 			Image:             image.String(),
 			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
-			Config:            gardencorev1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
+			Config:            v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
 			ShootAnnotations:  b.Shoot.GetInfo().Annotations,
 			ClusterDNS:        clusterDNS,
 			DNSServer:         dnsServer,

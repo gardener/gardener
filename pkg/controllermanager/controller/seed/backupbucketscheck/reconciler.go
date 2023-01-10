@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
 
@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	conditionBackupBucketsReady := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
+	conditionBackupBucketsReady := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
 
 	var (
 		bbCount                int
@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	for _, bb := range backupBucketList.Items {
 		bbCount++
-		if occurred, msg := gardencorev1beta1helper.BackupBucketIsErroneous(&bb); occurred {
+		if occurred, msg := v1beta1helper.BackupBucketIsErroneous(&bb); occurred {
 			erroneousBackupBuckets = append(erroneousBackupBuckets, backupBucketInfo{
 				name:     bb.Name,
 				errorMsg: msg,
@@ -88,7 +88,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 
 	case bbCount > 0:
-		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionBackupBucketsReady,
+		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "Backup Buckets are available.")); updateErr != nil {
 			return reconcile.Result{}, updateErr
 		}

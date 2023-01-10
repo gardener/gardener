@@ -22,7 +22,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -166,7 +166,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 		Context("phase == Preparing", func() {
 			BeforeEach(func() {
-				gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+				v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 					rotation.LastInitiationTime = &now
 					rotation.Phase = gardencorev1beta1.RotationPreparing
 				})
@@ -192,7 +192,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 		Context("phase == Completing", func() {
 			BeforeEach(func() {
-				gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+				v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 					rotation.LastInitiationTime = &now
 					rotation.Phase = gardencorev1beta1.RotationCompleting
 				})
@@ -228,7 +228,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 		})
 
 		It("should add the CA rotation initiation time for all CA configs", func() {
-			gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+			v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 				rotation.LastInitiationTime = &now
 			})
 			Expect(lastSecretRotationStartTimesFromCluster(cluster, secretConfigs)).To(MatchAllKeys(Keys{
@@ -283,7 +283,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 			Context("phase == Preparing", func() {
 				BeforeEach(func() {
-					gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+					v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 						rotation.LastInitiationTime = &now
 						rotation.Phase = gardencorev1beta1.RotationPreparing
 					})
@@ -308,7 +308,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 			Context("phase == Completing", func() {
 				BeforeEach(func() {
-					gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+					v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 						rotation.LastInitiationTime = &now
 						rotation.Phase = gardencorev1beta1.RotationCompleting
 					})

@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -283,7 +283,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			if terraformErrors := findTerraformErrors(terminationMessage); terraformErrors != "" {
 				errorMessage += fmt.Sprintf(":\n\n%s", terraformErrors)
 			}
-			return gardencorev1beta1helper.DeprecatedDetermineError(errors.New(errorMessage)) // TODO(acumino): Drop error code detection here once extension gets adapted to parse error code.
+			return v1beta1helper.DeprecatedDetermineError(errors.New(errorMessage)) // TODO(acumino): Drop error code detection here once extension gets adapted to parse error code.
 		}
 	}
 

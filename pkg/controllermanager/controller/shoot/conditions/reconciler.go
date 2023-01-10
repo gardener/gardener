@@ -21,7 +21,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -65,13 +65,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		gardencorev1beta1.SeedGardenletReady,
 		gardencorev1beta1.SeedSystemComponentsHealthy,
 	}
-	conditions := gardencorev1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
+	conditions := v1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
 	if seed != nil {
-		conditions = gardencorev1beta1helper.MergeConditions(conditions, seed.Status.Conditions...)
+		conditions = v1beta1helper.MergeConditions(conditions, seed.Status.Conditions...)
 	}
 
 	// Update the shoot conditions if needed
-	if gardencorev1beta1helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
+	if v1beta1helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
 		log.V(1).Info("Updating shoot conditions")
 		shoot.Status.Conditions = conditions
 		// We are using Update here to ensure that we act upon an up-to-date version of the shoot.

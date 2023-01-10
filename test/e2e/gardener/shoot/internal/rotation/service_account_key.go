@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/rotation"
 )
@@ -60,7 +60,7 @@ func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *ServiceAccountKeyVerifier) ExpectPreparingStatus(g Gomega) {
-	g.Expect(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
+	g.Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
@@ -87,7 +87,7 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ServiceAccountKeyVerifier) ExpectCompletingStatus(g Gomega) {
-	g.Expect(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
+	g.Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
@@ -95,7 +95,7 @@ func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
 	serviceAccountKeyRotation := v.Shoot.Status.Credentials.Rotation.ServiceAccountKey
-	Expect(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
+	Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
 	Expect(serviceAccountKeyRotation.LastCompletionTime.Time.UTC().After(serviceAccountKeyRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
 	By("Verifying new service account key secret")

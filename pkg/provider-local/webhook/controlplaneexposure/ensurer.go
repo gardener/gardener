@@ -23,7 +23,7 @@ import (
 
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // NewEnsurer creates a new controlplaneexposure ensurer.
@@ -37,7 +37,7 @@ type ensurer struct {
 }
 
 func (e *ensurer) EnsureKubeAPIServerService(_ context.Context, _ extensionscontextwebhook.GardenContext, newObj, _ *corev1.Service) error {
-	if gardencorev1beta1helper.IsAPIServerExposureManaged(newObj) {
+	if v1beta1helper.IsAPIServerExposureManaged(newObj) {
 		return nil
 	}
 

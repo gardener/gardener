@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -243,18 +243,18 @@ func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name
 
 // WaitUntilListDeleted waits until the given managed resources are deleted.
 func WaitUntilListDeleted(ctx context.Context, client client.Client, mrList *resourcesv1alpha1.ManagedResourceList, listOps ...client.ListOption) error {
-	allErrs := gardencorev1beta1helper.NewMultiErrorWithCodes(
+	allErrs := v1beta1helper.NewMultiErrorWithCodes(
 		errorsutils.NewErrorFormatFuncWithPrefix("error while waiting for all resources to be deleted: "),
 	)
 
 	if err := kubernetesutils.WaitUntilResourcesDeleted(ctx, client, mrList, IntervalWait, listOps...); err != nil {
 		for _, mr := range mrList.Items {
-			resourcesAppliedCondition := gardencorev1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+			resourcesAppliedCondition := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 			if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 				(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 				deleteError := fmt.Errorf("%w:\n%s", err, resourcesAppliedCondition.Message)
 
-				allErrs.Append(gardencorev1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...))
+				allErrs.Append(v1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...))
 			}
 		}
 	}
@@ -271,11 +271,11 @@ func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name
 		},
 	}
 	if err := kubernetesutils.WaitUntilResourceDeleted(ctx, client, mr, IntervalWait); err != nil {
-		resourcesAppliedCondition := gardencorev1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+		resourcesAppliedCondition := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 		if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 			(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 			deleteError := fmt.Errorf("error while waiting for all resources to be deleted: %w:\n%s", err, resourcesAppliedCondition.Message)
-			return gardencorev1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...)
+			return v1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...)
 		}
 		return err
 	}

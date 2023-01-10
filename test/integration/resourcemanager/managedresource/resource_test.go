@@ -19,7 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -213,10 +213,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 			// hence we fake the health controller by manually patching the status
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			oldConditions := managedResource.DeepCopy().Status.Conditions
-			managedResource.Status.Conditions = gardencorev1beta1helper.MergeConditions(
+			managedResource.Status.Conditions = v1beta1helper.MergeConditions(
 				oldConditions,
-				gardencorev1beta1helper.UpdatedConditionWithClock(fakeClock, gardencorev1beta1helper.GetOrInitConditionWithClock(fakeClock, oldConditions, resourcesv1alpha1.ResourcesHealthy), gardencorev1beta1.ConditionTrue, "test", "test"),
-				gardencorev1beta1helper.UpdatedConditionWithClock(fakeClock, gardencorev1beta1helper.GetOrInitConditionWithClock(fakeClock, oldConditions, resourcesv1alpha1.ResourcesProgressing), gardencorev1beta1.ConditionFalse, "test", "test"),
+				v1beta1helper.UpdatedConditionWithClock(fakeClock, v1beta1helper.GetOrInitConditionWithClock(fakeClock, oldConditions, resourcesv1alpha1.ResourcesHealthy), gardencorev1beta1.ConditionTrue, "test", "test"),
+				v1beta1helper.UpdatedConditionWithClock(fakeClock, v1beta1helper.GetOrInitConditionWithClock(fakeClock, oldConditions, resourcesv1alpha1.ResourcesProgressing), gardencorev1beta1.ConditionFalse, "test", "test"),
 			)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})

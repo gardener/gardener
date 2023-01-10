@@ -31,7 +31,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -276,7 +276,7 @@ func (b *Builder) Build(
 	if err != nil {
 		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
-	operation.ManagedSeedAPIServer, err = gardencorev1beta1helper.ReadManagedSeedAPIServer(shoot.GetInfo())
+	operation.ManagedSeedAPIServer, err = v1beta1helper.ReadManagedSeedAPIServer(shoot.GetInfo())
 	if err != nil {
 		return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
@@ -413,7 +413,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 // If the status.LastErrors array is empty then status.LastErrors is also removed.
 func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
 	if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-		shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
+		shoot.Status.LastErrors = v1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 		return nil
 	}); err != nil {
 		o.Logger.Error(err, "Could not update last errors of shoot", "shoot", client.ObjectKeyFromObject(o.Shoot.GetInfo()))

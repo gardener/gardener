@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
@@ -96,7 +96,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensi
 		}
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
 	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Reconciling the backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -132,7 +132,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
 	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Deleting the BackupBucket"); err != nil {
 		return reconcile.Result{}, err
 	}

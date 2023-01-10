@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
@@ -319,16 +319,16 @@ func shootDeleteFailed(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func managedSeedRegistered(managedSeed *seedmanagementv1alpha1.ManagedSeed) bool {
-	conditionSeedRegistered := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
+	conditionSeedRegistered := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
 	return managedSeed.Generation == managedSeed.Status.ObservedGeneration && managedSeed.DeletionTimestamp == nil &&
 		conditionSeedRegistered != nil && conditionSeedRegistered.Status == gardencorev1beta1.ConditionTrue
 }
 
 func seedReady(seed *gardencorev1beta1.Seed) bool {
-	conditionGardenletReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
-	conditionBootstrapped := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	conditionBackupBucketsReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
-	conditionSystemComponentsHealthy := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
+	conditionGardenletReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+	conditionBootstrapped := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+	conditionBackupBucketsReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
+	conditionSystemComponentsHealthy := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
 	return seed.Generation == seed.Status.ObservedGeneration && seed.DeletionTimestamp == nil &&
 		conditionGardenletReady != nil && conditionGardenletReady.Status == gardencorev1beta1.ConditionTrue &&
 		conditionBootstrapped != nil && conditionBootstrapped.Status == gardencorev1beta1.ConditionTrue &&
