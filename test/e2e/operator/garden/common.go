@@ -36,6 +36,8 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
+const namespace = "garden"
+
 var (
 	parentCtx     context.Context
 	runtimeClient client.Client
@@ -55,7 +57,7 @@ func defaultBackupSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "virtual-garden-etcd-main-backup",
-			Namespace: "garden",
+			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{"hostPath": []byte("/etc/gardener/local-backupbuckets")},
@@ -123,11 +125,21 @@ func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Gard
 }
 
 func cleanupVolumes(ctx context.Context) {
-	Expect(runtimeClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace("garden"))).To(Succeed())
+	Expect(runtimeClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(namespace))).To(Succeed())
 
-	CEventually(ctx, func(g Gomega) []corev1.PersistentVolume {
+	CEventually(ctx, func(g Gomega) bool {
 		pvList := &corev1.PersistentVolumeList{}
 		g.Expect(runtimeClient.List(ctx, pvList)).To(Succeed())
-		return pvList.Items
-	}).WithPolling(2 * time.Second).Should(HaveLen(0))
+
+		for _, pv := range pvList.Items {
+			if pv.Spec.ClaimRef != nil &&
+				pv.Spec.ClaimRef.APIVersion == "v1" &&
+				pv.Spec.ClaimRef.Kind == "PersistentVolumeClaim" &&
+				pv.Spec.ClaimRef.Namespace == namespace {
+				return false
+			}
+		}
+
+		return true
+	}).WithPolling(2 * time.Second).Should(BeTrue())
 }

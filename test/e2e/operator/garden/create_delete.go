@@ -57,7 +57,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		By("Verify creation")
 		CEventually(ctx, func(g Gomega) {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("garden"))).To(Succeed())
+			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
 			g.Expect(managedResourceList.Items).To(ConsistOf(
 				healthyManagedResource("garden-system"),
 				healthyManagedResource("hvpa"),
@@ -68,7 +68,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		CEventually(ctx, func(g Gomega) []druidv1alpha1.Etcd {
 			etcdList := &druidv1alpha1.EtcdList{}
-			g.Expect(runtimeClient.List(ctx, etcdList, client.InNamespace("garden"))).To(Succeed())
+			g.Expect(runtimeClient.List(ctx, etcdList, client.InNamespace(namespace))).To(Succeed())
 			return etcdList.Items
 		}).Should(ConsistOf(
 			healthyEtcd("virtual-garden-etcd-main"),
@@ -76,7 +76,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		))
 
 		CEventually(ctx, func(g Gomega) {
-			virtualGardenKubeAPIServerService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: "garden"}}
+			virtualGardenKubeAPIServerService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: namespace}}
 			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenKubeAPIServerService), virtualGardenKubeAPIServerService)).To(Succeed())
 			g.Expect(virtualGardenKubeAPIServerService.Status.LoadBalancer.Ingress).To(HaveLen(1))
 		}).Should(Succeed())
@@ -93,7 +93,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		By("Verify deletion")
 		secretList := &corev1.SecretList{}
-		Expect(runtimeClient.List(ctx, secretList, client.InNamespace("garden"), client.MatchingLabels{
+		Expect(runtimeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 			secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 			secretsmanager.LabelKeyManagerIdentity: operatorv1alpha1.SecretManagerIdentityOperator,
 		})).To(Succeed())
@@ -103,7 +103,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		Expect(runtimeClient.List(ctx, crdList)).To(Succeed())
 		Expect(crdList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardens.operator.gardener.cloud")})})))
 
-		Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: "garden"}, &appsv1.Deployment{})).To(BeNotFoundError())
+		Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: namespace}, &appsv1.Deployment{})).To(BeNotFoundError())
 	})
 })
 
