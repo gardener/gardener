@@ -33,14 +33,14 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenexternalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	seedmanagementinformer "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
+	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
-	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/openapi"
 
@@ -70,7 +70,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // NewCommandStartGardenerAPIServer creates a *cobra.Command object with default parameters.
@@ -115,10 +115,10 @@ type Options struct {
 	ServerRunOptions              *genericoptions.ServerRunOptions
 	ExtraOptions                  *apiserver.ExtraOptions
 	CoreInformerFactory           gardencoreinformers.SharedInformerFactory
-	ExternalCoreInformerFactory   gardenexternalcoreinformers.SharedInformerFactory
+	ExternalCoreInformerFactory   gardencoreexternalinformers.SharedInformerFactory
 	KubeInformerFactory           kubeinformers.SharedInformerFactory
-	SeedManagementInformerFactory seedmanagementinformer.SharedInformerFactory
-	SettingsInformerFactory       settingsinformer.SharedInformerFactory
+	SeedManagementInformerFactory seedmanagementinformers.SharedInformerFactory
+	SettingsInformerFactory       settingsinformers.SharedInformerFactory
 
 	Logs *logsv1.LoggingConfiguration
 }
@@ -201,25 +201,25 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, protobufLoopbackConfig.Timeout)
 
 		// versioned core client
-		versionedCoreClient, err := gardenversionedcoreclientset.NewForConfig(&protobufLoopbackConfig)
+		versionedCoreClient, err := gardencoreversionedclientset.NewForConfig(&protobufLoopbackConfig)
 		if err != nil {
 			return nil, err
 		}
-		o.ExternalCoreInformerFactory = gardenexternalcoreinformers.NewSharedInformerFactory(versionedCoreClient, protobufLoopbackConfig.Timeout)
+		o.ExternalCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(versionedCoreClient, protobufLoopbackConfig.Timeout)
 
 		// seedmanagement client
 		seedManagementClient, err := seedmanagementclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
 		if err != nil {
 			return nil, err
 		}
-		o.SeedManagementInformerFactory = seedmanagementinformer.NewSharedInformerFactory(seedManagementClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+		o.SeedManagementInformerFactory = seedmanagementinformers.NewSharedInformerFactory(seedManagementClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
 		// settings client
 		settingsClient, err := settingsclientset.NewForConfig(&protobufLoopbackConfig)
 		if err != nil {
 			return nil, err
 		}
-		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, protobufLoopbackConfig.Timeout)
+		o.SettingsInformerFactory = settingsinformers.NewSharedInformerFactory(settingsClient, protobufLoopbackConfig.Timeout)
 
 		// dynamic client
 		dynamicClient, err := dynamic.NewForConfig(kubeAPIServerConfig)
@@ -267,7 +267,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	runtimelog.SetLogger(log)
+	logf.SetLogger(log)
 	klog.SetLogger(log)
 
 	log.Info("Starting gardener-apiserver", "version", version.Get())
@@ -323,7 +323,7 @@ func (o *Options) Run(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: gardencorev1beta1.GardenerSeedLeaseNamespace,
 			},
-		}, clientkubernetes.DefaultCreateOptions())
+		}, kubernetesclient.DefaultCreateOptions())
 		return err
 	}); err != nil {
 		return err
@@ -345,7 +345,7 @@ func (o *Options) Run(ctx context.Context) error {
 			Data: map[string]string{
 				v1beta1constants.ClusterIdentity: o.ExtraOptions.ClusterIdentity,
 			},
-		}, clientkubernetes.DefaultCreateOptions())
+		}, kubernetesclient.DefaultCreateOptions())
 		return err
 	}); err != nil {
 		return err

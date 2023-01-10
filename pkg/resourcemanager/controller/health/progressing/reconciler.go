@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
@@ -83,7 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// skip checks until ManagedResource has been reconciled completely successfully to prevent updating status while
 	// resource controller is still applying the resources (this might lead to wrongful results inconsistent with the
 	// actual set of applied resources and causes a myriad of conflicts)
-	conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+	conditionResourcesApplied := gardencorev1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 	if conditionResourcesApplied == nil || conditionResourcesApplied.Status == gardencorev1beta1.ConditionProgressing || conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse {
 		log.Info("Skipping checks for ManagedResource as the resources were not applied yet")
 		return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
@@ -98,7 +98,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	checkCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+	conditionResourcesProgressing := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 
 	for _, ref := range mr.Status.Resources {
 		// only Deployment, StatefulSet and DaemonSet are considered for Progressing condition
@@ -139,8 +139,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 			objectLog.Info("ManagedResource rollout is progressing, detected progressing object", "status", "progressing", "reason", reason, "message", message)
 
-			conditionResourcesProgressing = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesProgressing, gardencorev1beta1.ConditionTrue, reason, message)
-			mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesProgressing)
+			conditionResourcesProgressing = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesProgressing, gardencorev1beta1.ConditionTrue, reason, message)
+			mr.Status.Conditions = gardencorev1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesProgressing)
 			if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 			}
@@ -149,7 +149,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		}
 	}
 
-	b, err := v1beta1helper.NewConditionBuilder(resourcesv1alpha1.ResourcesProgressing)
+	b, err := gardencorev1beta1helper.NewConditionBuilder(resourcesv1alpha1.ResourcesProgressing)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -162,7 +162,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 	if needsUpdate {
 		log.Info("ManagedResource has been fully rolled out", "status", "rolled out")
-		mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesProgressing)
+		mr.Status.Conditions = gardencorev1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesProgressing)
 		if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}

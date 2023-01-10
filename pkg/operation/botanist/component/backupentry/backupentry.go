@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/go-logr/logr"
@@ -164,7 +164,7 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1alpha1.ShootState) error {
 	bucketName := b.values.BucketName
 	if !gardenletfeatures.FeatureGate.Enabled(features.CopyEtcdBackupsDuringControlPlaneMigration) {
-		if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), b.backupEntry); err == nil {
+		if err := b.client.Get(ctx, kubernetesutils.Key(b.values.Namespace, b.values.Name), b.backupEntry); err == nil {
 			bucketName = b.backupEntry.Spec.BucketName
 		} else if client.IgnoreNotFound(err) != nil {
 			return err
@@ -197,7 +197,7 @@ func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1be
 
 // Destroy deletes the BackupEntry resource
 func (b *backupEntry) Destroy(ctx context.Context) error {
-	return kutil.DeleteObject(
+	return kubernetesutils.DeleteObject(
 		ctx,
 		b.client,
 		b.backupEntry,

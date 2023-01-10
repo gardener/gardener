@@ -24,7 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
@@ -102,7 +102,7 @@ var _ = Describe("Extension", func() {
 	BeforeEach(func() {
 		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedClientSet := fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
+		fakeSeedClientSet := kubernetesfake.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-namespace"}}
 
 		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
@@ -330,7 +330,7 @@ var _ = Describe("Extension", func() {
 			}
 			fakeError := errors.New("fake-err")
 			errClient := &errorClient{err: fakeError, Client: b.SeedClientSet.Client()}
-			errClientSet := fakekubernetes.NewClientSetBuilder().WithClient(errClient).Build()
+			errClientSet := kubernetesfake.NewClientSetBuilder().WithClient(errClient).Build()
 			b.SeedClientSet = errClientSet
 			b.Shoot.Components.Extensions.Extension = extension.New(
 				log,
@@ -370,7 +370,7 @@ var _ = Describe("Extension", func() {
 			}
 			fakeError := errors.New("fake-err")
 			errClient := &errorClient{err: fakeError, Client: b.SeedClientSet.Client()}
-			errClientSet := fakekubernetes.NewClientSetBuilder().WithClient(errClient).Build()
+			errClientSet := kubernetesfake.NewClientSetBuilder().WithClient(errClient).Build()
 			b.SeedClientSet = errClientSet
 			b.Shoot.Components.Extensions.Extension = extension.New(
 				log,

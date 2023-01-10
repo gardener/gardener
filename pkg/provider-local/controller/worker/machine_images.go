@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // UpdateMachineImagesStatus implements genericactuator.WorkerDelegate.
@@ -56,7 +56,7 @@ func (w *workerDelegate) findMachineImage(name, version string) (string, error) 
 	if providerStatus := w.worker.Status.ProviderStatus; providerStatus != nil {
 		workerStatus := &api.WorkerStatus{}
 		if _, _, err := w.Decoder().Decode(providerStatus.Raw, nil, workerStatus); err != nil {
-			return "", fmt.Errorf("could not decode worker status of worker '%s': %w", kutil.ObjectName(w.worker), err)
+			return "", fmt.Errorf("could not decode worker status of worker '%s': %w", kubernetesutils.ObjectName(w.worker), err)
 		}
 
 		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version)

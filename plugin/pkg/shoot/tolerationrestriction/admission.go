@@ -21,10 +21,10 @@ import (
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/validation"
@@ -61,7 +61,7 @@ func Register(plugins *admission.Plugins) {
 type TolerationRestriction struct {
 	*admission.Handler
 
-	projectLister corelisters.ProjectLister
+	projectLister gardencorelisters.ProjectLister
 	readyFunc     admission.ReadyFunc
 
 	defaults  []core.Toleration
@@ -90,7 +90,7 @@ func (t *TolerationRestriction) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreInformerFactory sets the internal garden core informer factory.
-func (t *TolerationRestriction) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (t *TolerationRestriction) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	projectInformer := f.Core().InternalVersion().Projects()
 	t.projectLister = projectInformer.Lister()
 
@@ -225,7 +225,7 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 		allowlist = append(allowlist, project.Spec.Tolerations.Whitelist...)
 	}
 
-	if errList := corevalidation.ValidateTolerationsAgainstAllowlist(tolerationsToValidate, allowlist, field.NewPath("spec", "tolerations")); len(errList) > 0 {
+	if errList := gardencorevalidation.ValidateTolerationsAgainstAllowlist(tolerationsToValidate, allowlist, field.NewPath("spec", "tolerations")); len(errList) > 0 {
 		return fmt.Errorf("error while validating tolerations against allowlist: %+v", errList)
 	}
 	return nil

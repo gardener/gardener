@@ -23,12 +23,12 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -106,12 +106,12 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 	}
 
-	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
+	operationType := gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
 	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		log.Error(err, "Failed to get backup secret", "secret", client.ObjectKey{Namespace: backupBucket.Spec.SecretRef.Namespace, Name: backupBucket.Spec.SecretRef.Name})
 		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "Failed to get backup secret %s/%s: %w", backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name, err)
@@ -183,12 +183,12 @@ func (r *Reconciler) reconcileBackupBucket(
 
 			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupBucket.Status.LastError != nil {
-				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
+				lastError = gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
 			}
 
-			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
+			lastObservedError := gardencorev1beta1helper.NewErrorWithCodes(lastError, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 			reconcileErr := &gardencorev1beta1.LastError{
-				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
+				Codes:       gardencorev1beta1helper.ExtractErrorCodes(lastObservedError),
 				Description: lastObservedError.Error(),
 			}
 
@@ -244,7 +244,7 @@ func (r *Reconciler) deleteBackupBucket(
 		return reconcile.Result{}, nil
 	}
 
-	operationType := v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
+	operationType := gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation)
 	if updateErr := r.updateBackupBucketStatusOperationStart(ctx, backupBucket, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 	}
@@ -288,7 +288,7 @@ func (r *Reconciler) deleteBackupBucket(
 
 	log.Info("Successfully deleted")
 
-	secret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		log.Error(err, "Failed to get backup secret", "secret", client.ObjectKey{Namespace: backupBucket.Spec.SecretRef.Namespace, Name: backupBucket.Spec.SecretRef.Name})
 		return reconcile.Result{}, err
@@ -321,7 +321,7 @@ func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secre
 }
 
 func (r *Reconciler) reconcileExtensionBackupBucketSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
-	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func (r *Reconciler) syncGeneratedSecretToGarden(ctx context.Context, backupBuck
 	var gardenGeneratedSecretRef *corev1.SecretReference
 
 	if extensionBackupBucket.Status.GeneratedSecretRef != nil {
-		seedGeneratedSecret, err := kutil.GetSecretByReference(ctx, r.SeedClient, extensionBackupBucket.Status.GeneratedSecretRef)
+		seedGeneratedSecret, err := kubernetesutils.GetSecretByReference(ctx, r.SeedClient, extensionBackupBucket.Status.GeneratedSecretRef)
 		if err != nil {
 			return err
 		}
@@ -438,7 +438,7 @@ func (r *Reconciler) updateBackupBucketStatusSucceeded(ctx context.Context, back
 
 	backupBucket.Status.LastError = nil
 	backupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
+		Type:           gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
 		State:          gardencorev1beta1.LastOperationStateSucceeded,
 		Progress:       100,
 		Description:    message,
@@ -453,7 +453,7 @@ func (r *Reconciler) updateBackupBucketStatusError(ctx context.Context, backupBu
 	patch := client.MergeFrom(backupBucket.DeepCopy())
 
 	backupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           v1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
+		Type:           gardencorev1beta1helper.ComputeOperationType(backupBucket.ObjectMeta, backupBucket.Status.LastOperation),
 		State:          gardencorev1beta1.LastOperationStateError,
 		Progress:       50,
 		Description:    message,

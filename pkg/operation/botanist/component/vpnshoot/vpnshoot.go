@@ -27,9 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 	policyv1 "k8s.io/api/policy/v1"
@@ -139,10 +139,10 @@ type vpnSecret struct {
 
 func (v *vpnShoot) Deploy(ctx context.Context) error {
 	var (
-		config = &secretutils.CertificateSecretConfig{
+		config = &secretsutils.CertificateSecretConfig{
 			Name:                        "vpn-shoot-client",
 			CommonName:                  "vpn-shoot-client",
-			CertType:                    secretutils.ClientCert,
+			CertType:                    secretsutils.ClientCert,
 			SkipPublishingCACertificate: true,
 		}
 		signingCA = v1beta1constants.SecretNameCAVPN
@@ -249,8 +249,8 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
-	utilruntime.Must(kutil.MakeUnique(secretCA))
-	utilruntime.Must(kutil.MakeUnique(secretTLSAuth))
+	utilruntime.Must(kubernetesutils.MakeUnique(secretCA))
+	utilruntime.Must(kubernetesutils.MakeUnique(secretTLSAuth))
 
 	for i, item := range secretsVPNShoot {
 		secret := &corev1.Secret{
@@ -261,7 +261,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			Type: corev1.SecretTypeOpaque,
 			Data: item.secret.Data,
 		}
-		utilruntime.Must(kutil.MakeUnique(secret))
+		utilruntime.Must(kubernetesutils.MakeUnique(secret))
 		secretsVPNShoot[i].secret = secret
 	}
 
@@ -729,7 +729,7 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth, secre
 									Name: secretCA.Name,
 								},
 								Items: []corev1.KeyToPath{{
-									Key:  secretutils.DataKeyCertificateBundle,
+									Key:  secretsutils.DataKeyCertificateBundle,
 									Path: "ca.crt",
 								}},
 							},
@@ -741,12 +741,12 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth, secre
 								},
 								Items: []corev1.KeyToPath{
 									{
-										Key:  secretutils.DataKeyCertificate,
-										Path: secretutils.DataKeyCertificate,
+										Key:  secretsutils.DataKeyCertificate,
+										Path: secretsutils.DataKeyCertificate,
 									},
 									{
-										Key:  secretutils.DataKeyPrivateKey,
-										Path: secretutils.DataKeyPrivateKey,
+										Key:  secretsutils.DataKeyPrivateKey,
+										Path: secretsutils.DataKeyPrivateKey,
 									},
 								},
 							},

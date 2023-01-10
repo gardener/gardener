@@ -41,10 +41,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -191,14 +191,14 @@ func defaultIstio(
 				MaxReplicas:           maxReplicas,
 				Ports:                 defaultIngressGatewayConfig.Ports,
 				LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
-				Labels:                operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+				Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
 
 		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 			Values: istio.ProxyValues{
-				Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+				Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
@@ -217,7 +217,7 @@ func defaultIstio(
 						ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 						Ports:                 defaultIngressGatewayConfig.Ports,
 						// LoadBalancerIP can currently not be provided for automatic ingress gateways
-						Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+						Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 						Zones:  []string{zone},
 					},
 					Namespace: namespace,
@@ -225,7 +225,7 @@ func defaultIstio(
 
 				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 					Values: istio.ProxyValues{
-						Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+						Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					},
 					Namespace: namespace,
 				})
@@ -403,7 +403,7 @@ func defaultVPNAuthzServer(
 		return vpnAuthzServer, nil
 	}
 
-	hasVPNSeedDeployments, err := kutil.ResourcesExist(ctx, c, appsv1.SchemeGroupVersion.WithKind("DeploymentList"), client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}))
+	hasVPNSeedDeployments, err := kubernetesutils.ResourcesExist(ctx, c, appsv1.SchemeGroupVersion.WithKind("DeploymentList"), client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}))
 	if err != nil {
 		return nil, err
 	}

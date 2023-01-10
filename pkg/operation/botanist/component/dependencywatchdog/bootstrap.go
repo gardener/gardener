@@ -42,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -136,7 +136,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		},
 		Data: map[string]string{configFileName: config},
 	}
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)

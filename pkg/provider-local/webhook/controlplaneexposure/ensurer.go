@@ -21,9 +21,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // NewEnsurer creates a new controlplaneexposure ensurer.
@@ -36,8 +36,8 @@ type ensurer struct {
 	logger logr.Logger
 }
 
-func (e *ensurer) EnsureKubeAPIServerService(_ context.Context, _ gcontext.GardenContext, newObj, _ *corev1.Service) error {
-	if v1beta1helper.IsAPIServerExposureManaged(newObj) {
+func (e *ensurer) EnsureKubeAPIServerService(_ context.Context, _ extensionscontextwebhook.GardenContext, newObj, _ *corev1.Service) error {
+	if gardencorev1beta1helper.IsAPIServerExposureManaged(newObj) {
 		return nil
 	}
 

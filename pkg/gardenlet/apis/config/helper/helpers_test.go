@@ -20,7 +20,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -95,9 +95,9 @@ var _ = Describe("helper", func() {
 
 	Describe("#ConvertGardenletConfiguration", func() {
 		It("should convert the external GardenletConfiguration version to an internal one", func() {
-			result, err := ConvertGardenletConfiguration(&configv1alpha1.GardenletConfiguration{
+			result, err := ConvertGardenletConfiguration(&gardenletv1alpha1.GardenletConfiguration{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+					APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
 				},
 			})
@@ -112,9 +112,9 @@ var _ = Describe("helper", func() {
 			result, err := ConvertGardenletConfigurationExternal(&config.GardenletConfiguration{})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(&configv1alpha1.GardenletConfiguration{
+			Expect(result).To(Equal(&gardenletv1alpha1.GardenletConfiguration{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+					APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
 				},
 			}))

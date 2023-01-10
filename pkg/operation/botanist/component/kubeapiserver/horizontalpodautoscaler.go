@@ -27,7 +27,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -57,7 +57,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, ob
 		k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
 
-		return kutil.DeleteObject(ctx, k.client.Client(), obj)
+		return kubernetesutils.DeleteObject(ctx, k.client.Client(), obj)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), obj, func() error {

@@ -36,7 +36,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	mockworker "github.com/gardener/gardener/extensions/pkg/controller/worker/mock"
+	extensionsmockworker "github.com/gardener/gardener/extensions/pkg/controller/worker/mock"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -89,7 +89,7 @@ var _ = Describe("Worker Reconcile", func() {
 	var (
 		newMockActuator = func(op string, err error) func(ctrl *gomock.Controller) worker.Actuator {
 			return func(ctrl *gomock.Controller) worker.Actuator {
-				actuator := mockworker.NewMockActuator(ctrl)
+				actuator := extensionsmockworker.NewMockActuator(ctrl)
 				switch op {
 				case "reconcile":
 					actuator.EXPECT().Reconcile(ctx, gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)

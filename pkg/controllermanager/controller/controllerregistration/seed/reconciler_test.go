@@ -24,7 +24,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -762,7 +762,7 @@ var _ = Describe("Reconciler", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			k8sClient = mockclient.NewMockClient(ctrl)
 
-			k8sClient.EXPECT().Get(gomock.Any(), kutil.Key(controllerDeployment.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerDeployment{})).DoAndReturn(
+			k8sClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(controllerDeployment.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerDeployment{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerDeployment, _ ...client.GetOption) error {
 					*obj = *controllerDeployment
 					return nil
@@ -787,7 +787,7 @@ var _ = Describe("Reconciler", func() {
 					fakeErr = errors.New("err")
 				)
 
-				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{})).Return(fakeErr)
+				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{})).Return(fakeErr)
 
 				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
@@ -834,10 +834,10 @@ var _ = Describe("Reconciler", func() {
 					common.SeedSpecHash:         "a5e0943b25bc6cab",
 				}
 
-				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
-				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation3.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation3.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Patch(ctx, installation3, gomock.Any())
 
 				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
@@ -869,7 +869,7 @@ var _ = Describe("Reconciler", func() {
 					common.SeedSpecHash:             "a5e0943b25bc6cab",
 				}
 
-				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
 				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, registrations, registrationNameToInstallation)

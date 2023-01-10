@@ -27,7 +27,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -149,7 +149,7 @@ var _ = Describe("DNSRecord", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 			&dnsrecord.TimeNow, mockNow.Do,
 			&extensions.TimeNow, mockNow.Do,
-			&gutil.TimeNow, mockNow.Do,
+			&gardenerutils.TimeNow, mockNow.Do,
 		)
 	})
 

@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencoreinternallisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -78,7 +78,7 @@ var _ = Describe("Project", func() {
 })
 
 type fakeInternalLister struct {
-	gardencoreinternallisters.ProjectLister
+	gardencorelisters.ProjectLister
 	projects []*gardencore.Project
 	err      error
 }

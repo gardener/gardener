@@ -21,8 +21,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -37,9 +37,9 @@ type ValuesHelper interface {
 	// MergeGardenletDeployment merges the given GardenletDeployment with the values from the parent gardenlet.
 	MergeGardenletDeployment(*seedmanagementv1alpha1.GardenletDeployment, *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.GardenletDeployment, error)
 	// MergeGardenletConfiguration merges the given GardenletConfiguration with the parent GardenletConfiguration.
-	MergeGardenletConfiguration(config *configv1alpha1.GardenletConfiguration) (*configv1alpha1.GardenletConfiguration, error)
+	MergeGardenletConfiguration(config *gardenletv1alpha1.GardenletConfiguration) (*gardenletv1alpha1.GardenletConfiguration, error)
 	// GetGardenletChartValues computes the values to be used when applying the gardenlet chart.
-	GetGardenletChartValues(*seedmanagementv1alpha1.GardenletDeployment, *configv1alpha1.GardenletConfiguration, string) (map[string]interface{}, error)
+	GetGardenletChartValues(*seedmanagementv1alpha1.GardenletDeployment, *gardenletv1alpha1.GardenletConfiguration, string) (map[string]interface{}, error)
 }
 
 // valuesHelper is a concrete implementation of ValuesHelper
@@ -87,7 +87,7 @@ func (vp *valuesHelper) MergeGardenletDeployment(deployment *seedmanagementv1alp
 }
 
 // MergeGardenletConfiguration merges the given GardenletConfiguration with the parent GardenletConfiguration.
-func (vp *valuesHelper) MergeGardenletConfiguration(config *configv1alpha1.GardenletConfiguration) (*configv1alpha1.GardenletConfiguration, error) {
+func (vp *valuesHelper) MergeGardenletConfiguration(config *gardenletv1alpha1.GardenletConfiguration) (*gardenletv1alpha1.GardenletConfiguration, error) {
 	// Convert configuration object to values
 	configValues, err := utils.ToValuesMap(config)
 	if err != nil {
@@ -95,7 +95,7 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *configv1alpha1.Garde
 	}
 
 	// Get parent config values
-	parentConfig, err := confighelper.ConvertGardenletConfigurationExternal(vp.config)
+	parentConfig, err := gardenlethelper.ConvertGardenletConfigurationExternal(vp.config)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *configv1alpha1.Garde
 	configValues = utils.MergeMaps(parentConfigValues, configValues)
 
 	// Convert config values back to an object
-	var configObj *configv1alpha1.GardenletConfiguration
+	var configObj *gardenletv1alpha1.GardenletConfiguration
 	if err := utils.FromValuesMap(configValues, &configObj); err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *configv1alpha1.Garde
 // GetGardenletChartValues computes the values to be used when applying the gardenlet chart.
 func (vp *valuesHelper) GetGardenletChartValues(
 	deployment *seedmanagementv1alpha1.GardenletDeployment,
-	config *configv1alpha1.GardenletConfiguration,
+	config *gardenletv1alpha1.GardenletConfiguration,
 	bootstrapKubeconfig string,
 ) (map[string]interface{}, error) {
 	var err error
@@ -194,7 +194,7 @@ func (vp *valuesHelper) getGardenletDeploymentValues(deployment *seedmanagementv
 }
 
 // getGardenletConfigurationValues computes and returns the gardenlet configuration values from the given GardenletConfiguration.
-func (vp *valuesHelper) getGardenletConfigurationValues(config *configv1alpha1.GardenletConfiguration, bootstrapKubeconfig string) (map[string]interface{}, error) {
+func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletv1alpha1.GardenletConfiguration, bootstrapKubeconfig string) (map[string]interface{}, error) {
 	// Convert configuration object to values
 	configValues, err := utils.ToValuesMap(config)
 	if err != nil {

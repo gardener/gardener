@@ -19,7 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -43,13 +43,13 @@ func ComputeOperationType(shoot *gardencorev1beta1.Shoot) gardencorev1beta1.Last
 		return gardencorev1beta1.LastOperationTypeRestore
 	}
 
-	return v1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
+	return gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 }
 
 // GetEtcdDeployTimeout returns the timeout for the etcd deployment task of the reconcile flow.
 func GetEtcdDeployTimeout(shoot *shoot.Shoot, defaultDuration time.Duration) time.Duration {
 	timeout := defaultDuration
-	if v1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo()) {
+	if gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo()) {
 		timeout = etcd.DefaultTimeout
 	}
 	return timeout

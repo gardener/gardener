@@ -18,7 +18,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/mock"
+	mockcomponents "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/mock"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/Masterminds/semver"
@@ -31,14 +31,14 @@ import (
 var _ = Describe("Original", func() {
 	var (
 		ctrl       *gomock.Controller
-		component1 *mockcomponent.MockComponent
-		component2 *mockcomponent.MockComponent
+		component1 *mockcomponents.MockComponent
+		component2 *mockcomponents.MockComponent
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		component1 = mockcomponent.NewMockComponent(ctrl)
-		component2 = mockcomponent.NewMockComponent(ctrl)
+		component1 = mockcomponents.NewMockComponent(ctrl)
+		component2 = mockcomponents.NewMockComponent(ctrl)
 	})
 
 	AfterEach(func() {

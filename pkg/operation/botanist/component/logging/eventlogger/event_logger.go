@@ -24,8 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -114,7 +114,7 @@ func (l *eventLogger) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return kutil.DeleteObjects(
+	return kubernetesutils.DeleteObjects(
 		ctx,
 		l.client,
 		l.emptyServiceAccount(),
@@ -300,7 +300,7 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, gutil.SecretNamePrefixShootAccess+name))
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, gardenerutils.SecretNamePrefixShootAccess+name))
 
 		return nil
 	})
@@ -348,11 +348,11 @@ func (l *eventLogger) deleteRBACForShoot(ctx context.Context) error {
 		return err
 	}
 
-	return kutil.DeleteObjects(ctx, l.client, l.newShootAccessSecret().Secret)
+	return kubernetesutils.DeleteObjects(ctx, l.client, l.newShootAccessSecret().Secret)
 }
 
-func (l *eventLogger) newShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret(name, l.namespace)
+func (l *eventLogger) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+	return gardenerutils.NewShootAccessSecret(name, l.namespace)
 }
 
 func (l *eventLogger) emptyRole() *rbacv1.Role {
@@ -379,7 +379,7 @@ func (l *eventLogger) computeCommand() []string {
 	return []string{
 		"./event-logger",
 		"--seed-event-namespaces=" + l.namespace,
-		"--shoot-kubeconfig=" + gutil.PathGenericKubeconfig,
+		"--shoot-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 		"--shoot-event-namespaces=" + metav1.NamespaceSystem + "," + metav1.NamespaceDefault,
 	}
 }

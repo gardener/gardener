@@ -26,7 +26,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/operation/garden"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("Garden", func() {
@@ -44,10 +44,10 @@ var _ = Describe("Garden", func() {
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							gutil.DNSProvider:     provider,
-							gutil.DNSDomain:       domain,
-							gutil.DNSIncludeZones: strings.Join(includeZones, ","),
-							gutil.DNSExcludeZones: strings.Join(excludeZones, ","),
+							gardenerutils.DNSProvider:     provider,
+							gardenerutils.DNSDomain:       domain,
+							gardenerutils.DNSIncludeZones: strings.Join(includeZones, ","),
+							gardenerutils.DNSExcludeZones: strings.Join(excludeZones, ","),
 						},
 					},
 					Data: data,
@@ -76,7 +76,7 @@ var _ = Describe("Garden", func() {
 				fmt.Sprintf("%s-%s", constants.GardenRoleDefaultDomain, "nip"): {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							gutil.DNSProvider: "aws",
+							gardenerutils.DNSProvider: "aws",
 						},
 					},
 				},
@@ -102,10 +102,10 @@ var _ = Describe("Garden", func() {
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							gutil.DNSProvider:     provider,
-							gutil.DNSDomain:       domain,
-							gutil.DNSIncludeZones: strings.Join(includeZones, ","),
-							gutil.DNSExcludeZones: strings.Join(excludeZones, ","),
+							gardenerutils.DNSProvider:     provider,
+							gardenerutils.DNSDomain:       domain,
+							gardenerutils.DNSIncludeZones: strings.Join(includeZones, ","),
+							gardenerutils.DNSExcludeZones: strings.Join(excludeZones, ","),
 						},
 					},
 					Data: data,
@@ -138,7 +138,7 @@ var _ = Describe("Garden", func() {
 				constants.GardenRoleInternalDomain: {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							gutil.DNSProvider: "aws",
+							gardenerutils.DNSProvider: "aws",
 						},
 					},
 				},

@@ -39,14 +39,14 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -90,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if responsibleSeedName := gutil.GetResponsibleSeedName(backupEntry.Spec.SeedName, backupEntry.Status.SeedName); responsibleSeedName != r.SeedName {
+	if responsibleSeedName := gardenerutils.GetResponsibleSeedName(backupEntry.Spec.SeedName, backupEntry.Status.SeedName); responsibleSeedName != r.SeedName {
 		log.Info("Skipping because BackupEntry is not managed by this gardenlet", "seedName", responsibleSeedName)
 		return reconcile.Result{}, nil
 	}
@@ -121,7 +121,7 @@ func (r *Reconciler) reconcileBackupEntry(
 		}
 	}
 
-	operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
+	operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
 	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, backupEntry, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
@@ -208,12 +208,12 @@ func (r *Reconciler) reconcileBackupEntry(
 
 			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupEntry.Status.LastError != nil {
-				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
+				lastError = gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
 			}
 
-			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
+			lastObservedError := gardencorev1beta1helper.NewErrorWithCodes(lastError, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 			reconcileErr := &gardencorev1beta1.LastError{
-				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
+				Codes:       gardencorev1beta1helper.ExtractErrorCodes(lastObservedError),
 				Description: lastObservedError.Error(),
 			}
 
@@ -242,7 +242,7 @@ func (r *Reconciler) reconcileBackupEntry(
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}
 
-		if kutil.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
+		if kubernetesutils.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
 			if updateErr := removeGardenerOperationAnnotation(ctx, r.GardenClient, backupEntry); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
 			}
@@ -268,7 +268,7 @@ func (r *Reconciler) deleteBackupEntry(
 	gracePeriod := computeGracePeriod(*r.Config.DeletionGracePeriodHours, r.Config.DeletionGracePeriodShootPurposes, gardencore.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
 	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || r.Clock.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
-		operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
+		operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
 		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
@@ -397,12 +397,12 @@ func (r *Reconciler) migrateBackupEntry(
 
 				lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperation.State)
 				if extensionBackupEntry.Status.LastError != nil {
-					lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
+					lastError = gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
 				}
 
-				lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
+				lastObservedError := gardencorev1beta1helper.NewErrorWithCodes(lastError, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 				migrateError := &gardencorev1beta1.LastError{
-					Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
+					Codes:       gardencorev1beta1helper.ExtractErrorCodes(lastObservedError),
 					Description: lastObservedError.Error(),
 				}
 
@@ -537,7 +537,7 @@ func (r *Reconciler) updateBackupEntryStatusPending(ctx context.Context, be *gar
 
 	be.Status.ObservedGeneration = be.Generation
 	be.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           v1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
+		Type:           gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
 		State:          gardencorev1beta1.LastOperationStatePending,
 		Progress:       0,
 		Description:    message,
@@ -597,7 +597,7 @@ func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardenco
 		gardenSecretRef = backupBucket.Status.GeneratedSecretRef
 	}
 
-	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, gardenSecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, gardenSecretRef)
 	if err != nil {
 		return nil, fmt.Errorf("could not get secret referred in core backup bucket: %w", err)
 	}
@@ -629,9 +629,9 @@ func (r *Reconciler) reconcileBackupEntryExtension(ctx context.Context, backupBu
 		return component.Deploy(ctx)
 	}
 
-	shootName := gutil.GetShootNameFromOwnerReferences(backupEntry)
+	shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry)
 	shootState := &gardencorev1alpha1.ShootState{}
-	if err := r.GardenClient.Get(ctx, kutil.Key(backupEntry.Namespace, shootName), shootState); err != nil {
+	if err := r.GardenClient.Get(ctx, kubernetesutils.Key(backupEntry.Namespace, shootName), shootState); err != nil {
 		return err
 	}
 	return component.Restore(ctx, shootState)

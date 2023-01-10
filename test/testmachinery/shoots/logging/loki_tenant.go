@@ -21,7 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
@@ -204,7 +204,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 				Name:      userLoggerName,
 			},
 		}
-		err := kutil.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
+		err := kubernetesutils.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Cleaning up operator logger app resources")
@@ -214,7 +214,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 				Name:      operatorLoggerName,
 			},
 		}
-		err = kutil.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
+		err = kubernetesutils.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Cleaning up loki's MutatingWebhook and the additional label")
@@ -223,7 +223,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 				Name: "block-loki-updates",
 			},
 		}
-		err = kutil.DeleteObject(ctx, f.SeedClient.Client(), webhookToDelete)
+		err = kubernetesutils.DeleteObject(ctx, f.SeedClient.Client(), webhookToDelete)
 		framework.ExpectNoError(err)
 
 		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {

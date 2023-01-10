@@ -22,8 +22,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,7 +107,7 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 	allowBootstrap := false
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := g.client.Get(ctx, kutil.Key(managedSeed.Name), seed); err != nil {
+	if err := g.client.Get(ctx, kubernetesutils.Key(managedSeed.Name), seed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return
 		}
@@ -124,13 +124,13 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 	if allowBootstrap {
 		switch *managedSeed.Spec.Gardenlet.Bootstrap {
 		case seedmanagementv1alpha1.BootstrapToken:
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraputil.TokenID(managedSeed.ObjectMeta))
+			secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+gardenletbootstraputil.TokenID(managedSeed.ObjectMeta))
 			g.addEdge(secretVertex, managedSeedVertex)
 
 		case seedmanagementv1alpha1.BootstrapServiceAccount:
 			var (
-				serviceAccountName     = bootstraputil.ServiceAccountName(managedSeed.Name)
-				clusterRoleBindingName = bootstraputil.ClusterRoleBindingName(managedSeed.Namespace, serviceAccountName)
+				serviceAccountName     = gardenletbootstraputil.ServiceAccountName(managedSeed.Name)
+				clusterRoleBindingName = gardenletbootstraputil.ClusterRoleBindingName(managedSeed.Namespace, serviceAccountName)
 
 				serviceAccountVertex     = g.getOrCreateVertex(VertexTypeServiceAccount, managedSeed.Namespace, serviceAccountName)
 				clusterRoleBindingVertex = g.getOrCreateVertex(VertexTypeClusterRoleBinding, "", clusterRoleBindingName)

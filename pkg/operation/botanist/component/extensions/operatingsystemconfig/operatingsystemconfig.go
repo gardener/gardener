@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -33,10 +33,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
@@ -210,7 +210,7 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha
 }
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
-	if err := gutil.
+	if err := gardenerutils.
 		NewShootAccessSecret(downloader.SecretName, o.values.Namespace).
 		WithTargetSecret(downloader.SecretName, metav1.NamespaceSystem).
 		WithTokenExpirationDuration("720h").
@@ -253,7 +253,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 				}
 
 				secret := &corev1.Secret{}
-				if err := o.client.Get(ctx, kutil.Key(osc.Status.CloudConfig.SecretRef.Namespace, osc.Status.CloudConfig.SecretRef.Name), secret); err != nil {
+				if err := o.client.Get(ctx, kubernetesutils.Key(osc.Status.CloudConfig.SecretRef.Namespace, osc.Status.CloudConfig.SecretRef.Name), secret); err != nil {
 					return err
 				}
 
@@ -378,7 +378,7 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.String, error) {
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
 			if err != nil {
 				return nil, err
 			}
@@ -399,7 +399,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
 			if err != nil {
 				return err
 			}
@@ -493,7 +493,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 	}
 	setDefaultEvictionMemoryAvailable(kubeletConfigParameters.EvictionHard, kubeletConfigParameters.EvictionSoft, o.values.MachineTypes, worker.Machine.Type)
 
-	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+	kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
 	if err != nil {
 		return deployer{}, err
 	}
@@ -511,7 +511,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		clusterDomain:           o.values.ClusterDomain,
 		criName:                 criName,
 		images:                  o.values.Images,
-		kubeletCABundle:         kubeletCASecret.Data[secretutils.DataKeyCertificateBundle],
+		kubeletCABundle:         kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
 		kubeletConfigParameters: kubeletConfigParameters,
 		kubeletCLIFlags:         kubeletCLIFlags,
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
@@ -621,7 +621,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			ClusterDomain:           d.clusterDomain,
 			CRIName:                 d.criName,
 			Images:                  d.images,
-			NodeLabels:              gutil.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
+			NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
 			KubeletCABundle:         d.kubeletCABundle,
 			KubeletConfigParameters: d.kubeletConfigParameters,
 			KubeletCLIFlags:         d.kubeletCLIFlags,

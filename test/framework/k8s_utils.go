@@ -25,7 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -238,7 +238,7 @@ func PodExecByLabel(ctx context.Context, podLabels labels.Selector, podContainer
 
 // DeleteAndWaitForResource deletes a kubernetes resource and waits for its deletion
 func DeleteAndWaitForResource(ctx context.Context, k8sClient kubernetes.Interface, resource client.Object, timeout time.Duration) error {
-	if err := kutil.DeleteObject(ctx, k8sClient.Client(), resource); err != nil {
+	if err := kubernetesutils.DeleteObject(ctx, k8sClient.Client(), resource); err != nil {
 		return err
 	}
 	return retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
@@ -271,7 +271,7 @@ func ScaleDeployment(ctx context.Context, client client.Client, desiredReplicas 
 	}
 
 	// scale the deployment
-	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
+	if err := kubernetes.ScaleDeployment(ctx, client, kubernetesutils.Key(namespace, name), *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to scale the replica count of deployment %q: '%w'", name, err)
 	}
 
@@ -286,7 +286,7 @@ func ScaleDeployment(ctx context.Context, client client.Client, desiredReplicas 
 func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namespace, name string, desiredReplicas int32) error {
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		deployment := &appsv1.Deployment{}
-		if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+		if err := client.Get(ctx, kubernetesutils.Key(namespace, name), deployment); err != nil {
 			return retry.SevereError(err)
 		}
 		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
@@ -304,7 +304,7 @@ func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namesp
 // GetDeploymentReplicas gets the spec.Replicas count from a deployment
 func GetDeploymentReplicas(ctx context.Context, client client.Client, namespace, name string) (*int32, error) {
 	deployment := &appsv1.Deployment{}
-	if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+	if err := client.Get(ctx, kubernetesutils.Key(namespace, name), deployment); err != nil {
 		return nil, err
 	}
 	replicas := deployment.Spec.Replicas

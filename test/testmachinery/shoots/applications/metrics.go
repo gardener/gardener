@@ -32,7 +32,7 @@ import (
 	"fmt"
 	"time"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 		framework.ExpectNoError(
 			retry.Until(ctx, 30*time.Second, func(ctx context.Context) (bool, error) {
 				podMetrics := &metricsv1beta1.PodMetrics{}
-				if err := f.ShootClient.Client().Get(ctx, kutil.Key(f.Namespace, podName), podMetrics); err != nil {
+				if err := f.ShootClient.Client().Get(ctx, kubernetesutils.Key(f.Namespace, podName), podMetrics); err != nil {
 					if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || apierrors.IsServiceUnavailable(err) {
 						f.Logger.Error(err, "No metrics for pod available yet", "pod", client.ObjectKeyFromObject(podMetrics))
 						return retry.MinorError(err)

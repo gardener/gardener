@@ -46,10 +46,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -249,21 +249,21 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
 	}
 
-	serverSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	serverSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        secretNamePrefixServer + e.values.Role,
 		CommonName:                  "etcd-server",
 		DNSNames:                    e.clientServiceDNSNames(),
-		CertType:                    secretutils.ServerClientCert,
+		CertType:                    secretsutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
 
-	clientSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	clientSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        SecretNameClient,
 		CommonName:                  "etcd-client",
-		CertType:                    secretutils.ClientCert,
+		CertType:                    secretsutils.ClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
@@ -437,7 +437,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -463,7 +463,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdPeerCASecretName,
 						Namespace: e.namespace,
 					},
-					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      peerServerSecretName,
@@ -479,7 +479,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -670,7 +670,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return err
 		}
 	} else {
-		if err := kutil.DeleteObjects(ctx, e.client, hvpa); err != nil {
+		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
 	}
@@ -679,7 +679,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 }
 
 func (e *etcd) Destroy(ctx context.Context) error {
-	if err := gutil.ConfirmDeletion(ctx, e.client, e.etcd); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, e.client, e.etcd); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -693,7 +693,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		objects = append(objects, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
 	}
 
-	return kutil.DeleteObjects(ctx, e.client, objects...)
+	return kubernetesutils.DeleteObjects(ctx, e.client, objects...)
 }
 
 func (e *etcd) getRoleLabels() map[string]string {
@@ -747,20 +747,20 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 func (e *etcd) clientServiceDNSNames() []string {
 	var domainNames []string
 	domainNames = append(domainNames, fmt.Sprintf("%s-local", e.etcd.Name))
-	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("%s-client", e.etcd.Name), e.namespace)...)
+	domainNames = append(domainNames, kubernetesutils.DNSNamesForService(fmt.Sprintf("%s-client", e.etcd.Name), e.namespace)...)
 
 	// The peer service needs to be considered here since the etcd-backup-restore side-car
 	// connects to member pods via pod domain names (e.g. for defragmentation).
 	// See https://github.com/gardener/etcd-backup-restore/issues/494
-	domainNames = append(domainNames, kutil.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...)
+	domainNames = append(domainNames, kubernetesutils.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...)
 
 	return domainNames
 }
 
 func (e *etcd) peerServiceDNSNames() []string {
 	return append(
-		kutil.DNSNamesForService(fmt.Sprintf("%s-peer", e.etcd.Name), e.namespace),
-		kutil.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...,
+		kubernetesutils.DNSNamesForService(fmt.Sprintf("%s-peer", e.etcd.Name), e.namespace),
+		kubernetesutils.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...,
 	)
 }
 
@@ -933,11 +933,11 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		signedByCAOptions = append(signedByCAOptions, secretsmanager.UseCurrentCA)
 	}
 
-	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        secretNamePrefixPeerServer + e.values.Role,
 		CommonName:                  "etcd-server",
 		DNSNames:                    e.peerServiceDNSNames(),
-		CertType:                    secretutils.ServerClientCert,
+		CertType:                    secretsutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, signedByCAOptions...), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {

@@ -22,8 +22,8 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -41,8 +41,8 @@ import (
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVars(
-		&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString,
-		&secretutils.GenerateKey, secretutils.FakeGenerateKey,
+		&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString,
+		&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
 	))
 })
 
@@ -71,40 +71,40 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
 		DeferCleanup(test.WithVars(
 			&rand.Reader, deterministicReader,
-			&secretutils.Clock, fakeClock,
+			&secretsutils.Clock, fakeClock,
 		))
 
 		caConfigs = []SecretConfigWithOptions{
 			{
-				Config: &secretutils.CertificateSecretConfig{
+				Config: &secretsutils.CertificateSecretConfig{
 					Name:       "my-extension-ca",
 					CommonName: "my-extension",
-					CertType:   secretutils.CACert,
+					CertType:   secretsutils.CACert,
 				},
 				Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 			},
 			{
-				Config: &secretutils.CertificateSecretConfig{
+				Config: &secretsutils.CertificateSecretConfig{
 					Name:       "my-extension-ca-2",
 					CommonName: "my-extension-2",
-					CertType:   secretutils.CACert,
+					CertType:   secretsutils.CACert,
 				},
 			},
 		}
 
 		certConfig = SecretConfigWithOptions{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:       "some-server",
 				CommonName: "some-server",
-				CertType:   secretutils.ServerCert,
+				CertType:   secretsutils.ServerCert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA("my-extension-ca"), secretsmanager.Persist()},
 		}
 
 		otherConfig = SecretConfigWithOptions{
-			Config: &secretutils.BasicAuthSecretConfig{
+			Config: &secretsutils.BasicAuthSecretConfig{
 				Name:           "some-secret",
-				Format:         secretutils.BasicAuthFormatCSV,
+				Format:         secretsutils.BasicAuthFormatCSV,
 				Username:       "admin",
 				PasswordLength: 32,
 			},
@@ -166,7 +166,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 		Context("phase == Preparing", func() {
 			BeforeEach(func() {
-				v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+				gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 					rotation.LastInitiationTime = &now
 					rotation.Phase = gardencorev1beta1.RotationPreparing
 				})
@@ -192,7 +192,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 		Context("phase == Completing", func() {
 			BeforeEach(func() {
-				v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+				gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 					rotation.LastInitiationTime = &now
 					rotation.Phase = gardencorev1beta1.RotationCompleting
 				})
@@ -228,7 +228,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 		})
 
 		It("should add the CA rotation initiation time for all CA configs", func() {
-			v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+			gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 				rotation.LastInitiationTime = &now
 			})
 			Expect(lastSecretRotationStartTimesFromCluster(cluster, secretConfigs)).To(MatchAllKeys(Keys{
@@ -283,7 +283,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 			Context("phase == Preparing", func() {
 				BeforeEach(func() {
-					v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+					gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 						rotation.LastInitiationTime = &now
 						rotation.Phase = gardencorev1beta1.RotationPreparing
 					})
@@ -308,7 +308,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 			Context("phase == Completing", func() {
 				BeforeEach(func() {
-					v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
+					gardencorev1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.CARotation) {
 						rotation.LastInitiationTime = &now
 						rotation.Phase = gardencorev1beta1.RotationCompleting
 					})
@@ -391,7 +391,7 @@ func expectSecrets(c client.Reader, secretNames ...string) {
 	ExpectWithOffset(1, secretList.Items).To(consistOfObjects(secretNames...))
 }
 
-func expectSecretsForConfig(c client.Reader, config secretutils.ConfigInterface, description string, secretNames ...string) {
+func expectSecretsForConfig(c client.Reader, config secretsutils.ConfigInterface, description string, secretNames ...string) {
 	secretList := &corev1.SecretList{}
 	ExpectWithOffset(1, c.List(context.Background(), secretList, client.MatchingLabels{"name": config.GetName()})).To(Succeed())
 	ExpectWithOffset(1, secretList.Items).To(consistOfObjects(secretNames...), description)

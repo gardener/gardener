@@ -21,12 +21,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockclusteridentity "github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -98,7 +98,7 @@ var _ = Describe("ClusterIdentity", func() {
 
 		gardenClient = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(shoot).Build()
 		seedClient = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(cluster).Build()
-		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
+		seedClientSet = kubernetesfake.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -126,7 +126,7 @@ var _ = Describe("ClusterIdentity", func() {
 		test := func() {
 			Expect(botanist.EnsureShootClusterIdentity(ctx)).NotTo(HaveOccurred())
 
-			Expect(gardenClient.Get(ctx, kutil.Key(shootNamespace, shootName), shoot)).To(Succeed())
+			Expect(gardenClient.Get(ctx, kubernetesutils.Key(shootNamespace, shootName), shoot)).To(Succeed())
 			Expect(shoot.Status.ClusterIdentity).NotTo(BeNil())
 			Expect(*shoot.Status.ClusterIdentity).To(Equal(expectedShootClusterIdentity))
 		}

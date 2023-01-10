@@ -30,7 +30,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/rotation"
@@ -103,7 +103,7 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *ETCDEncryptionKeyVerifier) ExpectPreparingStatus(g Gomega) {
-	g.Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
+	g.Expect(gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
@@ -159,7 +159,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ETCDEncryptionKeyVerifier) ExpectCompletingStatus(g Gomega) {
-	g.Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
+	g.Expect(gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
@@ -167,7 +167,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
 	etcdEncryptionKeyRotation := v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
-	Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
+	Expect(gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
 	Expect(etcdEncryptionKeyRotation.LastCompletionTime.Time.UTC().After(etcdEncryptionKeyRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
 	By("Verifying new etcd encryption key secret")

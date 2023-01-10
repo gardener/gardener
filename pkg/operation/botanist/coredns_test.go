@@ -22,7 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
@@ -67,10 +67,10 @@ var _ = Describe("CoreDNS", func() {
 	})
 
 	Describe("#DefaultCoreDNS", func() {
-		var kubernetesClient *mockkubernetes.MockInterface
+		var kubernetesClient *kubernetesmock.MockInterface
 
 		BeforeEach(func() {
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot.Networks = &shootpkg.Networks{
@@ -142,7 +142,7 @@ var _ = Describe("CoreDNS", func() {
 	Describe("#DeployCoreDNS", func() {
 		var (
 			coreDNS          *mockcoredns.MockInterface
-			kubernetesClient *mockkubernetes.MockInterface
+			kubernetesClient *kubernetesmock.MockInterface
 			c                client.Client
 
 			ctx     = context.TODO()
@@ -151,7 +151,7 @@ var _ = Describe("CoreDNS", func() {
 
 		BeforeEach(func() {
 			coreDNS = mockcoredns.NewMockInterface(ctrl)
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 			botanist.ShootClientSet = kubernetesClient

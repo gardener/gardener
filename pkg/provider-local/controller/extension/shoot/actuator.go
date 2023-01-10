@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/go-logr/logr"
@@ -120,7 +120,7 @@ func getLabels() map[string]string {
 }
 
 func getShootResources() (map[string][]byte, error) {
-	shootRegistry := managedresources.NewRegistry(gardenerkubernetes.ShootScheme, gardenerkubernetes.ShootCodec, gardenerkubernetes.ShootSerializer)
+	shootRegistry := managedresources.NewRegistry(kubernetesclient.ShootScheme, kubernetesclient.ShootCodec, kubernetesclient.ShootSerializer)
 	return shootRegistry.AddAllAndSerialize(
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{

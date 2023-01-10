@@ -24,7 +24,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/seed/validator"
 )
@@ -33,7 +33,7 @@ var _ = Describe("validator", func() {
 	Describe("#Admit", func() {
 		var (
 			admissionHandler    *ValidateSeed
-			coreInformerFactory coreinformers.SharedInformerFactory
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
 			backupBucket        core.BackupBucket
 			seed                core.Seed
 			shoot               core.Shoot
@@ -74,7 +74,7 @@ var _ = Describe("validator", func() {
 
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 		})
 
@@ -162,7 +162,7 @@ var _ = Describe("validator", func() {
 
 		It("should not return error if ShootLister and SeedLister are set", func() {
 			dr, _ := New()
-			dr.SetInternalCoreInformerFactory(coreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 

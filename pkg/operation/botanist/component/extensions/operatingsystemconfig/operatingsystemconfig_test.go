@@ -31,9 +31,9 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -449,7 +449,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc := mockclient.NewMockClient(ctrl)
 				mc.EXPECT().Status().Return(mc).AnyTimes()
 
-				mc.EXPECT().Get(ctx, kutil.Key(namespace, "shoot-access-cloud-config-downloader"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				mc.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-access-cloud-config-downloader"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				mc.EXPECT().Create(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "shoot-access-cloud-config-downloader",
@@ -734,7 +734,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should return error if not deleted successfully", func() {
 				defer test.WithVars(
 					&extensions.TimeNow, mockNow.Do,
-					&gutil.TimeNow, mockNow.Do,
+					&gardenerutils.TimeNow, mockNow.Do,
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -743,7 +743,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Name:      "osc1",
 						Namespace: namespace,
 						Annotations: map[string]string{
-							gutil.ConfirmationDeletion:         "true",
+							gardenerutils.ConfirmationDeletion: "true",
 							v1beta1constants.GardenerTimestamp: now.UTC().String(),
 						},
 					},

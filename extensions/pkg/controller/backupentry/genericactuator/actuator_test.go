@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
-	mockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
+	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
@@ -125,7 +125,7 @@ var _ = Describe("Actuator", func() {
 
 			It("should create secrets", func() {
 				// Create mock values provider
-				backupEntryDelegate := mockgenericactuator.NewMockBackupEntryDelegate(ctrl)
+				backupEntryDelegate := extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
 				backupEntryDelegate.EXPECT().GetETCDSecretData(context.TODO(), gomock.AssignableToTypeOf(logr.Logger{}), be, backupProviderSecretData).Return(etcdBackupSecretData, nil)
 
 				// Create actuator
@@ -153,7 +153,7 @@ var _ = Describe("Actuator", func() {
 
 			It("should not create secrets", func() {
 				// Create mock values provider
-				backupEntryDelegate := mockgenericactuator.NewMockBackupEntryDelegate(ctrl)
+				backupEntryDelegate := extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
 
 				// Create actuator
 				a = genericactuator.NewActuator(backupEntryDelegate)

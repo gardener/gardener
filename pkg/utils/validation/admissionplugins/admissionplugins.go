@@ -21,7 +21,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	utilsversion "github.com/gardener/gardener/pkg/utils/version"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // admissionPluginsVersionRanges contains the version ranges for all Kubernetes admission plugins.
@@ -107,7 +107,7 @@ func (r *AdmissionPluginVersionRange) Contains(version string) (bool, error) {
 	default:
 		constraint = "*"
 	}
-	return utilsversion.CheckVersionMeetsConstraint(version, constraint)
+	return versionutils.CheckVersionMeetsConstraint(version, constraint)
 }
 
 func getAllForbiddenPlugins() []string {

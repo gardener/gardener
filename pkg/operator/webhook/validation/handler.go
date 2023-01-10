@@ -25,8 +25,8 @@ import (
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler checks, if the secrets contains a kubeconfig and denies kubeconfigs with invalid fields (e.g. tokenFile or
@@ -68,7 +68,7 @@ func validateUpdate(oldObj, newObj runtime.Object) error {
 
 // ValidateCreate performs the validation.
 func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	otherGardensAlreadyExist, err := kutil.ResourcesExist(ctx, h.RuntimeClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	otherGardensAlreadyExist, err := kubernetesutils.ResourcesExist(ctx, h.RuntimeClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -91,5 +91,5 @@ func (h *Handler) ValidateDelete(_ context.Context, obj runtime.Object) error {
 		return fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
 	}
 
-	return gutil.CheckIfDeletionIsConfirmed(garden)
+	return gardenerutils.CheckIfDeletionIsConfirmed(garden)
 }

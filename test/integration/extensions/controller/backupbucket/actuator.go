@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
 
 	"github.com/go-logr/logr"
@@ -80,7 +80,7 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, bb *extensionsv1al
 	}
 
 	namespace := &corev1.Namespace{}
-	if err := a.client.Get(ctx, kutil.Key(bb.Spec.SecretRef.Namespace), namespace); err != nil {
+	if err := a.client.Get(ctx, kubernetesutils.Key(bb.Spec.SecretRef.Namespace), namespace); err != nil {
 		return err
 	}
 

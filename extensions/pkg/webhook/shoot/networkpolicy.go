@@ -25,12 +25,12 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // GetNetworkPolicyMeta returns the network policy object with filled meta data.
 func GetNetworkPolicyMeta(namespace, extensionName string) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{ObjectMeta: kutil.ObjectMeta(namespace, "gardener-extension-"+extensionName)}
+	return &networkingv1.NetworkPolicy{ObjectMeta: kubernetesutils.ObjectMeta(namespace, "gardener-extension-"+extensionName)}
 }
 
 // EnsureNetworkPolicy ensures that the required network policy that allows the kube-apiserver running in the given

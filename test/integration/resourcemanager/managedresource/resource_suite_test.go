@@ -36,11 +36,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -62,7 +62,7 @@ var (
 
 	testNamespace *corev1.Namespace
 
-	filter *managerpredicate.ClassFilter
+	filter *resourcemanagerpredicate.ClassFilter
 )
 
 var _ = BeforeSuite(func() {
@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 
 	fakeClock = testclock.NewFakeClock(time.Now())
 	By("registering controller")
-	filter = predicate.NewClassFilter(resourcemanagerconfigv1alpha1.DefaultResourceClass)
+	filter = predicate.NewClassFilter(resourcemanagerv1alpha1.DefaultResourceClass)
 	Expect((&managedresource.Reconciler{
 		Config: config.ManagedResourceControllerConfig{
 			ConcurrentSyncs:     pointer.Int(5),

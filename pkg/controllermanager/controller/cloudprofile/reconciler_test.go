@@ -31,7 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	It("should return nil because object not found", func() {
-		c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+		c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -76,7 +76,7 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	It("should return err because object reading failed", func() {
-		c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(fakeErr)
+		c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(fakeErr)
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -85,7 +85,7 @@ var _ = Describe("Reconciler", func() {
 
 	Context("when deletion timestamp not set", func() {
 		BeforeEach(func() {
-			c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*obj = *cloudProfile
 				return nil
 			})
@@ -122,7 +122,7 @@ var _ = Describe("Reconciler", func() {
 			cloudProfile.DeletionTimestamp = &now
 			cloudProfile.Finalizers = []string{finalizerName}
 
-			c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*obj = *cloudProfile
 				return nil
 			})

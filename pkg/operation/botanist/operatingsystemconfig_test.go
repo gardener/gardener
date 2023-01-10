@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
@@ -34,7 +34,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 
@@ -203,9 +203,9 @@ var _ = Describe("operatingsystemconfig", func() {
 
 	Describe("#DeployManagedResourceForCloudConfigExecutor", func() {
 		var (
-			kubernetesInterfaceSeed  *mockkubernetes.MockInterface
+			kubernetesInterfaceSeed  *kubernetesmock.MockInterface
 			kubernetesClientSeed     *mockclient.MockClient
-			kubernetesInterfaceShoot *mockkubernetes.MockInterface
+			kubernetesInterfaceShoot *kubernetesmock.MockInterface
 			kubernetesClientShoot    *mockclient.MockClient
 
 			namespace      = "shoot--foo--bar"
@@ -248,11 +248,11 @@ var _ = Describe("operatingsystemconfig", func() {
 		)
 
 		BeforeEach(func() {
-			kubernetesInterfaceSeed = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesInterfaceSeed = kubernetesmock.NewMockInterface(ctrl)
 			kubernetesClientSeed = mockclient.NewMockClient(ctrl)
 			botanist.SeedClientSet = kubernetesInterfaceSeed
 
-			kubernetesInterfaceShoot = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesInterfaceShoot = kubernetesmock.NewMockInterface(ctrl)
 			kubernetesClientShoot = mockclient.NewMockClient(ctrl)
 			botanist.ShootClientSet = kubernetesInterfaceShoot
 
@@ -327,7 +327,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						// managed resource secret reconciliation for executor scripts for worker pools
 						// worker pool 1
 						worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits)
-						kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+						kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "managedresource-shoot-cloud-config-execution-" + worker1Name,
@@ -353,7 +353,7 @@ metadata:
 
 						// worker pool 2
 						worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
-						kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+						kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "managedresource-shoot-cloud-config-execution-" + worker2Name,
@@ -379,7 +379,7 @@ metadata:
 
 						// managed resource secret reconciliation for RBAC resources
 						downloaderRBACResourcesData, _ := DownloaderGenerateRBACResourcesDataFn([]string{worker1Key, worker2Key})
-						kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-rbac"), gomock.AssignableToTypeOf(&corev1.Secret{}))
+						kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-rbac"), gomock.AssignableToTypeOf(&corev1.Secret{}))
 						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "managedresource-shoot-cloud-config-rbac",
@@ -392,7 +392,7 @@ metadata:
 
 						if params.managedResourceSecretReconciliationError == nil {
 							// managed resource reconciliation
-							kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "shoot-cloud-config-execution"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(params.managedResourceReadError)
+							kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-cloud-config-execution"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(params.managedResourceReadError)
 
 							if params.managedResourceReadError == nil {
 								kubernetesClientSeed.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, obj *resourcesv1alpha1.ManagedResource, _ ...client.UpdateOption) error {

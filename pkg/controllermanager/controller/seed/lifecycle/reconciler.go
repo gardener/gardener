@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -66,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	lease := &coordinationv1.Lease{}
-	if err := r.Client.Get(ctx, kutil.Key(r.LeaseNamespace, seed.Name), lease); client.IgnoreNotFound(err) != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(r.LeaseNamespace, seed.Name), lease); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -107,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// If the gardenlet's client certificate is expired and the seed belongs to a `ManagedSeed` then we reconcile it in
 	// order to re-bootstrap the gardenlet.
 	if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(r.Clock.Now().UTC()) {
-		managedSeed, err := kutil.GetManagedSeedByName(ctx, r.Client, seed.Name)
+		managedSeed, err := kubernetesutils.GetManagedSeedByName(ctx, r.Client, seed.Name)
 		if err != nil {
 			return reconcile.Result{}, err
 		}

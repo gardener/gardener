@@ -22,19 +22,19 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
@@ -81,10 +81,10 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		MaxConcurrentCSRApproverWorkers:      pointer.Int(5),
 		PodTopologySpreadConstraintsEnabled:  true,
 		PriorityClassName:                    v1beta1constants.PriorityClassNameShootControlPlane400,
-		SchedulingProfile:                    v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
+		SchedulingProfile:                    gardencorev1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
-		SystemComponentTolerations:           gutil.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
+		SystemComponentTolerations:           gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
 		KubernetesVersion:                    version,
@@ -160,7 +160,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
+	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
 func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bool, error) {
@@ -168,7 +168,7 @@ func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bo
 		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}
 
-	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
+	shootAccessSecret := gardenerutils.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
@@ -203,7 +203,7 @@ func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bo
 		return true, nil // ManagedResource (containing the RBAC resources) does not yet exist.
 	}
 
-	if conditionApplied := v1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied); conditionApplied != nil &&
+	if conditionApplied := gardencorev1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied); conditionApplied != nil &&
 		conditionApplied.Status == gardencorev1beta1.ConditionFalse &&
 		(strings.Contains(conditionApplied.Message, `forbidden: User "system:serviceaccount:kube-system:gardener-resource-manager" cannot`) ||
 			strings.Contains(conditionApplied.Message, ": Unauthorized")) {
@@ -219,25 +219,25 @@ func (b *Botanist) reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx
 		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
-	return b.SecretsManager.Generate(ctx, &secretutils.ControlPlaneSecretConfig{
+	return b.SecretsManager.Generate(ctx, &secretsutils.ControlPlaneSecretConfig{
 		Name: "shoot-access-gardener-resource-manager-bootstrap",
-		CertificateSecretConfig: &secretutils.CertificateSecretConfig{
+		CertificateSecretConfig: &secretsutils.CertificateSecretConfig{
 			CommonName:                  "gardener.cloud:system:gardener-resource-manager",
 			Organization:                []string{user.SystemPrivilegedGroup},
-			CertType:                    secretutils.ClientCert,
+			CertType:                    secretsutils.ClientCert,
 			Validity:                    pointer.Duration(10 * time.Minute),
 			SkipPublishingCACertificate: true,
 		},
-		KubeConfigRequests: []secretutils.KubeConfigRequest{{
+		KubeConfigRequests: []secretsutils.KubeConfigRequest{{
 			ClusterName:   b.Shoot.SeedNamespace,
 			APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			CAData:        caBundleSecret.Data[secretutils.DataKeyCertificateBundle],
+			CAData:        caBundleSecret.Data[secretsutils.DataKeyCertificateBundle],
 		}},
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient))
 }
 
 func (b *Botanist) waitUntilGardenerResourceManagerBootstrapped(ctx context.Context) error {
-	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
+	shootAccessSecret := gardenerutils.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
 
 	if err := retryutils.Until(ctx, 5*time.Second, func(ctx context.Context) (bool, error) {
 		if err2 := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err2 != nil {

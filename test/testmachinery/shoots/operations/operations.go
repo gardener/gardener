@@ -56,7 +56,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
@@ -169,7 +169,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 	f.Beta().Serial().CIt("should rotate the ssh keypair for a shoot cluster", func(ctx context.Context) {
 		secret := &corev1.Secret{}
-		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
+		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
 		preRotationPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
 		preRotationPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
@@ -184,11 +184,11 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 			gomega.Expect(v).NotTo(gomega.Equal(v1beta1constants.ShootOperationRotateSSHKeypair))
 		}
 
-		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
+		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
 		postRotationPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
 		postRotationPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
 
-		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixOldSSHKeypair)}, secret)).To(gomega.Succeed())
+		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixOldSSHKeypair)}, secret)).To(gomega.Succeed())
 		postRotationOldPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
 		postRotationOldPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
 

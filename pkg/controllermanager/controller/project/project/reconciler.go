@@ -43,8 +43,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/projectrbac"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Projects.
@@ -202,7 +202,7 @@ func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.
 		// a different Project. That's why we try to create the namespace first before updating spec.namespace.
 		// If the namespace is already taken, the Project will stay in Failed state but the owner can update spec.namespace
 		// to an arbitrary namespace to unblock their Project.
-		namespaceName = fmt.Sprintf("%s%s-%s", gutil.ProjectNamespacePrefix, project.Name, utils.ComputeSHA256Hex([]byte(project.UID))[:5])
+		namespaceName = fmt.Sprintf("%s%s-%s", gardenerutils.ProjectNamespacePrefix, project.Name, utils.ComputeSHA256Hex([]byte(project.UID))[:5])
 	}
 
 	namespace := &corev1.Namespace{}
@@ -235,7 +235,7 @@ func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.
 
 	before := namespace.DeepCopy()
 
-	namespace.OwnerReferences = kutil.MergeOwnerReferences(namespace.OwnerReferences, *ownerReference)
+	namespace.OwnerReferences = kubernetesutils.MergeOwnerReferences(namespace.OwnerReferences, *ownerReference)
 	namespace.Labels = utils.MergeStringMaps(namespace.Labels, projectLabels)
 	namespace.Annotations = utils.MergeStringMaps(namespace.Annotations, projectAnnotations)
 
@@ -287,7 +287,7 @@ func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNa
 	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, projectResourceQuota, func() error {
-		projectResourceQuota.SetOwnerReferences(kutil.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
+		projectResourceQuota.SetOwnerReferences(kubernetesutils.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
 		projectResourceQuota.Labels = utils.MergeStringMaps(projectResourceQuota.Labels, resourceQuota.Labels)
 		projectResourceQuota.Annotations = utils.MergeStringMaps(projectResourceQuota.Annotations, resourceQuota.Annotations)
 		quotas := make(map[corev1.ResourceName]resource.Quantity)
@@ -329,7 +329,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 	if namespace := project.Spec.Namespace; namespace != nil {
 		log = log.WithValues("namespaceName", *namespace)
 
-		inUse, err := kutil.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(*namespace))
+		inUse, err := kubernetesutils.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(*namespace))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}
@@ -366,7 +366,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 
 func (r *Reconciler) releaseNamespace(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
 	namespace := &corev1.Namespace{}
-	if err := r.Client.Get(ctx, kutil.Key(namespaceName), namespace); err != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(namespaceName), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

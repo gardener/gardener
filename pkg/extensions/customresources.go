@@ -27,8 +27,8 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -142,7 +142,7 @@ func DeleteExtensionObject(
 	obj extensionsv1alpha1.Object,
 	deleteOpts ...client.DeleteOption,
 ) error {
-	if err := gutil.ConfirmDeletion(ctx, c, obj); err != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, c, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
@@ -403,8 +403,8 @@ func WaitUntilExtensionObjectsMigrated(
 // AnnotateObjectWithOperation annotates the object with the provided operation annotation value.
 func AnnotateObjectWithOperation(ctx context.Context, w client.Writer, obj client.Object, operation string) error {
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
-	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerOperation, operation)
-	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerOperation, operation)
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 	return w.Patch(ctx, obj, patch)
 }
 

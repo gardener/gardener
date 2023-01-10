@@ -21,7 +21,7 @@ import (
 	"github.com/go-logr/logr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
@@ -56,7 +56,7 @@ var (
 	restConfig          *rest.Config
 	testEnv             *gardenerenvtest.GardenerTestEnvironment
 	testClient          client.Client
-	versionedTestClient *gardenversionedcoreclientset.Clientset
+	versionedTestClient *gardencoreversionedclientset.Clientset
 
 	testNamespace     *corev1.Namespace
 	testSecretBinding *gardencorev1beta1.SecretBinding
@@ -90,7 +90,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(testClient).NotTo(BeNil())
 
-	versionedTestClient, err = gardenversionedcoreclientset.NewForConfig(restConfig)
+	versionedTestClient, err = gardencoreversionedclientset.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(versionedTestClient).NotTo(BeNil())
 

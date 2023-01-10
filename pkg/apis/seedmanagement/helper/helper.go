@@ -19,7 +19,7 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 )
 
 // GetBootstrap returns the value of the given Bootstrap, or None if nil.
@@ -37,7 +37,7 @@ func ExtractSeedSpec(managedSeed *seedmanagement.ManagedSeed) (*gardencore.SeedS
 		return nil, fmt.Errorf("no gardenlet config specified in managedseed %s", managedSeed.Name)
 	}
 
-	gardenletConfig, err := confighelper.ConvertGardenletConfiguration(gardenlet.Config)
+	gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(gardenlet.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert gardenlet config for managedseed %s: %w", managedSeed.Name, err)
 	}

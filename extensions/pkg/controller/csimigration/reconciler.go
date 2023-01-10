@@ -25,7 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
@@ -104,7 +104,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, cluster *ex
 		// Check if a ControlPlane object exists for the cluster. If false then it is a new shoot that was created with
 		// at least the minimum Kubernetes version that is used for CSI migration. In this case we can directly set the
 		// CSIMigration<Provider>Complete annotations and proceed.
-		if err := r.client.Get(ctx, kutil.Key(cluster.Name, shoot.Name), &extensionsv1alpha1.ControlPlane{}); err != nil {
+		if err := r.client.Get(ctx, kubernetesutils.Key(cluster.Name, shoot.Name), &extensionsv1alpha1.ControlPlane{}); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return reconcile.Result{}, err
 			}

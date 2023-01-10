@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	errorutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
+	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,7 +80,7 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	}
 
 	if err := r.actuator.Reconcile(ctx, log, worker); err != nil {
-		return errorutils.ReconcileErr(fmt.Errorf("error updating Worker state: %w", err))
+		return reconcilerutils.ReconcileErr(fmt.Errorf("error updating Worker state: %w", err))
 	}
 
 	log.Info("Successfully updated Worker state")

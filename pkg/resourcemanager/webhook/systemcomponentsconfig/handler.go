@@ -26,8 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	gsets "github.com/gardener/gardener/pkg/utils/sets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	setsutils "github.com/gardener/gardener/pkg/utils/sets"
 )
 
 // Handler contains required nodeSelector and tolerations information.
@@ -55,9 +55,9 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		return err
 	}
 
-	log := h.Logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
+	log := h.Logger.WithValues("pod", kubernetesutils.ObjectKeyForCreateWebhooks(pod, req))
 
-	if kutil.PodManagedByDaemonSet(pod) {
+	if kubernetesutils.PodManagedByDaemonSet(pod) {
 		log.Info("Pod is managed by DaemonSet, skipping further handling")
 		return nil
 	}
@@ -82,11 +82,11 @@ func (h *Handler) handleTolerations(ctx context.Context, log logr.Logger, pod *c
 	}
 
 	var (
-		tolerations = gsets.New[corev1.Toleration]()
+		tolerations = setsutils.New[corev1.Toleration]()
 
 		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
 		// before they are added to the tolerations set.
-		comparableTolerations = &kutil.ComparableTolerations{}
+		comparableTolerations = &kubernetesutils.ComparableTolerations{}
 	)
 
 	// Add existing tolerations from pod to map.
@@ -107,7 +107,7 @@ func (h *Handler) handleTolerations(ctx context.Context, log logr.Logger, pod *c
 				log.Info("Kubernetes reserved taint is skipped for toleration calculation", "node", client.ObjectKeyFromObject(&node), "taint", taint.Key)
 				continue
 			}
-			toleration := kutil.TolerationForTaint(taint)
+			toleration := kubernetesutils.TolerationForTaint(taint)
 			tolerations = tolerations.Insert(comparableTolerations.Transform(toleration))
 		}
 	}

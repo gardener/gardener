@@ -24,7 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -49,7 +49,7 @@ func Register(plugins *admission.Plugins) {
 // Bastion contains listers and and admission handler.
 type Bastion struct {
 	*admission.Handler
-	coreClient coreclientset.Interface
+	coreClient gardencoreclientset.Interface
 	readyFunc  admission.ReadyFunc
 }
 
@@ -73,7 +73,7 @@ func (v *Bastion) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreClientset sets the garden core clientset.
-func (v *Bastion) SetInternalCoreClientset(c coreclientset.Interface) {
+func (v *Bastion) SetInternalCoreClientset(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 

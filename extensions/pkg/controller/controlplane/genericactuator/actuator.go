@@ -23,15 +23,15 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
-	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -67,8 +67,8 @@ type ValuesProvider interface {
 // the values provided by the given values provider.
 func NewActuator(
 	providerName string,
-	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
-	exposureSecretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
+	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gardenerutils.ShootAccessSecret,
+	exposureSecretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gardenerutils.ShootAccessSecret,
 	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
@@ -110,10 +110,10 @@ type actuator struct {
 	providerName string
 
 	secretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
-	shootAccessSecretsFunc func(namespace string) []*gutil.ShootAccessSecret
+	shootAccessSecretsFunc func(namespace string) []*gardenerutils.ShootAccessSecret
 
 	exposureSecretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
-	exposureShootAccessSecretsFunc func(namespace string) []*gutil.ShootAccessSecret
+	exposureShootAccessSecretsFunc func(namespace string) []*gardenerutils.ShootAccessSecret
 
 	configChart                chart.Interface
 	controlPlaneChart          chart.Interface
@@ -128,8 +128,8 @@ type actuator struct {
 	atomicShootWebhookConfig   *atomic.Value
 	webhookServerPort          int
 
-	gardenerClientset gardenerkubernetes.Interface
-	chartApplier      gardenerkubernetes.ChartApplier
+	gardenerClientset kubernetesclient.Interface
+	chartApplier      kubernetesclient.ChartApplier
 	client            client.Client
 
 	newSecretsManager newSecretsManagerFunc
@@ -143,7 +143,7 @@ func (a *actuator) InjectFunc(f inject.Func) error {
 // InjectConfig injects the given config into the actuator.
 func (a *actuator) InjectConfig(config *rest.Config) error {
 	var err error
-	a.gardenerClientset, err = gardenerkubernetes.NewWithConfig(gardenerkubernetes.WithRESTConfig(config))
+	a.gardenerClientset, err = kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(config))
 	if err != nil {
 		return fmt.Errorf("could not create Gardener client: %w", err)
 	}
@@ -213,14 +213,14 @@ func (a *actuator) reconcileControlPlaneExposure(
 	log.Info("Deploying control plane exposure secrets")
 	deployedSecrets, err := extensionssecretsmanager.GenerateAllSecrets(ctx, sm, secretConfigs)
 	if err != nil {
-		return false, fmt.Errorf("could not deploy control plane exposure secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return false, fmt.Errorf("could not deploy control plane exposure secrets for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
 	// Deploy shoot access secrets
 	if a.exposureShootAccessSecretsFunc != nil {
 		for _, shootAccessSecret := range a.exposureShootAccessSecretsFunc(cp.Namespace) {
 			if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
-				return false, fmt.Errorf("could not reconcile control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+				return false, fmt.Errorf("could not reconcile control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kubernetesutils.ObjectName(cp), err)
 			}
 		}
 	}
@@ -238,7 +238,7 @@ func (a *actuator) reconcileControlPlaneExposure(
 	log.Info("Applying control plane exposure chart", "values", values)
 	version := cluster.Shoot.Spec.Kubernetes.Version
 	if err := a.controlPlaneExposureChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
-		return false, fmt.Errorf("could not apply control plane exposure chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return false, fmt.Errorf("could not apply control plane exposure chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
 	return false, sm.Cleanup(ctx)
@@ -262,7 +262,7 @@ func (a *actuator) reconcileControlPlane(
 			return false, fmt.Errorf("expected *admissionregistrationv1.MutatingWebhookConfiguration, got %T", value)
 		}
 
-		if err := extensionswebhookshoot.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.providerName, ShootWebhooksResourceName, a.webhookServerPort, webhookConfig, cluster); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.providerName, ShootWebhooksResourceName, a.webhookServerPort, webhookConfig, cluster); err != nil {
 			return false, fmt.Errorf("could not reconcile shoot webhooks: %w", err)
 		}
 	}
@@ -281,14 +281,14 @@ func (a *actuator) reconcileControlPlane(
 	log.Info("Deploying secrets")
 	deployedSecrets, err := extensionssecretsmanager.GenerateAllSecrets(ctx, sm, secretConfigs)
 	if err != nil {
-		return false, fmt.Errorf("could not deploy secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return false, fmt.Errorf("could not deploy secrets for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
 	// Deploy shoot access secrets
 	if a.shootAccessSecretsFunc != nil {
 		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp.Namespace) {
 			if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
-				return false, fmt.Errorf("could not reconcile shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+				return false, fmt.Errorf("could not reconcile shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kubernetesutils.ObjectName(cp), err)
 			}
 		}
 	}
@@ -303,7 +303,7 @@ func (a *actuator) reconcileControlPlane(
 		// Apply config chart
 		log.Info("Applying configuration chart")
 		if err := a.configChart.Apply(ctx, a.chartApplier, cp.Namespace, nil, "", "", values); err != nil {
-			return false, fmt.Errorf("could not apply configuration chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return false, fmt.Errorf("could not apply configuration chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
@@ -349,7 +349,7 @@ func (a *actuator) reconcileControlPlane(
 
 		log.Info("Applying control plane chart")
 		if err := a.controlPlaneChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
-			return false, fmt.Errorf("could not apply control plane chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return false, fmt.Errorf("could not apply control plane chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
@@ -367,7 +367,7 @@ func (a *actuator) reconcileControlPlane(
 		}
 
 		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
-			return false, fmt.Errorf("could not apply control plane shoot chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return false, fmt.Errorf("could not apply control plane shoot chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
@@ -379,7 +379,7 @@ func (a *actuator) reconcileControlPlane(
 		}
 
 		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootCRDsChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootCRDsChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
-			return false, fmt.Errorf("could not apply control plane shoot CRDs chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return false, fmt.Errorf("could not apply control plane shoot CRDs chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
@@ -391,7 +391,7 @@ func (a *actuator) reconcileControlPlane(
 		}
 
 		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, StorageClassesChartResourceName, false, a.client, chartRenderer, a.storageClassesChart, values, a.imageVector, metav1.NamespaceSystem, version, true, true); err != nil {
-			return false, fmt.Errorf("could not apply storage classes chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return false, fmt.Errorf("could not apply storage classes chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
@@ -429,14 +429,14 @@ func (a *actuator) deleteControlPlaneExposure(
 	if a.controlPlaneExposureChart != nil {
 		log.Info("Deleting control plane exposure with objects")
 		if err := a.controlPlaneExposureChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete control plane exposure objects for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("could not delete control plane exposure objects for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
 	if a.exposureShootAccessSecretsFunc != nil {
 		for _, shootAccessSecret := range a.exposureShootAccessSecretsFunc(cp.Namespace) {
-			if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
-				return fmt.Errorf("could not delete control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+			if err := kubernetesutils.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
+				return fmt.Errorf("could not delete control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kubernetesutils.ObjectName(cp), err)
 			}
 		}
 	}
@@ -459,41 +459,41 @@ func (a *actuator) deleteControlPlane(
 
 	// Delete the managed resources
 	if err := managedresources.Delete(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, false); err != nil {
-		return fmt.Errorf("could not delete managed resource containing storage classes chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return fmt.Errorf("could not delete managed resource containing storage classes chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 	if a.controlPlaneShootCRDsChart != nil {
 		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName, false); err != nil {
-			return fmt.Errorf("could not delete managed resource containing shoot CRDs chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("could not delete managed resource containing shoot CRDs chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 
 		// Wait for shoot CRDs chart ManagedResource deletion before deleting the shoot chart ManagedResource
 		timeoutCtx1, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 		if err := managedresources.WaitUntilDeleted(timeoutCtx1, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
-			return fmt.Errorf("error while waiting for managed resource containing shoot CRDs chart for controlplane '%s' to be deleted: %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("error while waiting for managed resource containing shoot CRDs chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 	if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, false); err != nil {
-		return fmt.Errorf("could not delete managed resource containing shoot chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return fmt.Errorf("could not delete managed resource containing shoot chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
 	timeoutCtx2, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	if err := managedresources.WaitUntilDeleted(timeoutCtx2, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
-		return fmt.Errorf("error while waiting for managed resource containing storage classes chart for controlplane '%s' to be deleted: %w", kutil.ObjectName(cp), err)
+		return fmt.Errorf("error while waiting for managed resource containing storage classes chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
 	}
 
 	timeoutCtx3, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	if err := managedresources.WaitUntilDeleted(timeoutCtx3, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
-		return fmt.Errorf("error while waiting for managed resource containing shoot chart for controlplane '%s' to be deleted: %w", kutil.ObjectName(cp), err)
+		return fmt.Errorf("error while waiting for managed resource containing shoot chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
 	}
 
 	// Delete control plane objects
 	if a.controlPlaneChart != nil {
 		log.Info("Deleting control plane objects")
 		if err := a.controlPlaneChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete control plane objects for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("could not delete control plane objects for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
@@ -501,32 +501,32 @@ func (a *actuator) deleteControlPlane(
 		// Delete config objects
 		log.Info("Deleting configuration objects")
 		if err := a.configChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete configuration objects for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("could not delete configuration objects for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
 	if a.shootAccessSecretsFunc != nil {
 		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp.Namespace) {
-			if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
-				return fmt.Errorf("could not delete shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+			if err := kubernetesutils.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
+				return fmt.Errorf("could not delete shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kubernetesutils.ObjectName(cp), err)
 			}
 		}
 	}
 
 	if a.atomicShootWebhookConfig != nil {
-		networkPolicy := extensionswebhookshoot.GetNetworkPolicyMeta(cp.Namespace, a.providerName)
+		networkPolicy := extensionsshootwebhook.GetNetworkPolicyMeta(cp.Namespace, a.providerName)
 		if err := a.client.Delete(ctx, networkPolicy); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not delete network policy for shoot webhooks in namespace '%s': %w", cp.Namespace, err)
 		}
 
 		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ShootWebhooksResourceName, false); err != nil {
-			return fmt.Errorf("could not delete managed resource containing shoot webhooks for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("could not delete managed resource containing shoot webhooks for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 
 		timeoutCtx4, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 		if err := managedresources.WaitUntilDeleted(timeoutCtx4, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
-			return fmt.Errorf("error while waiting for managed resource containing shoot webhooks for controlplane '%s' to be deleted: %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("error while waiting for managed resource containing shoot webhooks for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 
@@ -589,15 +589,15 @@ func (a *actuator) Migrate(
 ) error {
 	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
 	if err := managedresources.SetKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, true); err != nil {
-		return fmt.Errorf("could not keep objects of managed resource containing shoot chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return fmt.Errorf("could not keep objects of managed resource containing shoot chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 	if a.controlPlaneShootCRDsChart != nil {
 		if err := managedresources.SetKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName, true); err != nil {
-			return fmt.Errorf("could not keep objects of managed resource containing shoot CRDs chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("could not keep objects of managed resource containing shoot CRDs chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
 	if err := managedresources.SetKeepObjects(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, true); err != nil {
-		return fmt.Errorf("could not keep objects of managed resource containing storage classes chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return fmt.Errorf("could not keep objects of managed resource containing storage classes chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
 	return a.Delete(ctx, log, cp, cluster)

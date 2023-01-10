@@ -22,7 +22,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -137,8 +137,8 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				APIServerClusterIP: clusterIP,
 				NamespaceUID:       b.SeedNamespaceObject.UID,
 				Hosts: []string{
-					gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-					gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),

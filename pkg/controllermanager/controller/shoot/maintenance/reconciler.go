@@ -26,8 +26,8 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
@@ -88,7 +88,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) (time.Duration, time.Time) {
 	var (
 		now             = time.Now()
-		window          = gutil.EffectiveShootMaintenanceTimeWindow(shoot)
+		window          = gardenerutils.EffectiveShootMaintenanceTimeWindow(shoot)
 		duration        = window.RandomDurationUntilNext(now, false)
 		nextMaintenance = time.Now().UTC().Add(duration)
 	)
@@ -105,7 +105,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := r.Client.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return err
 	}
 
@@ -407,7 +407,7 @@ func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool,
 }
 
 func mustMaintainNow(shoot *gardencorev1beta1.Shoot, clock clock.Clock) bool {
-	return hasMaintainNowAnnotation(shoot) || gutil.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock)
+	return hasMaintainNowAnnotation(shoot) || gardenerutils.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock)
 }
 
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {

@@ -20,7 +20,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	appsv1 "k8s.io/api/apps/v1"
@@ -54,7 +54,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 	)
 
 	// Check whether the kube-controller-manager deployment exists
-	if err := k.seedClient.Client().Get(ctx, kutil.Key(k.namespace, v1beta1constants.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err != nil {
+	if err := k.seedClient.Client().Get(ctx, kubernetesutils.Key(k.namespace, v1beta1constants.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return fmt.Errorf("kube controller manager deployment not found: %w", err)
 		}
@@ -90,7 +90,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 		// Check if the controller is active by reading its leader election record.
 		lock := resourcelock.LeasesResourceLock
 
-		leaderElectionRecord, err := kutil.ReadLeaderElectionRecord(ctx, k.shootClient, lock, metav1.NamespaceSystem, v1beta1constants.DeploymentNameKubeControllerManager)
+		leaderElectionRecord, err := kubernetesutils.ReadLeaderElectionRecord(ctx, k.shootClient, lock, metav1.NamespaceSystem, v1beta1constants.DeploymentNameKubeControllerManager)
 		if err != nil {
 			return retry.SevereError(fmt.Errorf("could not check whether controller %s is active: %w", v1beta1constants.DeploymentNameKubeControllerManager, err))
 		}

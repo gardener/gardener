@@ -30,7 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -55,7 +55,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 
 	if r.ClientCertificateExpirationTimestamp == nil {
-		gardenletClientCertificate, err := kutil.ClientCertificateFromRESTConfig(gardenCluster.GetConfig())
+		gardenletClientCertificate, err := kubernetesutils.ClientCertificateFromRESTConfig(gardenCluster.GetConfig())
 		if err != nil {
 			return fmt.Errorf("failed to get gardenlet client certificate: %w", err)
 		}

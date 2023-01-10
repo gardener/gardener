@@ -25,7 +25,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -206,7 +206,7 @@ var _ = Describe("shoot", func() {
 
 					dnsSecretName = "my-secret"
 					dnsSecretData = map[string][]byte{"foo": []byte("bar")}
-					dnsSecretKey  = kutil.Key(namespace, dnsSecretName)
+					dnsSecretKey  = kubernetesutils.Key(namespace, dnsSecretName)
 
 					shoot = &gardencorev1beta1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{

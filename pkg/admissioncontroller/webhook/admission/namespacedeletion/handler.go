@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler handles namespace deletions.
@@ -73,7 +73,7 @@ func (h *Handler) admitNamespace(ctx context.Context, namespaceName string) erro
 	// TODO: we should use a direct lookup here, as we might falsely allow the request, if our cache is
 	// out of sync and doesn't know about the project. We should use a field selector for looking up the project
 	// belonging to a given namespace.
-	project, namespace, err := gutil.ProjectAndNamespaceFromReader(ctx, h.Client, namespaceName)
+	project, namespace, err := gardenerutils.ProjectAndNamespaceFromReader(ctx, h.Client, namespaceName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -91,7 +91,7 @@ func (h *Handler) admitNamespace(ctx context.Context, namespaceName string) erro
 
 	case project.DeletionTimestamp != nil:
 		// if project is marked for deletion we need to wait until all shoots in the namespace are gone
-		namespaceInUse, err := kutil.ResourcesExist(ctx, h.APIReader, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(namespace.Name))
+		namespaceInUse, err := kubernetesutils.ResourcesExist(ctx, h.APIReader, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(namespace.Name))
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}

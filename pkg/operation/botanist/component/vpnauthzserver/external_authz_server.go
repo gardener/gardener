@@ -41,7 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -249,7 +249,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 }
 
 func (a *authzServer) Destroy(ctx context.Context) error {
-	return kutil.DeleteObjects(
+	return kubernetesutils.DeleteObjects(
 		ctx,
 		a.client,
 		a.emptyDeployment(),

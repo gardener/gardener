@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -75,7 +75,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 var (
 	gardenRoleReq      = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gutil.NoControlPlaneSecretsReq)
+	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq)
 )
 
 // GardenSecretPredicate returns true for all events when the respective secret is in the garden namespace and has a

@@ -23,7 +23,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 )
 
 // SkipVerification is a common function to skip object verification during admission
@@ -45,7 +45,7 @@ func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
 }
 
 // GetFilteredShootList returns shoots returned by the shootLister filtered via the predicateFn.
-func GetFilteredShootList(shootLister corelisters.ShootLister, predicateFn func(*core.Shoot) bool) ([]*core.Shoot, error) {
+func GetFilteredShootList(shootLister gardencorelisters.ShootLister, predicateFn func(*core.Shoot) bool) ([]*core.Shoot, error) {
 	var matchingShoots []*core.Shoot
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {

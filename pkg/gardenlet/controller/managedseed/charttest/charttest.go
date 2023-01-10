@@ -40,13 +40,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -61,7 +61,7 @@ func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(vpa.Namespace, vpa.Name),
+		kubernetesutils.Key(vpa.Namespace, vpa.Name),
 		vpa,
 	)).ToNot(HaveOccurred())
 
@@ -93,7 +93,7 @@ func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(priorityClass.Name),
+		kubernetesutils.Key(priorityClass.Name),
 		priorityClass,
 	)).ToNot(HaveOccurred())
 	Expect(priorityClass.GlobalDefault).To(Equal(false))
@@ -103,7 +103,7 @@ func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {
 func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 	return &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: gardencorev1beta1constants.PriorityClassNameSeedSystemCritical,
+			Name: v1beta1constants.PriorityClassNameSeedSystemCritical,
 		},
 	}
 }
@@ -487,7 +487,7 @@ func getGardenletClusterRoleBinding(labels map[string]string, serviceAccountName
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gardencorev1beta1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		},
 	}
@@ -510,7 +510,7 @@ func getAPIServerSNIClusterRoleBinding(labels map[string]string, serviceAccountN
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gardencorev1beta1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		},
 	}
@@ -533,7 +533,7 @@ func getManagedIstioClusterRoleBinding(labels map[string]string, serviceAccountN
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gardencorev1beta1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		},
 	}
@@ -587,7 +587,7 @@ func getGardenGardenletRoleBinding(labels map[string]string, serviceAccountName 
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gardencorev1beta1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		},
 	}
@@ -598,14 +598,14 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 
 	if hasSeedClientConnectionKubeconfig {
 		err := c.Get(
 			ctx,
-			kutil.Key(serviceAccount.Namespace, serviceAccount.Name),
+			kubernetesutils.Key(serviceAccount.Namespace, serviceAccount.Name),
 			serviceAccount,
 		)
 		Expect(err).To(HaveOccurred())
@@ -618,7 +618,7 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(serviceAccount.Namespace, serviceAccount.Name),
+		kubernetesutils.Key(serviceAccount.Namespace, serviceAccount.Name),
 		serviceAccount,
 	)).ToNot(HaveOccurred())
 	Expect(serviceAccount.Labels).To(DeepEqual(expectedServiceAccount.Labels))
@@ -631,7 +631,7 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 	pdb := &policyv1beta1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 		Spec: policyv1beta1.PodDisruptionBudgetSpec{
 			MaxUnavailable: &maxUnavailable,
@@ -659,9 +659,9 @@ func ComputeExpectedGardenletConfiguration(
 	hasGardenClientConnectionKubeconfig, hasSeedClientConnectionKubeconfig bool,
 	bootstrapKubeconfig *corev1.SecretReference,
 	kubeconfigSecret *corev1.SecretReference,
-	seedConfig *gardenletconfigv1alpha1.SeedConfig,
+	seedConfig *gardenletv1alpha1.SeedConfig,
 	featureGates map[string]bool,
-) gardenletconfigv1alpha1.GardenletConfiguration {
+) gardenletv1alpha1.GardenletConfiguration {
 	var (
 		zero   = 0
 		one    = 1
@@ -676,42 +676,42 @@ func ComputeExpectedGardenletConfiguration(
 		defaultCentralLokiStorage = resource.MustParse("100Gi")
 	)
 
-	config := gardenletconfigv1alpha1.GardenletConfiguration{
+	config := gardenletv1alpha1.GardenletConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "GardenletConfiguration",
 			APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
 		},
-		GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
+		GardenClientConnection: &gardenletv1alpha1.GardenClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   100,
 				Burst: 130,
 			},
-			KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+			KubeconfigValidity: &gardenletv1alpha1.KubeconfigValidity{
 				AutoRotationJitterPercentageMin: pointer.Int32(70),
 				AutoRotationJitterPercentageMax: pointer.Int32(90),
 			},
 		},
-		SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
+		SeedClientConnection: &gardenletv1alpha1.SeedClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   100,
 				Burst: 130,
 			},
 		},
-		ShootClientConnection: &gardenletconfigv1alpha1.ShootClientConnection{
+		ShootClientConnection: &gardenletv1alpha1.ShootClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   25,
 				Burst: 50,
 			},
 		},
-		Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
-			BackupBucket: &gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
+		Controllers: &gardenletv1alpha1.GardenletControllerConfiguration{
+			BackupBucket: &gardenletv1alpha1.BackupBucketControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
-			BackupEntry: &gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
+			BackupEntry: &gardenletv1alpha1.BackupEntryControllerConfiguration{
 				ConcurrentSyncs:          &twenty,
 				DeletionGracePeriodHours: &zero,
 			},
-			BackupEntryMigration: &gardenletconfigv1alpha1.BackupEntryMigrationControllerConfiguration{
+			BackupEntryMigration: &gardenletv1alpha1.BackupEntryMigrationControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Minute,
@@ -723,17 +723,17 @@ func ComputeExpectedGardenletConfiguration(
 					Duration: 2 * time.Minute,
 				},
 			},
-			Bastion: &gardenletconfigv1alpha1.BastionControllerConfiguration{
+			Bastion: &gardenletv1alpha1.BastionControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
-			Seed: &gardenletconfigv1alpha1.SeedControllerConfiguration{
+			Seed: &gardenletv1alpha1.SeedControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
 				LeaseResyncSeconds:       pointer.Int32(2),
 				LeaseResyncMissThreshold: pointer.Int32(10),
 			},
-			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
+			Shoot: &gardenletv1alpha1.ShootControllerConfiguration{
 				ReconcileInMaintenanceOnly: pointer.Bool(false),
 				RespectSyncPeriodOverwrite: pointer.Bool(false),
 				ConcurrentSyncs:            &twenty,
@@ -745,7 +745,7 @@ func ComputeExpectedGardenletConfiguration(
 				},
 				DNSEntryTTLSeconds: pointer.Int64(120),
 			},
-			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
+			ManagedSeed: &gardenletv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
 				JitterUpdates:   pointer.Bool(false),
 				SyncPeriod: &metav1.Duration{
@@ -758,16 +758,16 @@ func ComputeExpectedGardenletConfiguration(
 					Duration: 300000000000,
 				},
 			},
-			ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
+			ShootCare: &gardenletv1alpha1.ShootCareControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				StaleExtensionHealthChecks: &gardenletconfigv1alpha1.StaleExtensionHealthChecks{
+				StaleExtensionHealthChecks: &gardenletv1alpha1.StaleExtensionHealthChecks{
 					Enabled:   true,
 					Threshold: &metav1.Duration{Duration: 300000000000},
 				},
-				ConditionThresholds: []gardenletconfigv1alpha1.ConditionThreshold{
+				ConditionThresholds: []gardenletv1alpha1.ConditionThreshold{
 					{
 						Type: string(gardencorev1beta1.ShootAPIServerAvailable),
 						Duration: metav1.Duration{
@@ -795,11 +795,11 @@ func ComputeExpectedGardenletConfiguration(
 				},
 				WebhookRemediatorEnabled: pointer.Bool(false),
 			},
-			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
+			SeedCare: &gardenletv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				ConditionThresholds: []gardenletconfigv1alpha1.ConditionThreshold{
+				ConditionThresholds: []gardenletv1alpha1.ConditionThreshold{
 					{
 						Type: string(gardencorev1beta1.SeedSystemComponentsHealthy),
 						Duration: metav1.Duration{
@@ -808,7 +808,7 @@ func ComputeExpectedGardenletConfiguration(
 					},
 				},
 			},
-			ShootMigration: &gardenletconfigv1alpha1.ShootMigrationControllerConfiguration{
+			ShootMigration: &gardenletv1alpha1.ShootMigrationControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Minute,
@@ -820,23 +820,23 @@ func ComputeExpectedGardenletConfiguration(
 					Duration: 10 * time.Minute,
 				},
 			},
-			ShootSecret: &gardenletconfigv1alpha1.ShootSecretControllerConfiguration{
+			ShootSecret: &gardenletv1alpha1.ShootSecretControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
-			ShootStateSync: &gardenletconfigv1alpha1.ShootStateSyncControllerConfiguration{
+			ShootStateSync: &gardenletv1alpha1.ShootStateSyncControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
-			ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
+			ControllerInstallation: &gardenletv1alpha1.ControllerInstallationControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
-			ControllerInstallationCare: &gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration{
+			ControllerInstallationCare: &gardenletv1alpha1.ControllerInstallationCareControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 			},
-			ControllerInstallationRequired: &gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
+			ControllerInstallationRequired: &gardenletv1alpha1.ControllerInstallationRequiredControllerConfiguration{
 				ConcurrentSyncs: &one,
 			},
-			SeedAPIServerNetworkPolicy: &gardenletconfigv1alpha1.SeedAPIServerNetworkPolicyControllerConfiguration{
+			SeedAPIServerNetworkPolicy: &gardenletv1alpha1.SeedAPIServerNetworkPolicyControllerConfiguration{
 				ConcurrentSyncs: &three,
 			},
 		},
@@ -851,24 +851,24 @@ func ComputeExpectedGardenletConfiguration(
 		},
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
-		Logging: &gardenletconfigv1alpha1.Logging{
+		Logging: &gardenletv1alpha1.Logging{
 			Enabled: pointer.BoolPtr(false),
-			Loki: &gardenletconfigv1alpha1.Loki{
+			Loki: &gardenletv1alpha1.Loki{
 				Enabled: pointer.BoolPtr(false),
-				Garden: &gardenletconfigv1alpha1.GardenLoki{
+				Garden: &gardenletv1alpha1.GardenLoki{
 					Storage: &defaultCentralLokiStorage,
 				},
 			},
-			ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
+			ShootEventLogging: &gardenletv1alpha1.ShootEventLogging{
 				Enabled: pointer.Bool(false),
 			},
 		},
-		Server: gardenletconfigv1alpha1.ServerConfiguration{
-			HealthProbes: &gardenletconfigv1alpha1.Server{
+		Server: gardenletv1alpha1.ServerConfiguration{
+			HealthProbes: &gardenletv1alpha1.Server{
 				BindAddress: "0.0.0.0",
 				Port:        2728,
 			},
-			Metrics: &gardenletconfigv1alpha1.Server{
+			Metrics: &gardenletv1alpha1.Server{
 				BindAddress: "0.0.0.0",
 				Port:        2729,
 			},
@@ -878,31 +878,31 @@ func ComputeExpectedGardenletConfiguration(
 			EnableContentionProfiling: pointer.Bool(false),
 		},
 		FeatureGates: featureGates,
-		Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
+		Resources: &gardenletv1alpha1.ResourcesConfiguration{
 			Capacity: corev1.ResourceList{
 				"shoots": resource.MustParse("250"),
 			},
 		},
-		SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
-			ServiceName: pointer.String(gardencorev1beta1constants.DefaultSNIIngressServiceName),
-			Namespace:   pointer.String(gardencorev1beta1constants.DefaultSNIIngressNamespace),
+		SNI: &gardenletv1alpha1.SNI{Ingress: &gardenletv1alpha1.SNIIngress{
+			ServiceName: pointer.String(v1beta1constants.DefaultSNIIngressServiceName),
+			Namespace:   pointer.String(v1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
-		Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
-			Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
+		Monitoring: &gardenletv1alpha1.MonitoringConfig{
+			Shoot: &gardenletv1alpha1.ShootMonitoringConfig{
 				Enabled: pointer.Bool(true),
 			},
 		},
-		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
-			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
+		ETCDConfig: &gardenletv1alpha1.ETCDConfig{
+			BackupCompactionController: &gardenletv1alpha1.BackupCompactionController{
 				EnableBackupCompaction: pointer.Bool(false),
 				EventsThreshold:        pointer.Int64(1000000),
 				Workers:                pointer.Int64(3),
 			},
-			CustodianController: &gardenletconfigv1alpha1.CustodianController{
+			CustodianController: &gardenletv1alpha1.CustodianController{
 				Workers: pointer.Int64(10),
 			},
-			ETCDController: &gardenletconfigv1alpha1.ETCDController{
+			ETCDController: &gardenletv1alpha1.ETCDController{
 				Workers: pointer.Int64(50),
 			},
 		},
@@ -933,7 +933,7 @@ func VerifyGardenletComponentConfigConfigMap(
 	ctx context.Context,
 	c client.Client,
 	universalDecoder runtime.Decoder,
-	expectedGardenletConfig gardenletconfigv1alpha1.GardenletConfiguration,
+	expectedGardenletConfig gardenletv1alpha1.GardenletConfiguration,
 	expectedLabels map[string]string,
 	uniqueName string,
 ) {
@@ -941,7 +941,7 @@ func VerifyGardenletComponentConfigConfigMap(
 	expectedComponentConfigCm := getEmptyGardenletConfigMap()
 	expectedComponentConfigCm.Labels = expectedLabels
 
-	if err := c.Get(ctx, kutil.Key(componentConfigCm.Namespace, uniqueName), componentConfigCm); err != nil {
+	if err := c.Get(ctx, kubernetesutils.Key(componentConfigCm.Namespace, uniqueName), componentConfigCm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			ginkgo.Fail(err.Error())
 		}
@@ -959,7 +959,7 @@ func VerifyGardenletComponentConfigConfigMap(
 	// unmarshal Gardenlet Configuration from deployed Config Map
 	componentConfigYaml := componentConfigCm.Data["config.yaml"]
 	Expect(componentConfigYaml).ToNot(HaveLen(0))
-	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+	gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{}
 	_, _, err := universalDecoder.Decode([]byte(componentConfigYaml), nil, gardenletConfig)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(*gardenletConfig).To(DeepEqual(expectedGardenletConfig))
@@ -969,7 +969,7 @@ func getEmptyGardenletConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet-configmap",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 }
@@ -984,7 +984,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 	expectedLabels map[string]string,
 	imageVectorOverwrite, componentImageVectorOverwrites *string,
 	uniqueName map[string]string,
-	seedConfig *gardenletconfigv1alpha1.SeedConfig,
+	seedConfig *gardenletv1alpha1.SeedConfig,
 ) (
 	appsv1.DeploymentSpec,
 	error,
@@ -1007,7 +1007,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				Labels: expectedLabels,
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName:  gardencorev1beta1constants.PriorityClassNameSeedSystemCritical,
+				PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystemCritical,
 				ServiceAccountName: "gardenlet",
 				SecurityContext: &corev1.PodSecurityContext{
 					SeccompProfile: &corev1.SeccompProfile{
@@ -1114,7 +1114,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				numberOfZones = len(seedConfig.Spec.Provider.Zones)
 			}
 
-			deployment.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil)
+			deployment.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil)
 		}
 
 		if deploymentConfiguration.Env != nil {
@@ -1278,7 +1278,7 @@ func VerifyGardenletDeployment(ctx context.Context,
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(deployment.Namespace, deployment.Name),
+		kubernetesutils.Key(deployment.Namespace, deployment.Name),
 		deployment,
 	)).ToNot(HaveOccurred())
 
@@ -1327,7 +1327,7 @@ func getEmptyGardenletDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 }

@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -80,20 +80,20 @@ var _ = Describe("secretref", func() {
 
 	Describe("#GetSecretByReference", func() {
 		It("should get the secret", func() {
-			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 				*s = *secret
 				return nil
 			})
 
-			result, err := kutil.GetSecretByReference(ctx, c, secretRef)
+			result, err := kubernetesutils.GetSecretByReference(ctx, c, secretRef)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(secret))
 		})
 
 		It("should fail if getting the secret failed", func() {
-			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
 
-			result, err := kutil.GetSecretByReference(ctx, c, secretRef)
+			result, err := kubernetesutils.GetSecretByReference(ctx, c, secretRef)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeNil())
 		})
@@ -112,21 +112,21 @@ var _ = Describe("secretref", func() {
 		It("should delete the secret if it exists", func() {
 			c.EXPECT().Delete(ctx, secret).Return(nil)
 
-			err := kutil.DeleteSecretByReference(ctx, c, secretRef)
+			err := kubernetesutils.DeleteSecretByReference(ctx, c, secretRef)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should succeed if the secret doesn't exist", func() {
 			c.EXPECT().Delete(ctx, secret).Return(apierrors.NewNotFound(corev1.Resource("secret"), name))
 
-			err := kutil.DeleteSecretByReference(ctx, c, secretRef)
+			err := kubernetesutils.DeleteSecretByReference(ctx, c, secretRef)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should fail if deleting the secret failed", func() {
 			c.EXPECT().Delete(ctx, secret).Return(fmt.Errorf("error"))
 
-			err := kutil.DeleteSecretByReference(ctx, c, secretRef)
+			err := kubernetesutils.DeleteSecretByReference(ctx, c, secretRef)
 			Expect(err).To(HaveOccurred())
 		})
 	})

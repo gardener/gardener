@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/go-logr/logr"
@@ -149,7 +149,7 @@ func (s *service) Deploy(ctx context.Context) error {
 
 		obj.Spec.Type = s.values.serviceType
 		obj.Spec.Selector = getLabels()
-		obj.Spec.Ports = kutil.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{
+		obj.Spec.Ports = kubernetesutils.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{
 			{
 				Name:       kubeapiserver.ServicePortName,
 				Protocol:   corev1.ProtocolTCP,
@@ -184,7 +184,7 @@ func (s *service) Wait(ctx context.Context) error {
 			},
 		}
 
-		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, s.client, svc)
+		loadBalancerIngress, err := kubernetesutils.GetLoadBalancerIngress(ctx, s.client, svc)
 		if err != nil {
 			s.log.Info("Waiting until the kube-apiserver ingress LoadBalancer deployed in the Seed cluster is ready", "service", client.ObjectKeyFromObject(svc))
 			return retry.MinorError(fmt.Errorf("KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready: %v", err))
@@ -196,7 +196,7 @@ func (s *service) Wait(ctx context.Context) error {
 }
 
 func (s *service) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, s.client, s.emptyService(), 2*time.Second)
+	return kubernetesutils.WaitUntilResourceDeleted(ctx, s.client, s.emptyService(), 2*time.Second)
 }
 
 func (s *service) emptyService() *corev1.Service {

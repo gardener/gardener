@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,14 +86,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *Reconciler) getShootSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	// Get the managed seed referencing this shoot
-	ms, err := kutil.GetManagedSeedWithReader(ctx, r.Client, shoot.Namespace, shoot.Name)
+	ms, err := kubernetesutils.GetManagedSeedWithReader(ctx, r.Client, shoot.Namespace, shoot.Name)
 	if err != nil || ms == nil {
 		return nil, err
 	}
 
 	// Get the seed registered by the managed seed
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.Client.Get(ctx, kutil.Key(ms.Name), seed); err != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(ms.Name), seed); err != nil {
 		return nil, client.IgnoreNotFound(err)
 	}
 	return seed, nil

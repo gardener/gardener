@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -47,13 +47,13 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 		// Shoot is being created or restored with .spec.hibernation.enabled=true or
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=true,
 		// so keep the replicas which are already available.
-		return kutil.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
+		return kubernetesutils.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
 	}
 	if controlledByDependencyWatchdog && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
 		// The replicas of the component are controlled by dependency-watchdog and
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=false,
 		// so keep the replicas which are already available.
-		return kutil.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
+		return kubernetesutils.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
 	}
 
 	// If kube-apiserver is set to 0 replicas then we also want to return 0 here
@@ -124,7 +124,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		v1beta1constants.DeploymentNameKubeAPIServer,
 	}
 	for _, deployment := range deployments {
-		if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
+		if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -231,7 +231,7 @@ func waitUntilNoPodsExistAnymore(ctx context.Context, c client.Client, namespace
 			podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
 			timeoutContext, cancel := context.WithTimeout(ctx, time.Minute*5)
 			defer cancel()
-			return kutil.WaitUntilResourcesDeleted(timeoutContext, c, podList, time.Second*5, client.InNamespace(namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels), client.Limit(1))
+			return kubernetesutils.WaitUntilResourcesDeleted(timeoutContext, c, podList, time.Second*5, client.InNamespace(namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels), client.Limit(1))
 		})
 	}
 	return flow.Parallel(fns...)(ctx)

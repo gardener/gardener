@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
@@ -40,7 +40,7 @@ func CheckManagedResourceApplied(mr *resourcesv1alpha1.ManagedResource) error {
 		return fmt.Errorf("observed generation of managed resource %s/%s outdated (%d/%d)", mr.GetNamespace(), mr.GetName(), status.ObservedGeneration, mr.GetGeneration())
 	}
 
-	conditionApplied := v1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesApplied)
+	conditionApplied := gardencorev1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
 	if conditionApplied == nil {
 		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", resourcesv1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName())
@@ -55,7 +55,7 @@ func CheckManagedResourceApplied(mr *resourcesv1alpha1.ManagedResource) error {
 // CheckManagedResourceHealthy checks if the condition 'ResourcesHealthy' of a ManagedResource is True
 func CheckManagedResourceHealthy(mr *resourcesv1alpha1.ManagedResource) error {
 	status := mr.Status
-	conditionHealthy := v1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+	conditionHealthy := gardencorev1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 
 	if conditionHealthy == nil {
 		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", resourcesv1alpha1.ResourcesHealthy, mr.GetNamespace(), mr.GetName())
@@ -69,7 +69,7 @@ func CheckManagedResourceHealthy(mr *resourcesv1alpha1.ManagedResource) error {
 // CheckManagedResourceProgressing checks if the condition ResourcesProgressing of a ManagedResource is False.
 func CheckManagedResourceProgressing(mr *resourcesv1alpha1.ManagedResource) error {
 	status := mr.Status
-	conditionProgressing := v1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+	conditionProgressing := gardencorev1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 
 	if conditionProgressing == nil {
 		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", resourcesv1alpha1.ResourcesProgressing, mr.GetNamespace(), mr.GetName())

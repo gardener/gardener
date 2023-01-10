@@ -19,11 +19,11 @@ import (
 	"strconv"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,7 +52,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		nodelocaldns.Values{
 			Image:             image.String(),
 			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
-			Config:            v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
+			Config:            gardencorev1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
 			ShootAnnotations:  b.Shoot.GetInfo().Annotations,
 			ClusterDNS:        clusterDNS,
 			DNSServer:         dnsServer,
@@ -80,7 +80,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 
 // isNodeLocalDNSStillDesired indicates whether any node still requires node-local-dns components.
 func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error) {
-	return kutil.ResourcesExist(ctx, b.ShootClientSet.Client(), corev1.SchemeGroupVersion.WithKind("NodeList"), client.MatchingLabels{
+	return kubernetesutils.ResourcesExist(ctx, b.ShootClientSet.Client(), corev1.SchemeGroupVersion.WithKind("NodeList"), client.MatchingLabels{
 		v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true),
 	})
 }

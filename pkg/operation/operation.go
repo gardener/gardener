@@ -44,9 +44,9 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -272,7 +272,7 @@ func (b *Builder) Build(
 
 	// Get the ManagedSeed object for this shoot, if it exists.
 	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
-	operation.ManagedSeed, err = kutil.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
+	operation.ManagedSeed, err = kubernetesutils.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
 	if err != nil {
 		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
@@ -349,7 +349,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	// use API reader here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
-	if err := o.SeedClientSet.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+	if err := o.SeedClientSet.APIReader().Get(ctx, kubernetesutils.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -478,7 +478,7 @@ func (o *Operation) DeleteShootState(ctx context.Context) error {
 		},
 	}
 
-	if err := gutil.ConfirmDeletion(ctx, o.GardenClient, shootState); err != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, o.GardenClient, shootState); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
@@ -621,14 +621,14 @@ func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedA
 	if o.Shoot.ExternalClusterDomain != nil && len(*o.Shoot.ExternalClusterDomain) > 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: "external",
-			URL:  "https://" + gutil.GetAPIServerDomain(*o.Shoot.ExternalClusterDomain),
+			URL:  "https://" + gardenerutils.GetAPIServerDomain(*o.Shoot.ExternalClusterDomain),
 		})
 	}
 
 	if len(o.Shoot.InternalClusterDomain) > 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: "internal",
-			URL:  "https://" + gutil.GetAPIServerDomain(o.Shoot.InternalClusterDomain),
+			URL:  "https://" + gardenerutils.GetAPIServerDomain(o.Shoot.InternalClusterDomain),
 		})
 	}
 

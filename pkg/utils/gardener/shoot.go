@@ -43,9 +43,9 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	gsets "github.com/gardener/gardener/pkg/utils/sets"
+	setsutils "github.com/gardener/gardener/pkg/utils/sets"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -496,17 +496,17 @@ func GetShootSeedNames(obj client.Object) (*string, *string) {
 // on the given workers. Tolerations are only considered for workers which have `SystemComponents.Allow: true`.
 func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []corev1.Toleration {
 	var (
-		tolerations = gsets.New[corev1.Toleration]()
+		tolerations = setsutils.New[corev1.Toleration]()
 
 		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
 		// before they are added to the tolerations set.
-		comparableTolerations = &kutil.ComparableTolerations{}
+		comparableTolerations = &kubernetesutils.ComparableTolerations{}
 	)
 
 	for _, worker := range workers {
 		if gardencorev1beta1helper.SystemComponentsAllowed(&worker) {
 			for _, taint := range worker.Taints {
-				toleration := kutil.TolerationForTaint(taint)
+				toleration := kubernetesutils.TolerationForTaint(taint)
 				tolerations.Insert(comparableTolerations.Transform(toleration))
 			}
 		}

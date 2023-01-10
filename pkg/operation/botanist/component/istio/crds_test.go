@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
@@ -51,7 +51,7 @@ var _ = Describe("#CRDs", func() {
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 
-		renderer := cr.NewWithServerVersion(&version.Info{})
+		renderer := chartrenderer.NewWithServerVersion(&version.Info{})
 
 		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")

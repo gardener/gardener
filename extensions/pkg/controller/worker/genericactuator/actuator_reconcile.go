@@ -24,14 +24,14 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	workerhealthcheck "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
-	extensionsworker "github.com/gardener/gardener/extensions/pkg/controller/worker"
-	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
+	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -236,10 +236,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 func (a *genericActuator) scaleClusterAutoscaler(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, replicas int32) error {
 	log.Info("Scaling cluster-autoscaler", "replicas", replicas)
-	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kutil.Key(worker.Namespace, v1beta1constants.DeploymentNameClusterAutoscaler), replicas))
+	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kubernetesutils.Key(worker.Namespace, v1beta1constants.DeploymentNameClusterAutoscaler), replicas))
 }
 
-func (a *genericActuator) deployMachineDeployments(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments extensionsworker.MachineDeployments, classKind string, clusterAutoscalerUsed bool) error {
+func (a *genericActuator) deployMachineDeployments(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments extensionsworkercontroller.MachineDeployments, classKind string, clusterAutoscalerUsed bool) error {
 	log.Info("Deploying machine deployments")
 	for _, deployment := range wantedMachineDeployments {
 		var (
@@ -347,7 +347,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, log logr
 
 // waitUntilWantedMachineDeploymentsAvailable waits until all the desired <machineDeployments> were marked as healthy /
 // available by the machine-controller-manager. It polls the status every 5 seconds.
-func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, alreadyExistingMachineDeploymentNames sets.String, alreadyExistingMachineClassNames sets.String, wantedMachineDeployments extensionsworker.MachineDeployments) error {
+func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, alreadyExistingMachineDeploymentNames sets.String, alreadyExistingMachineClassNames sets.String, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
 	log.Info("Waiting until wanted machine deployments are available")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
@@ -366,7 +366,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 		}
 
 		// map the owner reference to the machine sets
-		ownerReferenceToMachineSet := workerhelper.BuildOwnerToMachineSetsMap(machineSets.Items)
+		ownerReferenceToMachineSet := extensionsworkerhelper.BuildOwnerToMachineSetsMap(machineSets.Items)
 
 		// Collect the numbers of available and desired replicas.
 		for _, deployment := range machineDeployments.Items {
@@ -380,7 +380,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			// We want to wait until all wanted machine deployments have as many
 			// available replicas as desired (specified in the .spec.replicas).
 			// However, if we see any error in the status of the deployment then we return it.
-			if machineErrs := workerhelper.ReportFailedMachines(deployment.Status); machineErrs != nil {
+			if machineErrs := extensionsworkerhelper.ReportFailedMachines(deployment.Status); machineErrs != nil {
 				return retryutils.SevereError(machineErrs)
 			}
 
@@ -410,7 +410,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 			// If the Shoot is not hibernated we want to make sure that the machine set with the right
 			// machine class for the machine deployment is deployed by the machine-controller-manager
-			if machineSet := workerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
+			if machineSet := extensionsworkerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
 				return retryutils.MinorError(fmt.Errorf("waiting for the machine-controller-manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
 			}
 
@@ -456,7 +456,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 // waitUntilUnwantedMachineDeploymentsDeleted waits until all the undesired <machineDeployments> are deleted from the
 // system. It polls the status every 5 seconds.
-func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, wantedMachineDeployments extensionsworker.MachineDeployments) error {
+func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
 	log.Info("Waiting until unwanted machine deployments are deleted")
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -479,7 +479,7 @@ func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context
 	})
 }
 
-func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Context, worker *extensionsv1alpha1.Worker, machineDeployments extensionsworker.MachineDeployments) error {
+func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Context, worker *extensionsv1alpha1.Worker, machineDeployments extensionsworkercontroller.MachineDeployments) error {
 	if len(machineDeployments) == 0 {
 		return nil
 	}

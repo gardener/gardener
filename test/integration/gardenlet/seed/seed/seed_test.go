@@ -38,9 +38,9 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -51,7 +51,7 @@ var _ = Describe("Seed controller tests", func() {
 	)
 
 	JustBeforeEach(func() {
-		DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+		DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
 		DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
 
 		seed = &gardencorev1beta1.Seed{
@@ -116,7 +116,7 @@ var _ = Describe("Seed controller tests", func() {
 
 		JustBeforeEach(func() {
 			By("Create seed namespace in garden")
-			seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: gutil.ComputeGardenNamespace(seed.Name)}}
+			seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}}
 			Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
 
 			By("Wait until the manager cache observes the seed namespace")

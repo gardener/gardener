@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
-	backupbucketstrategy "github.com/gardener/gardener/pkg/registry/core/backupbucket"
+	backupbucketregistry "github.com/gardener/gardener/pkg/registry/core/backupbucket"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -76,7 +76,7 @@ var _ = Describe("Reconciler", func() {
 
 			c = test.NewClientWithFieldSelectorSupport(
 				fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build(),
-				backupbucketstrategy.ToSelectableFields,
+				backupbucketregistry.ToSelectableFields,
 			)
 
 			conf = config.SeedBackupBucketsCheckControllerConfiguration{

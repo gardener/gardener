@@ -31,7 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -124,7 +124,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					}
 
 					var err error
-					existingKubeconfig, err = bootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
+					existingKubeconfig, err = gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
 					secret := &corev1.Secret{
@@ -147,7 +147,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					runner.Config.GardenClientConnection.GardenClusterCACert = newCABundle
 
 					restConfig.TLSClientConfig.CAData = newCABundle
-					updatedKubeconfig, err := bootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
+					updatedKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(runner.Start(ctx)).To(BeNil())

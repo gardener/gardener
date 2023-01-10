@@ -25,13 +25,13 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// get Shoot for the bastion
 	shoot := gardencorev1beta1.Shoot{}
-	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
+	shootKey := kubernetesutils.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
 	if err := r.GardenClient.Get(ctx, shootKey, &shoot); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %w", shootKey, err)
 	}
@@ -159,14 +159,14 @@ func (r *Reconciler) reconcileBastion(
 
 			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extBastion.Status.LastError != nil {
-				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extBastion.Status.LastError.Description), extBastion.Status.LastError.Codes...)
+				lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extBastion.Status.LastError.Description), extBastion.Status.LastError.Codes...)
 			}
 		}
 	}
 
 	if lastObservedError != nil {
 		message := fmt.Sprintf("Error while waiting for %s %s/%s to become ready", extensionsv1alpha1.BastionResource, extBastion.Namespace, extBastion.Name)
-		err := v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+		err := gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 
 		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 			log.Error(patchErr, "Failed patching ready condition")

@@ -25,30 +25,30 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/logger"
-	configv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
 	Describe("SchedulerConfiguration", func() {
-		var obj *configv1alpha1.SchedulerConfiguration
+		var obj *schedulerv1alpha1.SchedulerConfiguration
 
 		BeforeEach(func() {
-			obj = &configv1alpha1.SchedulerConfiguration{}
+			obj = &schedulerv1alpha1.SchedulerConfiguration{}
 		})
 
 		Context("Empty configuration", func() {
 			It("should correctly default the admission controller configuration", func() {
-				configv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+				schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 				Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 				Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
-				Expect(obj.Schedulers).To(Equal(configv1alpha1.SchedulerControllerConfiguration{
-					BackupBucket: &configv1alpha1.BackupBucketSchedulerConfiguration{
+				Expect(obj.Schedulers).To(Equal(schedulerv1alpha1.SchedulerControllerConfiguration{
+					BackupBucket: &schedulerv1alpha1.BackupBucketSchedulerConfiguration{
 						ConcurrentSyncs: 2,
 					},
-					Shoot: &configv1alpha1.ShootSchedulerConfiguration{
+					Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
 						ConcurrentSyncs: 5,
-						Strategy:        configv1alpha1.Default,
+						Strategy:        schedulerv1alpha1.Default,
 					},
 				}))
 			})
@@ -56,12 +56,12 @@ var _ = Describe("Defaults", func() {
 
 		Describe("ServerConfiguration", func() {
 			It("should not default any values for ServerConfiguration", func() {
-				serverConfiguration := &configv1alpha1.ServerConfiguration{
-					HealthProbes: &configv1alpha1.Server{
+				serverConfiguration := &schedulerv1alpha1.ServerConfiguration{
+					HealthProbes: &schedulerv1alpha1.Server{
 						BindAddress: "127.0.0.1",
 						Port:        1234,
 					},
-					Metrics: &configv1alpha1.Server{
+					Metrics: &schedulerv1alpha1.Server{
 						BindAddress: "10.0.0.1",
 						Port:        1235,
 					},
@@ -69,32 +69,32 @@ var _ = Describe("Defaults", func() {
 
 				expectedServerConfiguration := serverConfiguration.DeepCopy()
 
-				configv1alpha1.SetDefaults_ServerConfiguration(serverConfiguration)
+				schedulerv1alpha1.SetDefaults_ServerConfiguration(serverConfiguration)
 				Expect(serverConfiguration).To(Equal(expectedServerConfiguration))
 			})
 
 			It("should default values for ServerConfiguration", func() {
-				serverConfiguration := &configv1alpha1.ServerConfiguration{}
+				serverConfiguration := &schedulerv1alpha1.ServerConfiguration{}
 
-				expectedServerConfiguration := &configv1alpha1.ServerConfiguration{
-					HealthProbes: &configv1alpha1.Server{
+				expectedServerConfiguration := &schedulerv1alpha1.ServerConfiguration{
+					HealthProbes: &schedulerv1alpha1.Server{
 						BindAddress: "0.0.0.0",
 						Port:        10251,
 					},
-					Metrics: &configv1alpha1.Server{
+					Metrics: &schedulerv1alpha1.Server{
 						BindAddress: "0.0.0.0",
 						Port:        19251,
 					},
 				}
 
-				configv1alpha1.SetDefaults_ServerConfiguration(serverConfiguration)
+				schedulerv1alpha1.SetDefaults_ServerConfiguration(serverConfiguration)
 				Expect(serverConfiguration).To(Equal(expectedServerConfiguration))
 			})
 		})
 
 		Describe("ClientConnection", func() {
 			It("should not default ContentType and AcceptContentTypes", func() {
-				configv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+				schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 				// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
 				// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
@@ -103,7 +103,7 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.ClientConnection.AcceptContentTypes).To(BeEmpty())
 			})
 			It("should correctly default ClientConnection", func() {
-				configv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+				schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 				Expect(obj.ClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					QPS:   50.0,
 					Burst: 100,
@@ -113,7 +113,7 @@ var _ = Describe("Defaults", func() {
 
 		Describe("leader election settings", func() {
 			It("should correctly default leader election settings", func() {
-				configv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+				schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 				Expect(obj.LeaderElection).NotTo(BeNil())
 				Expect(obj.LeaderElection.LeaderElect).To(PointTo(BeTrue()))
@@ -135,7 +135,7 @@ var _ = Describe("Defaults", func() {
 					ResourceName:      "lock-object",
 				}
 				obj.LeaderElection = expectedLeaderElection.DeepCopy()
-				configv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+				schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 				Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
 			})
@@ -145,10 +145,10 @@ var _ = Describe("Defaults", func() {
 
 var _ = Describe("Constants", func() {
 	It("should have the same values as the corresponding constants in the logger package", func() {
-		Expect(configv1alpha1.LogLevelDebug).To(Equal(logger.DebugLevel))
-		Expect(configv1alpha1.LogLevelInfo).To(Equal(logger.InfoLevel))
-		Expect(configv1alpha1.LogLevelError).To(Equal(logger.ErrorLevel))
-		Expect(configv1alpha1.LogFormatJSON).To(Equal(logger.FormatJSON))
-		Expect(configv1alpha1.LogFormatText).To(Equal(logger.FormatText))
+		Expect(schedulerv1alpha1.LogLevelDebug).To(Equal(logger.DebugLevel))
+		Expect(schedulerv1alpha1.LogLevelInfo).To(Equal(logger.InfoLevel))
+		Expect(schedulerv1alpha1.LogLevelError).To(Equal(logger.ErrorLevel))
+		Expect(schedulerv1alpha1.LogFormatJSON).To(Equal(logger.FormatJSON))
+		Expect(schedulerv1alpha1.LogFormatText).To(Equal(logger.FormatText))
 	})
 })

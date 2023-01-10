@@ -21,7 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
@@ -62,5 +62,5 @@ func CheckAPIServerAvailability(
 	}
 
 	message := "API server /healthz endpoint responded with success status code."
-	return v1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
+	return gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
 }

@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"os"
 
-	extcontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
-	heartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
+	extensionsheartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	oscommoncmd "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
@@ -35,31 +35,31 @@ import (
 // NewControllerCommand creates a new command for running an OS controller.
 func NewControllerCommand(ctrlName string, osTypes []string, generator generator.Generator) *cobra.Command {
 	var (
-		restOpts = &controllercmd.RESTOptions{}
-		mgrOpts  = &controllercmd.ManagerOptions{
+		restOpts = &extensionscmdcontroller.RESTOptions{}
+		mgrOpts  = &extensionscmdcontroller.ManagerOptions{
 			LeaderElection:          true,
-			LeaderElectionID:        controllercmd.LeaderElectionNameID(ctrlName),
+			LeaderElectionID:        extensionscmdcontroller.LeaderElectionNameID(ctrlName),
 			LeaderElectionNamespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
-		ctrlOpts = &controllercmd.ControllerOptions{
+		ctrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
-		heartbeatCtrlOpts = &heartbeatcmd.Options{
+		heartbeatCtrlOpts = &extensionsheartbeatcmd.Options{
 			ExtensionName:        ctrlName,
 			RenewIntervalSeconds: 30,
 			Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
 
-		reconcileOpts = &controllercmd.ReconcilerOptions{}
+		reconcileOpts = &extensionscmdcontroller.ReconcilerOptions{}
 
 		controllerSwitches = oscommoncmd.SwitchOptions(ctrlName, osTypes, generator)
 
-		aggOption = controllercmd.NewOptionAggregator(
+		aggOption = extensionscmdcontroller.NewOptionAggregator(
 			restOpts,
 			mgrOpts,
 			ctrlOpts,
-			controllercmd.PrefixOption("heartbeat-", heartbeatCtrlOpts),
+			extensionscmdcontroller.PrefixOption("heartbeat-", heartbeatCtrlOpts),
 			reconcileOpts,
 			controllerSwitches,
 		)
@@ -90,7 +90,7 @@ func NewControllerCommand(ctrlName string, osTypes []string, generator generator
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
 
-			if err := extcontroller.AddToScheme(mgr.GetScheme()); err != nil {
+			if err := extensionscontroller.AddToScheme(mgr.GetScheme()); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 

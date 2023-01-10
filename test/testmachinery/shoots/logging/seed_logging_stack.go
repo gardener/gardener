@@ -23,7 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
@@ -279,15 +279,15 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					Name:      loggerName,
 				},
 			}
-			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), loggerDeploymentToDelete))
+			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), loggerDeploymentToDelete))
 
 			cluster := getCluster(i)
-			framework.ExpectNoError(kutil.DeleteObject(ctx, shootClient.Client(), cluster))
+			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootClient.Client(), cluster))
 
 			lokiShootService := getLokiShootService(i)
-			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), lokiShootService))
+			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), lokiShootService))
 
-			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), shootNamespace))
+			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), shootNamespace))
 		}
 
 		ginkgo.By("Cleaning up garden namespace")
@@ -311,7 +311,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			newGardenNamespace(v1beta1constants.GardenNamespace),
 		}
 		for _, object := range objectsToDelete {
-			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), object))
+			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), object))
 		}
 	}, loggerDeploymentCleanupTimeout))
 })

@@ -24,9 +24,9 @@ import (
 	"time"
 
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
-	gardenercore "github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/utils"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -37,15 +37,15 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	registryrest "k8s.io/apiserver/pkg/registry/rest"
-	configlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 )
 
 var _ = Describe("Admin Kubeconfig", func() {
 	var (
-		shootState       *gardenercore.ShootState
-		shoot            *gardenercore.Shoot
+		shootState       *gardencore.ShootState
+		shoot            *gardencore.Shoot
 		akcREST          *AdminKubeconfigREST
 		shootStateGetter *fakeGetter
 		shootGetter      *fakeGetter
@@ -160,10 +160,10 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 	)
 
 	BeforeEach(func() {
-		shootState = &gardenercore.ShootState{
+		shootState = &gardencore.ShootState{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-			Spec: gardenercore.ShootStateSpec{
-				Gardener: []gardenercore.GardenerResourceData{
+			Spec: gardencore.ShootStateSpec{
+				Gardener: []gardencore.GardenerResourceData{
 					{
 						Name: "ca-hugo",
 						Type: "secret",
@@ -194,10 +194,10 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			},
 		}
 		createValidation = func(ctx context.Context, obj runtime.Object) error { return nil }
-		shoot = &gardenercore.Shoot{
+		shoot = &gardencore.Shoot{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-			Status: gardenercore.ShootStatus{
-				AdvertisedAddresses: []gardenercore.ShootAdvertisedAddress{
+			Status: gardencore.ShootStatus{
+				AdvertisedAddresses: []gardencore.ShootAdvertisedAddress{
 					{
 						Name: "external",
 						URL:  "https://foo.bar.external:9443",
@@ -226,7 +226,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			Name: userName,
 		})
 
-		DeferCleanup(test.WithVar(&secretutils.Clock, testclock.NewFakeClock(time.Unix(10, 0))))
+		DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Unix(10, 0))))
 	})
 
 	Context("request fails", func() {
@@ -293,7 +293,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 		})
 
 		It("returns error when the issued-at-time label on a CA cert secret is missing", func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
 				Name: "ca-2",
 				Type: "secret",
 				Labels: map[string]string{
@@ -321,20 +321,20 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 
 			Expect(akcr.Status.ExpirationTimestamp.Time).To(Equal(time.Unix(10, 0).Add(time.Minute * 11)))
 
-			config := &configv1.Config{}
-			Expect(runtime.DecodeInto(configlatest.Codec, akcr.Status.Kubeconfig, config)).To(Succeed())
+			config := &clientcmdv1.Config{}
+			Expect(runtime.DecodeInto(clientcmdlatest.Codec, akcr.Status.Kubeconfig, config)).To(Succeed())
 
 			Expect(config.Clusters).To(ConsistOf(
-				configv1.NamedCluster{
+				clientcmdv1.NamedCluster{
 					Name: "baz--test-external",
-					Cluster: configv1.Cluster{
+					Cluster: clientcmdv1.Cluster{
 						Server:                   "https://foo.bar.external:9443",
 						CertificateAuthorityData: expectedClusterCABundle,
 					},
 				},
-				configv1.NamedCluster{
+				clientcmdv1.NamedCluster{
 					Name: "baz--test-internal",
-					Cluster: configv1.Cluster{
+					Cluster: clientcmdv1.Cluster{
 						Server:                   "https://foo.bar.internal:9443",
 						CertificateAuthorityData: expectedClusterCABundle,
 					},
@@ -342,16 +342,16 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			))
 
 			Expect(config.Contexts).To(ConsistOf(
-				configv1.NamedContext{
+				clientcmdv1.NamedContext{
 					Name: "baz--test-external",
-					Context: configv1.Context{
+					Context: clientcmdv1.Context{
 						Cluster:  "baz--test-external",
 						AuthInfo: "baz--test-external",
 					},
 				},
-				configv1.NamedContext{
+				clientcmdv1.NamedContext{
 					Name: "baz--test-internal",
-					Context: configv1.Context{
+					Context: clientcmdv1.Context{
 						Cluster:  "baz--test-internal",
 						AuthInfo: "baz--test-external",
 					},
@@ -378,7 +378,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 		Entry("one client CA, one cluster CA", clientCACert1Name, clusterCACert1, nil),
 
 		Entry("one client CA, multiple cluster CA", clientCACert1Name, append(clusterCACert2, clusterCACert1...), func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
 				Name: "ca-cluster-2",
 				Type: "secret",
 				Labels: map[string]string{
@@ -394,7 +394,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 		}),
 
 		Entry("multiple client CA (in case of rotation), one cluster CA", clientCACert2Name, clusterCACert1, func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
 				Name: "ca-client-bar",
 				Type: "secret",
 				Labels: map[string]string{
@@ -411,7 +411,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 
 		Entry("multiple client CA (in case of rotation), multiple cluster CA", clientCACert2Name, append(clusterCACert2, clusterCACert1...), func() {
 			shootState.Spec.Gardener = append(shootState.Spec.Gardener,
-				gardenercore.GardenerResourceData{
+				gardencore.GardenerResourceData{
 					Name: "ca-client-bar",
 					Type: "secret",
 					Labels: map[string]string{
@@ -424,7 +424,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 						Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert2) + `","ca.key":"` + utils.EncodeBase64(clientCAKey2) + `"}`),
 					},
 				},
-				gardenercore.GardenerResourceData{
+				gardencore.GardenerResourceData{
 					Name: "ca-cluster-2",
 					Type: "secret",
 					Labels: map[string]string{

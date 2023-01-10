@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -343,9 +343,9 @@ var _ = Describe("Worker", func() {
 
 	Describe("#WaitUntilCloudConfigUpdatedForAllWorkerPools", func() {
 		var (
-			seedInterface  *mockkubernetes.MockInterface
+			seedInterface  *kubernetesmock.MockInterface
 			seedClient     *mockclient.MockClient
-			shootInterface *mockkubernetes.MockInterface
+			shootInterface *kubernetesmock.MockInterface
 			shootClient    *mockclient.MockClient
 
 			namespace = "shoot--foo--bar"
@@ -359,11 +359,11 @@ var _ = Describe("Worker", func() {
 				},
 			}}
 
-			seedInterface = mockkubernetes.NewMockInterface(ctrl)
+			seedInterface = kubernetesmock.NewMockInterface(ctrl)
 			seedClient = mockclient.NewMockClient(ctrl)
 			botanist.SeedClientSet = seedInterface
 
-			shootInterface = mockkubernetes.NewMockInterface(ctrl)
+			shootInterface = kubernetesmock.NewMockInterface(ctrl)
 			shootClient = mockclient.NewMockClient(ctrl)
 			botanist.ShootClientSet = shootInterface
 		})

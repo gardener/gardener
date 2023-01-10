@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	configv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
 
 const (
@@ -44,11 +44,11 @@ var _ predicate.Predicate = &ClassFilter{}
 // NewClassFilter returns a new `ClassFilter` instance.
 func NewClassFilter(class string) *ClassFilter {
 	if class == "" {
-		class = configv1alpha1.DefaultResourceClass
+		class = resourcemanagerv1alpha1.DefaultResourceClass
 	}
 
 	finalizer := FinalizerName + "-" + class
-	if class == configv1alpha1.DefaultResourceClass {
+	if class == resourcemanagerv1alpha1.DefaultResourceClass {
 		finalizer = FinalizerName
 	}
 
@@ -75,7 +75,7 @@ func (f *ClassFilter) Responsible(o runtime.Object) bool {
 	if r.Spec.Class != nil && *r.Spec.Class != "" {
 		c = *r.Spec.Class
 	}
-	return c == f.resourceClass || (c == "" && f.resourceClass == configv1alpha1.DefaultResourceClass)
+	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerv1alpha1.DefaultResourceClass)
 }
 
 // Active checks whether a dedicated object must be handled by the actual controller

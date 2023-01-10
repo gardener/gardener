@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
-	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -119,7 +119,7 @@ func readDocuments(fp string) ([][]byte, error) {
 	}
 
 	var docs [][]byte
-	reader := k8syaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(b)))
+	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(b)))
 	for {
 		// Read document
 		doc, err := reader.Read()

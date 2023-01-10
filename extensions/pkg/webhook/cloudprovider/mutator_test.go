@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
-	mockcloudprovider "github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider/mock"
+	extensionsmockcloudprovider "github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider/mock"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"github.com/golang/mock/gomock"
@@ -52,13 +52,13 @@ var _ = Describe("Mutator", func() {
 
 	Describe("#Mutate", func() {
 		var (
-			ensurer  *mockcloudprovider.MockEnsurer
+			ensurer  *extensionsmockcloudprovider.MockEnsurer
 			new, old *corev1.Secret
 			mutator  webhook.Mutator
 		)
 
 		BeforeEach(func() {
-			ensurer = mockcloudprovider.NewMockEnsurer(ctrl)
+			ensurer = extensionsmockcloudprovider.NewMockEnsurer(ctrl)
 			mutator = cloudprovider.NewMutator(logger, ensurer)
 			new = nil
 			old = nil

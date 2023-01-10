@@ -20,8 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // IsObjectBeingMigrated checks whether the object is being migrated.
@@ -36,10 +36,10 @@ func IsObjectBeingMigrated(
 
 	if specSeedName != nil && statusSeedName != nil && *specSeedName != *statusSeedName && *specSeedName == seedName {
 		seed := &gardencorev1beta1.Seed{}
-		if err := reader.Get(ctx, kutil.Key(*statusSeedName), seed); err != nil {
+		if err := reader.Get(ctx, kubernetesutils.Key(*statusSeedName), seed); err != nil {
 			return false
 		}
-		return v1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
+		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
 	}
 
 	return false

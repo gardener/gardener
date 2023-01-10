@@ -32,12 +32,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/internaldomainsecret"
-	gardenercore "github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("handler", func() {
@@ -85,7 +85,7 @@ var _ = Describe("handler", func() {
 		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
 		seedName = "aws"
-		seedNamespace = gutil.ComputeGardenNamespace(seedName)
+		seedNamespace = gardenerutils.ComputeGardenNamespace(seedName)
 	})
 
 	AfterEach(func() {
@@ -264,7 +264,7 @@ var _ = Describe("handler", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.MatchingFields{gardenercore.ShootSeedName: seedName},
+				client.MatchingFields{gardencore.ShootSeedName: seedName},
 				client.Limit(1),
 			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
@@ -328,7 +328,7 @@ var _ = Describe("handler", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.MatchingFields{gardenercore.ShootSeedName: seedName},
+				client.MatchingFields{gardencore.ShootSeedName: seedName},
 				client.Limit(1),
 			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))

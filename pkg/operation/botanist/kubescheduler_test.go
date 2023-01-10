@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -48,10 +48,10 @@ var _ = Describe("KubeScheduler", func() {
 	})
 
 	Describe("#DefaultKubeScheduler", func() {
-		var kubernetesClient *mockkubernetes.MockInterface
+		var kubernetesClient *kubernetesmock.MockInterface
 
 		BeforeEach(func() {
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			kubernetesClient.EXPECT().Version()
 
 			botanist.SeedClientSet = kubernetesClient

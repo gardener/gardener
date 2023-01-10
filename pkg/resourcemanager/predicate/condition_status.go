@@ -16,7 +16,7 @@ package predicate
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -66,8 +66,8 @@ func ConditionStatusChanged(conditionType gardencorev1beta1.ConditionType, chang
 				return false
 			}
 
-			oldCondition := v1beta1helper.GetCondition(old.Status.Conditions, conditionType)
-			newCondition := v1beta1helper.GetCondition(new.Status.Conditions, conditionType)
+			oldCondition := gardencorev1beta1helper.GetCondition(old.Status.Conditions, conditionType)
+			newCondition := gardencorev1beta1helper.GetCondition(new.Status.Conditions, conditionType)
 
 			return changeFn(oldCondition, newCondition)
 		},

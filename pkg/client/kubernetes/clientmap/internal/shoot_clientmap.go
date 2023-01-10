@@ -29,7 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	baseconfig "k8s.io/component-base/config"
+	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -56,7 +56,7 @@ type ShootClientSetFactory struct {
 	// SeedClient is the seed cluster client.
 	SeedClient client.Client
 	// ClientConnectionConfiguration is the configuration that will be used by created ClientSets.
-	ClientConnectionConfig baseconfig.ClientConnectionConfiguration
+	ClientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
 
 	// log is a logger for logging entries related to creating Shoot ClientSets.
 	log logr.Logger

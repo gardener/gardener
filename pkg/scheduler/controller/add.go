@@ -19,19 +19,19 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	shoot "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 )
 
 // AddToManager adds all scheduler controllers to the given manager.
 func AddToManager(mgr manager.Manager, cfg *config.SchedulerConfiguration) error {
-	versionedGardenerClient, err := gardenversionedcoreclientset.NewForConfig(mgr.GetConfig())
+	versionedGardenerClient, err := gardencoreversionedclientset.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("unable to create versioned garden API client: %w", err)
 	}
 
-	if err := (&shoot.Reconciler{
+	if err := (&shootcontroller.Reconciler{
 		Config:                  cfg.Schedulers.Shoot,
 		VersionedGardenerClient: versionedGardenerClient,
 	}).AddToManager(mgr); err != nil {

@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -86,11 +86,11 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 			c = mockclient.NewMockClient(ctrl)
-			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
+			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithClient(c).Build()
 			sm = fakesecretsmanager.New(c, seedNamespace)
 
 			By("expecting secrets managed outside of this function for whose secretsmanager.Get() will be called")
-			c.EXPECT().Get(gomock.Any(), kutil.Key(seedNamespace, "ca"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(seedNamespace, "ca"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
 			botanist.SeedClientSet = k8sSeedClient
 			botanist.SecretsManager = sm
@@ -169,7 +169,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
 					)
 				})
@@ -208,7 +208,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
 					)
 				})
@@ -231,7 +231,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
 					)
 				})

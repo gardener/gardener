@@ -21,7 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -61,16 +61,16 @@ func (b *Botanist) DeployEtcdCopyBackupsTask(ctx context.Context) error {
 
 	sourceBackupEntryName := fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, b.Shoot.BackupEntryName)
 	sourceBackupEntry := &extensionsv1alpha1.BackupEntry{}
-	if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(sourceBackupEntryName), sourceBackupEntry); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(sourceBackupEntryName), sourceBackupEntry); err != nil {
 		return err
 	}
 	sourceSecretName := fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, v1beta1constants.BackupSecretName)
 	sourceSecret := &corev1.Secret{}
-	if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, sourceSecretName), sourceSecret); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(b.Shoot.SeedNamespace, sourceSecretName), sourceSecret); err != nil {
 		return err
 	}
 	secret := &corev1.Secret{}
-	if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
 		return err
 	}
 

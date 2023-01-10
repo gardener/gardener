@@ -52,12 +52,17 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+<<<<<<< HEAD
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+=======
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+>>>>>>> 1ef8f398f (Adapt Import Aliases)
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -65,10 +70,10 @@ import (
 )
 
 var _ = BeforeSuite(func() {
-	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
-	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
-	DeferCleanup(test.WithVar(&secretutils.GenerateVPNKey, secretutils.FakeGenerateVPNKey))
-	DeferCleanup(test.WithVar(&secretutils.Clock, testclock.NewFakeClock(time.Time{})))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateVPNKey, secretsutils.FakeGenerateVPNKey))
+	DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Time{})))
 })
 
 var _ = Describe("KubeAPIServer", func() {
@@ -145,7 +150,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Version:        version,
 			VPN:            VPNConfig{Enabled: true},
 		}
-		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
+		kubernetesInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, sm, values)
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -1176,7 +1181,7 @@ subjects:
 					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
 					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
 				}
-				Expect(kutil.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
+				Expect(kubernetesutils.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
 
 				actualSecretOIDCCABundle := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretOIDCCABundle.Name)))
@@ -1219,7 +1224,7 @@ resources:
 					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-configuration", Namespace: namespace},
 					Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
 				}
-				Expect(kutil.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+				Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
 
 				actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretETCDEncryptionConfiguration.Name)))
@@ -1310,7 +1315,7 @@ resources:
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-configuration", Namespace: namespace},
 						Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
 					}
-					Expect(kutil.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
 
 					actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretETCDEncryptionConfiguration.Name)))
@@ -1360,7 +1365,7 @@ kind: AdmissionConfiguration
 plugins: null
 `},
 					}
-					Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -1403,7 +1408,7 @@ plugins:
 							"baz.yaml": "some-config-for-baz",
 						},
 					}
-					Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -1437,7 +1442,7 @@ rules:
 - level: None
 `},
 					}
-					Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -1470,7 +1475,7 @@ rules:
 						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
 						Data:       map[string]string{"audit-policy.yaml": policy},
 					}
-					Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -1504,7 +1509,7 @@ rules:
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
 						Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("controlplane")},
 					}
-					Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapEgressSelector)).To(Succeed())
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -2173,7 +2178,7 @@ rules:
 					issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+serviceAccountIssuer)
 					issuerIdx1 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+acceptedIssuers[0])
 					issuerIdx2 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+acceptedIssuers[1])
-					tlscipherSuites := kutil.TLSCipherSuites(version)
+					tlscipherSuites := kubernetesutils.TLSCipherSuites(version)
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))
@@ -2461,7 +2466,7 @@ rules:
 					))
 
 					secret := &corev1.Secret{}
-					Expect(c.Get(ctx, kutil.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
 				})
 
@@ -2594,7 +2599,7 @@ rules:
 					deployAndRead()
 
 					secret := &corev1.Secret{}
-					Expect(c.Get(ctx, kutil.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
 					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
 						corev1.Volume{
 							Name: "static-token",
@@ -2635,7 +2640,7 @@ rules:
 					))
 
 					secret = &corev1.Secret{}
-					Expect(c.Get(ctx, kutil.Key(namespace, newSecretNameStaticToken), secret)).To(Succeed())
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, newSecretNameStaticToken), secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
 				})
 
@@ -3163,7 +3168,7 @@ rules:
 
 		It("should successfully wait for the deployment to be updated", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{RuntimeVersion: runtimeVersion, Version: version})
 			deploy := deployment.DeepCopy()
 
@@ -3203,7 +3208,7 @@ rules:
 	Describe("#WaitCleanup", func() {
 		It("should successfully wait for the deployment to be deleted", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
 			deploy := deployment.DeepCopy()
 
@@ -3238,7 +3243,7 @@ rules:
 
 			scheme := runtime.NewScheme()
 			clientWithoutScheme := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
-			kubernetesInterface2 := fakekubernetes.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
+			kubernetesInterface2 := kubernetesfake.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
 			kapi = New(kubernetesInterface2, namespace, nil, Values{})
 
 			Expect(runtime.IsNotRegisteredError(kapi.WaitCleanup(ctx))).To(BeTrue())

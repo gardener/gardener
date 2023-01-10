@@ -21,7 +21,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,8 +57,8 @@ func CheckIfDeletionIsConfirmed(obj client.Object) error {
 // request. It does not ignore `NotFound` errors while patching.
 func ConfirmDeletion(ctx context.Context, w client.Writer, obj client.Object) error {
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
-	kutil.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
-	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	kubernetesutils.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 	return w.Patch(ctx, obj, patch)
 }
 

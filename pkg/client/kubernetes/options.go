@@ -20,7 +20,7 @@ import (
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	baseconfig "k8s.io/component-base/config"
+	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -87,7 +87,7 @@ func WithRuntimeCache(runtimeCache cache.Cache) ConfigFunc {
 // WithClientConnectionOptions returns a ConfigFunc that transfers settings from
 // the passed ClientConnectionConfiguration.
 // The kubeconfig location in ClientConnectionConfiguration is disregarded, though!
-func WithClientConnectionOptions(cfg baseconfig.ClientConnectionConfiguration) ConfigFunc {
+func WithClientConnectionOptions(cfg componentbaseconfig.ClientConnectionConfiguration) ConfigFunc {
 	return func(config *Config) error {
 		if config.restConfig == nil {
 			return errors.New("REST config must be set before setting connection options")

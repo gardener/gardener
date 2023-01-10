@@ -33,8 +33,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -68,7 +68,7 @@ func NewCertificateManager(log logr.Logger, gardenCluster cluster.Cluster, seedC
 		return nil, fmt.Errorf("failed creating garden clientset: %w", err)
 	}
 
-	seedName := bootstraputil.GetSeedName(config.SeedConfig)
+	seedName := gardenletbootstraputil.GetSeedName(config.SeedConfig)
 
 	return &Manager{
 		log:                    log.WithName("certificate-manager").WithValues("seedName", seedName),
@@ -183,7 +183,7 @@ func waitForCertificateRotation(
 
 func readCertificateFromKubeconfigSecret(ctx context.Context, log logr.Logger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) (*corev1.Secret, *tls.Certificate, error) {
 	kubeconfigSecret := &corev1.Secret{}
-	if err := seedClient.Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
 		return nil, nil, err
 	}
 
@@ -197,7 +197,7 @@ func readCertificateFromKubeconfigSecret(ctx context.Context, log logr.Logger, s
 
 // GetCurrentCertificate returns the client certificate which is currently used to communicate with the garden cluster.
 func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClientConnection *config.GardenClientConnection) (*tls.Certificate, error) {
-	kubeconfigKey := kutil.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
+	kubeconfigKey := kubernetesutils.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
 	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
 
 	if len(gardenKubeconfig) == 0 {
@@ -214,7 +214,7 @@ func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClien
 		return nil, err
 	}
 
-	return kutil.ClientCertificateFromRESTConfig(restConfig)
+	return kubernetesutils.ClientCertificateFromRESTConfig(restConfig)
 }
 
 // rotateCertificate uses an already existing garden client (already bootstrapped) to request a new client certificate
@@ -235,11 +235,11 @@ func rotateCertificate(
 		return err
 	}
 
-	kubeconfigKey := kutil.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
+	kubeconfigKey := kubernetesutils.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
 	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
 	log.Info("Updating kubeconfig secret in target cluster with rotated certificate")
 
-	_, err = bootstraputil.UpdateGardenKubeconfigSecret(ctx, gardenClientSet.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
+	_, err = gardenletbootstraputil.UpdateGardenKubeconfigSecret(ctx, gardenClientSet.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
 	if err != nil {
 		return fmt.Errorf("unable to update kubeconfig secret %q on the target cluster during certificate rotation: %w", kubeconfigKey.String(), err)
 	}

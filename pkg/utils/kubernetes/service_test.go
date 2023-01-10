@@ -15,7 +15,7 @@
 package kubernetes_test
 
 import (
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -24,7 +24,7 @@ import (
 var _ = Describe("service", func() {
 	Describe("#DNSNamesForService", func() {
 		It("should return all expected DNS names for the given service name and namespace", func() {
-			Expect(kutil.DNSNamesForService("test", "default")).To(Equal([]string{
+			Expect(kubernetesutils.DNSNamesForService("test", "default")).To(Equal([]string{
 				"test",
 				"test.default",
 				"test.default.svc",

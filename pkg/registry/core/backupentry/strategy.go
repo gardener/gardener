@@ -31,7 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
@@ -86,7 +86,7 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 		return true
 	}
 
-	if v1beta1helper.HasOperationAnnotation(newBackupEntry.Annotations) {
+	if gardencorev1beta1helper.HasOperationAnnotation(newBackupEntry.Annotations) {
 		// Remove the operation annotation if its value is not "restore"
 		// If it's "restore", it will be removed at the end of the reconciliation since it's needed
 		// to properly determine that the operation is "restore, and not "reconcile"

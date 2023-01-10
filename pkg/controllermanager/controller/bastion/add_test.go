@@ -21,7 +21,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
-	bastionstrategy "github.com/gardener/gardener/pkg/registry/operations/bastion"
+	bastionregistry "github.com/gardener/gardener/pkg/registry/operations/bastion"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/go-logr/logr"
@@ -154,7 +154,7 @@ var _ = Describe("Add", func() {
 			log = logr.Discard()
 			fakeClient = test.NewClientWithFieldSelectorSupport(
 				fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build(),
-				bastionstrategy.ToSelectableFields,
+				bastionregistry.ToSelectableFields,
 			)
 		})
 

@@ -25,10 +25,10 @@ import (
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // IsDeleting is a predicate for objects having a deletion timestamp.
@@ -130,8 +130,8 @@ func RelevantConditionsChanged(
 
 			for _, condition := range relevantConditionTypes {
 				if wasConditionStatusReasonOrMessageUpdated(
-					v1beta1helper.GetCondition(oldConditions, condition),
-					v1beta1helper.GetCondition(newConditions, condition),
+					gardencorev1beta1helper.GetCondition(oldConditions, condition),
+					gardencorev1beta1helper.GetCondition(newConditions, condition),
 				) {
 					return true
 				}
@@ -178,7 +178,7 @@ func ExtensionStatusChanged() predicate.Predicate {
 			// If the object has the operation annotation, this means it's not picked up by the extension controller.
 			// migrate and restore annotations are removed for the extensions only at the end of the operation,
 			// so if the oldObject doesn't have the same annotation, don't enqueue it.
-			if v1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
+			if gardencorev1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
 				operation := e.ObjectNew.GetAnnotations()[v1beta1constants.GardenerOperation]
 				if operation == v1beta1constants.GardenerOperationMigrate || operation == v1beta1constants.GardenerOperationRestore {
 					// if the oldObject doesn't have the same annotation skip
@@ -258,12 +258,12 @@ type isBeingMigratedPredicate struct {
 }
 
 func (p *isBeingMigratedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
-// IsObjectBeingMigrated is an alias for gutil.IsObjectBeingMigrated.
-var IsObjectBeingMigrated = gutil.IsObjectBeingMigrated
+// IsObjectBeingMigrated is an alias for gardenerutils.IsObjectBeingMigrated.
+var IsObjectBeingMigrated = gardenerutils.IsObjectBeingMigrated
 
 func (p *isBeingMigratedPredicate) Create(e event.CreateEvent) bool {
 	return IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
@@ -286,6 +286,6 @@ func (p *isBeingMigratedPredicate) Generic(e event.GenericEvent) bool {
 func SeedNamePredicate(seedName string, getSeedNamesFromObject func(client.Object) (*string, *string)) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		specSeedName, statusSeedName := getSeedNamesFromObject(obj)
-		return gutil.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
+		return gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
 	})
 }

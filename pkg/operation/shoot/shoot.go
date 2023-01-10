@@ -34,8 +34,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -88,7 +88,7 @@ func (b *Builder) WithCloudProfileObject(cloudProfileObject *gardencorev1beta1.C
 func (b *Builder) WithCloudProfileObjectFrom(reader client.Reader) *Builder {
 	b.cloudProfileFunc = func(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
 		obj := &gardencorev1beta1.CloudProfile{}
-		return obj, reader.Get(ctx, kutil.Key(name), obj)
+		return obj, reader.Get(ctx, kubernetesutils.Key(name), obj)
 	}
 	return b
 }
@@ -115,12 +115,12 @@ func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
 func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
 	b.shootSecretFunc = func(ctx context.Context, namespace, secretBindingName string) (*corev1.Secret, error) {
 		binding := &gardencorev1beta1.SecretBinding{}
-		if err := c.Get(ctx, kutil.Key(namespace, secretBindingName), binding); err != nil {
+		if err := c.Get(ctx, kubernetesutils.Key(namespace, secretBindingName), binding); err != nil {
 			return nil, err
 		}
 
 		secret := &corev1.Secret{}
-		if err := c.Get(ctx, kutil.Key(binding.SecretRef.Namespace, binding.SecretRef.Name), secret); err != nil {
+		if err := c.Get(ctx, kubernetesutils.Key(binding.SecretRef.Namespace, binding.SecretRef.Name), secret); err != nil {
 			return nil, err
 		}
 
@@ -235,7 +235,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 
 	shoot.PSPDisabled = gardencorev1beta1helper.IsPSPDisabled(shoot.GetInfo())
 
-	backupEntryName, err := gutil.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
+	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +358,7 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *shoot.Spec.DNS.Domain)
+	return fmt.Sprintf("%s.%s.%s", subDomain, gardenerutils.IngressPrefix, *shoot.Spec.DNS.Domain)
 }
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
@@ -414,14 +414,14 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 	}
 
 	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
-		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
+		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
 	if useInternalClusterDomain {
-		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
+		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
-	return gutil.GetAPIServerDomain(*s.ExternalClusterDomain)
+	return gardenerutils.GetAPIServerDomain(*s.ExternalClusterDomain)
 }
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.
@@ -461,10 +461,10 @@ func ConstructInternalClusterDomain(shootName, shootProject string, internalDoma
 	if internalDomain == nil {
 		return ""
 	}
-	if strings.Contains(internalDomain.Domain, gutil.InternalDomainKey) {
+	if strings.Contains(internalDomain.Domain, gardenerutils.InternalDomainKey) {
 		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain)
 	}
-	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, gutil.InternalDomainKey, internalDomain.Domain)
+	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, gardenerutils.InternalDomainKey, internalDomain.Domain)
 }
 
 // ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put
@@ -503,7 +503,7 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 	case primaryProvider != nil:
 		if primaryProvider.SecretName != nil {
 			secret := &corev1.Secret{}
-			if err := c.Get(ctx, kutil.Key(shoot.Namespace, *primaryProvider.SecretName), secret); err != nil {
+			if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, *primaryProvider.SecretName), secret); err != nil {
 				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
 			}
 			externalDomain.SecretData = secret.Data

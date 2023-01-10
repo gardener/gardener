@@ -17,7 +17,7 @@ package fake_test
 import (
 	"context"
 
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 
@@ -85,7 +85,7 @@ var _ = Describe("FakeManager", func() {
 
 	Describe("#Generate", func() {
 		var (
-			config         = &secretutils.BasicAuthSecretConfig{Name: name, Format: secretutils.BasicAuthFormatNormal}
+			config         = &secretsutils.BasicAuthSecretConfig{Name: name, Format: secretsutils.BasicAuthFormatNormal}
 			configChecksum = "17492942871593004096"
 			secretName     = name + "-fa646dad"
 		)

@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // ControllerName is the name of the controller.
@@ -70,17 +70,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 			r.ClassFilter,
 			predicate.Or(
 				predicate.GenerationChangedPredicate{},
-				managerpredicate.HasOperationAnnotation(),
-				managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
-				managerpredicate.NoLongerIgnored(),
+				resourcemanagerpredicate.HasOperationAnnotation(),
+				resourcemanagerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, resourcemanagerpredicate.ConditionChangedToUnhealthy),
+				resourcemanagerpredicate.NoLongerIgnored(),
 				// we need to reconcile once if the ManagedResource got marked as ignored in order to update the conditions
-				managerpredicate.GotMarkedAsIgnored(),
+				resourcemanagerpredicate.GotMarkedAsIgnored(),
 			),
 			// TODO: refactor this predicate chain into a single predicate.Funcs that can be properly tested as a whole
 			predicate.Or(
 				// Added again here, as otherwise NotIgnored would filter this add/update event out
-				managerpredicate.GotMarkedAsIgnored(),
-				managerpredicate.NotIgnored(),
+				resourcemanagerpredicate.GotMarkedAsIgnored(),
+				resourcemanagerpredicate.NotIgnored(),
 				predicateutils.IsDeleting(),
 			),
 		)).
@@ -89,7 +89,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 			mapper.EnqueueRequestsFrom(r.MapSecretToManagedResources(
 				r.ClassFilter,
 				predicate.Or(
-					managerpredicate.NotIgnored(),
+					resourcemanagerpredicate.NotIgnored(),
 					predicateutils.IsDeleting(),
 				),
 			), mapper.UpdateWithOldAndNew, logr.Discard()),

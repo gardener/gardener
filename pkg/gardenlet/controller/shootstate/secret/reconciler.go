@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	namespace := &corev1.Namespace{}
-	if err := r.SeedClient.Get(ctx, kutil.Key(secret.Namespace), namespace); err != nil {
+	if err := r.SeedClient.Get(ctx, kubernetesutils.Key(secret.Namespace), namespace); err != nil {
 		return reconcile.Result{}, err
 	}
 	if namespace.Labels[v1beta1constants.GardenRole] != v1beta1constants.GardenRoleShoot {

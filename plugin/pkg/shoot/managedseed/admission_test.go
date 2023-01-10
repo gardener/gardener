@@ -19,10 +19,10 @@ import (
 	"errors"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	seedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
+	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 
@@ -46,7 +46,7 @@ var _ = Describe("ManagedSeed", func() {
 			shoot                *core.Shoot
 			managedSeed          *seedmanagementv1alpha1.ManagedSeed
 			coreClient           *corefake.Clientset
-			seedManagementClient *seedmanagementfake.Clientset
+			seedManagementClient *fakeseedmanagement.Clientset
 			admissionHandler     *ManagedSeed
 		)
 
@@ -90,7 +90,7 @@ var _ = Describe("ManagedSeed", func() {
 			coreClient = &corefake.Clientset{}
 			admissionHandler.SetInternalCoreClientset(coreClient)
 
-			seedManagementClient = &seedmanagementfake.Clientset{}
+			seedManagementClient = &fakeseedmanagement.Clientset{}
 			admissionHandler.SetSeedManagementClientset(seedManagementClient)
 		})
 
@@ -254,7 +254,7 @@ var _ = Describe("ManagedSeed", func() {
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
 			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
-			admissionHandler.SetSeedManagementClientset(&seedmanagementfake.Clientset{})
+			admissionHandler.SetSeedManagementClientset(&fakeseedmanagement.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
@@ -263,9 +263,9 @@ var _ = Describe("ManagedSeed", func() {
 })
 
 func getShootAttributes(shoot *core.Shoot, operation admission.Operation, operationOptions runtime.Object) admission.Attributes {
-	return admission.NewAttributesRecord(shoot, nil, corev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, corev1beta1.Resource("shoots").WithVersion("v1beta1"), "", operation, operationOptions, false, nil)
+	return admission.NewAttributesRecord(shoot, nil, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", operation, operationOptions, false, nil)
 }
 
 func getAllShootsAttributes(namespace string) admission.Attributes {
-	return admission.NewAttributesRecord(nil, nil, corev1beta1.Kind("Shoot").WithVersion("v1beta1"), namespace, "", corev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+	return admission.NewAttributesRecord(nil, nil, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), namespace, "", gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 }

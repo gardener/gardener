@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sort"
 
-	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -126,7 +126,7 @@ func (a *genericStateActuator) getExistingMachineSetsMap(ctx context.Context, na
 	// When we read from the cache we get unsorted results, hence, we sort to prevent unnecessary state updates from happening.
 	sort.Slice(existingMachineSets.Items, func(i, j int) bool { return existingMachineSets.Items[i].Name < existingMachineSets.Items[j].Name })
 
-	return workerhelper.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
+	return extensionsworkerhelper.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
 }
 
 // getExistingMachinesMap returns a map of the existing Machines as values and the name of their owner
@@ -153,7 +153,7 @@ func (a *genericStateActuator) getExistingMachinesMap(ctx context.Context, names
 	// When we read from the cache we get unsorted results, hence, we sort to prevent unnecessary state updates from happening.
 	sort.Slice(filteredMachines, func(i, j int) bool { return filteredMachines[i].Name < filteredMachines[j].Name })
 
-	return workerhelper.BuildOwnerToMachinesMap(filteredMachines), nil
+	return extensionsworkerhelper.BuildOwnerToMachinesMap(filteredMachines), nil
 }
 
 func addMachineSetToMachineDeploymentState(machineSets []machinev1alpha1.MachineSet, machineDeploymentState *MachineDeploymentState) {

@@ -16,7 +16,7 @@ package predicate_test
 
 import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -57,7 +57,7 @@ var _ = Describe("Predicate", func() {
 
 	Describe("#ClassChangedPredicate", func() {
 		It("should not match on update (no change)", func() {
-			predicate := managerpredicate.ClassChangedPredicate()
+			predicate := resourcemanagerpredicate.ClassChangedPredicate()
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
@@ -68,7 +68,7 @@ var _ = Describe("Predicate", func() {
 		It("should not match on update (old not set)", func() {
 			updateEvent.ObjectOld = nil
 
-			predicate := managerpredicate.ClassChangedPredicate()
+			predicate := resourcemanagerpredicate.ClassChangedPredicate()
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
@@ -79,7 +79,7 @@ var _ = Describe("Predicate", func() {
 		It("should not match on update (old is not a ManagedResource)", func() {
 			updateEvent.ObjectOld = &corev1.Pod{}
 
-			predicate := managerpredicate.ClassChangedPredicate()
+			predicate := resourcemanagerpredicate.ClassChangedPredicate()
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
@@ -90,7 +90,7 @@ var _ = Describe("Predicate", func() {
 		It("should not match on update (new not set)", func() {
 			updateEvent.ObjectNew = nil
 
-			predicate := managerpredicate.ClassChangedPredicate()
+			predicate := resourcemanagerpredicate.ClassChangedPredicate()
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
@@ -101,7 +101,7 @@ var _ = Describe("Predicate", func() {
 		It("should not match on update (new is not a ManagedResource)", func() {
 			updateEvent.ObjectNew = &corev1.Pod{}
 
-			predicate := managerpredicate.ClassChangedPredicate()
+			predicate := resourcemanagerpredicate.ClassChangedPredicate()
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
@@ -114,7 +114,7 @@ var _ = Describe("Predicate", func() {
 			managedResourceNew.Spec.Class = pointer.StringPtr("other")
 			updateEvent.ObjectNew = managedResourceNew
 
-			predicate := managerpredicate.ClassChangedPredicate()
+			predicate := resourcemanagerpredicate.ClassChangedPredicate()
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeTrue())

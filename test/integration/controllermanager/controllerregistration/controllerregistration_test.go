@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -73,7 +73,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 
 		seedNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: gutil.ComputeGardenNamespace(seed.Name),
+				Name: gardenerutils.ComputeGardenNamespace(seed.Name),
 			},
 		}
 

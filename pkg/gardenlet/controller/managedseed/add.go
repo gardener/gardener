@@ -38,9 +38,9 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -140,7 +140,7 @@ type managedSeedPredicate struct {
 }
 
 func (p *managedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
@@ -186,7 +186,7 @@ type seedOfManagedSeedPredicate struct {
 }
 
 func (p *seedOfManagedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
@@ -213,7 +213,7 @@ func (p *seedOfManagedSeedPredicate) filterSeedOfManagedSeed(obj client.Object) 
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := p.reader.Get(p.ctx, kutil.Key(p.gardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := p.reader.Get(p.ctx, kubernetesutils.Key(p.gardenNamespace, seed.Name), managedSeed); err != nil {
 		return false
 	}
 
@@ -226,13 +226,13 @@ func filterManagedSeed(ctx context.Context, reader client.Reader, managedSeed *s
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := reader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := reader.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		return false
 	}
 
-	specSeedName, statusSeedName := gutil.GetShootSeedNames(shoot)
+	specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(shoot)
 
-	return gutil.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
+	return gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
 }
 
 // MapSeedToManagedSeed is a mapper.MapFunc for mapping a Seed to the owning ManagedSeed.

@@ -29,7 +29,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler handles admission requests and configures volumes and mounts for projected ServiceAccount tokens in Pod
@@ -52,7 +52,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		return err
 	}
 
-	log := h.Logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
+	log := h.Logger.WithValues("pod", kubernetesutils.ObjectKeyForCreateWebhooks(pod, req))
 
 	if len(pod.Spec.ServiceAccountName) == 0 || pod.Spec.ServiceAccountName == "default" {
 		log.Info("Pod's service account name is empty or defaulted, nothing to be done", "serviceAccountName", pod.Spec.ServiceAccountName)
@@ -61,7 +61,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 
 	serviceAccount := &corev1.ServiceAccount{}
 	// We use `req.Namespace` instead of `pod.Namespace` due to https://github.com/kubernetes/kubernetes/issues/88282.
-	if err := h.TargetReader.Get(ctx, kutil.Key(req.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
+	if err := h.TargetReader.Get(ctx, kubernetesutils.Key(req.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
 		log.Error(err, "Error getting service account", "serviceAccountName", pod.Spec.ServiceAccountName)
 		return err
 	}

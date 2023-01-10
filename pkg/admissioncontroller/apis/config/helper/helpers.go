@@ -22,13 +22,13 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 
-	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 )
 
 // APIGroupMatches returns `true` if the given group has a match in the given limit.
-func APIGroupMatches(limit apisconfig.ResourceLimit, group string) bool {
+func APIGroupMatches(limit admissioncontrollerconfig.ResourceLimit, group string) bool {
 	for _, grp := range limit.APIGroups {
-		if grp == apisconfig.WildcardAll || grp == group {
+		if grp == admissioncontrollerconfig.WildcardAll || grp == group {
 			return true
 		}
 	}
@@ -36,9 +36,9 @@ func APIGroupMatches(limit apisconfig.ResourceLimit, group string) bool {
 }
 
 // ResourceMatches returns `true` if the given resource has a match in the given limit.
-func ResourceMatches(limit apisconfig.ResourceLimit, resource string) bool {
+func ResourceMatches(limit admissioncontrollerconfig.ResourceLimit, resource string) bool {
 	for _, res := range limit.Resources {
-		if res == apisconfig.WildcardAll || res == resource {
+		if res == admissioncontrollerconfig.WildcardAll || res == resource {
 			return true
 		}
 	}
@@ -46,9 +46,9 @@ func ResourceMatches(limit apisconfig.ResourceLimit, resource string) bool {
 }
 
 // VersionMatches returns `true` if the given version has a match in the given limit.
-func VersionMatches(limit apisconfig.ResourceLimit, version string) bool {
+func VersionMatches(limit admissioncontrollerconfig.ResourceLimit, version string) bool {
 	for _, ver := range limit.APIVersions {
-		if ver == apisconfig.WildcardAll || ver == version {
+		if ver == admissioncontrollerconfig.WildcardAll || ver == version {
 			return true
 		}
 	}
@@ -61,17 +61,17 @@ func UserMatches(subject rbacv1.Subject, userInfo authenticationv1.UserInfo) boo
 		return false
 	}
 
-	return subject.Name == apisconfig.WildcardAll || subject.Name == userInfo.Username
+	return subject.Name == admissioncontrollerconfig.WildcardAll || subject.Name == userInfo.Username
 }
 
 // UserGroupMatches returns `true` if the given group in the subject has a match in the given userConfig.
-// Always returns true if `apisconfig.WildcardAll` is used in subject.
+// Always returns true if `admissioncontrollerconfig.WildcardAll` is used in subject.
 func UserGroupMatches(subject rbacv1.Subject, userInfo authenticationv1.UserInfo) bool {
 	if subject.Kind != rbacv1.GroupKind {
 		return false
 	}
 
-	if subject.Name == apisconfig.WildcardAll {
+	if subject.Name == admissioncontrollerconfig.WildcardAll {
 		return true
 	}
 
@@ -84,13 +84,13 @@ func UserGroupMatches(subject rbacv1.Subject, userInfo authenticationv1.UserInfo
 }
 
 // ServiceAccountMatches returns `true` if the given service account in the subject has a match in the given userConfig.
-// Supports `apisconfig.WildcardAll` in subject name.
+// Supports `admissioncontrollerconfig.WildcardAll` in subject name.
 func ServiceAccountMatches(subject rbacv1.Subject, userInfo authenticationv1.UserInfo) bool {
 	if subject.Kind != rbacv1.ServiceAccountKind {
 		return false
 	}
 
-	if subject.Name == apisconfig.WildcardAll {
+	if subject.Name == admissioncontrollerconfig.WildcardAll {
 		saPrefix := fmt.Sprintf("%s%s:", serviceaccount.ServiceAccountUsernamePrefix, subject.Namespace)
 		return strings.HasPrefix(userInfo.Username, saPrefix)
 	}

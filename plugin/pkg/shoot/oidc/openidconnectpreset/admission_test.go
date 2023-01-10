@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,7 +34,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 	Describe("#Admit", func() {
 		var (
 			admissionHandler        *OpenIDConnectPreset
-			settingsInformerFactory settingsinformer.SharedInformerFactory
+			settingsInformerFactory settingsinformers.SharedInformerFactory
 			shoot                   *core.Shoot
 			preset                  *settingsv1alpha1.OpenIDConnectPreset
 		)
@@ -86,7 +86,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			}
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			settingsInformerFactory = settingsinformer.NewSharedInformerFactory(nil, 0)
+			settingsInformerFactory = settingsinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetSettingsInformerFactory(settingsInformerFactory)
 
 		})
@@ -275,7 +275,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 		})
 
 		It("should return nil error when everything is set", func() {
-			plugin.SetSettingsInformerFactory(settingsinformer.NewSharedInformerFactory(nil, 0))
+			plugin.SetSettingsInformerFactory(settingsinformers.NewSharedInformerFactory(nil, 0))
 			Expect(plugin.ValidateInitialization()).ToNot(HaveOccurred())
 		})
 	})

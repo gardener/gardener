@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 )
@@ -57,7 +57,7 @@ func checkSeed(seed *gardencorev1beta1.Seed) error {
 
 	for _, trueConditionType := range trueSeedConditionTypes {
 		conditionType := string(trueConditionType)
-		condition := v1beta1helper.GetCondition(seed.Status.Conditions, trueConditionType)
+		condition := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, trueConditionType)
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}

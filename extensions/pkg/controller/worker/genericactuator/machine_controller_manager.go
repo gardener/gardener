@@ -31,8 +31,8 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -58,7 +58,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 	mcmValues["useTokenRequestor"] = true
 	mcmValues["useProjectedTokenMount"] = true
 
-	if err := gutil.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
+	if err := gardenerutils.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
 		return err
 	}
 	mcmValues["genericTokenKubeconfigSecretName"] = extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster)
@@ -68,7 +68,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 
 	if err := a.mcmSeedChart.Apply(ctx, a.chartApplier, workerObj.Namespace,
 		a.imageVector, a.gardenerClientset.Version(), cluster.Shoot.Spec.Kubernetes.Version, mcmValues); err != nil {
-		return fmt.Errorf("could not apply MCM chart in seed for worker '%s': %w", kutil.ObjectName(workerObj), err)
+		return fmt.Errorf("could not apply MCM chart in seed for worker '%s': %w", kubernetesutils.ObjectName(workerObj), err)
 	}
 
 	if err := a.applyMachineControllerManagerShootChart(ctx, workerDelegate, workerObj, cluster); err != nil {
@@ -86,21 +86,21 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker) error {
 	logger.Info("Deleting the machine-controller-manager")
 	if err := managedresources.Delete(ctx, a.client, workerObj.Namespace, McmShootResourceName, false); err != nil {
-		return fmt.Errorf("could not delete managed resource containing mcm chart for worker '%s': %w", kutil.ObjectName(workerObj), err)
+		return fmt.Errorf("could not delete managed resource containing mcm chart for worker '%s': %w", kubernetesutils.ObjectName(workerObj), err)
 	}
 
 	logger.Info("Waiting for machine-controller-manager ManagedResource to be deleted")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	if err := managedresources.WaitUntilDeleted(timeoutCtx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
-		return fmt.Errorf("error while waiting for managed resource containing mcm for '%s' to be deleted: %w", kutil.ObjectName(workerObj), err)
+		return fmt.Errorf("error while waiting for managed resource containing mcm for '%s' to be deleted: %w", kubernetesutils.ObjectName(workerObj), err)
 	}
 
 	if err := a.mcmSeedChart.Delete(ctx, a.client, workerObj.Namespace); err != nil {
 		return fmt.Errorf("cleaning up machine-controller-manager resources in seed failed: %w", err)
 	}
 
-	return kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + a.mcmName, Namespace: workerObj.Namespace}})
+	return kubernetesutils.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + a.mcmName, Namespace: workerObj.Namespace}})
 }
 
 func (a *genericActuator) waitUntilMachineControllerManagerIsDeleted(ctx context.Context, logger logr.Logger, namespace string) error {
@@ -120,7 +120,7 @@ func (a *genericActuator) waitUntilMachineControllerManagerIsDeleted(ctx context
 
 func (a *genericActuator) scaleMachineControllerManager(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, replicas int32) error {
 	logger.Info("Scaling machine-controller-manager", "replicas", replicas)
-	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kutil.Key(worker.Namespace, McmDeploymentName), replicas))
+	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kubernetesutils.Key(worker.Namespace, McmDeploymentName), replicas))
 }
 
 func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Context, workerDelegate WorkerDelegate, workerObj *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
@@ -139,7 +139,7 @@ func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Co
 	values["useTokenRequestor"] = true
 
 	if err := managedresources.RenderChartAndCreate(ctx, workerObj.Namespace, McmShootResourceName, false, a.client, chartRenderer, a.mcmShootChart, values, a.imageVector, metav1.NamespaceSystem, cluster.Shoot.Spec.Kubernetes.Version, true, false); err != nil {
-		return fmt.Errorf("could not apply control plane shoot chart for worker '%s': %w", kutil.ObjectName(workerObj), err)
+		return fmt.Errorf("could not apply control plane shoot chart for worker '%s': %w", kubernetesutils.ObjectName(workerObj), err)
 	}
 
 	return nil

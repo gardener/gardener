@@ -25,7 +25,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 )
 
@@ -60,8 +60,8 @@ func (i *IdentityDeterminer) Start(ctx context.Context) error {
 // be set.
 func (i *IdentityDeterminer) determineClusterIdentity(ctx context.Context, force bool) (string, error) {
 	configMap := &corev1.ConfigMap{}
-	if err := i.SourceClient.Get(ctx, client.ObjectKey{Name: gardenerconstantsv1beta1.ClusterIdentity, Namespace: metav1.NamespaceSystem}, configMap); err == nil {
-		if id, ok := configMap.Data[gardenerconstantsv1beta1.ClusterIdentity]; ok {
+	if err := i.SourceClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.ClusterIdentity, Namespace: metav1.NamespaceSystem}, configMap); err == nil {
+		if id, ok := configMap.Data[v1beta1constants.ClusterIdentity]; ok {
 			return id, nil
 		}
 

@@ -23,9 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
-	"github.com/gardener/gardener/pkg/utils/secrets/manager"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	fakemanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -147,7 +146,7 @@ var _ = Describe("EventLogger", func() {
 	type newEventLoggerArgs struct {
 		client         client.Client
 		namespace      string
-		secretsManager manager.Interface
+		secretsManager secretsmanager.Interface
 		image          string
 	}
 
@@ -196,7 +195,7 @@ var _ = Describe("EventLogger", func() {
 		Entry("pass valid options", newEventLoggerArgs{
 			client:         client.NewDryRunClient(nil),
 			namespace:      namespace,
-			secretsManager: fakemanager.New(client.NewDryRunClient(nil), namespace),
+			secretsManager: fakesecretsmanager.New(client.NewDryRunClient(nil), namespace),
 			image:          image,
 		},
 			BeNil(),
@@ -206,7 +205,7 @@ var _ = Describe("EventLogger", func() {
 	BeforeEach(func() {
 		var err error
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSecretManager = fakemanager.New(c, namespace)
+		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 
 		eventLoggerDeployer, err = New(
 			c,

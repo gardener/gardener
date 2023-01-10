@@ -21,9 +21,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +41,7 @@ import (
 type Reconciler struct {
 	Client                  client.Client
 	Config                  *config.ShootSchedulerConfiguration
-	VersionedGardenerClient *gardenversionedcoreclientset.Clientset
+	VersionedGardenerClient *gardencoreversionedclientset.Clientset
 	Recorder                record.EventRecorder
 }
 
@@ -121,7 +121,7 @@ func determineSeed(
 		return nil, err
 	}
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := reader.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err := reader.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return nil, err
 	}
 	filteredSeeds, err := filterUsableSeeds(seedList.Items)

@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 
 	"github.com/go-logr/logr"
-	baseconfig "k8s.io/component-base/config"
+	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -30,7 +30,7 @@ import (
 type ShootClientMapBuilder struct {
 	gardenClient           client.Client
 	seedClient             client.Client
-	clientConnectionConfig *baseconfig.ClientConnectionConfiguration
+	clientConnectionConfig *componentbaseconfig.ClientConnectionConfiguration
 }
 
 // NewShootClientMapBuilder constructs a new ShootClientMapBuilder.
@@ -51,7 +51,7 @@ func (b *ShootClientMapBuilder) WithSeedClient(client client.Client) *ShootClien
 }
 
 // WithClientConnectionConfig sets the ClientConnectionConfiguration that should be used by ClientSets created by this ClientMap.
-func (b *ShootClientMapBuilder) WithClientConnectionConfig(cfg *baseconfig.ClientConnectionConfiguration) *ShootClientMapBuilder {
+func (b *ShootClientMapBuilder) WithClientConnectionConfig(cfg *componentbaseconfig.ClientConnectionConfiguration) *ShootClientMapBuilder {
 	b.clientConnectionConfig = cfg
 	return b
 }

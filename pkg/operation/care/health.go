@@ -34,8 +34,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -192,7 +192,7 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	// Get BackupEntries separately as they are not namespaced i.e., they cannot be narrowed down
 	// to a shoot namespace like other extension resources above.
 	be := &extensionsv1alpha1.BackupEntry{}
-	if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.BackupEntryName), be); err == nil {
+	if err := h.seedClient.Client().Get(ctx, kubernetesutils.Key(h.shoot.BackupEntryName), be); err == nil {
 		allExtensions = append(allExtensions, be)
 	} else if !apierrors.IsNotFound(err) {
 		return nil, err
@@ -219,7 +219,7 @@ func (h *Health) getLastHeartbeatTimeForExtension(ctx context.Context, controlle
 	heartBeatLease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      extensions.HeartBeatResourceName,
-			Namespace: gutil.NamespaceNameForControllerInstallation(controllerInstallation),
+			Namespace: gardenerutils.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
 

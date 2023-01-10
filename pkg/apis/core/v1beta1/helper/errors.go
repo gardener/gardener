@@ -21,7 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -140,10 +140,10 @@ type Coder interface {
 	Codes() []gardencorev1beta1.ErrorCode
 }
 
-// ExtractErrorCodes extracts all error codes from the given error by using utilerrors.Errors
+// ExtractErrorCodes extracts all error codes from the given error by using errorsutils.Errors
 func ExtractErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var codes []gardencorev1beta1.ErrorCode
-	for _, err := range utilerrors.Errors(err) {
+	for _, err := range errorsutils.Errors(err) {
 		var coder Coder
 		if errors.As(err, &coder) {
 			codes = append(codes, coder.Codes()...)
@@ -227,10 +227,10 @@ type WrappedLastErrors struct {
 func DeprecatedNewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 	var lastErrors []gardencorev1beta1.LastError
 
-	for _, partError := range utilerrors.Errors(err) {
+	for _, partError := range errorsutils.Errors(err) {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
-			utilerrors.GetID(partError),
+			errorsutils.GetID(partError),
 			DeprecatedDetermineErrorCodes(partError)...))
 	}
 
@@ -244,10 +244,10 @@ func DeprecatedNewWrappedLastErrors(description string, err error) *WrappedLastE
 func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 	var lastErrors []gardencorev1beta1.LastError
 
-	for _, partError := range utilerrors.Errors(err) {
+	for _, partError := range errorsutils.Errors(err) {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
-			utilerrors.GetID(partError),
+			errorsutils.GetID(partError),
 			ExtractErrorCodes(partError)...))
 	}
 

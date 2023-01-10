@@ -26,10 +26,10 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation"
-	operationseed "github.com/gardener/gardener/pkg/operation/seed"
-	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -63,13 +63,13 @@ var _ = Describe("operation", func() {
 				},
 			}
 			o = &Operation{
-				Seed:  &operationseed.Seed{},
-				Shoot: &operationshoot.Shoot{},
+				Seed:  &seedpkg.Seed{},
+				Shoot: &shootpkg.Shoot{},
 			}
 		)
 
 		shoot.Status = gardencorev1beta1.ShootStatus{
-			TechnicalID: operationshoot.ComputeTechnicalID(projectName, shoot),
+			TechnicalID: shootpkg.ComputeTechnicalID(projectName, shoot),
 		}
 
 		o.Seed.SetInfo(seed)
@@ -115,7 +115,7 @@ var _ = Describe("operation", func() {
 			gardenClient = mockclient.NewMockClient(ctrl)
 			o = &Operation{
 				GardenClient: gardenClient,
-				Shoot:        &operationshoot.Shoot{},
+				Shoot:        &shootpkg.Shoot{},
 			}
 			o.Shoot.SetInfo(shoot)
 		})
@@ -125,7 +125,7 @@ var _ = Describe("operation", func() {
 			It("should create ShootState and add it to the Operation object", func() {
 				gomock.InOrder(
 					gardenClient.EXPECT().Create(ctx, shootState).Return(nil),
-					gardenClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})),
+					gardenClient.EXPECT().Get(ctx, kubernetesutils.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})),
 				)
 
 				Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
@@ -139,7 +139,7 @@ var _ = Describe("operation", func() {
 
 				gomock.InOrder(
 					gardenClient.EXPECT().Create(ctx, shootState).Return(apierrors.NewAlreadyExists(gr, "foo")),
-					gardenClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1alpha1.ShootState, _ ...client.GetOption) error {
+					gardenClient.EXPECT().Get(ctx, kubernetesutils.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1alpha1.ShootState, _ ...client.GetOption) error {
 						expectedShootState.DeepCopyInto(obj)
 						return nil
 					}),
@@ -268,7 +268,7 @@ var _ = Describe("operation", func() {
 
 		BeforeEach(func() {
 			operation = &Operation{
-				Shoot: &operationshoot.Shoot{},
+				Shoot: &shootpkg.Shoot{},
 			}
 		})
 

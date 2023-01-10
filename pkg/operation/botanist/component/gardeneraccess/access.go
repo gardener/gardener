@@ -21,10 +21,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -86,10 +86,10 @@ func (g *gardener) Deploy(ctx context.Context) error {
 
 	for _, v := range accessNamesToServers {
 		var (
-			shootAccessSecret = gutil.NewShootAccessSecret(v.name, g.namespace).WithNameOverride(v.name)
-			kubeconfig        = kutil.NewKubeconfig(
+			shootAccessSecret = gardenerutils.NewShootAccessSecret(v.name, g.namespace).WithNameOverride(v.name)
+			kubeconfig        = kubernetesutils.NewKubeconfig(
 				g.namespace,
-				clientcmdv1.Cluster{Server: v.server, CertificateAuthorityData: caSecret.Data[secretutils.DataKeyCertificateBundle]},
+				clientcmdv1.Cluster{Server: v.server, CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle]},
 				clientcmdv1.AuthInfo{Token: ""},
 			)
 		)

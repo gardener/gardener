@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -185,10 +185,10 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 		roleBindingPSP    *rbacv1.RoleBinding
 	)
 
-	utilruntime.Must(kutil.MakeUnique(secret))
-	utilruntime.Must(kutil.MakeUnique(configMap))
-	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
-	utilruntime.Must(kutil.MakeUnique(configMapCleanupScript))
+	utilruntime.Must(kubernetesutils.MakeUnique(secret))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMapConntrackFixScript))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMapCleanupScript))
 
 	k.serviceAccount = serviceAccount
 	k.secret = secret

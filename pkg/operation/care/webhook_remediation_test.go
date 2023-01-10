@@ -19,7 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	. "github.com/gardener/gardener/pkg/operation/care"
@@ -53,7 +53,7 @@ var _ = Describe("WebhookRemediation", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		fakeKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+		fakeKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
 		shootClientInit = func() (kubernetes.Interface, bool, error) {
 			return fakeKubernetesInterface, true, nil
 		}

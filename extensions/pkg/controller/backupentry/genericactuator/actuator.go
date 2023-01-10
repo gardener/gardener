@@ -23,7 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +65,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 	shootTechnicalID, _ := backupentry.ExtractShootDetailsFromBackupEntryName(be.Name)
 
 	namespace := &corev1.Namespace{}
-	if err := a.client.Get(ctx, kutil.Key(shootTechnicalID), namespace); err != nil {
+	if err := a.client.Get(ctx, kubernetesutils.Key(shootTechnicalID), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("SeedNamespace for shoot not found. Avoiding etcd backup secret deployment")
 			return nil
@@ -78,7 +78,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 		return nil
 	}
 
-	backupSecret, err := kutil.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
+	backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
 	if err != nil {
 		log.Error(err, "Failed to read backup extension secret")
 		return err
@@ -113,7 +113,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, be *extensionsv1
 
 func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, secretName string) error {
 	etcdSecret := emptyEtcdBackupSecret(secretName)
-	return kutil.DeleteObject(ctx, a.client, etcdSecret)
+	return kubernetesutils.DeleteObject(ctx, a.client, etcdSecret)
 }
 
 func emptyEtcdBackupSecret(backupEntryName string) *corev1.Secret {

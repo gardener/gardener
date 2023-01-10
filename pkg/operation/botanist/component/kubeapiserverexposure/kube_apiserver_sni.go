@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/sprig"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -202,7 +202,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 }
 
 func (s *sni) Destroy(ctx context.Context) error {
-	return kutil.DeleteObjects(
+	return kubernetesutils.DeleteObjects(
 		ctx,
 		s.client,
 		s.emptyDestinationRule(),

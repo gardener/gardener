@@ -33,7 +33,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 )
 
@@ -204,7 +204,7 @@ func (r *Reconciler) getClusterNameFromRequest(req reconcile.Request) string {
 	var clusterName string
 	if req.Namespace == "" {
 		// Handling for cluster-scoped backupentry extension resources.
-		clusterName, _ = gutil.ExtractShootDetailsFromBackupEntryName(req.Name)
+		clusterName, _ = gardenerutils.ExtractShootDetailsFromBackupEntryName(req.Name)
 	} else {
 		clusterName = req.Namespace
 	}

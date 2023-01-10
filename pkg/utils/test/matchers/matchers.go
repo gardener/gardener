@@ -17,7 +17,7 @@ package matchers
 import (
 	"errors"
 
-	kcache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
+	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -124,7 +124,7 @@ func BeInvalidError() types.GomegaMatcher {
 func BeCacheError() types.GomegaMatcher {
 	return &kubernetesErrors{
 		checkFunc: func(err error) bool {
-			cacheErr := &kcache.CacheError{}
+			cacheErr := &kubernetescache.CacheError{}
 			return errors.As(err, &cacheErr)
 		},
 		message: "",

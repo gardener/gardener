@@ -23,7 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -82,7 +82,7 @@ func (a *AddToManagerBuilder) AddToManager(m manager.Manager) error {
 }
 
 // GetSecretByReference returns the Secret object matching the given SecretReference.
-var GetSecretByReference = kutil.GetSecretByReference
+var GetSecretByReference = kubernetesutils.GetSecretByReference
 
 // WatchBuilder holds various functions which add watch controls to the passed Controller.
 type WatchBuilder []func(controller.Controller) error

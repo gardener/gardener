@@ -21,8 +21,8 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +36,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		configv1alpha1.AddToScheme,
+		gardenletv1alpha1.AddToScheme,
 		gardencore.AddToScheme,
 		gardencorev1beta1.AddToScheme,
 	)
@@ -72,7 +72,7 @@ func (o *options) complete() error {
 }
 
 func (o *options) validate() error {
-	if errs := configvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
+	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 	return nil

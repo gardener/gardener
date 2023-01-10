@@ -31,7 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	mockclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/mock"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 )
 
 var _ = Describe("GenericClientMap", func() {
@@ -50,7 +50,7 @@ var _ = Describe("GenericClientMap", func() {
 		var (
 			ctrl    *gomock.Controller
 			factory *mockclientmap.MockClientSetFactory
-			cs      *mockkubernetes.MockInterface
+			cs      *kubernetesmock.MockInterface
 
 			csVersion *version.Info
 
@@ -62,7 +62,7 @@ var _ = Describe("GenericClientMap", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			factory = mockclientmap.NewMockClientSetFactory(ctrl)
-			cs = mockkubernetes.NewMockInterface(ctrl)
+			cs = kubernetesmock.NewMockInterface(ctrl)
 			csVersion = &version.Info{GitVersion: "1.24.0"}
 			cs.EXPECT().Version().Return(csVersion.GitVersion).AnyTimes()
 
@@ -176,7 +176,7 @@ var _ = Describe("GenericClientMap", func() {
 				fakeClock.Sleep(internal.MaxRefreshInterval)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash2", nil)
 
-				cs2 := mockkubernetes.NewMockInterface(ctrl)
+				cs2 := kubernetesmock.NewMockInterface(ctrl)
 				factory.EXPECT().NewClientSet(ctx, key).Return(cs2, "hash2", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs2))
 			})

@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 			if mayReleaseSecret {
 				secret := &corev1.Secret{}
-				if err := r.Client.Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err == nil {
+				if err := r.Client.Get(ctx, kubernetesutils.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err == nil {
 					// Remove 'referred by a secret binding' label
 					if metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
 						patch := client.MergeFrom(secret.DeepCopy())
@@ -129,7 +129,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// Add the Gardener finalizer to the referenced Secret to protect it from deletion as long as the
 	// SecretBinding resource exists.
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -158,7 +158,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if len(secretBinding.Quotas) != 0 {
 		for _, objRef := range secretBinding.Quotas {
 			quota := &gardencorev1beta1.Quota{}
-			if err := r.Client.Get(ctx, kutil.Key(objRef.Namespace, objRef.Name), quota); err != nil {
+			if err := r.Client.Get(ctx, kubernetesutils.Key(objRef.Namespace, objRef.Name), quota); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -217,7 +217,7 @@ func (r *Reconciler) removeLabelFromQuotas(ctx context.Context, quotas []corev1.
 		}
 
 		quota := &gardencorev1beta1.Quota{}
-		if err := r.Client.Get(ctx, kutil.Key(q.Namespace, q.Name), quota); err != nil {
+		if err := r.Client.Get(ctx, kubernetesutils.Key(q.Namespace, q.Name), quota); err != nil {
 			return err
 		}
 

@@ -47,8 +47,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	componenttest "github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -377,7 +377,7 @@ var _ = Describe("VPA", func() {
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
 
-				Expect(gutil.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretUpdater.Name)).To(Succeed())
+				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretUpdater.Name)).To(Succeed())
 			}
 
 			return obj
@@ -652,7 +652,7 @@ var _ = Describe("VPA", func() {
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
 
-				Expect(gutil.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretRecommender.Name)).To(Succeed())
+				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretRecommender.Name)).To(Succeed())
 			}
 
 			return obj
@@ -1519,7 +1519,7 @@ var _ = Describe("VPA", func() {
 				Expect(secret).To(Equal(shootAccessSecretUpdater))
 
 				deployment := &appsv1.Deployment{}
-				Expect(c.Get(ctx, kutil.Key(namespace, "vpa-updater"), deployment)).To(Succeed())
+				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-updater"), deployment)).To(Succeed())
 				deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil, component.ClusterTypeShoot)
 				deploymentUpdater.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentUpdater))
@@ -1545,7 +1545,7 @@ var _ = Describe("VPA", func() {
 				Expect(secret).To(Equal(shootAccessSecretRecommender))
 
 				deployment = &appsv1.Deployment{}
-				Expect(c.Get(ctx, kutil.Key(namespace, "vpa-recommender"), deployment)).To(Succeed())
+				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-recommender"), deployment)).To(Succeed())
 				deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot)
 				deploymentRecommender.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentRecommender))
@@ -1578,7 +1578,7 @@ var _ = Describe("VPA", func() {
 				Expect(networkPolicy).To(Equal(networkPolicyAdmissionController))
 
 				deployment = &appsv1.Deployment{}
-				Expect(c.Get(ctx, kutil.Key(namespace, "vpa-admission-controller"), deployment)).To(Succeed())
+				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-admission-controller"), deployment)).To(Succeed())
 				deploymentAdmissionController := deploymentAdmissionControllerFor(false, component.ClusterTypeShoot)
 				deploymentAdmissionController.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentAdmissionController))

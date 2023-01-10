@@ -20,10 +20,10 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	workercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
+	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -74,7 +74,7 @@ func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *
 		return fmt.Errorf("failed to deploy the machine classes: %w", err)
 	}
 
-	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, a.client, kutil.Key(worker.Namespace, McmDeploymentName), 0); err != nil && !apierrors.IsNotFound(err) {
+	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, a.client, kubernetesutils.Key(worker.Namespace, McmDeploymentName), 0); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("deadline exceeded while scaling down machine-controller-manager: %w", err)
 	}
 
@@ -93,14 +93,14 @@ func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *
 	return a.Reconcile(ctx, log, worker, cluster)
 }
 
-func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachineDeployments workercontroller.MachineDeployments) error {
+func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
 	if worker.Status.State == nil || len(worker.Status.State.Raw) <= 0 {
 		return nil
 	}
 
 	// Parse the worker state to MachineDeploymentStates
-	workerState := &workercontroller.State{
-		MachineDeployments: make(map[string]*workercontroller.MachineDeploymentState),
+	workerState := &extensionsworkercontroller.State{
+		MachineDeployments: make(map[string]*extensionsworkercontroller.MachineDeploymentState),
 	}
 
 	if err := json.Unmarshal(worker.Status.State.Raw, &workerState); err != nil {
@@ -115,7 +115,7 @@ func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1
 	return nil
 }
 
-func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, wantedMachineDeployments workercontroller.MachineDeployments) error {
+func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
 	log.Info("Deploying Machines and MachineSets")
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
 		for _, machineSet := range wantedMachineDeployment.State.MachineSets {
@@ -136,12 +136,12 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 	return nil
 }
 
-func removeWantedDeploymentWithoutState(wantedMachineDeployments workercontroller.MachineDeployments) workercontroller.MachineDeployments {
+func removeWantedDeploymentWithoutState(wantedMachineDeployments extensionsworkercontroller.MachineDeployments) extensionsworkercontroller.MachineDeployments {
 	if wantedMachineDeployments == nil {
 		return nil
 	}
 
-	reducedMachineDeployments := make(workercontroller.MachineDeployments, 0)
+	reducedMachineDeployments := make(extensionsworkercontroller.MachineDeployments, 0)
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
 		if wantedMachineDeployment.State != nil && len(wantedMachineDeployment.State.MachineSets) > 0 {
 			reducedMachineDeployments = append(reducedMachineDeployments, wantedMachineDeployment)

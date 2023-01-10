@@ -19,7 +19,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -43,7 +43,7 @@ type shootNotFailedPredicate struct {
 }
 
 func (p *shootNotFailedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 

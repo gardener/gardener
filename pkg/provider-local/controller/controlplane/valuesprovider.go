@@ -23,8 +23,8 @@ import (
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/chart"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -42,36 +42,36 @@ type valuesProvider struct {
 func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
 	return []extensionssecretsmanager.SecretConfigWithOptions{
 		{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:       caNameControlPlane,
 				CommonName: caNameControlPlane,
-				CertType:   secretutils.CACert,
+				CertType:   secretsutils.CACert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 		},
 		{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:       local.Name + "-dummy-server",
 				CommonName: local.Name + "-dummy-server",
-				DNSNames:   kutil.DNSNamesForService(local.Name+"-dummy-server", namespace),
-				CertType:   secretutils.ServerCert,
+				DNSNames:   kubernetesutils.DNSNamesForService(local.Name+"-dummy-server", namespace),
+				CertType:   secretsutils.ServerCert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
 		},
 		{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:                        local.Name + "-dummy-client",
 				CommonName:                  "extensions.gardener.cloud:" + local.Name + ":dummy-client",
 				Organization:                []string{"extensions.gardener.cloud:" + local.Name + ":dummy"},
-				CertType:                    secretutils.ClientCert,
+				CertType:                    secretsutils.ClientCert,
 				SkipPublishingCACertificate: true,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
 		},
 		{
-			Config: &secretutils.BasicAuthSecretConfig{
+			Config: &secretsutils.BasicAuthSecretConfig{
 				Name:           local.Name + "-dummy-auth",
-				Format:         secretutils.BasicAuthFormatCSV,
+				Format:         secretsutils.BasicAuthFormatCSV,
 				PasswordLength: 32,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.Validity(time.Hour)},

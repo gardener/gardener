@@ -19,8 +19,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	seedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
 
@@ -44,8 +44,8 @@ var _ = Describe("Shoot", func() {
 		var (
 			managedSeed          *seedmanagementv1alpha1.ManagedSeed
 			shoot                *core.Shoot
-			coreInformerFactory  coreinformers.SharedInformerFactory
-			seedManagementClient *seedmanagementfake.Clientset
+			coreInformerFactory  gardencoreinformers.SharedInformerFactory
+			seedManagementClient *fakeseedmanagement.Clientset
 			admissionHandler     *Shoot
 		)
 
@@ -70,10 +70,10 @@ var _ = Describe("Shoot", func() {
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
-			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
-			seedManagementClient = &seedmanagementfake.Clientset{}
+			seedManagementClient = &fakeseedmanagement.Clientset{}
 			admissionHandler.SetSeedManagementClientset(seedManagementClient)
 		})
 
@@ -165,8 +165,8 @@ var _ = Describe("Shoot", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreInformerFactory(coreinformers.NewSharedInformerFactory(nil, 0))
-			admissionHandler.SetSeedManagementClientset(&seedmanagementfake.Clientset{})
+			admissionHandler.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			admissionHandler.SetSeedManagementClientset(&fakeseedmanagement.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

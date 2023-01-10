@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
@@ -104,7 +104,7 @@ type Opts struct {
 	// ErrorCleaner is used to clean up a previously failed task.
 	ErrorCleaner func(ctx context.Context, taskID string)
 	// ErrorContext is used to store any error related context.
-	ErrorContext *utilerrors.ErrorContext
+	ErrorContext *errorsutils.ErrorContext
 }
 
 // Run starts an execution of a Flow.
@@ -193,7 +193,7 @@ type execution struct {
 	log              logr.Logger
 	progressReporter ProgressReporter
 	errorCleaner     ErrorCleaner
-	errorContext     *utilerrors.ErrorContext
+	errorContext     *errorsutils.ErrorContext
 
 	done          chan *nodeResult
 	triggerCounts map[TaskID]int
@@ -283,7 +283,7 @@ func (e *execution) run(ctx context.Context) error {
 	for e.stats.Running.Len() > 0 {
 		result := <-e.done
 		if result.Error != nil {
-			e.taskErrors = append(e.taskErrors, utilerrors.WithID(string(result.TaskID), result.Error))
+			e.taskErrors = append(e.taskErrors, errorsutils.WithID(string(result.TaskID), result.Error))
 			e.updateFailure(result.TaskID)
 		} else {
 			e.updateSuccess(result.TaskID)
@@ -368,7 +368,7 @@ func Causes(err error) *multierror.Error {
 		causes = make([]error, 0, len(errs))
 	)
 	for _, err := range errs {
-		causes = append(causes, utilerrors.Unwrap(err))
+		causes = append(causes, errorsutils.Unwrap(err))
 	}
 	return &multierror.Error{Errors: causes}
 }

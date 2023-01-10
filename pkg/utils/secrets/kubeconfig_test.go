@@ -15,7 +15,7 @@
 package secrets_test
 
 import (
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/secrets"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -60,7 +60,7 @@ var _ = Describe("Kubeconfig Secrets", func() {
 				Expect(ok).To(BeTrue())
 
 				Expect(kubeconfig.Name).To(Equal(name))
-				Expect(kubeconfig.Kubeconfig).To(Equal(kutil.NewKubeconfig(contextName, cluster, authInfo)))
+				Expect(kubeconfig.Kubeconfig).To(Equal(kubernetesutils.NewKubeconfig(contextName, cluster, authInfo)))
 			})
 		})
 

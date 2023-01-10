@@ -26,7 +26,7 @@ import (
 	"time"
 
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
-	authenticationapiv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -61,8 +61,8 @@ var (
 	_ = rest.GroupVersionKindProvider(&AdminKubeconfigREST{})
 
 	gvk = schema.GroupVersionKind{
-		Group:   authenticationapiv1alpha1.SchemeGroupVersion.Group,
-		Version: authenticationapiv1alpha1.SchemeGroupVersion.Version,
+		Group:   authenticationv1alpha1.SchemeGroupVersion.Group,
+		Version: authenticationv1alpha1.SchemeGroupVersion.Version,
 		Kind:    "AdminKubeconfigRequest",
 	}
 )

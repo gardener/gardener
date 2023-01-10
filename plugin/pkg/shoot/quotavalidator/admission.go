@@ -25,9 +25,9 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	utiltime "github.com/gardener/gardener/pkg/utils/time"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	timeutils "github.com/gardener/gardener/pkg/utils/time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -55,19 +55,19 @@ var (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
-		return New(utiltime.DefaultOps())
+		return New(timeutils.DefaultOps())
 	})
 }
 
 // QuotaValidator contains listers and and admission handler.
 type QuotaValidator struct {
 	*admission.Handler
-	shootLister         corelisters.ShootLister
-	cloudProfileLister  corelisters.CloudProfileLister
-	secretBindingLister corelisters.SecretBindingLister
-	quotaLister         corelisters.QuotaLister
+	shootLister         gardencorelisters.ShootLister
+	cloudProfileLister  gardencorelisters.CloudProfileLister
+	secretBindingLister gardencorelisters.SecretBindingLister
+	quotaLister         gardencorelisters.QuotaLister
 	readyFunc           admission.ReadyFunc
-	time                utiltime.Ops
+	time                timeutils.Ops
 }
 
 var (
@@ -77,7 +77,7 @@ var (
 )
 
 // New creates a new QuotaValidator admission plugin.
-func New(time utiltime.Ops) (*QuotaValidator, error) {
+func New(time timeutils.Ops) (*QuotaValidator, error) {
 	return &QuotaValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 		time:    time,
@@ -91,7 +91,7 @@ func (q *QuotaValidator) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (q *QuotaValidator) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (q *QuotaValidator) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().InternalVersion().Shoots()
 	q.shootLister = shootInformer.Lister()
 

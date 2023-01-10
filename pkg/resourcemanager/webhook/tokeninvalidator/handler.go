@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler handles admission requests and invalidates the static token in Secret resources related to ServiceAccounts.
@@ -46,7 +46,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		return err
 	}
 
-	log := h.Logger.WithValues("secret", kutil.ObjectKeyForCreateWebhooks(secret, req))
+	log := h.Logger.WithValues("secret", kubernetesutils.ObjectKeyForCreateWebhooks(secret, req))
 
 	if secret.Data == nil {
 		log.Info("Secret's data is nil, nothing to be done")

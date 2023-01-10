@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -486,7 +486,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	if k.values.FeatureGates != nil {
-		out = append(out, kutil.FeatureGatesToCommandLineParameter(k.values.FeatureGates))
+		out = append(out, kubernetesutils.FeatureGatesToCommandLineParameter(k.values.FeatureGates))
 	}
 
 	if version.ConstraintK8sLess124.Check(k.values.Version) {
@@ -512,7 +512,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--requestheader-username-headers=X-Remote-User")
 
 	if k.values.RuntimeConfig != nil {
-		out = append(out, kutil.MapStringBoolToCommandLineParameter(k.values.RuntimeConfig, "--runtime-config="))
+		out = append(out, kubernetesutils.MapStringBoolToCommandLineParameter(k.values.RuntimeConfig, "--runtime-config="))
 	}
 
 	out = append(out, "--service-account-issuer="+k.values.ServiceAccount.Issuer)
@@ -531,7 +531,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
 	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey))
-	out = append(out, "--tls-cipher-suites="+strings.Join(kutil.TLSCipherSuites(k.values.Version), ","))
+	out = append(out, "--tls-cipher-suites="+strings.Join(kubernetesutils.TLSCipherSuites(k.values.Version), ","))
 
 	if k.values.Logging != nil {
 		if k.values.Logging.HTTPAccessVerbosity != nil {

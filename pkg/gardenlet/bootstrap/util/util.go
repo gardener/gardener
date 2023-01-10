@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -122,7 +122,7 @@ func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, see
 		return kubeconfig, nil
 	}
 
-	kubeconfigKey := kutil.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
+	kubeconfigKey := kubernetesutils.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
 	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
 	log.Info("Updating kubeconfig secret as CA data has changed")
 
@@ -226,7 +226,7 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 	)
 
 	secret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstraptokenutil.BootstrapTokenSecretName(tokenID)), secret); client.IgnoreNotFound(err) != nil {
+	if err := gardenClient.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, bootstraptokenutil.BootstrapTokenSecretName(tokenID)), secret); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 
@@ -272,7 +272,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 		return nil, fmt.Errorf("service account token controller has not yet created a secret for the service account")
 	}
 	saSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, kutil.Key(sa.Namespace, sa.Secrets[0].Name), saSecret); err != nil {
+	if err := gardenClient.Get(ctx, kubernetesutils.Key(sa.Namespace, sa.Secrets[0].Name), saSecret); err != nil {
 		return nil, err
 	}
 

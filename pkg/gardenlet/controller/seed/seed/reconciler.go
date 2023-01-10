@@ -36,9 +36,9 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Seed resources and provisions or de-provisions the seed system components.
@@ -70,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// Check if seed namespace is already available.
-	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: gutil.ComputeGardenNamespace(seed.Name)}, &corev1.Namespace{}); err != nil {
+	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}, &corev1.Namespace{}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get seed namespace in garden cluster: %w", err)
 	}
 
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	seedIsGarden, err := kutil.ResourcesExist(ctx, r.SeedClientSet.Client(), operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	seedIsGarden, err := kubernetesutils.ResourcesExist(ctx, r.SeedClientSet.Client(), operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
 	if err != nil {
 		if !meta.IsNoMatchError(err) {
 			return reconcile.Result{}, err
@@ -145,13 +145,13 @@ func (r *Reconciler) patchSeedStatus(
 // an identity, it should not be changed.
 func determineClusterIdentity(ctx context.Context, c client.Client) (string, error) {
 	clusterIdentity := &corev1.ConfigMap{}
-	if err := c.Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), clusterIdentity); err != nil {
+	if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), clusterIdentity); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return "", err
 		}
 
 		gardenNamespace := &corev1.Namespace{}
-		if err := c.Get(ctx, kutil.Key(metav1.NamespaceSystem), gardenNamespace); err != nil {
+		if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem), gardenNamespace); err != nil {
 			return "", err
 		}
 		return string(gardenNamespace.UID), nil
@@ -161,7 +161,7 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 
 func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
 	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
-		secret, err := kutil.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
+		secret, err := kubernetesutils.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
 		if err != nil {
 			return nil, err
 		}

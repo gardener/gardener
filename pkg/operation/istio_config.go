@@ -25,7 +25,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -64,7 +64,7 @@ func (o *Operation) IstioLoadBalancerAnnotations() map[string]string {
 func (o *Operation) IstioLabels() map[string]string {
 	zone := o.singleZoneIfPinned()
 	if exposureClassHandler := o.exposureClassHandler(); exposureClassHandler != nil {
-		return GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(exposureClassHandler.SNI.Ingress.Labels, exposureClassHandler.Name), zone)
+		return GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassHandler.SNI.Ingress.Labels, exposureClassHandler.Name), zone)
 	}
 	return GetIstioZoneLabels(o.sniConfig().Ingress.Labels, zone)
 }

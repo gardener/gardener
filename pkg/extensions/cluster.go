@@ -24,7 +24,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -110,7 +110,7 @@ type Cluster struct {
 // GetCluster tries to read Gardener's Cluster extension resource in the given namespace.
 func GetCluster(ctx context.Context, c client.Reader, namespace string) (*Cluster, error) {
 	cluster := &extensionsv1alpha1.Cluster{}
-	if err := c.Get(ctx, kutil.Key(namespace), cluster); err != nil {
+	if err := c.Get(ctx, kubernetesutils.Key(namespace), cluster); err != nil {
 		return nil, err
 	}
 
@@ -205,7 +205,7 @@ func GetShootStateForCluster(
 	error,
 ) {
 	cluster := &extensionsv1alpha1.Cluster{}
-	if err := seedClient.Get(ctx, kutil.Key(clusterName), cluster); err != nil {
+	if err := seedClient.Get(ctx, kubernetesutils.Key(clusterName), cluster); err != nil {
 		return nil, nil, err
 	}
 
@@ -219,7 +219,7 @@ func GetShootStateForCluster(
 	}
 
 	shootState := &gardencorev1alpha1.ShootState{}
-	if err := gardenClient.Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
+	if err := gardenClient.Get(ctx, kubernetesutils.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
 		return nil, nil, err
 	}
 
@@ -229,7 +229,7 @@ func GetShootStateForCluster(
 // GetShoot tries to read Gardener's Cluster extension resource in the given namespace and return the embedded Shoot resource.
 func GetShoot(ctx context.Context, c client.Reader, namespace string) (*gardencorev1beta1.Shoot, error) {
 	cluster := &extensionsv1alpha1.Cluster{}
-	if err := c.Get(ctx, kutil.Key(namespace), cluster); err != nil {
+	if err := c.Get(ctx, kubernetesutils.Key(namespace), cluster); err != nil {
 		return nil, err
 	}
 

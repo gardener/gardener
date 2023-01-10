@@ -35,14 +35,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Extension CRDs Webhook Handler", func() {
 	var (
-		deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
+		deletionConfirmedAnnotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
 
 		crdObjects []client.Object
 		objects    []client.Object
@@ -183,7 +183,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 				})
 				Expect(err).NotTo(HaveOccurred(), objectID(obj))
 				crd := &apiextensionsv1.CustomResourceDefinition{}
-				Expect(testClient.Get(context.TODO(), kutil.Key(obj.GetName()), crd)).To(Succeed())
+				Expect(testClient.Get(context.TODO(), kubernetesutils.Key(obj.GetName()), crd)).To(Succeed())
 			}
 
 			testDeleteCollectionConfirmed(ctx, crdObjects[0])

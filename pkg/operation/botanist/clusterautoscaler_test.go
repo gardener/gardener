@@ -28,7 +28,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler/mock"
@@ -57,10 +57,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 	})
 
 	Describe("#DefaultClusterAutoscaler", func() {
-		var kubernetesClient *mockkubernetes.MockInterface
+		var kubernetesClient *kubernetesmock.MockInterface
 
 		BeforeEach(func() {
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			kubernetesClient.EXPECT().Version()
 
 			botanist.SeedClientSet = kubernetesClient

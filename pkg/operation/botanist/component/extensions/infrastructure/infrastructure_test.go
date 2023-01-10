@@ -27,7 +27,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -297,7 +297,7 @@ var _ = Describe("#Interface", func() {
 		It("should return error when it's not deleted successfully", func() {
 			defer test.WithVars(
 				&extensions.TimeNow, mockNow.Do,
-				&gutil.TimeNow, mockNow.Do,
+				&gardenerutils.TimeNow, mockNow.Do,
 			)()
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -305,7 +305,7 @@ var _ = Describe("#Interface", func() {
 
 			expected = empty.DeepCopy()
 			expected.SetAnnotations(map[string]string{
-				gutil.ConfirmationDeletion:         "true",
+				gardenerutils.ConfirmationDeletion: "true",
 				v1beta1constants.GardenerTimestamp: now.UTC().String(),
 			})
 

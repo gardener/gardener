@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -131,7 +131,7 @@ func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logge
 		fns = append(fns, func(ctx context.Context) error {
 			secret := &corev1.Secret{}
 			s := shoot
-			if err := c.Get(ctx, kutil.Key(s.Namespace, name), secret); err != nil {
+			if err := c.Get(ctx, kubernetesutils.Key(s.Namespace, name), secret); err != nil {
 				return err
 			}
 
@@ -160,7 +160,7 @@ func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logge
 func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
 		configMap := &corev1.ConfigMap{}
-		if err := c.Get(ctx, kutil.Key(shoot.Namespace, configMapRef.Name), configMap); err != nil {
+		if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, configMapRef.Name), configMap); err != nil {
 			return false, err
 		}
 

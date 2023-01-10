@@ -22,8 +22,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -155,7 +155,7 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 			TargetPort: intstr.FromInt(admissionControllerPort),
 		},
 	}
-	service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
+	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
 }
 
 func (v *vpa) reconcileAdmissionControllerNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy) {
@@ -204,9 +204,9 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					Args: []string{
 						"--v=2",
 						"--stderrthreshold=info",
-						fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCertificates, secretutils.DataKeyCertificateBundle),
-						fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretutils.DataKeyCertificate),
-						fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretutils.DataKeyPrivateKey),
+						fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificateBundle),
+						fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificate),
+						fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyPrivateKey),
 						"--address=:8944",
 						fmt.Sprintf("--port=%d", admissionControllerPort),
 						"--register-webhook=false",
@@ -248,8 +248,8 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 											Name: v.caSecretName,
 										},
 										Items: []corev1.KeyToPath{{
-											Key:  secretutils.DataKeyCertificateBundle,
-											Path: secretutils.DataKeyCertificateBundle,
+											Key:  secretsutils.DataKeyCertificateBundle,
+											Path: secretsutils.DataKeyCertificateBundle,
 										}},
 									},
 								},
@@ -260,12 +260,12 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 										},
 										Items: []corev1.KeyToPath{
 											{
-												Key:  secretutils.DataKeyCertificate,
-												Path: secretutils.DataKeyCertificate,
+												Key:  secretsutils.DataKeyCertificate,
+												Path: secretsutils.DataKeyCertificate,
 											},
 											{
-												Key:  secretutils.DataKeyPrivateKey,
-												Path: secretutils.DataKeyPrivateKey,
+												Key:  secretsutils.DataKeyPrivateKey,
+												Path: secretsutils.DataKeyPrivateKey,
 											},
 										},
 									},

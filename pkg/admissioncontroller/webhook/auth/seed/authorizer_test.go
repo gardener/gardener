@@ -24,9 +24,9 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/go-logr/logr"
@@ -862,7 +862,7 @@ var _ = Describe("Seed", func() {
 					User:            seedUser,
 					Name:            name,
 					Namespace:       namespace,
-					APIGroup:        gardenoperationsv1alpha1.SchemeGroupVersion.Group,
+					APIGroup:        operationsv1alpha1.SchemeGroupVersion.Group,
 					Resource:        "bastions",
 					ResourceRequest: true,
 					Verb:            "list",
@@ -1700,7 +1700,7 @@ var _ = Describe("Seed", func() {
 			It("should allow to delete the gardenlet's bootstrap tokens without consulting the graph", func() {
 				attrs.Verb = "delete"
 				attrs.Namespace = "kube-system"
-				attrs.Name = "bootstrap-token-" + bootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})
+				attrs.Name = "bootstrap-token-" + gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 				Expect(err).NotTo(HaveOccurred())

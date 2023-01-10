@@ -40,7 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -100,7 +100,7 @@ func (m *metricsServer) Deploy(ctx context.Context) error {
 	serverSecret, err := m.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  "metrics-server",
-		DNSNames:                    append([]string{serviceName}, kutil.DNSNamesForService(serviceName, metav1.NamespaceSystem)...),
+		DNSNames:                    append([]string{serviceName}, kubernetesutils.DNSNamesForService(serviceName, metav1.NamespaceSystem)...),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAMetricsServer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -137,7 +137,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 		Type: corev1.SecretTypeTLS,
 		Data: serverSecret.Data,
 	}
-	utilruntime.Must(kutil.MakeUnique(secret))
+	utilruntime.Must(kubernetesutils.MakeUnique(secret))
 
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)

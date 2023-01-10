@@ -40,9 +40,9 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
 	"github.com/gardener/gardener/pkg/healthz"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // AddToManager adds all gardenlet controllers to the given manager.
@@ -55,7 +55,7 @@ func AddToManager(
 	cfg *config.GardenletConfiguration,
 	healthManager healthz.Manager,
 ) error {
-	identity, err := gutil.DetermineIdentity()
+	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func AddToManager(
 	}
 
 	configMap := &corev1.ConfigMap{}
-	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), configMap); err != nil {
+	if err := gardenCluster.GetClient().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), configMap); err != nil {
 		return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
 	}
 	gardenClusterIdentity, ok := configMap.Data[v1beta1constants.ClusterIdentity]
@@ -83,7 +83,7 @@ func AddToManager(
 	}
 
 	gardenNamespace := &corev1.Namespace{}
-	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
+	if err := gardenCluster.GetClient().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
 		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
 	}
 

@@ -24,8 +24,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
-	configv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
-	configvalidation "github.com/gardener/gardener/pkg/resourcemanager/apis/config/validation"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagervalidation "github.com/gardener/gardener/pkg/resourcemanager/apis/config/validation"
 )
 
 var configDecoder runtime.Decoder
@@ -34,7 +34,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		configv1alpha1.AddToScheme,
+		resourcemanagerv1alpha1.AddToScheme,
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
@@ -68,7 +68,7 @@ func (o *options) complete() error {
 }
 
 func (o *options) validate() error {
-	if errs := configvalidation.ValidateResourceManagerConfiguration(o.config); len(errs) > 0 {
+	if errs := resourcemanagervalidation.ValidateResourceManagerConfiguration(o.config); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 	return nil

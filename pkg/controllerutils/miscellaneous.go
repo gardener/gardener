@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,7 +105,7 @@ func ReconcileOncePer24hDuration(clock clock.Clock, objectMeta metav1.ObjectMeta
 		return 0
 	}
 
-	if v1beta1helper.HasOperationAnnotation(objectMeta.Annotations) {
+	if gardencorev1beta1helper.HasOperationAnnotation(objectMeta.Annotations) {
 		return 0
 	}
 

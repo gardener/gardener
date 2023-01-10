@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Reconcile", func() {
@@ -135,8 +135,8 @@ var _ = Describe("Reconcile", func() {
 			new200GiStorageQuantity = resource.MustParse("200Gi")
 			new100GiStorageQuantity = resource.MustParse("100Gi")
 			new80GiStorageQuantity  = resource.MustParse("80Gi")
-			lokiPVCKey              = kutil.Key("garden", "loki-loki-0")
-			lokiStatefulSetKey      = kutil.Key("garden", "loki")
+			lokiPVCKey              = kubernetesutils.Key("garden", "loki-loki-0")
+			lokiStatefulSetKey      = kubernetesutils.Key("garden", "loki")
 			funcGetLokiPVC          = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim, _ ...client.GetOption) error {
 				*pvc = *lokiPVC
 				return nil

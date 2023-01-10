@@ -27,7 +27,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/autoscaling/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -414,7 +414,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &v1.CrossVersionObjectReference{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "DaemonSet",
 					Name:       daemonSet.Name,

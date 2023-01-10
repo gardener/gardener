@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -61,7 +61,7 @@ var _ = Describe("istiod", func() {
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
-		renderer              cr.Interface
+		renderer              chartrenderer.Interface
 
 		minReplicas = 2
 		maxReplicas = 5
@@ -2198,7 +2198,7 @@ spec:
 		managedResourceName = "istio"
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		renderer = cr.NewWithServerVersion(&version.Info{GitVersion: "v1.21.4"})
+		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.21.4"})
 
 		gardenletfeatures.RegisterFeatureGates()
 
@@ -2348,7 +2348,7 @@ spec:
 
 		Context("kubernetes version <v1.21", func() {
 			BeforeEach(func() {
-				renderer = cr.NewWithServerVersion(&version.Info{GitVersion: "v1.20.11"})
+				renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.20.11"})
 
 				istiod = NewIstio(
 					c,

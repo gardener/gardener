@@ -57,7 +57,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
@@ -70,8 +70,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -92,7 +92,7 @@ var (
 
 func init() {
 	scheme = runtime.NewScheme()
-	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(resourcemanagerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 
 	var (
@@ -102,7 +102,7 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			resourcemanagerconfigv1alpha1.SchemeGroupVersion,
+			resourcemanagerv1alpha1.SchemeGroupVersion,
 			apiextensionsv1.SchemeGroupVersion,
 		})
 	)
@@ -114,7 +114,7 @@ const (
 	// ManagedResourceName is the name for the ManagedResource containing resources deployed to the shoot cluster.
 	ManagedResourceName = "shoot-core-gardener-resource-manager"
 	// SecretNameShootAccess is the name of the shoot access secret for the gardener-resource-manager.
-	SecretNameShootAccess = gutil.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
+	SecretNameShootAccess = gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
 	// labelChecksum is a constant for the label key which holds the checksum of the pod template.
@@ -372,7 +372,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			return err
 		}
 
-		if err := gutil.ConfirmDeletion(ctx, r.client, crd); client.IgnoreNotFound(err) != nil {
+		if err := gardenerutils.ConfirmDeletion(ctx, r.client, crd); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
@@ -385,7 +385,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		}, objectsToDelete...)
 	}
 
-	return kutil.DeleteObjects(ctx, r.client, objectsToDelete...)
+	return kubernetesutils.DeleteObjects(ctx, r.client, objectsToDelete...)
 }
 
 func (r *resourceManager) emptyCustomResourceDefinition() (*apiextensionsv1.CustomResourceDefinition, error) {
@@ -484,69 +484,69 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 }
 
 func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
-	config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
-		SourceClientConnection: resourcemanagerconfigv1alpha1.SourceClientConnection{
+	config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
+		SourceClientConnection: resourcemanagerv1alpha1.SourceClientConnection{
 			Namespace: r.values.WatchedNamespace,
 		},
 		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       pointer.Bool(true),
 			ResourceNamespace: r.namespace,
 		},
-		Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
-			HealthProbes: &resourcemanagerconfigv1alpha1.Server{
+		Server: resourcemanagerv1alpha1.ServerConfiguration{
+			HealthProbes: &resourcemanagerv1alpha1.Server{
 				Port: healthPort,
 			},
-			Metrics: &resourcemanagerconfigv1alpha1.Server{
+			Metrics: &resourcemanagerv1alpha1.Server{
 				Port: metricsPort,
 			},
-			Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
-				Server: resourcemanagerconfigv1alpha1.Server{
+			Webhooks: resourcemanagerv1alpha1.HTTPSServer{
+				Server: resourcemanagerv1alpha1.Server{
 					Port: serverPort,
 				},
-				TLS: resourcemanagerconfigv1alpha1.TLSServer{
+				TLS: resourcemanagerv1alpha1.TLSServer{
 					ServerCertDir: volumeMountPathCerts,
 				},
 			},
 		},
 		LogLevel:  r.values.LogLevel,
 		LogFormat: r.values.LogFormat,
-		Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
+		Controllers: resourcemanagerv1alpha1.ResourceManagerControllerConfiguration{
 			ClusterID:     r.values.ClusterIdentity,
 			ResourceClass: r.values.ResourceClass,
-			GarbageCollector: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
+			GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
 				Enabled:    true,
 				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 			},
-			Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
+			Health: resourcemanagerv1alpha1.HealthControllerConfig{
 				ConcurrentSyncs: r.values.MaxConcurrentHealthWorkers,
 				SyncPeriod:      r.values.HealthSyncPeriod,
 			},
-			ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
+			ManagedResource: resourcemanagerv1alpha1.ManagedResourceControllerConfig{
 				ConcurrentSyncs: r.values.ConcurrentSyncs,
 				SyncPeriod:      r.values.SyncPeriod,
 				AlwaysUpdate:    r.values.AlwaysUpdate,
 			},
 		},
-		Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
-			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
+		Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
+			HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
 				Enabled: true,
 			},
-			PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
+			PodTopologySpreadConstraints: resourcemanagerv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 				Enabled: r.values.PodTopologySpreadConstraintsEnabled,
 			},
-			ProjectedTokenMount: resourcemanagerconfigv1alpha1.ProjectedTokenMountWebhookConfig{
+			ProjectedTokenMount: resourcemanagerv1alpha1.ProjectedTokenMountWebhookConfig{
 				Enabled: true,
 			},
-			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
+			SeccompProfile: resourcemanagerv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
 			},
 		},
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		config.TargetClientConnection = &resourcemanagerconfigv1alpha1.TargetClientConnection{
+		config.TargetClientConnection = &resourcemanagerv1alpha1.TargetClientConnection{
 			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-				Kubeconfig: gutil.PathGenericKubeconfig,
+				Kubeconfig: gardenerutils.PathGenericKubeconfig,
 			},
 			DisableCachedClient: r.values.TargetDisableCache,
 		}
@@ -590,7 +590,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
+		config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
 			NodeSelector: map[string]string{
 				v1beta1constants.LabelWorkerPoolSystemComponents: "true",
@@ -608,7 +608,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	configMap.Data = map[string]string{configMapDataKey: string(data)}
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return client.IgnoreAlreadyExists(r.client.Create(ctx, configMap))
 }
@@ -683,7 +683,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 				TargetPort: intstr.FromInt(serverPort),
 			},
 		}
-		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
+		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 		return nil
 	})
 	return err
@@ -699,7 +699,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  v1beta1constants.DeploymentNameGardenerResourceManager,
-		DNSNames:                    kutil.DNSNamesForService(serviceName, r.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(serviceName, r.namespace),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(r.values.SecretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -889,7 +889,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					},
 				})
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-					MountPath: gutil.VolumeMountPathGenericKubeconfig,
+					MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,
 					Name:      volumeNameBootstrapKubeconfig,
 					ReadOnly:  true,
 				})
@@ -899,7 +899,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 				}
 
-				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
+				utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
 			}
 		}
 
@@ -914,7 +914,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				resourcesv1alpha1.HighAvailabilityConfigSkip: "true",
 			})
 
-			deployment.Spec.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(pointer.Int32Deref(r.values.Replicas, 0), pointer.Int32Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil)
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(pointer.Int32Deref(r.values.Replicas, 0), pointer.Int32Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil)
 
 			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
 			// ACCURATE!
@@ -1173,8 +1173,8 @@ func (r *resourceManager) emptyNetworkPolicy() *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}}
 }
 
-func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
+func (r *resourceManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+	return gardenerutils.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
 func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
@@ -1893,5 +1893,5 @@ type Secrets struct {
 	// token requestor controller will request a JWT token for itself with this kubeconfig.
 	BootstrapKubeconfig *component.Secret
 
-	shootAccess *gutil.ShootAccessSecret
+	shootAccess *gardenerutils.ShootAccessSecret
 }

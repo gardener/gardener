@@ -28,8 +28,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles the BackupEntry by forcing the backup entry's restoration to this seed during control plane
@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 
 	// If the backup entry is being deleted or no longer being migrated to this seed, clear the migration start time
-	if backupEntry.DeletionTimestamp != nil || !gutil.IsObjectBeingMigrated(ctx, r.GardenClient, backupEntry, r.SeedName, gutil.GetBackupEntrySeedNames) {
+	if backupEntry.DeletionTimestamp != nil || !gardenerutils.IsObjectBeingMigrated(ctx, r.GardenClient, backupEntry, r.SeedName, gardenerutils.GetBackupEntrySeedNames) {
 		log.V(1).Info("Clearing migration start time")
 		if err := r.setMigrationStartTime(ctx, backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
@@ -138,7 +138,7 @@ func (r *Reconciler) updateStatusForRestore(ctx context.Context, backupEntry *ga
 }
 
 func hasForceRestoreAnnotation(backupEntry *gardencorev1beta1.BackupEntry) bool {
-	return kutil.HasMetaDataAnnotation(backupEntry, v1beta1constants.AnnotationShootForceRestore, "true")
+	return kubernetesutils.HasMetaDataAnnotation(backupEntry, v1beta1constants.AnnotationShootForceRestore, "true")
 }
 
 func removeForceRestoreAnnotation(ctx context.Context, c client.Client, backupEntry *gardencorev1beta1.BackupEntry) error {

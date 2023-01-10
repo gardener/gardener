@@ -32,10 +32,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
-	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -175,13 +175,13 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	if r.ShootWebhookConfig != nil {
 		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
 		// ControlPlane actuator
-		if err := webhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretutils.DataKeyCertificateBundle]); err != nil {
+		if err := webhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
 			return reconcile.Result{}, err
 		}
 		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := extensionswebhookshoot.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.serverPort, r.ShootWebhookConfig); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.serverPort, r.ShootWebhookConfig); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
 		log.Info("Updated all shoot webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfig)
@@ -202,14 +202,14 @@ func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, caBundleS
 	}
 
 	patch := client.MergeFromWithOptions(config.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
-	if err := webhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretutils.DataKeyCertificateBundle]); err != nil {
+	if err := webhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
 		return err
 	}
 	return r.client.Patch(ctx, config, patch)
 }
 
 func isWebhookServerSecretPresent(ctx context.Context, c client.Reader, secretName, namespace, identity string) (bool, error) {
-	return kutil.ResourcesExist(ctx, c, corev1.SchemeGroupVersion.WithKind("SecretList"), client.InNamespace(namespace), client.MatchingLabels{
+	return kubernetesutils.ResourcesExist(ctx, c, corev1.SchemeGroupVersion.WithKind("SecretList"), client.InNamespace(namespace), client.MatchingLabels{
 		secretsmanager.LabelKeyName:            secretName,
 		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 		secretsmanager.LabelKeyManagerIdentity: identity,

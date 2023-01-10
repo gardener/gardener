@@ -22,7 +22,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
@@ -292,7 +292,7 @@ func (r *reconciler) resultWithRequeue() reconcile.Result {
 func isInMigration(accessor extensionsv1alpha1.Object) bool {
 	annotations := accessor.GetAnnotations()
 	if annotations != nil &&
-		annotations[gardenv1beta1constants.GardenerOperation] == gardenv1beta1constants.GardenerOperationMigrate {
+		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate {
 		return true
 	}
 

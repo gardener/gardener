@@ -36,7 +36,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -89,7 +89,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 		}
 
 		url := fmt.Sprintf("https://api.%s/api/v1/namespaces/%s/services/https:kubernetes-dashboard:/proxy", *f.Shoot.Spec.DNS.Domain, "kubernetes-dashboard")
-		kubeconfigData, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
+		kubeconfigData, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gardenerutils.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
 		kubeconfig := &clientcmdv1.Config{}
 		_, _, err = clientcmdlatest.Codec.Decode([]byte(kubeconfigData), nil, kubeconfig)

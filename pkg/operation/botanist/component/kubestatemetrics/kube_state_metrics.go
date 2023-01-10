@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -97,7 +97,7 @@ type Values struct {
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
-		shootAccessSecret                *gutil.ShootAccessSecret
+		shootAccessSecret                *gardenerutils.ShootAccessSecret
 	)
 
 	if k.values.ClusterType == component.ClusterTypeShoot {

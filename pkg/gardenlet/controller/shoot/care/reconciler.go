@@ -33,11 +33,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -122,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
-		secrets, err := garden.ReadGardenSecrets(careCtx, log, r.GardenClient, gutil.ComputeGardenNamespace(*shoot.Spec.SeedName), true)
+		secrets, err := garden.ReadGardenSecrets(careCtx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(*shoot.Spec.SeedName), true)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reading Garden secrets: %w", err)
 		}
@@ -150,7 +150,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	var (
-		staleExtensionHealthCheckThreshold    = confighelper.StaleExtensionHealthChecksThreshold(r.Config.Controllers.ShootCare.StaleExtensionHealthChecks)
+		staleExtensionHealthCheckThreshold    = gardenlethelper.StaleExtensionHealthChecksThreshold(r.Config.Controllers.ShootCare.StaleExtensionHealthChecks)
 		initializeShootClients                = shootClientInitializer(careCtx, o)
 		updatedConditions, updatedConstraints []gardencorev1beta1.Condition
 	)

@@ -31,8 +31,8 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecrets(ctx, log, r.Client, gutil.ComputeGardenNamespace(seed.Name), false)
+	secrets, err := gardenpkg.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -412,7 +412,7 @@ func deployNeededInstallations(
 			// Today, only one DeploymentRef element is allowed, which is why can simply pick the first one from the slice.
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
 
-			if err := c.Get(ctx, kutil.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
+			if err := c.Get(ctx, kubernetesutils.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
 				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %w", err)
 			}
 		}

@@ -19,7 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 
@@ -54,7 +54,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 })
 
 func verifyNoPodsRunning(ctx context.Context, f *framework.ShootCreationFramework) {
-	podsAreExisting, err := kutil.ResourcesExist(ctx, f.ShootFramework.SeedClient.Client(), corev1.SchemeGroupVersion.WithKind("PodList"), client.InNamespace(f.Shoot.Status.TechnicalID))
+	podsAreExisting, err := kubernetesutils.ResourcesExist(ctx, f.ShootFramework.SeedClient.Client(), corev1.SchemeGroupVersion.WithKind("PodList"), client.InNamespace(f.Shoot.Status.TechnicalID))
 	Expect(err).To(Succeed())
 	Expect(podsAreExisting).To(BeFalse())
 }

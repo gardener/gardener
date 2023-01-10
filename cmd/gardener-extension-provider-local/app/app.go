@@ -24,13 +24,13 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
-	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
-	heartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
+	extensionsheartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
+	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
 	localbackupbucket "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
@@ -83,26 +83,26 @@ func init() {
 // NewControllerManagerCommand creates a new command for running a local provider controller.
 func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	var (
-		restOpts = &controllercmd.RESTOptions{}
-		mgrOpts  = &controllercmd.ManagerOptions{
+		restOpts = &extensionscmdcontroller.RESTOptions{}
+		mgrOpts  = &extensionscmdcontroller.ManagerOptions{
 			LeaderElection:             true,
 			LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
-			LeaderElectionID:           controllercmd.LeaderElectionNameID(local.Name),
+			LeaderElectionID:           extensionscmdcontroller.LeaderElectionNameID(local.Name),
 			LeaderElectionNamespace:    os.Getenv("LEADER_ELECTION_NAMESPACE"),
 			WebhookServerPort:          443,
 			WebhookCertDir:             "/tmp/gardener-extensions-cert",
 			MetricsBindAddress:         ":8080",
 			HealthBindAddress:          ":8081",
 		}
-		generalOpts = &controllercmd.GeneralOptions{}
+		generalOpts = &extensionscmdcontroller.GeneralOptions{}
 
 		// options for the health care controller
-		healthCheckCtrlOpts = &controllercmd.ControllerOptions{
+		healthCheckCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
 		// options for the controlplane controller
-		controlPlaneCtrlOpts = &controllercmd.ControllerOptions{
+		controlPlaneCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
@@ -130,39 +130,39 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		}
 
 		// options for the operatingsystemconfig controller
-		operatingSystemConfigCtrlOpts = &controllercmd.ControllerOptions{
+		operatingSystemConfigCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
 		// options for the infrastructure controller
-		infraCtrlOpts = &controllercmd.ControllerOptions{
+		infraCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
-		reconcileOpts = &controllercmd.ReconcilerOptions{}
+		reconcileOpts = &extensionscmdcontroller.ReconcilerOptions{}
 
 		// options for the worker controller
-		workerCtrlOpts = &controllercmd.ControllerOptions{
+		workerCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 		workerReconcileOpts = &worker.Options{
 			DeployCRDs: true,
 		}
-		workerCtrlOptsUnprefixed = controllercmd.NewOptionAggregator(workerCtrlOpts, workerReconcileOpts)
+		workerCtrlOptsUnprefixed = extensionscmdcontroller.NewOptionAggregator(workerCtrlOpts, workerReconcileOpts)
 
-		heartbeatCtrlOptions = &heartbeatcmd.Options{
+		heartbeatCtrlOptions = &extensionsheartbeatcmd.Options{
 			ExtensionName:        local.Name,
 			RenewIntervalSeconds: 30,
 			Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
 
 		// options for the webhook server
-		webhookServerOptions = &webhookcmd.ServerOptions{
+		webhookServerOptions = &extensionscmdwebhook.ServerOptions{
 			Namespace: os.Getenv("WEBHOOK_CONFIG_NAMESPACE"),
 		}
 
 		controllerSwitches = ControllerSwitchOptions()
 		webhookSwitches    = WebhookSwitchOptions()
-		webhookOptions     = webhookcmd.NewAddToManagerOptions(
+		webhookOptions     = extensionscmdwebhook.NewAddToManagerOptions(
 			local.Name,
 			genericactuator.ShootWebhooksResourceName,
 			genericactuator.ShootWebhookNamespaceSelector(local.Type),
@@ -170,20 +170,20 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			webhookSwitches,
 		)
 
-		aggOption = controllercmd.NewOptionAggregator(
+		aggOption = extensionscmdcontroller.NewOptionAggregator(
 			restOpts,
 			mgrOpts,
 			generalOpts,
-			controllercmd.PrefixOption("controlplane-", controlPlaneCtrlOpts),
-			controllercmd.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
-			controllercmd.PrefixOption("infrastructure-", infraCtrlOpts),
-			controllercmd.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
-			controllercmd.PrefixOption("ingress-", ingressCtrlOpts),
-			controllercmd.PrefixOption("service-", serviceCtrlOpts),
-			controllercmd.PrefixOption("backupbucket-", localBackupBucketOptions),
-			controllercmd.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
-			controllercmd.PrefixOption("healthcheck-", healthCheckCtrlOpts),
-			controllercmd.PrefixOption("heartbeat-", heartbeatCtrlOptions),
+			extensionscmdcontroller.PrefixOption("controlplane-", controlPlaneCtrlOpts),
+			extensionscmdcontroller.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
+			extensionscmdcontroller.PrefixOption("infrastructure-", infraCtrlOpts),
+			extensionscmdcontroller.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
+			extensionscmdcontroller.PrefixOption("ingress-", ingressCtrlOpts),
+			extensionscmdcontroller.PrefixOption("service-", serviceCtrlOpts),
+			extensionscmdcontroller.PrefixOption("backupbucket-", localBackupBucketOptions),
+			extensionscmdcontroller.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
+			extensionscmdcontroller.PrefixOption("healthcheck-", healthCheckCtrlOpts),
+			extensionscmdcontroller.PrefixOption("heartbeat-", heartbeatCtrlOptions),
 			controllerSwitches,
 			reconcileOpts,
 			webhookOptions,

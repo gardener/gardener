@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
-	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"github.com/go-logr/logr"
@@ -31,7 +31,7 @@ import (
 
 // Ensurer ensures that the cloudprovider secret conforms to the provider requirements.
 type Ensurer interface {
-	EnsureCloudProviderSecret(ctx context.Context, gctx gcontext.GardenContext, new, old *corev1.Secret) error
+	EnsureCloudProviderSecret(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *corev1.Secret) error
 }
 
 // NewMutator creates a new cloudprovider mutator.
@@ -87,7 +87,7 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		}
 	}
 
-	etcx := gcontext.NewGardenContext(m.client, new)
+	etcx := extensionscontextwebhook.NewGardenContext(m.client, new)
 	webhook.LogMutation(m.logger, newSecret.Kind, newSecret.Namespace, newSecret.Name)
 	return m.ensurer.EnsureCloudProviderSecret(ctx, etcx, newSecret, oldSecret)
 }

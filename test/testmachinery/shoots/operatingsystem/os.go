@@ -33,7 +33,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	g "github.com/onsi/gomega"
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -94,7 +94,7 @@ var _ = ginkgo.Describe("Operating system testing", func() {
 			err := rootPodExecutor.Clean(ctx)
 			framework.ExpectNoError(err)
 
-			deployment := &v1.Deployment{}
+			deployment := &appsv1.Deployment{}
 			deployment.Name = deploymentName
 			deployment.Namespace = f.Namespace
 			err = framework.DeleteAndWaitForResource(ctx, f.ShootClient, deployment, 5*time.Minute)

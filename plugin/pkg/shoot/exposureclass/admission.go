@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	corev1alphalisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -48,7 +48,7 @@ func Register(plugins *admission.Plugins) {
 type ExposureClass struct {
 	*admission.Handler
 
-	exposureClassLister corev1alphalisters.ExposureClassLister
+	exposureClassLister gardencorev1alpha1listers.ExposureClassLister
 	readyFunc           admission.ReadyFunc
 }
 
@@ -72,7 +72,7 @@ func (e *ExposureClass) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (e *ExposureClass) SetExternalCoreInformerFactory(f externalcoreinformers.SharedInformerFactory) {
+func (e *ExposureClass) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
 	exposureClassInformer := f.Core().V1alpha1().ExposureClasses()
 	e.exposureClassLister = exposureClassInformer.Lister()
 

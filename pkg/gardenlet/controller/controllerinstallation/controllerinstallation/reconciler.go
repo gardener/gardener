@@ -30,8 +30,8 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/go-logr/logr"
@@ -131,7 +131,7 @@ func (r *Reconciler) reconcile(
 	var providerConfig *runtime.RawExtension
 	if deploymentRef := controllerInstallation.Spec.DeploymentRef; deploymentRef != nil {
 		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-		if err := r.GardenClient.Get(ctx, kutil.Key(deploymentRef.Name), controllerDeployment); err != nil {
+		if err := r.GardenClient.Get(ctx, kubernetesutils.Key(deploymentRef.Name), controllerDeployment); err != nil {
 			return reconcile.Result{}, err
 		}
 		providerConfig = &controllerDeployment.ProviderConfig
@@ -333,7 +333,7 @@ func patchConditions(ctx context.Context, c client.StatusClient, controllerInsta
 func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1beta1.ControllerInstallation) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: gutil.NamespaceNameForControllerInstallation(controllerInstallation),
+			Name: gardenerutils.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
 }

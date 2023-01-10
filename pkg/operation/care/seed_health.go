@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -126,7 +126,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		namespace = pointer.StringDeref(h.namespace, namespace)
 
 		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := h.seedClient.Get(ctx, kutil.Key(namespace, name), mr); err != nil {
+		if err := h.seedClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
 				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil

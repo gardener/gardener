@@ -47,7 +47,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockio "github.com/gardener/gardener/pkg/mock/go/io"
@@ -459,7 +459,7 @@ var _ = Describe("kubernetes", func() {
 			scheme = runtime.NewScheme()
 			Expect(corev1.AddToScheme(scheme)).To(Succeed())
 			c.EXPECT().Scheme().Return(scheme).AnyTimes()
-			k8sShootClient = fakeclientset.NewClientSetBuilder().
+			k8sShootClient = kubernetesfake.NewClientSetBuilder().
 				WithClient(c).
 				Build()
 		})

@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/go-logr/logr"
@@ -210,7 +210,7 @@ func (c *Constraint) CheckIfCACertificateValiditiesAcceptable(ctx context.Contex
 
 	expiringCACertificates := make(map[string]time.Time, len(secretList.Items))
 	for _, secret := range secretList.Items {
-		if secret.Data[secretutils.DataKeyCertificateCA] == nil || secret.Data[secretutils.DataKeyPrivateKeyCA] == nil {
+		if secret.Data[secretsutils.DataKeyCertificateCA] == nil || secret.Data[secretsutils.DataKeyPrivateKeyCA] == nil {
 			continue
 		}
 

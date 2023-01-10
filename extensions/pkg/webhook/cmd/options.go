@@ -28,7 +28,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
-	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
@@ -351,7 +351,7 @@ func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, s
 			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
 				return err
 			}
-			if err := extensionswebhookshoot.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
+			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
 				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 			}
 		}

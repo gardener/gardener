@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
+	certificatesigningrequestcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -118,7 +118,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	Expect((&csrcontroller.Reconciler{
+	Expect((&certificatesigningrequestcontroller.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: config.CertificateSigningRequestControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),

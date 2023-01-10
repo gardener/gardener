@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -70,7 +70,7 @@ func (k *kubeAPIServer) reconcileConfigMapAdmission(ctx context.Context, configM
 	}
 
 	configMap.Data[configMapAdmissionDataKey] = string(data)
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
@@ -97,7 +97,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuditPolicy(ctx context.Context, confi
 	}
 
 	configMap.Data = map[string]string{configMapAuditPolicyDataKey: policy}
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
 
@@ -118,9 +118,9 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 						TCP: &apiserverv1alpha1.TCPTransport{
 							URL: fmt.Sprintf("https://%s:%d", vpnseedserver.ServiceName, vpnseedserver.EnvoyPort),
 							TLSConfig: &apiserverv1alpha1.TLSConfig{
-								CABundle:   fmt.Sprintf("%s/%s", volumeMountPathCAVPN, secretutils.DataKeyCertificateBundle),
-								ClientCert: fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyCertificate),
-								ClientKey:  fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyPrivateKey),
+								CABundle:   fmt.Sprintf("%s/%s", volumeMountPathCAVPN, secretsutils.DataKeyCertificateBundle),
+								ClientCert: fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretsutils.DataKeyCertificate),
+								ClientKey:  fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretsutils.DataKeyPrivateKey),
 							},
 						},
 					},
@@ -143,7 +143,7 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 	}
 
 	configMap.Data = map[string]string{configMapEgressSelectorDataKey: string(data)}
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }

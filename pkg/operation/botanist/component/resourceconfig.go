@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -163,5 +163,5 @@ func DestroyResourceConfigs(
 		return err
 	}
 
-	return kutil.DeleteObjects(ctx, c, AllRuntimeObjects(resourceConfigs...)...)
+	return kubernetesutils.DeleteObjects(ctx, c, AllRuntimeObjects(resourceConfigs...)...)
 }

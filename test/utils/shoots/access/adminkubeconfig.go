@@ -22,13 +22,13 @@ import (
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // CreateShootClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client.
 func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	versionedClient, err := gardenversionedcoreclientset.NewForConfig(gardenClient.RESTConfig())
+	versionedClient, err := gardencoreversionedclientset.NewForConfig(gardenClient.RESTConfig())
 	if err != nil {
 		return nil, err
 	}

@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
@@ -129,7 +129,7 @@ var _ = Describe("Actuator", func() {
 	Describe("#isMachineControllerStuck", func() {
 		var (
 			machineDeploymentName           = "machine-deployment-1"
-			machineDeploymentOwnerReference = []metav1.OwnerReference{{Name: machineDeploymentName, Kind: workerhelper.MachineDeploymentKind}}
+			machineDeploymentOwnerReference = []metav1.OwnerReference{{Name: machineDeploymentName, Kind: extensionsworkerhelper.MachineDeploymentKind}}
 
 			machineClassName      = "machine-class-new"
 			machineDeploymentSpec = machinev1alpha1.MachineDeploymentSpec{

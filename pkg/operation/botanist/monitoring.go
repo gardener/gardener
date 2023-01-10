@@ -31,9 +31,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -139,7 +139,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
-	kutil.ByName().Sort(existingConfigMaps)
+	kubernetesutils.ByName().Sort(existingConfigMaps)
 
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
@@ -148,7 +148,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	// Create shoot token secret for prometheus component
-	if err := gutil.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
+	if err := gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
 		return err
 	}
 
@@ -176,7 +176,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		prometheusIngressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	ingressClass, err := gutil.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
+	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -243,8 +243,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				},
 			},
 			"shoot": map[string]interface{}{
-				"apiserver":           fmt.Sprintf("https://%s", gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
-				"apiserverServerName": gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				"apiserver":           fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
+				"apiserverServerName": gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				"sniEnabled":          b.APIServerSNIEnabled(),
 				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
 				"name":                b.Shoot.GetInfo().Name,
@@ -400,8 +400,8 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 			return err
 		}
 
-		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixMonitoring)
-		return kutil.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
+		secretName := gardenerutils.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gardenerutils.ShootProjectSecretSuffixMonitoring)
+		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
 	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators),
@@ -434,7 +434,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	}
 
 	// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
-	kutil.ByName().Sort(existingConfigMaps)
+	kubernetesutils.ByName().Sort(existingConfigMaps)
 
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
@@ -475,7 +475,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 
 	return b.syncShootCredentialToGarden(
 		ctx,
-		gutil.ShootProjectSecretSuffixMonitoring,
+		gardenerutils.ShootProjectSecretSuffixMonitoring,
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
 		map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
 		credentialsUsersSecret.Data,
@@ -560,7 +560,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 }
 
 func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, role, dashboards, subDomain, ingressTLSSecretName string) error {
-	ingressClass, err := gutil.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
+	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -629,7 +629,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "allow-prometheus",
 			},
 		},
-		gutil.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Secret,
+		gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Secret,
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
@@ -698,5 +698,5 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		},
 	}
 
-	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(), objects...)
+	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(), objects...)
 }

@@ -27,13 +27,13 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	corev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
@@ -74,12 +74,12 @@ func Register(plugins *admission.Plugins) {
 type ValidateShoot struct {
 	*admission.Handler
 	authorizer          authorizer.Authorizer
-	cloudProfileLister  corelisters.CloudProfileLister
-	seedLister          corelisters.SeedLister
-	shootLister         corelisters.ShootLister
-	shootStateLister    corev1alpha1listers.ShootStateLister
-	projectLister       corelisters.ProjectLister
-	secretBindingLister corelisters.SecretBindingLister
+	cloudProfileLister  gardencorelisters.CloudProfileLister
+	seedLister          gardencorelisters.SeedLister
+	shootLister         gardencorelisters.ShootLister
+	shootStateLister    gardencorev1alpha1listers.ShootStateLister
+	projectLister       gardencorelisters.ProjectLister
+	secretBindingLister gardencorelisters.SecretBindingLister
 	readyFunc           admission.ReadyFunc
 }
 
@@ -110,7 +110,7 @@ func (v *ValidateShoot) SetAuthorizer(authorizer authorizer.Authorizer) {
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateShoot) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (v *ValidateShoot) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	seedInformer := f.Core().InternalVersion().Seeds()
 	v.seedLister = seedInformer.Lister()
 
@@ -137,7 +137,7 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f coreinformers.SharedInf
 }
 
 // SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (v *ValidateShoot) SetExternalCoreInformerFactory(f externalcoreinformers.SharedInformerFactory) {
+func (v *ValidateShoot) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
 	shootStateInformer := f.Core().V1alpha1().ShootStates()
 	v.shootStateLister = shootStateInformer.Lister()
 
@@ -370,7 +370,7 @@ func (c *validationContext) validateSeedSelectionForMultiZonalShoot() error {
 	return nil
 }
 
-func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister, shootStateLister corev1alpha1listers.ShootStateLister) error {
+func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister gardencorelisters.ShootLister, seedLister gardencorelisters.SeedLister, shootStateLister gardencorev1alpha1listers.ShootStateLister) error {
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
@@ -505,7 +505,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
 			// except changes to the deletion confirmation annotation
 			if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-				newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
+				newConfirmation, newHasConfirmation := newMeta.Annotations[gardenerutils.ConfirmationDeletion]
 
 				// copy the new confirmation value to the old annotations to see if
 				// anything else was changed other than the confirmation annotation
@@ -513,11 +513,11 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 					if oldMeta.Annotations == nil {
 						oldMeta.Annotations = make(map[string]string)
 					}
-					oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
+					oldMeta.Annotations[gardenerutils.ConfirmationDeletion] = newConfirmation
 				}
 
 				if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-					return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, gutil.ConfirmationDeletion))
+					return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, gardenerutils.ConfirmationDeletion))
 				}
 			}
 
@@ -530,7 +530,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	return nil
 }
 
-func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName string) (int64, error) {
+func getNumberOfShootsOnSeed(shootLister gardencorelisters.ShootLister, seedName string) (int64, error) {
 	allShoots, err := shootLister.Shoots(metav1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return 0, fmt.Errorf("could not list all shoots: %w", err)
@@ -939,7 +939,7 @@ func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeCons
 	return true, ""
 }
 
-func (c *validationContext) validateDNSDomainUniqueness(shootLister corelisters.ShootLister) (field.ErrorList, error) {
+func (c *validationContext) validateDNSDomainUniqueness(shootLister gardencorelisters.ShootLister) (field.ErrorList, error) {
 	var (
 		allErrs field.ErrorList
 		dns     = c.shoot.Spec.DNS

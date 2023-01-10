@@ -23,9 +23,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -167,10 +167,10 @@ var _ = Describe("dnsrecord", func() {
 			},
 		})
 
-		renderer := cr.NewWithServerVersion(&version.Info{})
+		renderer := chartrenderer.NewWithServerVersion(&version.Info{})
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
-		b.SeedClientSet = fakeclientset.NewClientSetBuilder().
+		b.SeedClientSet = kubernetesfake.NewClientSetBuilder().
 			WithClient(c).
 			WithChartApplier(chartApplier).
 			Build()

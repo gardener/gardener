@@ -32,8 +32,8 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerhelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
 )
 
@@ -43,7 +43,7 @@ const metricReasonSizeExceeded = "Size Exceeded"
 // Handler checks the resource sizes.
 type Handler struct {
 	Logger logr.Logger
-	Config *apisconfig.ResourceAdmissionConfiguration
+	Config *admissioncontrollerconfig.ResourceAdmissionConfiguration
 }
 
 // Handle checks the resource sizes.
@@ -92,7 +92,7 @@ func (h *Handler) handle(req admission.Request) error {
 	}
 
 	if objectSize := len(req.Object.Raw); limit.CmpInt64(int64(objectSize)) == -1 {
-		if h.Config.OperationMode == nil || *h.Config.OperationMode == apisconfig.AdmissionModeBlock {
+		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfig.AdmissionModeBlock {
 			log.Info("Maximum resource size exceeded, rejected request", "requestObjectSize", objectSize, "limit", limit)
 			metrics.RejectedResources.WithLabelValues(
 				fmt.Sprint(req.Operation),
@@ -112,7 +112,7 @@ func (h *Handler) handle(req admission.Request) error {
 func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {
 	for _, subject := range subjects {
 		if subject.Kind == rbacv1.ServiceAccountKind {
-			if confighelper.ServiceAccountMatches(subject, userInfo) {
+			if admissioncontrollerhelper.ServiceAccountMatches(subject, userInfo) {
 				return true
 			}
 		}
@@ -125,9 +125,9 @@ func userMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bo
 		var match bool
 		switch subject.Kind {
 		case rbacv1.UserKind:
-			match = confighelper.UserMatches(subject, userInfo)
+			match = admissioncontrollerhelper.UserMatches(subject, userInfo)
 		case rbacv1.GroupKind:
-			match = confighelper.UserGroupMatches(subject, userInfo)
+			match = admissioncontrollerhelper.UserGroupMatches(subject, userInfo)
 		}
 		if match {
 			return true
@@ -144,12 +144,12 @@ func isUnrestrictedUser(userInfo authenticationv1.UserInfo, subjects []rbacv1.Su
 	return userMatch(userInfo, subjects)
 }
 
-func findLimitForGVR(limits []apisconfig.ResourceLimit, gvr *metav1.GroupVersionResource) *resource.Quantity {
+func findLimitForGVR(limits []admissioncontrollerconfig.ResourceLimit, gvr *metav1.GroupVersionResource) *resource.Quantity {
 	for _, limit := range limits {
 		size := limit.Size
-		if confighelper.APIGroupMatches(limit, gvr.Group) &&
-			confighelper.VersionMatches(limit, gvr.Version) &&
-			confighelper.ResourceMatches(limit, gvr.Resource) {
+		if admissioncontrollerhelper.APIGroupMatches(limit, gvr.Group) &&
+			admissioncontrollerhelper.VersionMatches(limit, gvr.Version) &&
+			admissioncontrollerhelper.ResourceMatches(limit, gvr.Resource) {
 			return &size
 		}
 	}
