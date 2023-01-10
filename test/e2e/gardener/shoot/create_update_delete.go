@@ -119,11 +119,21 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "maintain")
 			return nil
 		})).To(Succeed())
-		Expect(f.ShootFramework.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "reconcile")
-			return nil
-		})).To(Succeed())
 
+		By("Wait for operation annotation to be gone. Controller picked up reconciliation request.")
+		Eventually(func(g Gomega) {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      f.Shoot.Name,
+					Namespace: f.Shoot.Namespace,
+				},
+			}
+
+			g.Expect(f.GetShoot(ctx, shoot)).To(Succeed())
+			g.Expect(shoot.Annotations).ToNot(HaveKey("gardener.cloud/operation"))
+		}).Should(Succeed())
+
+		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
 		Expect(f.Shoot.Annotations).ToNot(HaveKey("shoot.gardener.cloud/skip-readiness"))
 
 		By("Delete Shoot")
