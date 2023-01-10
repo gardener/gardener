@@ -22,14 +22,8 @@ import (
 
 // SetDefaults_Project sets default values for Project objects.
 func SetDefaults_Project(obj *Project) {
-	defaultSubject(obj.Spec.Owner)
-
-	for i, member := range obj.Spec.Members {
-		defaultSubject(&obj.Spec.Members[i].Subject)
-
-		if len(member.Role) == 0 && len(member.Roles) == 0 {
-			obj.Spec.Members[i].Role = ProjectMemberViewer
-		}
+	if obj.Spec.Owner != nil {
+		setDefaults_Subject(obj.Spec.Owner)
 	}
 
 	if obj.Spec.Namespace != nil && *obj.Spec.Namespace == v1beta1constants.GardenNamespace {
@@ -41,8 +35,10 @@ func SetDefaults_Project(obj *Project) {
 	}
 }
 
-func defaultSubject(obj *rbacv1.Subject) {
-	if obj != nil && len(obj.APIGroup) == 0 {
+// setDefaults_Subject sets default values for rbacv1.Subject objects.
+// It is not exported and called manually, because we cannot create defaulting functions for foreign API groups.
+func setDefaults_Subject(obj *rbacv1.Subject) {
+	if len(obj.APIGroup) == 0 {
 		switch obj.Kind {
 		case rbacv1.ServiceAccountKind:
 			obj.APIGroup = ""
@@ -51,5 +47,14 @@ func defaultSubject(obj *rbacv1.Subject) {
 		case rbacv1.GroupKind:
 			obj.APIGroup = rbacv1.GroupName
 		}
+	}
+}
+
+// SetDefaults_ProjectMember sets default values for ProjectMember objects.
+func SetDefaults_ProjectMember(obj *ProjectMember) {
+	setDefaults_Subject(&obj.Subject)
+
+	if len(obj.Role) == 0 && len(obj.Roles) == 0 {
+		obj.Role = ProjectMemberViewer
 	}
 }
