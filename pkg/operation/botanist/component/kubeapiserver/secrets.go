@@ -242,11 +242,11 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 		}
 	)
 
-	if k.values.SNI.PodMutatorEnabled || k.values.VPN.HighAvailabilityEnabled {
+	if k.values.SNI.PodMutatorEnabled || (k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled) {
 		ipAddresses = append(ipAddresses, net.ParseIP("127.0.0.1"))
 	}
 
-	if k.values.IsNodeless {
+	if !k.values.IsNodeless {
 		dnsNames = append(dnsNames, kutil.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 	}
 
