@@ -113,6 +113,7 @@
 
 * [Getting started locally (using the local provider)](development/getting_started_locally.md)
 * [Setting up a development environment (using a cloud provider)](development/local_setup.md)
+* [Setting up a development box on Google Cloud](development/dev-box-on-google-cloud.md)
 * [Testing (Unit, Integration, E2E Tests)](development/testing.md)
 * [Test Machinery Tests](development/testmachinery_tests.md)
 * [Dependency Management](development/dependencies.md)

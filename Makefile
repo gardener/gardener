@@ -284,6 +284,38 @@ verify: check format test test-integration test-prometheus
 verify-extended: check-generate check format test-cov test-cov-clean test-integration test-prometheus
 
 #####################################################################
+# Rules for dev box on GCP                                          #
+#####################################################################
+
+GCP_BOX_TF_DIR  := $(REPO_ROOT)/hack/local-development/gcp
+
+gcp-box-%: export TF_VAR_name = ${USER}-gardener-dev
+gcp-box-%: export TF_VAR_user = ${USER}
+gcp-box-%: export TF_VAR_serviceaccount_file = $(REPO_ROOT)/.kube-secrets/gcp/gardener-dev.json
+
+.PHONY: gcp-box-up
+gcp-box-up: $(TERRAFORM)
+	$(TERRAFORM) -chdir=$(GCP_BOX_TF_DIR) init
+	$(TERRAFORM) -chdir=$(GCP_BOX_TF_DIR) apply
+	@# we need an additional refresh, otherwise the instance_ip_addr output variable might be outdated
+	$(TERRAFORM) -chdir=$(GCP_BOX_TF_DIR) refresh
+	@echo -e "\nYou can now connect to your dev box using:"
+	@echo "ssh -tl $$TF_VAR_user $$($(TERRAFORM) -chdir=hack/local-development/gcp output instance_ip_addr | jq -r) ./start-gardener-dev.sh"
+
+.PHONY: gcp-box-down
+gcp-box-down: gcp-box-clean-known-hosts $(TERRAFORM)
+	$(TERRAFORM) -chdir=$(GCP_BOX_TF_DIR) apply -var desired_status=TERMINATED
+
+.PHONY: gcp-box-clean
+gcp-box-clean: gcp-box-clean-known-hosts $(TERRAFORM)
+	$(TERRAFORM) -chdir=$(GCP_BOX_TF_DIR) destroy
+
+.PHONY: gcp-box-clean-known-hosts
+gcp-box-clean-known-hosts: $(TERRAFORM)
+	instance_ip_addr="$$($(TERRAFORM) -chdir=hack/local-development/gcp output instance_ip_addr | jq -r)"; \
+	[ -z "$$instance_ip_addr" ] || sed -i "/$$instance_ip_addr /d" ~/.ssh/known_hosts
+
+#####################################################################
 # Rules for local environment                                       #
 #####################################################################
 
