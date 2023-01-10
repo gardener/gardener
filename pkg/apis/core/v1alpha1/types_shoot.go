@@ -1195,7 +1195,8 @@ type Networking struct {
 	// +optional
 	Services *string `json:"services,omitempty" protobuf:"bytes,5,opt,name=services"`
 	// IPFamilies specifies the IP families to use for shoot networking. This field is immutable.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+	// Defaults to ["IPv4"].
 	// +optional
 	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,6,rep,name=ipFamilies,casttype=IPFamily"`
 }

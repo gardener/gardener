@@ -1612,7 +1612,8 @@ message Networking {
   optional string services = 5;
 
   // IPFamilies specifies the IP families to use for shoot networking. This field is immutable.
-  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+  // Defaults to ["IPv4"].
   // +optional
   repeated string ipFamilies = 6;
 }
@@ -2070,7 +2071,8 @@ message SeedNetworks {
   optional ShootNetworks shootDefaults = 4;
 
   // IPFamilies specifies the IP families to use for seed networking. This field is immutable.
-  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+  // Defaults to ["IPv4"].
   // +optional
   repeated string ipFamilies = 5;
 }

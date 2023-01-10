@@ -6810,7 +6810,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>IPFamilies specifies the IP families to use for shoot networking. This field is immutable.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a></p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
 </tr>
 </tbody>
@@ -8093,7 +8094,8 @@ in the seed cluster.</p>
 <td>
 <em>(Optional)</em>
 <p>IPFamilies specifies the IP families to use for seed networking. This field is immutable.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a></p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
 </tr>
 </tbody>

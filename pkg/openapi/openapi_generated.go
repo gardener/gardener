@@ -4898,7 +4898,7 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 					},
 					"ipFamilies": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IPFamilies specifies the IP families to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
+							Description: "IPFamilies specifies the IP families to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md. Defaults to [\"IPv4\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -6255,7 +6255,7 @@ func schema_pkg_apis_core_v1alpha1_SeedNetworks(ref common.ReferenceCallback) co
 					},
 					"ipFamilies": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IPFamilies specifies the IP families to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
+							Description: "IPFamilies specifies the IP families to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md. Defaults to [\"IPv4\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -12313,7 +12313,7 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 					},
 					"ipFamilies": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IPFamilies specifies the IP families to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
+							Description: "IPFamilies specifies the IP families to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md. Defaults to [\"IPv4\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -13639,7 +13639,7 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 					},
 					"ipFamilies": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IPFamilies specifies the IP families to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
+							Description: "IPFamilies specifies the IP families to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md. Defaults to [\"IPv4\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
