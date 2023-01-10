@@ -142,6 +142,8 @@ type Values struct {
 	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
+	// IsNodeless specifies whether the cluster managed by this API server has worker nodes.
+	IsNodeless bool
 	// Logging contains configuration settings for the log and access logging verbosity
 	Logging *gardencorev1beta1.KubeAPIServerLogging
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
@@ -156,6 +158,8 @@ type Values struct {
 	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
 	ServiceAccount ServiceAccountConfig
+	// ServiceNetworkCIDR is the CIDR of the service network.
+	ServiceNetworkCIDR string
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
@@ -216,10 +220,10 @@ type Images struct {
 
 // VPNConfig contains information for configuring the VPN settings for the kube-apiserver.
 type VPNConfig struct {
+	// Enabled states whether VPN is enabled.
+	Enabled bool
 	// PodNetworkCIDR is the CIDR of the pod network.
 	PodNetworkCIDR string
-	// ServiceNetworkCIDR is the CIDR of the service network.
-	ServiceNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
 	NodeNetworkCIDR *string
 	// HighAvailabilityEnabled states if VPN uses HA configuration.
@@ -389,7 +393,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if k.values.VPN.HighAvailabilityEnabled {
+	if k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled {
 		if err := k.reconcileServiceAccount(ctx); err != nil {
 			return err
 		}

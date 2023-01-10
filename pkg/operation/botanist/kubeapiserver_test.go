@@ -1095,9 +1095,9 @@ usernames: ["admin"]
 				Entry("ReversedVPN enabled",
 					nil,
 					kubeapiserver.VPNConfig{
-						PodNetworkCIDR:     podNetworkCIDR,
-						ServiceNetworkCIDR: serviceNetworkCIDR,
-						NodeNetworkCIDR:    &nodeNetworkCIDR,
+						Enabled:         true,
+						PodNetworkCIDR:  podNetworkCIDR,
+						NodeNetworkCIDR: &nodeNetworkCIDR,
 					},
 				),
 				Entry("no node network",
@@ -1107,8 +1107,8 @@ usernames: ["admin"]
 						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.VPNConfig{
-						PodNetworkCIDR:     podNetworkCIDR,
-						ServiceNetworkCIDR: serviceNetworkCIDR,
+						Enabled:        true,
+						PodNetworkCIDR: podNetworkCIDR,
 					},
 				),
 			)

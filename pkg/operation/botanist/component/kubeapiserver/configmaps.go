@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +26,10 @@ import (
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -67,8 +68,8 @@ func (k *kubeAPIServer) reconcileConfigMapAdmission(ctx context.Context, configM
 	if err != nil {
 		return err
 	}
-	configMap.Data[configMapAdmissionDataKey] = string(data)
 
+	configMap.Data[configMapAdmissionDataKey] = string(data)
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
@@ -101,13 +102,11 @@ func (k *kubeAPIServer) reconcileConfigMapAuditPolicy(ctx context.Context, confi
 }
 
 func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if k.values.VPN.HighAvailabilityEnabled {
-		// We don't delete the confimap here as we don't know its name (as it's unique). Instead, we rely on the usual
+	if !k.values.VPN.Enabled || k.values.VPN.HighAvailabilityEnabled {
+		// We don't delete the configmap here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
 		return nil
 	}
-
-	egressSelectionControlPlaneName := "controlplane"
 
 	egressSelectorConfig := &apiserverv1alpha1.EgressSelectorConfiguration{
 		EgressSelections: []apiserverv1alpha1.EgressSelection{
@@ -128,7 +127,7 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 				},
 			},
 			{
-				Name:       egressSelectionControlPlaneName,
+				Name:       "controlplane",
 				Connection: apiserverv1alpha1.Connection{ProxyProtocol: apiserverv1alpha1.ProtocolDirect},
 			},
 			{
