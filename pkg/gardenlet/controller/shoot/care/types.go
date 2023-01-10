@@ -35,7 +35,7 @@ import (
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
-	Check(ctx context.Context, thresholdMapping map[gardencorev1beta1.ConditionType]time.Duration, threshold, managedResourceProgressingThreshold *metav1.Duration, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+	Check(ctx context.Context, thresholdMapping map[gardencorev1beta1.ConditionType]time.Duration, threshold *metav1.Duration, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.

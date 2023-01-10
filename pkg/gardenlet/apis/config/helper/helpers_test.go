@@ -296,4 +296,46 @@ var _ = Describe("helper", func() {
 			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeTrue())
 		})
 	})
+
+	Describe("#GetManagedResourceProgressingThreshold", func() {
+		It("should return nil the GardenletConfiguration is nil", func() {
+			Expect(GetManagedResourceProgressingThreshold(nil)).To(BeNil())
+		})
+
+		It("should return nil when GardenletConfiguration is empty", func() {
+			gardenletConfig := &config.GardenletConfiguration{}
+
+			Expect(GetManagedResourceProgressingThreshold(gardenletConfig)).To(BeNil())
+		})
+
+		It("should return nil when Controller configuration is empty", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Controllers: &config.GardenletControllerConfiguration{},
+			}
+
+			Expect(GetManagedResourceProgressingThreshold(gardenletConfig)).To(BeNil())
+		})
+
+		It("should return nil when Shoot Care configuration is empty", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Controllers: &config.GardenletControllerConfiguration{
+					ShootCare: &config.ShootCareControllerConfiguration{},
+				},
+			}
+
+			Expect(GetManagedResourceProgressingThreshold(gardenletConfig)).To(BeNil())
+		})
+
+		It("should return non nil value when ManagedResourceProgressingThreshold value is set", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Controllers: &config.GardenletControllerConfiguration{
+					ShootCare: &config.ShootCareControllerConfiguration{
+						ManagedResourceProgressingThreshold: &metav1.Duration{},
+					},
+				},
+			}
+
+			Expect(GetManagedResourceProgressingThreshold(gardenletConfig)).To(Not(BeNil()))
+		})
+	})
 })

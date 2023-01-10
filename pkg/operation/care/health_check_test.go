@@ -276,11 +276,7 @@ var _ = Describe("health check", func() {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating worker "+client.ObjectKeyFromObject(obj).String())
 			}
 
-<<<<<<< HEAD
-			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
-=======
-			checker := care.NewHealthChecker(fakeClient, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
->>>>>>> dee2933e2 (Use ManagedResourceProgressingThreshold in shoot care)
+			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
 			exitCondition, err := checker.CheckControlPlane(ctx, shoot, seedNamespace, condition)
 			Expect(err).NotTo(HaveOccurred())
@@ -383,7 +379,7 @@ var _ = Describe("health check", func() {
 		func(conditions []gardencorev1beta1.Condition, upToDate bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				mr      = new(resourcesv1alpha1.ManagedResource)
-				checker = care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
+				checker = care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, &metav1.Duration{Duration: 1 * time.Minute}, nil, kubernetesVersion, gardenerVersion)
 			)
 
 			if !upToDate {
@@ -392,7 +388,7 @@ var _ = Describe("health check", func() {
 
 			mr.Status.Conditions = conditions
 
-			exitCondition := checker.CheckManagedResource(condition, mr, &metav1.Duration{Duration: 1 * time.Minute})
+			exitCondition := checker.CheckManagedResource(condition, mr)
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("no conditions",
@@ -440,7 +436,7 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
-			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceStuckInProgressingError, "ManagedResource  progressing state is true for more than 1m0s time"))),
+			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceStuckInProgressingError, "ManagedResource  progressing state is true for more than 1m0s"))),
 		Entry("one false condition ResourcesApplied",
 			[]gardencorev1beta1.Condition{
 				{
@@ -572,11 +568,7 @@ var _ = Describe("health check", func() {
 					return nil
 				})
 
-<<<<<<< HEAD
-				checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
-=======
-				checker := care.NewHealthChecker(fakeClient, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
->>>>>>> dee2933e2 (Use ManagedResourceProgressingThreshold in shoot care)
+				checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
 				exitCondition, err := checker.CheckClusterNodes(ctx, c, workerPools, condition)
 				Expect(err).NotTo(HaveOccurred())
@@ -787,11 +779,7 @@ var _ = Describe("health check", func() {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 			}
 
-<<<<<<< HEAD
-			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
-=======
-			checker := care.NewHealthChecker(fakeClient, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
->>>>>>> dee2933e2 (Use ManagedResourceProgressingThreshold in shoot care)
+			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
 			exitCondition, err := checker.CheckMonitoringControlPlane(ctx, seedNamespace, wantsShootMonitoring, wantsAlertmanager, condition)
 			Expect(err).NotTo(HaveOccurred())
@@ -855,11 +843,7 @@ var _ = Describe("health check", func() {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 			}
 
-<<<<<<< HEAD
-			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
-=======
-			checker := care.NewHealthChecker(fakeClient, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
->>>>>>> dee2933e2 (Use ManagedResourceProgressingThreshold in shoot care)
+			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
 			exitCondition, err := checker.CheckLoggingControlPlane(ctx, seedNamespace, isTestingShoot, eventLoggingEnabled, lokiEnabled, condition)
 			Expect(err).NotTo(HaveOccurred())
@@ -944,18 +928,9 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#FailedCondition",
-<<<<<<< HEAD
 		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
 			fakeClock.SetTime(now)
-			checker := care.NewHealthChecker(fakeClient, fakeClock, thresholds, nil, lastOperation, kubernetesVersion, gardenerVersion)
-=======
-		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, transitionTime metav1.Time, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
-			checker := care.NewHealthChecker(fakeClient, thresholds, nil, nil, lastOperation, kubernetesVersion, gardenerVersion)
-			DeferCleanup(test.WithVars(
-				&gardencorev1beta1helper.Clock, testclock.NewFakeClock(transitionTime.Time),
-				&care.Now, func() time.Time { return now },
-			))
->>>>>>> dee2933e2 (Use ManagedResourceProgressingThreshold in shoot care)
+			checker := care.NewHealthChecker(fakeClient, fakeClock, thresholds, nil, nil, lastOperation, kubernetesVersion, gardenerVersion)
 			Expect(checker.FailedCondition(condition, reason, message)).To(expected)
 		},
 		Entry("true condition with threshold",
@@ -1114,11 +1089,7 @@ var _ = Describe("health check", func() {
 	// CheckExtensionCondition
 	DescribeTable("#CheckExtensionCondition - HealthCheckReport",
 		func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []care.ExtensionCondition, expected types.GomegaMatcher) {
-<<<<<<< HEAD
-			checker := care.NewHealthChecker(fakeClient, fakeClock, nil, healthCheckOutdatedThreshold, nil, kubernetesVersion, gardenerVersion)
-=======
-			checker := care.NewHealthChecker(fakeClient, nil, healthCheckOutdatedThreshold, nil, nil, kubernetesVersion, gardenerVersion)
->>>>>>> dee2933e2 (Use ManagedResourceProgressingThreshold in shoot care)
+			checker := care.NewHealthChecker(fakeClient, fakeClock, nil, healthCheckOutdatedThreshold, nil, nil, kubernetesVersion, gardenerVersion)
 			updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions)
 			if expected == nil {
 				Expect(updatedCondition).To(BeNil())

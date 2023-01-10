@@ -126,3 +126,11 @@ func IsMonitoringEnabled(c *config.GardenletConfiguration) bool {
 	}
 	return true
 }
+
+// GetManagedResourceProgressingThreshold returns ManagedResourceProgressingThreshold if set otherwise it returns nil.
+func GetManagedResourceProgressingThreshold(c *config.GardenletConfiguration) *metav1.Duration {
+	if c != nil && c.Controllers != nil && c.Controllers.ShootCare != nil && c.Controllers.ShootCare.ManagedResourceProgressingThreshold != nil {
+		return c.Controllers.ShootCare.ManagedResourceProgressingThreshold
+	}
+	return nil
+}

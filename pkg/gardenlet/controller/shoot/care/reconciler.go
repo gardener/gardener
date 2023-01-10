@@ -164,7 +164,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 				ctx,
 				r.conditionThresholdsToProgressingMapping(),
 				staleExtensionHealthCheckThreshold,
-				r.Config.Controllers.ShootCare.ManagedResourceProgressingThreshold,
 				conditions,
 			)
 			return nil

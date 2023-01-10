@@ -120,7 +120,6 @@ func NewHealthChecker(
 		kubernetesVersion:                   kubernetesVersion,
 		gardenerVersion:                     gardenerVersion,
 	}
-	return nil
 }
 
 func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.Condition, requiredNames, names sets.String, reason, message string) *gardencorev1beta1.Condition {
@@ -241,13 +240,13 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 }
 
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
-func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
+func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool{
 		resourcesv1alpha1.ResourcesApplied: defaultSuccessfulCheck(),
 		resourcesv1alpha1.ResourcesHealthy: defaultSuccessfulCheck(),
 	}
 
-	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck, managedResourceProgressingThreshold)
+	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck)
 }
 
 func defaultSuccessfulCheck() func(status gardencorev1beta1.ConditionStatus) bool {
@@ -265,8 +264,7 @@ func resourcesNotProgressingCheck() func(status gardencorev1beta1.ConditionStatu
 func (b *HealthChecker) checkManagedResourceConditions(
 	condition gardencorev1beta1.Condition,
 	mr *resourcesv1alpha1.ManagedResource,
-	conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool,
-	managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
+	conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 		return &c
@@ -276,8 +274,8 @@ func (b *HealthChecker) checkManagedResourceConditions(
 	for _, cond := range mr.Status.Conditions {
 		if cond.Type == resourcesv1alpha1.ResourcesProgressing &&
 			cond.Status == gardencorev1beta1.ConditionTrue &&
-			managedResourceProgressingThreshold != nil &&
-			time.Since(cond.LastTransitionTime.Time) >= managedResourceProgressingThreshold.Duration {
+			b.managedResourceProgressingThreshold != nil &&
+			time.Since(cond.LastTransitionTime.Time) >= b.managedResourceProgressingThreshold.Duration {
 			conditionProgressing = true
 		}
 		if cond.Type == resourcesv1alpha1.ResourcesHealthy && cond.Status == gardencorev1beta1.ConditionTrue {
@@ -304,7 +302,7 @@ func (b *HealthChecker) checkManagedResourceConditions(
 	}
 
 	if conditionProgressing && conditionHealthy {
-		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceStuckInProgressingError, fmt.Sprintf("ManagedResource %s progressing state is true for more than %v time", mr.Name, managedResourceProgressingThreshold.Duration))
+		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceStuckInProgressingError, fmt.Sprintf("ManagedResource %s progressing state is true for more than %v", mr.Name, b.managedResourceProgressingThreshold.Duration))
 		return &c
 	}
 

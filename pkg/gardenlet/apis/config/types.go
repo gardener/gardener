@@ -284,8 +284,9 @@ type ShootCareControllerConfiguration struct {
 	SyncPeriod *metav1.Duration
 	// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 	StaleExtensionHealthChecks *StaleExtensionHealthChecks
-	// ManagedResourceProgressingThreshold is the duration after which if managed resource progressing
-	// condition remains true then managed resource is considered stuck.
+	// ManagedResourceProgressingThreshold is the allowed duration a ManagedResource can be with condition
+	// Progressing=True before being considered as "stuck" from the shoot-care controller.
+	// If the field is not specified, the check for ManagedResource "stuck" in progressing state is not performed.
 	ManagedResourceProgressingThreshold *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold

@@ -150,5 +150,5 @@ func checkManagedResourceForSeed(checker *HealthChecker, condition gardencorev1b
 		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(),
 	}
 
-	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck, nil)
+	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck)
 }
