@@ -63,6 +63,7 @@ var _ = Describe("NginxIngress", func() {
 			ImageController:     imageController,
 			ImageDefaultBackend: imageDefaultBackend,
 			ConfigData:          configMapData,
+			PSPDisabled:         true,
 		}
 
 		configMapYAML = `apiVersion: v1
@@ -517,6 +518,24 @@ subjects:
   namespace: ` + namespace + `
 `
 
+		roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: gardener.cloud:psp:addons-nginx-ingress
+  namespace: ` + namespace + `
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:psp:privileged
+subjects:
+- kind: ServiceAccount
+  name: addons-nginx-ingress
+  namespace: ` + namespace + `
+`
+
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -634,6 +653,16 @@ status: {}
 
 			It("should successfully deploy VPA resource", func() {
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+			})
+		})
+
+		Context("PSP is enabled", func() {
+			BeforeEach(func() {
+				values.PSPDisabled = false
+			})
+
+			It("should successfully deploy PSP RoleBinding resource", func() {
+				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
 			})
 		})
 	})

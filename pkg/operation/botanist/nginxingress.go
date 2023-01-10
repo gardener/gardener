@@ -47,6 +47,7 @@ func (b *Botanist) DefaultNginxIngress() (
 		LoadBalancerSourceRanges: b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
 		ExternalTrafficPolicy:    *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy,
 		VPAEnabled:               b.Shoot.WantsVerticalPodAutoscaler,
+		PSPDisabled:              b.Shoot.PSPDisabled,
 	}
 
 	if b.APIServerSNIEnabled() {

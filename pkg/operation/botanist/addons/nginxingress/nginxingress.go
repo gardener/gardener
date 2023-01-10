@@ -54,11 +54,13 @@ const (
 	clusterRoleName          = "addons-nginx-ingress"
 	serviceAccountName       = "addons-nginx-ingress"
 	clusterRoleBindingName   = "addons-nginx-ingress"
+	clusterRolePSPName       = "gardener.cloud:psp:privileged"
 	configMapName            = "addons-nginx-ingress-controller"
 	deploymentNameController = "addons-nginx-ingress-controller"
 	ingressClassName         = "nginx"
 	roleName                 = "addons-nginx-ingress"
 	roleBindingName          = "addons-nginx-ingress"
+	roleBindingPSPName       = "gardener.cloud:psp:addons-nginx-ingress"
 	serviceNameController    = "addons-nginx-ingress-controller"
 	containerNameController  = "nginx-ingress-controller"
 	containerNameBackend     = "nginx-ingress-nginx-ingress-k8s-backend"
@@ -93,6 +95,8 @@ type Values struct {
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
+	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
+	PSPDisabled bool
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -578,8 +582,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		ingressClass *networkingv1.IngressClass
-		vpa          *vpaautoscalingv1.VerticalPodAutoscaler
+		ingressClass   *networkingv1.IngressClass
+		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
+		roleBindingPSP *rbacv1.RoleBinding
 	)
 
 	if n.values.VPAEnabled {
@@ -613,6 +618,28 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
+	if !n.values.PSPDisabled {
+		roleBindingPSP = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleBindingPSPName,
+				Namespace: n.namespace,
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRolePSPName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
+	}
+
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
 		ingressClass = &networkingv1.IngressClass{
 			ObjectMeta: metav1.ObjectMeta{
@@ -642,6 +669,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		ingressClass,
 		role,
 		roleBinding,
+		roleBindingPSP,
 		serviceAccount,
 		serviceController,
 		serviceBackend,

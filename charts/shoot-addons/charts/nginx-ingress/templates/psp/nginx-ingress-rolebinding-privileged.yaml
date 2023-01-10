@@ -1,17 +1,8 @@
-{{- if not .Values.global.pspDisabled }}
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
-  name: gardener.cloud:psp:{{ template "nginx-ingress.fullname" . }}
+  name: gardener.cloud:psp:addons-nginx-ingress
   namespace: kube-system
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:privileged
-subjects:
-- kind: ServiceAccount
-  name: {{ template "nginx-ingress.fullname" . }}
-  namespace: kube-system
-{{- end }}
+    resources.gardener.cloud/mode: Ignore
+
