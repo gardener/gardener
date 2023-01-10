@@ -196,7 +196,7 @@ func (s *service) Wait(ctx context.Context) error {
 }
 
 func (s *service) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, s.client, s.emptyService(), 5*time.Second)
+	return kutil.WaitUntilResourceDeleted(ctx, s.client, s.emptyService(), 2*time.Second)
 }
 
 func (s *service) emptyService() *corev1.Service {
