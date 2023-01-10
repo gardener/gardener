@@ -185,7 +185,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		// if the spec of the extensionBackupBucket has changed or it has not been reconciled after the last updation of secret, reconcile it
 		mustReconcileExtensionBackupBucket = true
 	} else if extensionBackupBucket.Status.LastOperation == nil {
-		// if the extension did not record a lastOperation yet, don't update the status
+		// if the extension did not record a lastOperation yet, record it as error in the extension backupbucket status
 		reconciliationSuccessful = false
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
