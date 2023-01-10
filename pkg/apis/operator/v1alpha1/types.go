@@ -111,6 +111,9 @@ type SettingVerticalPodAutoscaler struct {
 
 // VirtualCluster contains configuration for the virtual cluster.
 type VirtualCluster struct {
+	// ControlPlane holds information about the general settings for the control plane of the virtual cluster.
+	// +optional
+	ControlPlane *ControlPlane `json:"controlPlane,omitempty"`
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
@@ -159,10 +162,10 @@ type Storage struct {
 // Backup contains the object store configuration for backups for the virtual garden etcd.
 type Backup struct {
 	// Provider is a provider name. This field is immutable.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Provider is immutable"
 	Provider string `json:"provider"`
 	// BucketName is the name of the backup bucket.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="BucketName is immutable"
 	BucketName string `json:"bucketName"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
@@ -174,6 +177,16 @@ type Maintenance struct {
 	// TimeWindow contains information about the time window for maintenance operations.
 	TimeWindow gardencorev1beta1.MaintenanceTimeWindow `json:"timeWindow"`
 }
+
+// ControlPlane holds information about the general settings for the control plane of the virtual garden cluster.
+type ControlPlane struct {
+	// HighAvailability holds the configuration settings for high availability settings.
+	// +optional
+	HighAvailability *HighAvailability `json:"highAvailability,omitempty"`
+}
+
+// HighAvailability specifies the configuration settings for high availability for a resource.
+type HighAvailability struct{}
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {

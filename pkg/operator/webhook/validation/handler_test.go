@@ -77,13 +77,25 @@ var _ = Describe("Handler", func() {
 
 	Describe("#ValidateUpdate", func() {
 		It("should return success if there are no errors", func() {
-			Expect(handler.ValidateUpdate(ctx, nil, garden)).To(Succeed())
+			Expect(handler.ValidateUpdate(ctx, garden, garden)).To(Succeed())
 		})
 
 		It("should return an error if there are validation errors", func() {
+			oldGarden := garden.DeepCopy()
 			metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
 
-			err := handler.ValidateUpdate(ctx, nil, garden)
+			err := handler.ValidateUpdate(ctx, oldGarden, garden)
+			statusError, ok := err.(*apierrors.StatusError)
+			Expect(ok).To(BeTrue())
+			Expect(statusError.Status().Code).To(Equal(int32(http.StatusUnprocessableEntity)))
+			Expect(statusError.Status().Reason).To(Equal(metav1.StatusReasonInvalid))
+		})
+
+		It("should not be possible to remove the high availability setting once set", func() {
+			oldGarden := garden.DeepCopy()
+			oldGarden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
+
+			err := handler.ValidateUpdate(ctx, oldGarden, garden)
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusUnprocessableEntity)))

@@ -277,4 +277,28 @@ var _ = Describe("Validation Tests", func() {
 			)
 		})
 	})
+
+	Describe("#ValidateGarden", func() {
+		var oldGarden, newGarden *operatorv1alpha1.Garden
+
+		BeforeEach(func() {
+			oldGarden = &operatorv1alpha1.Garden{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "garden",
+				},
+			}
+			newGarden = oldGarden.DeepCopy()
+		})
+
+		Context("high availability setting", func() {
+			It("should not be possible to remove the high availability setting once set", func() {
+				oldGarden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
+
+				Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.virtualCluster.controlPlane.highAvailability"),
+				}))))
+			})
+		})
+	})
 })

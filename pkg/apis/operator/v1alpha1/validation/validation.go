@@ -15,6 +15,7 @@
 package validation
 
 import (
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -28,6 +29,21 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
+
+	return allErrs
+}
+
+// ValidateGardenUpdate contains functionality for performing extended validation of a Garden object under update which
+// is not possible with standard CRD validation, see https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules.
+func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if oldGarden.Spec.VirtualCluster.ControlPlane != nil && oldGarden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil &&
+		(newGarden.Spec.VirtualCluster.ControlPlane == nil || newGarden.Spec.VirtualCluster.ControlPlane.HighAvailability == nil) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldGarden.Spec.VirtualCluster.ControlPlane, newGarden.Spec.VirtualCluster.ControlPlane, field.NewPath("spec", "virtualCluster", "controlPlane", "highAvailability"))...)
+	}
+
+	allErrs = append(allErrs, ValidateGarden(newGarden)...)
 
 	return allErrs
 }

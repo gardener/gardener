@@ -65,6 +65,39 @@ backups should be stored. It should have enough privileges to manipulate the obj
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.ControlPlane">ControlPlane
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>ControlPlane holds information about the general settings for the control plane of the virtual garden cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>highAvailability</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.HighAvailability">
+HighAvailability
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HighAvailability holds the configuration settings for high availability settings.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Credentials">Credentials
 </h3>
 <p>
@@ -454,6 +487,15 @@ Credentials
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.HighAvailability">HighAvailability
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ControlPlane">ControlPlane</a>)
+</p>
+<p>
+<p>HighAvailability specifies the configuration settings for high availability for a resource.</p>
+</p>
 <h3 id="operator.gardener.cloud/v1alpha1.Maintenance">Maintenance
 </h3>
 <p>
@@ -738,6 +780,20 @@ string
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>controlPlane</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ControlPlane">
+ControlPlane
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlane holds information about the general settings for the control plane of the virtual cluster.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>etcd</code></br>

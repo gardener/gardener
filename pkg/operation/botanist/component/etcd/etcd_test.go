@@ -66,13 +66,12 @@ var _ = Describe("Etcd", func() {
 	})
 
 	var (
-		ctrl                 *gomock.Controller
-		c                    *mockclient.MockClient
-		fakeClient           client.Client
-		sm                   secretsmanager.Interface
-		etcd                 Interface
-		log                  logr.Logger
-		failureToleranceType *gardencorev1beta1.FailureToleranceType
+		ctrl       *gomock.Controller
+		c          *mockclient.MockClient
+		fakeClient client.Client
+		sm         secretsmanager.Interface
+		etcd       Interface
+		log        logr.Logger
 
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
@@ -266,7 +265,6 @@ var _ = Describe("Etcd", func() {
 			existingBackupSchedule string,
 			existingResourcesContainerEtcd *corev1.ResourceRequirements,
 			existingResourcesContainerBackupRestore *corev1.ResourceRequirements,
-			failureToleranceType *gardencorev1beta1.FailureToleranceType,
 			caSecretName string,
 			clientSecretName string,
 			serverSecretName string,
@@ -391,7 +389,7 @@ var _ = Describe("Etcd", func() {
 				obj.Spec.VolumeClaimTemplate = pointer.String(testRole + "-etcd")
 			}
 
-			if failureToleranceType != nil {
+			if replicas == 3 {
 				obj.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 					ServerTLSSecretRef: corev1.SecretReference{
 						Name:      secretNameServerPeer,
@@ -624,7 +622,6 @@ var _ = Describe("Etcd", func() {
 		etcd = New(log, c, testNamespace, sm, Values{
 			Role:                    testRole,
 			Class:                   class,
-			FailureToleranceType:    failureToleranceType,
 			Replicas:                replicas,
 			StorageCapacity:         storageCapacity,
 			StorageClassName:        &storageClassName,
@@ -768,7 +765,6 @@ var _ = Describe("Etcd", func() {
 						"",
 						nil,
 						nil,
-						nil,
 						secretNameCA,
 						secretNameClient,
 						secretNameServer,
@@ -796,7 +792,6 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
-				FailureToleranceType:    nil,
 				Replicas:                nil,
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
@@ -838,7 +833,6 @@ var _ = Describe("Etcd", func() {
 						"",
 						nil,
 						nil,
-						nil,
 						secretNameCA,
 						secretNameClient,
 						secretNameServer,
@@ -866,7 +860,6 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
-				FailureToleranceType:    failureToleranceType,
 				Replicas:                nil,
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
@@ -911,7 +904,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						"",
 						"",
-						nil,
 						nil,
 						nil,
 						secretNameCA,
@@ -969,7 +961,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						"",
 						"",
-						nil,
 						nil,
 						nil,
 						secretNameCA,
@@ -1037,7 +1028,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						existingDefragmentationSchedule,
 						"",
-						nil,
 						nil,
 						nil,
 						secretNameCA,
@@ -1132,7 +1122,6 @@ var _ = Describe("Etcd", func() {
 						"",
 						&expectedResourcesContainerEtcd,
 						&expectedResourcesContainerBackupRestore,
-						nil,
 						secretNameCA,
 						secretNameClient,
 						secretNameServer,
@@ -1162,12 +1151,9 @@ var _ = Describe("Etcd", func() {
 					updateMode = hvpav1alpha1.UpdateModeOff
 				}
 
-				replicas = pointer.Int32(1)
-
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
-					FailureToleranceType:    failureToleranceType,
 					Replicas:                replicas,
 					StorageCapacity:         storageCapacity,
 					StorageClassName:        &storageClassName,
@@ -1193,7 +1179,6 @@ var _ = Describe("Etcd", func() {
 							nil,
 							"",
 							"",
-							nil,
 							nil,
 							nil,
 							secretNameCA,
@@ -1246,7 +1231,6 @@ var _ = Describe("Etcd", func() {
 							backupConfig,
 							"",
 							"",
-							nil,
 							nil,
 							nil,
 							secretNameCA,
@@ -1307,7 +1291,6 @@ var _ = Describe("Etcd", func() {
 							existingBackupSchedule,
 							nil,
 							nil,
-							nil,
 							secretNameCA,
 							secretNameClient,
 							secretNameServer,
@@ -1332,7 +1315,7 @@ var _ = Describe("Etcd", func() {
 				rotationPhase gardencorev1beta1.CredentialsRotationPhase
 			)
 
-			createExpectations := func(failureToleranceType *gardencorev1beta1.FailureToleranceType, caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
+			createExpectations := func(caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1360,13 +1343,12 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
-							1,
+							3,
 							nil,
 							"",
 							"",
 							nil,
 							nil,
-							failureToleranceType,
 							caSecretName,
 							clientSecretName,
 							serverSecretName,
@@ -1383,10 +1365,10 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
+				replicas = pointer.Int32(3)
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
-					FailureToleranceType:    failureToleranceType,
 					Replicas:                replicas,
 					StorageCapacity:         storageCapacity,
 					StorageClassName:        &storageClassName,
@@ -1403,7 +1385,6 @@ var _ = Describe("Etcd", func() {
 				)
 
 				BeforeEach(func() {
-					failureToleranceType = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeNode)
 					rotationPhase = gardencorev1beta1.RotationPreparing
 
 					secretNamesToTimes := map[string]time.Time{}
@@ -1504,39 +1485,7 @@ var _ = Describe("Etcd", func() {
 					}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
 					Expect(err).ToNot(HaveOccurred())
 
-					createExpectations(failureToleranceType, clientCASecret.Name, clientSecret.Name, serverSecret.Name, peerCASecret.Name, peerServerSecret.Name)
-
-					Expect(etcd.Deploy(ctx)).To(Succeed())
-				})
-			})
-
-			Context("when configured for single-zone", func() {
-				BeforeEach(func() {
-					failureToleranceType = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeNode)
-				})
-
-				It("should successfully deploy", func() {
-					oldTimeNow := TimeNow
-					defer func() { TimeNow = oldTimeNow }()
-					TimeNow = func() time.Time { return now }
-
-					createExpectations(failureToleranceType, secretNameCA, secretNameClient, secretNameServer, secretNamePeerCA, secretNameServerPeer)
-
-					Expect(etcd.Deploy(ctx)).To(Succeed())
-				})
-			})
-
-			Context("when configured for multi-zone", func() {
-				BeforeEach(func() {
-					failureToleranceType = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeZone)
-				})
-
-				It("should successfully deploy", func() {
-					oldTimeNow := TimeNow
-					defer func() { TimeNow = oldTimeNow }()
-					TimeNow = func() time.Time { return now }
-
-					createExpectations(failureToleranceType, secretNameCA, secretNameClient, secretNameServer, secretNamePeerCA, secretNameServerPeer)
+					createExpectations(clientCASecret.Name, clientSecret.Name, serverSecret.Name, peerCASecret.Name, peerServerSecret.Name)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 				})
@@ -1546,17 +1495,15 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#Destroy", func() {
 		var (
-			etcdRes                   *druidv1alpha1.Etcd
-			nowFunc                   func() time.Time
-			shootFailureToleranceType *gardencorev1beta1.FailureToleranceType
+			etcdRes *druidv1alpha1.Etcd
+			nowFunc func() time.Time
 		)
 
 		JustBeforeEach(func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
-				FailureToleranceType:    shootFailureToleranceType,
-				Replicas:                replicas,
+				Replicas:                pointer.Int32(1),
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
@@ -1855,13 +1802,10 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#RolloutPeerCA", func() {
-		var failureToleranceTypeZone *gardencorev1beta1.FailureToleranceType
-
 		JustBeforeEach(func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
-				FailureToleranceType:    failureToleranceTypeZone,
 				Replicas:                replicas,
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
@@ -1873,7 +1817,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA control-plane is not requested", func() {
 			BeforeEach(func() {
-				failureToleranceTypeZone = nil
+				replicas = pointer.Int32(1)
 			})
 
 			It("should do nothing and succeed without expectations", func() {
@@ -1905,7 +1849,7 @@ var _ = Describe("Etcd", func() {
 			}
 
 			BeforeEach(func() {
-				failureToleranceTypeZone = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeZone)
+				replicas = pointer.Int32(3)
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))
 			})
 
@@ -1955,7 +1899,3 @@ var _ = Describe("Etcd", func() {
 		})
 	})
 })
-
-func getFailureToleranceTypeRef(f gardencorev1beta1.FailureToleranceType) *gardencorev1beta1.FailureToleranceType {
-	return &f
-}

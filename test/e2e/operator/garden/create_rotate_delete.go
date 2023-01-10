@@ -37,7 +37,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
 		By("Create Garden")
-		ctx, cancel := context.WithTimeout(parentCtx, 3*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
 		defer cancel()
 
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
@@ -59,7 +59,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v.Before(ctx)
 
 		By("Start credentials rotation")
-		ctx, cancel = context.WithTimeout(parentCtx, 3*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 		defer cancel()
 
 		patch := client.MergeFrom(garden.DeepCopy())
@@ -83,7 +83,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v.AfterPrepared(ctx)
 
 		By("Complete credentials rotation")
-		ctx, cancel = context.WithTimeout(parentCtx, 3*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 		defer cancel()
 
 		patch = client.MergeFrom(garden.DeepCopy())
@@ -107,12 +107,13 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v.AfterCompleted(ctx)
 
 		By("Delete Garden")
-		ctx, cancel = context.WithTimeout(parentCtx, 3*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 		defer cancel()
 
 		Expect(gutil.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 		Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 		Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
 		waitForGardenToBeDeleted(ctx, garden)
+		cleanupVolumes(ctx)
 	})
 })

@@ -17,6 +17,8 @@ spec:
     provider:
       zones:
       - "0"
+      - "1"
+      - "2"
     settings:
     # loadBalancerServices:
     #   annotations:
@@ -24,6 +26,8 @@ spec:
       verticalPodAutoscaler:
         enabled: true
   virtualCluster:
+  # controlPlane:
+  #   highAvailability: {}
     etcd:
       main:
         backup:

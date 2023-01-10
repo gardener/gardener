@@ -40,7 +40,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -164,7 +163,6 @@ type Values struct {
 	NamePrefix              string
 	Role                    string
 	Class                   Class
-	FailureToleranceType    *gardencorev1beta1.FailureToleranceType
 	Replicas                *int32
 	StorageCapacity         string
 	StorageClassName        *string
@@ -174,10 +172,6 @@ type Values struct {
 	BackupConfig            *BackupConfig
 	HvpaConfig              *HVPAConfig
 	PriorityClassName       string
-}
-
-func (e *etcd) hasHAControlPlane() bool {
-	return helper.IsFailureToleranceTypeNode(e.values.FailureToleranceType) || helper.IsFailureToleranceTypeZone(e.values.FailureToleranceType)
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -339,8 +333,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		// create peer network policy only if the shoot has a HA control plane
-		if e.hasHAControlPlane() {
+		// create peer network policy only if there are 3 replicas
+		if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
 			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
 				peerNetworkPolicy.Annotations = map[string]string{
 					v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
@@ -462,7 +456,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
-		if e.hasHAControlPlane() {
+		if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
 			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
@@ -689,21 +683,17 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if err := kutil.DeleteObjects(
-		ctx,
-		e.client,
+	objects := []client.Object{
 		e.emptyHVPA(),
 		e.etcd,
 		e.emptyNetworkPolicy(NetworkPolicyNameClient),
-	); err != nil {
-		return err
 	}
 
-	if e.hasHAControlPlane() {
-		return kutil.DeleteObject(ctx, e.client, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
+	if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
+		objects = append(objects, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
 	}
 
-	return nil
+	return kutil.DeleteObjects(ctx, e.client, objects...)
 }
 
 func (e *etcd) getRoleLabels() map[string]string {
@@ -816,9 +806,10 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
-	if !e.hasHAControlPlane() {
+	if pointer.Int32Deref(e.values.Replicas, 0) != 3 {
 		return nil
 	}
+
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
@@ -854,7 +845,6 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 		}
 		return nil
 	})
-
 	return err
 }
 
@@ -928,19 +918,19 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 
 func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
 	// TODO(timuthy): Remove this once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved.
-	if !e.hasHAControlPlane() {
+	if pointer.Int32Deref(e.values.Replicas, 0) != 3 {
 		return
 	}
+
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
 		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 		return
 	}
 
-	var singedByCAOptions []secretsmanager.SignedByCAOption
-
+	var signedByCAOptions []secretsmanager.SignedByCAOption
 	if e.values.CARotationPhase == gardencorev1beta1.RotationPreparing {
-		singedByCAOptions = append(singedByCAOptions, secretsmanager.UseCurrentCA)
+		signedByCAOptions = append(signedByCAOptions, secretsmanager.UseCurrentCA)
 	}
 
 	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
@@ -949,7 +939,7 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		DNSNames:                    e.peerServiceDNSNames(),
 		CertType:                    secretutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, singedByCAOptions...), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, signedByCAOptions...), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 		return

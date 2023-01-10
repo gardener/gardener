@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
@@ -61,7 +60,6 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		etcd.Values{
 			Role:                    role,
 			Class:                   class,
-			FailureToleranceType:    v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo()),
 			Replicas:                replicas,
 			StorageCapacity:         b.Seed.GetValidVolumeSize("10Gi"),
 			DefragmentationSchedule: &defragmentationSchedule,

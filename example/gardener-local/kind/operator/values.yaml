@@ -8,3 +8,7 @@ gardener:
 
 registry:
   hostname: gardener-operator-local-control-plane
+
+workers:
+  - zone: "1"
+  - zone: "2"

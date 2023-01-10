@@ -31,9 +31,12 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
+
+const namespace = "garden"
 
 var (
 	parentCtx     context.Context
@@ -54,7 +57,7 @@ func defaultBackupSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "virtual-garden-etcd-main-backup",
-			Namespace: "garden",
+			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{"hostPath": []byte("/etc/gardener/local-backupbuckets")},
@@ -62,14 +65,18 @@ func defaultBackupSecret() *corev1.Secret {
 }
 
 func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
+	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
+	Expect(err).NotTo(HaveOccurred())
+	name := "garden-" + randomSuffix
+
 	return &operatorv1alpha1.Garden{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "garden-",
+			Name: name,
 		},
 		Spec: operatorv1alpha1.GardenSpec{
 			RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 				Provider: operatorv1alpha1.Provider{
-					Zones: []string{"0"},
+					Zones: []string{"0", "1", "2"},
 				},
 				Settings: &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
@@ -78,11 +85,14 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 				},
 			},
 			VirtualCluster: operatorv1alpha1.VirtualCluster{
+				ControlPlane: &operatorv1alpha1.ControlPlane{
+					HighAvailability: &operatorv1alpha1.HighAvailability{},
+				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
-							BucketName: "gardener-operator",
+							BucketName: "gardener-operator/" + name,
 							SecretRef: corev1.SecretReference{
 								Name:      backupSecret.Name,
 								Namespace: backupSecret.Namespace,
@@ -112,4 +122,24 @@ func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Gard
 	CEventually(ctx, func() error {
 		return runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 	}).WithPolling(2 * time.Second).Should(BeNotFoundError())
+}
+
+func cleanupVolumes(ctx context.Context) {
+	Expect(runtimeClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(namespace))).To(Succeed())
+
+	CEventually(ctx, func(g Gomega) bool {
+		pvList := &corev1.PersistentVolumeList{}
+		g.Expect(runtimeClient.List(ctx, pvList)).To(Succeed())
+
+		for _, pv := range pvList.Items {
+			if pv.Spec.ClaimRef != nil &&
+				pv.Spec.ClaimRef.APIVersion == "v1" &&
+				pv.Spec.ClaimRef.Kind == "PersistentVolumeClaim" &&
+				pv.Spec.ClaimRef.Namespace == namespace {
+				return false
+			}
+		}
+
+		return true
+	}).WithPolling(2 * time.Second).Should(BeTrue())
 }
