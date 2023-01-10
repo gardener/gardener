@@ -128,7 +128,6 @@ func (r *Reconciler) reconcileBackupBucket(
 	var (
 		mustReconcileExtensionBackupBucket = false
 		mustReconcileExtensionSecret       = false
-		reconciliationSuccessful           = true
 
 		lastObservedError         error
 		extensionSecret           = r.emptyExtensionSecret(backupBucket.Name)
@@ -186,7 +185,6 @@ func (r *Reconciler) reconcileBackupBucket(
 		mustReconcileExtensionBackupBucket = true
 	} else if extensionBackupBucket.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, record it as error in the extension backupbucket status
-		reconciliationSuccessful = false
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
 		// check for errors, and if none are present, sync generated Secret to garden
@@ -197,7 +195,6 @@ func (r *Reconciler) reconcileBackupBucket(
 			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
 				mustReconcileExtensionBackupBucket = true
 			}
-			reconciliationSuccessful = false
 
 			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupBucket.Status.LastError != nil {
@@ -206,6 +203,9 @@ func (r *Reconciler) reconcileBackupBucket(
 		} else if lastOperationState == gardencorev1beta1.LastOperationStateSucceeded {
 			if err := r.syncGeneratedSecretToGarden(ctx, backupBucket, extensionBackupBucket); err != nil {
 				return reconcile.Result{}, err
+			}
+			if updateErr := r.updateBackupBucketStatusSucceeded(ctx, backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
+				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 			}
 		}
 	}
@@ -236,12 +236,6 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 		// return early here, the BackupBucket status will be updated by the reconciliation caused by the extension BackupBucket status update.
 		return reconcile.Result{}, nil
-	}
-
-	if reconciliationSuccessful && extensionBackupBucket.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-		if updateErr := r.updateBackupBucketStatusSucceeded(ctx, backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
-			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
-		}
 	}
 
 	return reconcile.Result{}, nil

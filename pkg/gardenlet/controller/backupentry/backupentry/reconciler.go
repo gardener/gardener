@@ -129,7 +129,6 @@ func (r *Reconciler) reconcileBackupEntry(
 	var (
 		mustReconcileExtensionBackupEntry = false
 		mustReconcileExtensionSecret      = false
-		reconciliationSuccessful          = true
 
 		lastObservedError error
 		extensionSecret   = r.emptyExtensionSecret(backupEntry)
@@ -210,8 +209,7 @@ func (r *Reconciler) reconcileBackupEntry(
 		// if the spec of the extensionBackupEntry has changed or it has not been reconciled after the last updation of secret, reconcile it
 		mustReconcileExtensionBackupEntry = true
 	} else if extensionBackupEntry.Status.LastOperation == nil {
-		// if the extension did not record a lastOperation yet, record it in the extension backupentry status
-		reconciliationSuccessful = false
+		// if the extension did not record a lastOperation yet, record it as error in the extension backupentry status
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
 		// check for errors, and if none are present, reconciliation has succeeded
@@ -222,11 +220,20 @@ func (r *Reconciler) reconcileBackupEntry(
 			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
 				mustReconcileExtensionBackupEntry = true
 			}
-			reconciliationSuccessful = false
 
 			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupEntry.Status.LastError != nil {
 				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
+			}
+		} else if lastOperationState == gardencorev1beta1.LastOperationStateSucceeded {
+			if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, operationType); updateErr != nil {
+				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
+			}
+
+			if kubernetesutils.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
+				if updateErr := removeGardenerOperationAnnotation(ctx, r.GardenClient, backupEntry); updateErr != nil {
+					return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
+				}
 			}
 		}
 	}
@@ -251,18 +258,6 @@ func (r *Reconciler) reconcileBackupEntry(
 		}
 		// return early here, the BackupEntry status will be updated by the reconciliation caused by the extension BackupEntry status update.
 		return reconcile.Result{}, nil
-	}
-
-	if reconciliationSuccessful && extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-		if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, operationType); updateErr != nil {
-			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
-		}
-
-		if kubernetesutils.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
-			if updateErr := removeGardenerOperationAnnotation(ctx, r.GardenClient, backupEntry); updateErr != nil {
-				return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
-			}
-		}
 	}
 
 	return reconcile.Result{}, nil
