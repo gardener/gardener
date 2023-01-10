@@ -5807,7 +5807,7 @@ func schema_pkg_apis_core_v1alpha1_SSHAccess(ref common.ReferenceCallback) commo
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SSHAccess containes setting to enable/disable SSH access to the worker nodes.",
+				Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -8412,11 +8412,12 @@ func schema_pkg_apis_core_v1alpha1_WorkersSettings(ref common.ReferenceCallback)
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "WorkersSettings contains settings for all workers.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"sshAccess": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SSHAccess containes setting to enable/disable SSH access to the worker nodes.",
+							Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SSHAccess"),
 						},
 					},
@@ -13123,7 +13124,7 @@ func schema_pkg_apis_core_v1beta1_SSHAccess(ref common.ReferenceCallback) common
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SSHAccess containes setting to enable/disable SSH access to the worker nodes.",
+				Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -15653,11 +15654,12 @@ func schema_pkg_apis_core_v1beta1_WorkersSettings(ref common.ReferenceCallback) 
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "WorkersSettings contains settings for all workers.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"sshAccess": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SSHAccess containes setting to enable/disable SSH access to the worker nodes.",
+							Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess"),
 						},
 					},

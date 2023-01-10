@@ -7657,7 +7657,7 @@ int32
 <a href="#core.gardener.cloud/v1beta1.WorkersSettings">WorkersSettings</a>)
 </p>
 <p>
-<p>SSHAccess containes setting to enable/disable SSH access to the worker nodes.</p>
+<p>SSHAccess contains settings regarding ssh access to the worker nodes.</p>
 </p>
 <table>
 <thead>
@@ -11439,6 +11439,7 @@ bool
 <a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>)
 </p>
 <p>
+<p>WorkersSettings contains settings for all workers.</p>
 </p>
 <table>
 <thead>
@@ -11459,7 +11460,7 @@ SSHAccess
 </td>
 <td>
 <em>(Optional)</em>
-<p>SSHAccess containes setting to enable/disable SSH access to the worker nodes.</p>
+<p>SSHAccess contains settings regarding ssh access to the worker nodes.</p>
 </td>
 </tr>
 </tbody>

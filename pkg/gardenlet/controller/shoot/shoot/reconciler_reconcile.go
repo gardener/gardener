@@ -448,7 +448,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		deleteBastions = g.Add(flow.Task{
-			Name:         "Deleting Bastions if SSHAccess is disabled in workers settings",
+			Name:         "Deleting Bastions",
 			Fn:           flow.TaskFn(botanist.DeleteBastions).SkipIf(shootSSHAccessEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
 		})

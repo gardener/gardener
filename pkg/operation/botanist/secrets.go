@@ -64,7 +64,7 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 	return flow.Sequential(
 		b.generateCertificateAuthorities,
 		flow.TaskFn(b.generateSSHKeypair).DoIf(gardencorev1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())),
-		flow.TaskFn(b.deleteSSHKeypairGardenSecret).SkipIf(gardencorev1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())),
+		flow.TaskFn(b.deleteSSHKeypair).SkipIf(gardencorev1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())),
 		b.generateGenericTokenKubeconfig,
 		b.reconcileWildcardIngressCertificate,
 		// TODO(rfranzke): Remove this function in a future release.
@@ -307,19 +307,19 @@ func (b *Botanist) syncShootCredentialToGarden(
 	return err
 }
 
-func (b *Botanist) deleteSSHKeypairGardenSecret(ctx context.Context) error {
-	if err := b.deleteGardenSecret(ctx, gutil.ShootProjectSecretSuffixSSHKeypair); err != nil {
+func (b *Botanist) deleteSSHKeypair(ctx context.Context) error {
+	if err := b.deleteShootCredentialFromGarden(ctx, gutil.ShootProjectSecretSuffixSSHKeypair); err != nil {
 		return err
 	}
 
-	if err := b.deleteGardenSecret(ctx, gutil.ShootProjectSecretSuffixOldSSHKeypair); err != nil {
+	if err := b.deleteShootCredentialFromGarden(ctx, gutil.ShootProjectSecretSuffixOldSSHKeypair); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *Botanist) deleteGardenSecret(ctx context.Context, nameSuffix string) error {
+func (b *Botanist) deleteShootCredentialFromGarden(ctx context.Context, nameSuffix string) error {
 	gardenSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),

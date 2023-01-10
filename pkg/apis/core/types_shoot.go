@@ -1179,11 +1179,11 @@ var (
 
 // WorkersSettings contains settings for all workers.
 type WorkersSettings struct {
-	// SSHAccess containes setting to enable/disable SSH access to the worker nodes.
+	// SSHAccess contains settings regarding ssh access to the worker nodes.
 	SSHAccess *SSHAccess
 }
 
-// SSHAccess containes setting to enable/disable SSH access to the worker nodes.
+// SSHAccess contains settings regarding ssh access to the worker nodes.
 type SSHAccess struct {
 	// Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
 	// Defaults to true.

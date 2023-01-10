@@ -4,7 +4,7 @@ Users can configure settings affecting all worker nodes via `.spec.provider.work
 
 ## SSH Access
 
-`SSHAccess` indicates whether the `sshd.service` on the worker nodes should be be enabled and running or disabled and stopped . When set to `true`, a systemd service called `sshd-ensurer.service` is started on each worker node. It runs a script every 15 seconds in order to ensure that the `sshd.service` is enabled and running. If it is set to `false`, the `sshd-ensurer.service` service ensures that `sshd.service` is stopped and disabled. It also terminates all established SSH connections, existing `Bastion` resources are deleted in shoot reconcilation and new ones are prevented from being created. SSH keypairs stopped being rotated, secrets with suffixes "ssh-keypair" and "ssh-keypair.old" are deleted and the gardener-user.service is not deployed to worker nodes.
+`SSHAccess` indicates whether the `sshd.service` should be running on the worker nodes. This is ensured by a systemd service called `sshd-ensurer.service` which runs on every 15 seconds on each worker node. When set to `true`, the systemd service ensures that the `sshd.service` is enabled and running. If it is set to `false`, the systemd service ensures that `sshd.service` is stopped and disabled. It also terminates all established SSH connections. In addition when this value is set to `false` existing `Bastion` resources are deleted during shoot reconciliation and new ones are prevented from being created, ssh keypairs are not created/rotated, ssh keypair secrets are deleted from the Garden cluster and the `gardener-user.service` is not deployed to the worker nodes.
 
 `SSHAccess` is set to `true` by default.
 
