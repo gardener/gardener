@@ -168,6 +168,10 @@ func (r *Reconciler) reconcileBackupEntry(
 			mustReconcileExtensionBackupEntry = true
 			mustReconcileExtensionSecret = true
 		}
+		// if the timestamp is not present yet (needed for existing secrets), reconcile the secret
+		if _, timestampPresent := extensionSecret.Annotations[v1beta1constants.GardenerTimestamp]; !timestampPresent {
+			mustReconcileExtensionSecret = true
+		}
 	}
 
 	if mustReconcileExtensionSecret {

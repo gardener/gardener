@@ -224,6 +224,24 @@ var _ = Describe("Controller", func() {
 		Expect(extensionBackupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 	})
 
+	It("should reconcile the extension secret and extension backupentry if the secret currently doesn't have a timestamp", func() {
+		extensionSecret.Annotations = nil
+		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+
+		// step the clock so that the updated timestamp of the secret is greater than the extensionSecret lastUpdate time.
+		fakeClock.Step(time.Minute)
+
+		result, err := reconciler.Reconcile(ctx, request)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(reconcile.Result{}))
+
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
+		Expect(extensionSecret.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339)))
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
+		Expect(extensionBackupEntry.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+	})
+
 	It("should reconcile the extension BackupEntry if the secret data has changed", func() {
 		extensionSecret.Data = map[string][]byte{"dash": []byte("bash")}
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
