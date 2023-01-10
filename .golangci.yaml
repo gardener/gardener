@@ -18,6 +18,7 @@ linters:
   - unused
   enable:
   - revive
+  - importas
   - logcheck
   - gomegacheck
 
@@ -44,6 +45,192 @@ issues:
     text: "SA1019:" # Excludes messages where deprecated variables are used
 
 linters-settings:
+  importas:
+    alias:
+      # External imported packages
+      - pkg: k8s.io/api/(\w+)/(v[\w\d]+)
+        alias: $1$2
+      - pkg: k8s.io/apimachinery/pkg/apis/(\w+)/(v[\w\d]+)
+        alias: $1$2
+      - pkg: k8s.io/apimachinery/pkg/api/([^m]\w+)
+        alias: api${1}
+      - pkg: k8s.io/apimachinery/pkg/api/meta/table
+        alias: metatable
+      - pkg: k8s.io/apimachinery/pkg/util/(\w+)
+        alias: util${1}
+      - pkg: k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1
+        alias: vpaautoscalingv1
+      - pkg: k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
+        alias: apiregistrationv1
+      - pkg: k8s.io/client-go/informers
+        alias: kubeinformers
+      - pkg: k8s.io/client-go/kubernetes
+        alias: kubernetesclientset
+      - pkg: k8s.io/client-go/tools/clientcmd/api/(\w+)
+        alias: clientcmd${1}
+      - pkg: k8s.io/client-go/tools/cache
+        alias: toolscache
+      - pkg: k8s.io/kubelet/config/v1beta1
+        alias: kubeletconfigv1beta1
+      - pkg: k8s.io/utils/clock/testing
+        alias: testclock
+      - pkg: k8s.io/apiserver/pkg/endpoints/openapi
+        alias: openapinamer
+      - pkg: k8s.io/apiserver/pkg/server
+        alias: genericapiserver
+      - pkg: k8s.io/apiserver/pkg/server/options
+        alias: genericoptions
+      - pkg: k8s.io/apiserver/pkg/server/storage
+        alias: serverstorage
+      - pkg: k8s.io/apiserver/pkg/util/feature
+        alias: utilfeature
+      - pkg: k8s.io/component-base/config
+        alias: componentbaseconfig
+      - pkg: k8s.io/component-base/logs/api/v1
+        alias: logsv1
+      - pkg: sigs.k8s.io/controller-runtime/pkg/client/fake
+        alias: fakeclient
+      - pkg: sigs.k8s.io/controller-runtime/pkg/log/zap
+        alias: logzap
+      - pkg: sigs.k8s.io/controller-runtime/pkg/log
+        alias: logf
+      - pkg: github.com/golang/mock/gomock
+        alias: gmock
+      # Gradener external imported packages
+      - pkg: github.com/gardener/hvpa-controller/api/v1alpha1
+        alias: hvpav1alpha1
+      - pkg: github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
+        alias: machinev1alpha1
+      - pkg: github.com/gardener/etcd-druid/api/v1alpha1
+        alias: druidv1alpha1
+      # Gardener extension package
+      - pkg: github.com/gardener/gardener/extensions/.*/(\w+)/mock$
+        alias: extensionsmock${1}
+      - pkg: github.com/gardener/gardener/extensions/pkg/apis/config
+        alias: extensionsconfig
+      - pkg: github.com/gardener/gardener/extensions/pkg/controller
+        alias: extensionscontroller
+      - pkg: github.com/gardener/gardener/extensions/pkg/predicate
+        alias: extensionspredicate
+      - pkg: github.com/gardener/gardener/extensions/pkg/controller/([^m]\w+)
+        alias: extensions${1}controller
+      - pkg: github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd
+        alias: extensionsheartbeatcmd
+      - pkg: github.com/gardener/gardener/extensions/pkg/controller/worker/helper
+        alias: extensionsworkerhelper
+      - pkg: github.com/gardener/gardener/extensions/pkg/util/secret/manager
+        alias: extensionssecretsmanager
+      - pkg: github.com/gardener/gardener/extensions/pkg/webhook
+        alias: extensionswebhook
+      - pkg: github.com/gardener/gardener/extensions/pkg/webhook/([^m]\w+)
+        alias:  extensions${1}webhook
+      # Gardener other packages
+      - pkg: github.com/gardener/gardener/pkg/api/extensions
+        alias: apiextensions
+      - pkg: github.com/gardener/gardener/pkg/apis/core
+        alias: gardencore
+      - pkg: github.com/gardener/gardener/pkg/apis/core/([\w\d]+)
+        alias: gardencore${1}
+      - pkg: github.com/gardener/gardener/pkg/apis/([^c]\w+)/([\w\d]+)
+        alias: $1$2
+      - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config
+        alias: ${1}config
+      - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/([\w\d]+)
+        alias: $1$2
+      - pkg: github.com/gardener/gardener/pkg/(\w+)/features
+        alias: ${1}features
+      - pkg: github.com/gardener/gardener/pkg/\w+/controller/([\w\d]+)
+        alias: ${1}controller
+      - pkg: github.com/gardener/gardener/pkg/\w+/webhook/([\w\d]+)
+        alias: ${1}webhook
+      - pkg: github.com/gardener/gardener/pkg/apiserver/admission/initializer
+        alias: admissioninitializer
+      - pkg: github.com/gardener/gardener/pkg/chartrenderer
+        alias: chartrenderer
+      - pkg: github.com/gardener/gardener/pkg/client/core/clientset/internalversion
+        alias: gardencoreclientset
+      - pkg: github.com/gardener/gardener/pkg/client/core/clientset/versioned
+        alias: gardencoreversionedclientset
+      - pkg: github.com/gardener/gardener/pkg/client/core/informers/externalversions
+        alias: gardencoreexternalinformers
+      - pkg: github.com/gardener/gardener/pkg/client/core/informers/internalversion
+        alias: gardencoreinformers
+      - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/internalversion
+        alias: gardencorelisters
+      - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1
+        alias: gardencorev1alpha1listers
+      - pkg: github.com/gardener/gardener/pkg/client/kubernetes
+        alias: kubernetesclient
+      - pkg: github.com/gardener/gardener/pkg/client/kubernetes/(\w+)
+        alias: kubernetes${1}
+      - pkg: github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder
+        alias: clientmapbuilder
+      - pkg: github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake
+        alias: fakeclientmap
+      - pkg: github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned
+        alias: seedmanagementclientset
+      - pkg: github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions
+        alias: seedmanagementinformers
+      - pkg: github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake
+        alias: fakeseedmanagement
+      - pkg: github.com/gardener/gardener/pkg/client/settings/clientset/versioned
+        alias: settingsclientset
+      - pkg: github.com/gardener/gardener/pkg/client/settings/informers/externalversions
+        alias: settingsinformers
+      - pkg: github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1
+        alias: settingsv1alpha1lister
+      - pkg: github.com/gardener/gardener/pkg/controllerutils/(\w+)
+        alias: ${1}utils
+      - pkg: github.com/gardener/gardener/pkg/envtest
+        alias: gardenerenvtest
+      - pkg: github.com/gardener/gardener/pkg/extensions
+        alias: gardenerextensions
+      - pkg: github.com/gardener/gardener/pkg/gardenlet/bootstrap/util
+        alias: gardenletbootstraputil
+      - pkg: github.com/gardener/gardener/pkg/healthz
+        alias: gardenerhealthz
+      - pkg: github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer
+        alias: mockauthorizer
+      - pkg: github.com/gardener/gardener/pkg/mock/\w+/(\w+)
+        alias: mock${1}
+      - pkg: github.com/gardener/gardener/pkg/mock/client-go/core/v1
+        alias: mockcorev1
+      - pkg: github.com/gardener/gardener/pkg/mock/client-go/tools/(\w+)
+        alias: mock${1}
+      - pkg: github.com/gardener/gardener/pkg/mock/client-go/util/(\w+)
+        alias: mock${1}
+      - pkg: github.com/gardener/gardener/pkg/operation/.*/(\w+)/mock$
+        alias: mock${1}
+      - pkg: github.com/gardener/gardener/pkg/operation/garden
+        alias: gardenpkg
+      - pkg: github.com/gardener/gardener/pkg/operation/seed
+        alias: seedpkg
+      - pkg: github.com/gardener/gardener/pkg/operation/shoot
+        alias: shootpkg
+      - pkg: github.com/gardener/gardener/pkg/operator/client
+        alias: operatorclient
+      - pkg: github.com/gardener/gardener/pkg/registry/(\w+)/rest
+        alias: ${1}rest
+      - pkg: github.com/gardener/gardener/pkg/registry/\w+/(\w+)/storage$
+        alias: ${1}store
+      - pkg: github.com/gardener/gardener/pkg/registry/\w+/([^r]\w+)
+        alias: ${1}registry
+      - pkg: github.com/gardener/gardener/pkg/resourcemanager/client
+        alias: resourcemanagerclient
+      - pkg: github.com/gardener/gardener/pkg/resourcemanager/predicate
+        alias: resourcemanagerpredicate
+      - pkg: github.com/gardener/gardener/pkg/utils/(\w+)
+        alias: ${1}utils
+      - pkg: github.com/gardener/gardener/pkg/utils/secrets/manager
+        alias: secretsmanager
+      - pkg: github.com/gardener/gardener/pkg/utils/secrets/manager/fake
+        alias: fakesecretsmanager
+      - pkg: github.com/gardener/gardener/plugin/pkg/utils
+        alias: admissionutils
+      - pkg: github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting
+        alias: shootdnsrewriting
+      - pkg: github.com/gardener/gardener/plugin/pkg/shoot/oidc
+        alias: applier
   custom:
     logcheck:
       path: hack/tools/bin/logcheck.so
