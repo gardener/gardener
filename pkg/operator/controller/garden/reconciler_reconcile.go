@@ -210,11 +210,17 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
+			container, prefix := etcdConfig.Main.Backup.BucketName, "virtual-garden-etcd-main"
+			if idx := strings.Index(etcdConfig.Main.Backup.BucketName, "/"); idx != -1 {
+				container = etcdConfig.Main.Backup.BucketName[:idx]
+				prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(etcdConfig.Main.Backup.BucketName[idx+1:], "/"), prefix)
+			}
+
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             etcdConfig.Main.Backup.Provider,
 				SecretRefName:        etcdConfig.Main.Backup.SecretRef.Name,
-				Container:            etcdConfig.Main.Backup.BucketName,
-				Prefix:               "virtual-garden-etcd-main",
+				Container:            container,
+				Prefix:               prefix,
 				FullSnapshotSchedule: snapshotSchedule,
 				LeaderElection:       backupLeaderElection,
 			})

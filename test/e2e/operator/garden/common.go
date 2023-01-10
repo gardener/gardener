@@ -31,6 +31,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -62,14 +63,18 @@ func defaultBackupSecret() *corev1.Secret {
 }
 
 func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
+	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
+	Expect(err).NotTo(HaveOccurred())
+	name := "garden-" + randomSuffix
+
 	return &operatorv1alpha1.Garden{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "garden-",
+			Name: name,
 		},
 		Spec: operatorv1alpha1.GardenSpec{
 			RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 				Provider: operatorv1alpha1.Provider{
-					Zones: []string{"0"},
+					Zones: []string{"0", "1", "2"},
 				},
 				Settings: &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
@@ -85,7 +90,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
-							BucketName: "gardener-operator",
+							BucketName: "gardener-operator/" + name,
 							SecretRef: corev1.SecretReference{
 								Name:      backupSecret.Name,
 								Namespace: backupSecret.Namespace,
