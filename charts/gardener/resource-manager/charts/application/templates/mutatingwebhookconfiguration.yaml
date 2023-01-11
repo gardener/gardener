@@ -54,7 +54,7 @@ webhooks:
       path: /webhooks/high-availability-config
       port: 443
   failurePolicy: Fail
-  matchPolicy: Exact
+  matchPolicy: Equivalent
   name: high-availability-config.resources.gardener.cloud
   namespaceSelector:
     matchLabels:
@@ -75,6 +75,25 @@ webhooks:
     resources:
     - deployments
     - statefulsets
+  - apiGroups:
+    - autoscaling
+    apiVersions:
+    - v2beta1
+    - v2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - horizontalpodautoscalers
+  - apiGroups:
+    - autoscaling.k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - hvpas
     scope: '*'
   sideEffects: None
   timeoutSeconds: 10

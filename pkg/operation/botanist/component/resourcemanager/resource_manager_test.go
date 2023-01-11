@@ -109,7 +109,8 @@ var _ = Describe("ResourceManager", func() {
 		targetDisableCache                   = true
 		maxUnavailable                       = intstr.FromInt(1)
 		failurePolicy                        = admissionregistrationv1.Fail
-		matchPolicy                          = admissionregistrationv1.Exact
+		matchPolicyExact                     = admissionregistrationv1.Exact
+		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
 		networkPolicyProtocol                = corev1.ProtocolTCP
 		networkPolicyPort                    = intstr.FromInt(serverPort)
@@ -859,7 +860,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -902,20 +903,38 @@ var _ = Describe("ResourceManager", func() {
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
 				{
 					Name: "high-availability-config.resources.gardener.cloud",
-					Rules: []admissionregistrationv1.RuleWithOperations{{
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{"apps"},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"deployments", "statefulsets"},
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"apps"},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"deployments", "statefulsets"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
 						},
-						Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
-					}},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"autoscaling"},
+								APIVersions: []string{"v2beta1", "v2"},
+								Resources:   []string{"horizontalpodautoscalers"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"autoscaling.k8s.io"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"hvpas"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
 							Key:      "gardener.cloud/purpose",
@@ -943,7 +962,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -986,7 +1005,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1029,7 +1048,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1114,7 +1133,7 @@ webhooks:
   clientConfig:
     url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/high-availability-config
   failurePolicy: Fail
-  matchPolicy: Exact
+  matchPolicy: Equivalent
   name: high-availability-config.resources.gardener.cloud
   namespaceSelector:
     matchExpressions:
@@ -1142,6 +1161,25 @@ webhooks:
     resources:
     - deployments
     - statefulsets
+  - apiGroups:
+    - autoscaling
+    apiVersions:
+    - v2beta1
+    - v2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - horizontalpodautoscalers
+  - apiGroups:
+    - autoscaling.k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - hvpas
   sideEffects: None
   timeoutSeconds: 10
 - admissionReviewVersions:
@@ -1282,7 +1320,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1330,7 +1368,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1356,7 +1394,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1382,7 +1420,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1408,7 +1446,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1434,7 +1472,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1460,7 +1498,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1486,7 +1524,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1512,7 +1550,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1538,7 +1576,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1564,7 +1602,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1590,7 +1628,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1616,7 +1654,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
@@ -1642,7 +1680,7 @@ subjects:
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					MatchPolicy:             &matchPolicy,
+					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},

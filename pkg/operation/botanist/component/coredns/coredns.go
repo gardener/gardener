@@ -691,6 +691,9 @@ import custom/*.server
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+				},
 			},
 			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 				MinReplicas: pointer.Int32(2),
@@ -717,6 +720,9 @@ import custom/*.server
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+				},
 			},
 			Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
 				MinReplicas: pointer.Int32(2),

@@ -561,8 +561,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Labels: hpaLabels,
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(int32(replicas)),
-						MaxReplicas: int32(replicas),
+						MinReplicas: pointer.Int32(replicas),
+						MaxReplicas: replicas,
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,

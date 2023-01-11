@@ -354,6 +354,7 @@ var _ = Describe("KubeControllerManager", func() {
 							Labels: map[string]string{
 								"app":  "kubernetes",
 								"role": "controller-manager",
+								"high-availability-config.resources.gardener.cloud/type": "controller",
 							},
 						},
 						Spec: hvpav1alpha1.HvpaSpec{
