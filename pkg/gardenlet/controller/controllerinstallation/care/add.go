@@ -58,12 +58,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	return builder.
+	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
@@ -72,15 +71,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create)),
 		).
-		Watches(
-			source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, seedCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, logr.Discard()),
-			builder.WithPredicates(
-				r.IsExtensionDeployment(),
-				predicateutils.ManagedResourceConditionsChanged(),
-			),
-		).
-		Complete(r)
+		Build(r)
+	if err != nil {
+		return err
+	}
+
+	return c.Watch(
+		source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, seedCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
+		r.IsExtensionDeployment(),
+		predicateutils.ManagedResourceConditionsChanged(),
+	)
 }
 
 // IsExtensionDeployment returns a predicate which evaluates to true in case the object is in the garden namespace and

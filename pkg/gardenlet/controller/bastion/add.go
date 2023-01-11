@@ -59,8 +59,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-
-			RateLimiter: r.RateLimiter,
+			RateLimiter:             r.RateLimiter,
 		}).
 		Watches(
 			source.NewKindWithCache(&operationsv1alpha1.Bastion{}, gardenCluster.GetCache()),

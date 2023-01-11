@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -46,30 +45,36 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Clock = clock.RealClock{}
 	}
 
-	return builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		WithOptions(controller.Options{
+	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
+	// Hence, we have to build up the controller manually.
+	c, err := controller.New(
+		ControllerName,
+		mgr,
+		controller.Options{
+			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
-		}).
-		Watches(
-			&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
-			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, logr.Discard()),
-			builder.WithPredicates(predicateutils.RelevantConditionsChanged(
-				func(obj client.Object) []gardencorev1beta1.Condition {
-					controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-					if !ok {
-						return nil
-					}
-					return controllerInstallation.Status.Conditions
-				},
-				conditionsToCheck...,
-			)),
-		).
-		Complete(r)
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		predicateutils.RelevantConditionsChanged(
+			func(obj client.Object) []gardencorev1beta1.Condition {
+				controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+				if !ok {
+					return nil
+				}
+				return controllerInstallation.Status.Conditions
+			},
+			conditionsToCheck...,
+		),
+	)
 }
 
 // MapControllerInstallationToSeed is a mapper.MapFunc for mapping a ControllerInstallation to the referenced Seed.

@@ -45,8 +45,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
-
-			RateLimiter: workqueue.DefaultControllerRateLimiter(),
+			RateLimiter:             workqueue.DefaultControllerRateLimiter(),
 		}).
 		Complete(r)
 }

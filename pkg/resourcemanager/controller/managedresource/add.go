@@ -63,7 +63,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		r.RequeueAfterOnDeletionPending = pointer.Duration(5 * time.Second)
 	}
 
-	return builder.
+	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&resourcesv1alpha1.ManagedResource{}, builder.WithPredicates(
@@ -84,23 +84,27 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 				predicateutils.IsDeleting(),
 			),
 		)).
-		Watches(
-			&source.Kind{Type: &corev1.Secret{}},
-			mapper.EnqueueRequestsFrom(r.MapSecretToManagedResources(
-				r.ClassFilter,
-				predicate.Or(
-					resourcemanagerpredicate.NotIgnored(),
-					predicateutils.IsDeleting(),
-				),
-			), mapper.UpdateWithOldAndNew, logr.Discard()),
-		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Complete(reconcilerutils.OperationAnnotationWrapper(
+		Build(reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			r,
 		))
+	if err != nil {
+		return err
+	}
+
+	return c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		mapper.EnqueueRequestsFrom(r.MapSecretToManagedResources(
+			r.ClassFilter,
+			predicate.Or(
+				resourcemanagerpredicate.NotIgnored(),
+				predicateutils.IsDeleting(),
+			),
+		), mapper.UpdateWithOldAndNew, c.GetLogger()),
+	)
 }
 
 // MapSecretToManagedResources maps secrets to relevant ManagedResources.

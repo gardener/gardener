@@ -93,7 +93,7 @@ func (r *Reconciler) AddToManager(
 		)
 	}
 
-	return builder.
+	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -102,15 +102,21 @@ func (r *Reconciler) AddToManager(
 		Watches(
 			source.NewKindWithCache(&seedmanagementv1alpha1.ManagedSeed{}, gardenCluster.GetCache()),
 			r.EnqueueWithJitterDelay(),
-			builder.WithPredicates(r.ManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
+			builder.WithPredicates(
+				r.ManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
 				&predicate.GenerationChangedPredicate{},
 			),
 		).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, logr.Discard()),
-			builder.WithPredicates(r.SeedOfManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name)),
-		).Complete(r)
+		Build(r)
+	if err != nil {
+		return err
+	}
+
+	return c.Watch(
+		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
+		r.SeedOfManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
+	)
 }
 
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.

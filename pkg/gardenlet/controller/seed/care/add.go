@@ -60,7 +60,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
-
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).

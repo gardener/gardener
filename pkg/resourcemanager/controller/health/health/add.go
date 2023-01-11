@@ -58,6 +58,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		r.Clock = clock.RealClock{}
 	}
 
+	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
+	// Hence, we have to build up the controller manually.
 	c, err := controller.New(
 		ControllerName,
 		mgr,
