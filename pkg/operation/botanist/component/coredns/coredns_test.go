@@ -363,8 +363,6 @@ spec:
           name: custom-config-volume
           readOnly: true
       dnsPolicy: Default
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
       priorityClassName: system-cluster-critical
       securityContext:
         fsGroup: 1

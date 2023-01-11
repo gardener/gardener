@@ -508,7 +508,6 @@ status: {}
 						ServiceAccountName:           "vpn-shoot",
 						PriorityClassName:            "system-cluster-critical",
 						DNSPolicy:                    corev1.DNSDefault,
-						NodeSelector:                 map[string]string{"worker.gardener.cloud/system-components": "true"},
 						Tolerations: []corev1.Toleration{{
 							Key:      "CriticalAddonsOnly",
 							Operator: corev1.TolerationOpExists,

@@ -42,8 +42,6 @@ spec:
       - effect: NoExecute
         operator: Exists
       priorityClassName: system-cluster-critical
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
       securityContext:
         runAsUser: 65534
         fsGroup: 65534

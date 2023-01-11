@@ -300,9 +300,6 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 							Operator: corev1.TolerationOpExists,
 						}},
 						PriorityClassName: "system-cluster-critical",
-						NodeSelector: map[string]string{
-							v1beta1constants.LabelWorkerPoolSystemComponents: "true",
-						},
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsUser:          pointer.Int64(65534),
 							FSGroup:            pointer.Int64(65534),

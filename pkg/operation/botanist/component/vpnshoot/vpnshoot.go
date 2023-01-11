@@ -508,7 +508,6 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 			ServiceAccountName:           serviceAccount.Name,
 			PriorityClassName:            "system-cluster-critical",
 			DNSPolicy:                    corev1.DNSDefault,
-			NodeSelector:                 map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 			SecurityContext: &corev1.PodSecurityContext{
 				SeccompProfile: &corev1.SeccompProfile{
 					Type: corev1.SeccompProfileTypeRuntimeDefault,

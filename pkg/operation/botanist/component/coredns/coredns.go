@@ -382,7 +382,6 @@ import custom/*.server
 					Spec: corev1.PodSpec{
 						PriorityClassName:  "system-cluster-critical",
 						ServiceAccountName: serviceAccount.Name,
-						NodeSelector:       map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:       pointer.Bool(true),
