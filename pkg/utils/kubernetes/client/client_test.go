@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
@@ -74,9 +74,9 @@ var _ = Describe("Cleaner", func() {
 		c = mockclient.NewMockClient(ctrl)
 		ctx = context.Background()
 
-		cm1Key = kutil.Key("n", "foo")
-		cm2Key = kutil.Key("n", "bar")
-		nsKey = kutil.Key("baz")
+		cm1Key = kubernetesutils.Key("n", "foo")
+		cm2Key = kubernetesutils.Key("n", "bar")
+		nsKey = kubernetesutils.Key("baz")
 
 		cm1 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
 		cm2 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}

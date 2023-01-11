@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
@@ -87,7 +87,7 @@ func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1
 		return nil, err
 	}
 
-	seedChartApplier, err := gardener.NewChartApplierForConfig(d.RESTConfig())
+	seedChartApplier, err := kubernetesclient.NewChartApplierForConfig(d.RESTConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1
 
 type workerDelegate struct {
 	common.ClientContext
-	seedChartApplier   gardener.ChartApplier
+	seedChartApplier   kubernetesclient.ChartApplier
 	serverVersion      string
 	cloudProfileConfig *api.CloudProfileConfig
 	cluster            *extensionscontroller.Cluster
@@ -116,7 +116,7 @@ type workerDelegate struct {
 // NewWorkerDelegate creates a new context for a worker reconciliation.
 func NewWorkerDelegate(
 	clientContext common.ClientContext,
-	seedChartApplier gardener.ChartApplier,
+	seedChartApplier kubernetesclient.ChartApplier,
 	serverVersion string,
 	worker *extensionsv1alpha1.Worker,
 	cluster *extensionscontroller.Cluster,

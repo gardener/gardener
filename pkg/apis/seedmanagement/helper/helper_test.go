@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Helper", func() {
@@ -60,12 +60,12 @@ var _ = Describe("Helper", func() {
 		Context("#ExtractSeedSpec", func() {
 			It("should extract the seed spec when gardenlet is defined", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-					Config: &configv1alpha1.GardenletConfiguration{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &configv1alpha1.SeedConfig{
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
@@ -103,9 +103,9 @@ var _ = Describe("Helper", func() {
 
 			It("should fail when seedConfig is not defined in gardenlet config", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-					Config: &configv1alpha1.GardenletConfiguration{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
 					},

@@ -34,7 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // AddToManager adds all controllers to the given manager.
@@ -85,7 +85,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if err := (&managedresource.Reconciler{
 		Config:                    cfg.Controllers.ManagedResource,
-		ClassFilter:               managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
+		ClassFilter:               resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
 		ClusterID:                 *cfg.Controllers.ClusterID,
 		GarbageCollectorActivated: cfg.Controllers.GarbageCollector.Enabled,
 	}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
@@ -102,7 +102,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if err := (&secret.Reconciler{
 		Config:      cfg.Controllers.Secret,
-		ClassFilter: managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
+		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
 	}).AddToManager(mgr, sourceCluster); err != nil {
 		return fmt.Errorf("failed adding secret controller: %w", err)
 	}

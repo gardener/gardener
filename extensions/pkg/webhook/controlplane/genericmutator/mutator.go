@@ -20,14 +20,14 @@ import (
 	"fmt"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
@@ -46,43 +46,43 @@ import (
 type Ensurer interface {
 	// EnsureKubeAPIServerService ensures that the kube-apiserver service conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeAPIServerService(ctx context.Context, gctx gcontext.GardenContext, new, old *corev1.Service) error
+	EnsureKubeAPIServerService(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *corev1.Service) error
 	// EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeAPIServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
+	EnsureKubeAPIServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureKubeControllerManagerDeployment ensures that the kube-controller-manager deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeControllerManagerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
+	EnsureKubeControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureKubeSchedulerDeployment ensures that the kube-scheduler deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeSchedulerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
+	EnsureKubeSchedulerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureClusterAutoscalerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
+	EnsureClusterAutoscalerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureETCD ensures that the etcds conform to the respective provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureETCD(ctx context.Context, gctx gcontext.GardenContext, new, old *druidv1alpha1.Etcd) error
+	EnsureETCD(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidv1alpha1.Etcd) error
 	// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureVPNSeedServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
+	EnsureVPNSeedServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
+	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
 	// EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old *kubeletconfigv1beta1.KubeletConfiguration) error
+	EnsureKubeletConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, new, old *kubeletconfigv1beta1.KubeletConfiguration) error
 	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
-	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version) bool
+	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version) bool
 	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
-	EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, configContent *string, namespace string) error
+	EnsureKubeletCloudProviderConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, configContent *string, namespace string) error
 	// EnsureKubernetesGeneralConfiguration ensures that the kubernetes general configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx gcontext.GardenContext, new, old *string) error
+	EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *string) error
 	// EnsureAdditionalUnits ensures additional systemd units
 	// "old" might be "nil" and must always be checked.
-	EnsureAdditionalUnits(ctx context.Context, gctx gcontext.GardenContext, new, old *[]extensionsv1alpha1.Unit) error
+	EnsureAdditionalUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.Unit) error
 	// EnsureAdditionalFiles ensures additional systemd files
 	// "old" might be "nil" and must always be checked.
-	EnsureAdditionalFiles(ctx context.Context, gctx gcontext.GardenContext, new, old *[]extensionsv1alpha1.File) error
+	EnsureAdditionalFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.File) error
 }
 
 // NewMutator creates a new controlplane mutator.
@@ -128,7 +128,7 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 	if new.GetDeletionTimestamp() != nil {
 		return nil
 	}
-	gctx := gcontext.NewGardenContext(m.client, new)
+	gctx := extensionscontextwebhook.NewGardenContext(m.client, new)
 
 	switch x := new.(type) {
 	case *corev1.Service:
@@ -235,7 +235,7 @@ func findFileWithPath(osc *extensionsv1alpha1.OperatingSystemConfig, path string
 	return nil
 }
 
-func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext.GardenContext, osc, oldOSC *extensionsv1alpha1.OperatingSystemConfig) error {
+func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, osc, oldOSC *extensionsv1alpha1.OperatingSystemConfig) error {
 	cluster, err := gctx.GetCluster(ctx)
 	if err != nil {
 		return err
@@ -278,7 +278,7 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 
 	// Mutate 99 kubernetes general configuration file, if present
 	if content := getKubernetesGeneralConfiguration(osc); content != nil {
-		if err := m.ensureKubernetesGeneralConfiguration(ctx, gctx, content, getKubernetesGeneralConfiguration(oldOSC), kutil.ObjectName(osc)); err != nil {
+		if err := m.ensureKubernetesGeneralConfiguration(ctx, gctx, content, getKubernetesGeneralConfiguration(oldOSC), kubernetesutils.ObjectName(osc)); err != nil {
 			return err
 		}
 	}
@@ -307,7 +307,7 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 	return m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits)
 }
 
-func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, content, oldContent *string) error {
+func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, content, oldContent *string) error {
 	var (
 		opts, oldOpts []*unit.UnitOption
 		err           error
@@ -337,7 +337,7 @@ func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcon
 	return nil
 }
 
-func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, fci, oldFCI *extensionsv1alpha1.FileContentInline) error {
+func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, fci, oldFCI *extensionsv1alpha1.FileContentInline) error {
 	var (
 		kubeletConfig, oldKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration
 		err                             error
@@ -369,7 +369,7 @@ func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcont
 	return nil
 }
 
-func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx gcontext.GardenContext, fci, oldFCI *extensionsv1alpha1.FileContentInline, objectName string) error {
+func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, fci, oldFCI *extensionsv1alpha1.FileContentInline, objectName string) error {
 	var (
 		data, oldData []byte
 		err           error
@@ -412,7 +412,7 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 // CloudProviderConfigPath is the path to the cloudprovider.conf kubelet configuration file.
 const CloudProviderConfigPath = "/var/lib/kubelet/cloudprovider.conf"
 
-func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, osc *extensionsv1alpha1.OperatingSystemConfig) error {
+func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, osc *extensionsv1alpha1.OperatingSystemConfig) error {
 	var err error
 
 	// Ensure kubelet cloud provider config
@@ -423,7 +423,7 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 
 	if len(s) == 0 {
 		// File entries with empty content are not valid, so we do not add them to the OperatingSystemConfig resource.
-		m.logger.Info("Skipping addition of kubelet cloud provider config file entry because its content is empty", "operatingsystemconfig", kutil.ObjectName(osc))
+		m.logger.Info("Skipping addition of kubelet cloud provider config file entry because its content is empty", "operatingsystemconfig", kubernetesutils.ObjectName(osc))
 		return nil
 	}
 

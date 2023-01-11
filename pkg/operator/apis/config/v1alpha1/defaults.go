@@ -22,7 +22,7 @@ import (
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
@@ -40,8 +40,8 @@ func SetDefaults_OperatorConfiguration(obj *OperatorConfiguration) {
 	}
 
 	if obj.Controllers.Garden.ETCDConfig == nil {
-		obj.Controllers.Garden.ETCDConfig = &gardenletconfigv1alpha1.ETCDConfig{}
-		gardenletconfigv1alpha1.SetDefaults_ETCDConfig(obj.Controllers.Garden.ETCDConfig)
+		obj.Controllers.Garden.ETCDConfig = &gardenletv1alpha1.ETCDConfig{}
+		gardenletv1alpha1.SetDefaults_ETCDConfig(obj.Controllers.Garden.ETCDConfig)
 	}
 }
 

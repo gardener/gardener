@@ -19,7 +19,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	utilsversion "github.com/gardener/gardener/pkg/utils/version"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // featureGateVersionRanges contains the version ranges for all Kubernetes feature gates.
@@ -303,7 +303,7 @@ func (r *FeatureGateVersionRange) Contains(version string) (bool, error) {
 	default:
 		constraint = "*"
 	}
-	return utilsversion.CheckVersionMeetsConstraint(version, constraint)
+	return versionutils.CheckVersionMeetsConstraint(version, constraint)
 }
 
 func isFeatureLockedToDefault(featureGate, version string) (bool, error) {
@@ -311,7 +311,7 @@ func isFeatureLockedToDefault(featureGate, version string) (bool, error) {
 	vr := featureGateVersionRanges[featureGate]
 	if vr.LockedToDefaultInVersion != "" {
 		constraint = fmt.Sprintf(">= %s", vr.LockedToDefaultInVersion)
-		return utilsversion.CheckVersionMeetsConstraint(version, constraint)
+		return versionutils.CheckVersionMeetsConstraint(version, constraint)
 	}
 
 	return false, nil

@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -127,24 +127,24 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 		return err
 	}
 
-	if err := switchIngressClass(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, "aggregate-prometheus"), newClass, kubernetesVersion); err != nil {
+	if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(v1beta1constants.GardenNamespace, "aggregate-prometheus"), newClass, kubernetesVersion); err != nil {
 		return err
 	}
-	if err := switchIngressClass(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, "grafana"), newClass, kubernetesVersion); err != nil {
+	if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(v1beta1constants.GardenNamespace, "grafana"), newClass, kubernetesVersion); err != nil {
 		return err
 	}
 
 	for _, ns := range shootNamespaces.Items {
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "alertmanager"), newClass, kubernetesVersion); err != nil {
+		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "alertmanager"), newClass, kubernetesVersion); err != nil {
 			return err
 		}
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "prometheus"), newClass, kubernetesVersion); err != nil {
+		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "prometheus"), newClass, kubernetesVersion); err != nil {
 			return err
 		}
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "grafana-operators"), newClass, kubernetesVersion); err != nil {
+		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "grafana-operators"), newClass, kubernetesVersion); err != nil {
 			return err
 		}
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "grafana-users"), newClass, kubernetesVersion); err != nil {
+		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "grafana-users"), newClass, kubernetesVersion); err != nil {
 			return err
 		}
 	}

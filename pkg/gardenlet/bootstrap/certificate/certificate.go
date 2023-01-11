@@ -22,7 +22,7 @@ import (
 	"net"
 	"time"
 
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/go-logr/logr"
@@ -71,9 +71,9 @@ func RequestCertificate(
 	return certData, privateKeyData, csrName, nil
 }
 
-// DigestedName is an alias for bootstraputil.DigestedName.
+// DigestedName is an alias for gardenletbootstraputil.DigestedName.
 // Exposed for testing.
-var DigestedName = bootstraputil.DigestedName
+var DigestedName = gardenletbootstraputil.DigestedName
 
 // requestCertificate will create a certificate signing request for the Gardenlet
 // and send it to API server, then it will watch the object's

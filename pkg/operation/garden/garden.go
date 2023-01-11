@@ -29,8 +29,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -53,7 +53,7 @@ func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
 // WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
 func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Builder {
 	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
-		project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, reader, namespace)
+		project, _, err := gardenerutils.ProjectAndNamespaceFromReader(ctx, reader, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +145,7 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, zone, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+	provider, domain, zone, includeZones, excludeZones, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func ReadGardenSecrets(
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
@@ -216,7 +216,7 @@ func ReadGardenSecrets(
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
@@ -319,9 +319,9 @@ func ReadGardenSecrets(
 }
 
 func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.Client, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
-	credentialsSecret, err := secretsManager.Generate(ctx, &secretutils.BasicAuthSecretConfig{
+	credentialsSecret, err := secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
 		Name:           v1beta1constants.SecretNameObservabilityIngress,
-		Format:         secretutils.BasicAuthFormatNormal,
+		Format:         secretsutils.BasicAuthFormatNormal,
 		Username:       "admin",
 		PasswordLength: 32,
 	})

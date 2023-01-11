@@ -33,9 +33,9 @@ import (
 	"context"
 	"time"
 
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
@@ -65,8 +65,8 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		f = framework.NewShootFramework(nil)
 
 		testWorkerPoolName          = "ca-test"
-		origClusterAutoscalerConfig *corev1beta1.ClusterAutoscaler
-		origWorkers                 []corev1beta1.Worker
+		origClusterAutoscalerConfig *gardencorev1beta1.ClusterAutoscaler
+		origWorkers                 []gardencorev1beta1.Worker
 		origMinWorkers              int32
 		origMaxWorkers              int32
 	)
@@ -85,9 +85,9 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		ginkgo.By("updating shoot spec for test")
 		// set clusterautoscaler params to lower values so we don't have to wait too long
 		// and ensure the worker pool has maximum > minimum
-		err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
+		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			if s.Spec.Kubernetes.ClusterAutoscaler == nil {
-				s.Spec.Kubernetes.ClusterAutoscaler = &corev1beta1.ClusterAutoscaler{}
+				s.Spec.Kubernetes.ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscaler{}
 			}
 			s.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd = &metav1.Duration{Duration: scaleDownDelayAfterAdd}
 			s.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime = &metav1.Duration{Duration: scaleDownUnneededTime}
@@ -135,7 +135,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 
 		ginkgo.By("reverting shoot spec changes by test")
-		err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
+		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
 			s.Spec.Provider.Workers[0].Maximum = origMaxWorkers
 
@@ -144,7 +144,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("deleting pod-anti-affinity deployment")
-		err = kutil.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
+		err = kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podAntiAffinityDeploymentName,
 				Namespace: podAntiAffinityDeploymentNamespace,
@@ -173,11 +173,11 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		}
 
 		ginkgo.By("updating shoot spec for test")
-		err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
+		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorkerPool)
 
 			if s.Spec.Kubernetes.ClusterAutoscaler == nil {
-				s.Spec.Kubernetes.ClusterAutoscaler = &corev1beta1.ClusterAutoscaler{}
+				s.Spec.Kubernetes.ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscaler{}
 			}
 			s.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd = &metav1.Duration{Duration: scaleDownDelayAfterAdd}
 			s.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime = &metav1.Duration{Duration: scaleDownUnneededTime}
@@ -227,7 +227,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("reverting shoot spec changes by test")
-		err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
+		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
 
 			for i, worker := range s.Spec.Provider.Workers {
@@ -244,7 +244,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("deleting pod-anti-affinity deployment")
-		err = kutil.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
+		err = kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podAntiAffinityDeploymentName,
 				Namespace: podAntiAffinityDeploymentNamespace,

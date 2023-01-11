@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/Masterminds/semver"
@@ -212,7 +212,7 @@ ip6.arpa:53 {
 			},
 		}
 	)
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	var (
 		service = &corev1.Service{

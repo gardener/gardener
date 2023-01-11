@@ -22,16 +22,16 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
-	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
+	admissionwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -53,7 +53,7 @@ var (
 	// group and the resource (but it ignores the version).
 	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
-	bastionResource                   = gardenoperationsv1alpha1.Resource("bastions")
+	bastionResource                   = operationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
 	leaseResource                     = coordinationv1.Resource("leases")
@@ -80,7 +80,7 @@ func (h *Handler) InjectDecoder(d *admission.Decoder) error {
 func (h *Handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	seedName, isSeed := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
 	if !isSeed {
-		return acadmission.Allowed("")
+		return admissionwebhook.Allowed("")
 	}
 
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
@@ -107,7 +107,7 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitShootState(ctx, seedName, request)
 	}
 
-	return acadmission.Allowed("")
+	return admissionwebhook.Allowed("")
 }
 
 func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, request admission.Request) admission.Response {
@@ -125,7 +125,7 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the name is equal to the UID of
 		// the gardenlet's seed.
 		seed := &gardencorev1beta1.Seed{}
-		if err := h.Client.Get(ctx, kutil.Key(seedName), seed); err != nil {
+		if err := h.Client.Get(ctx, kubernetesutils.Key(seedName), seed); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if string(seed.UID) != request.Name {
@@ -156,7 +156,7 @@ func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request
 	}
 
 	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := h.Client.Get(ctx, kutil.Key(backupEntry.Spec.BucketName), backupBucket); err != nil {
+	if err := h.Client.Get(ctx, kubernetesutils.Key(backupEntry.Spec.BucketName), backupBucket); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -166,9 +166,9 @@ func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request
 func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry) admission.Response {
 	// The source BackupEntry is created during the restore phase of control plane migration
 	// so allow creations only if the shoot that owns the BackupEntry is currently being restored.
-	shootName := gutil.GetShootNameFromOwnerReferences(backupEntry)
+	shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry)
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.Client.Get(ctx, kutil.Key(backupEntry.Namespace, shootName), shoot); err != nil {
+	if err := h.Client.Get(ctx, kubernetesutils.Key(backupEntry.Namespace, shootName), shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -181,7 +181,7 @@ func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *garde
 	// The original BackupEntry is modified after the source BackupEntry has been deployed and successfully reconciled.
 	shootBackupEntryName := strings.TrimPrefix(backupEntry.Name, fmt.Sprintf("%s-", v1beta1constants.BackupSourcePrefix))
 	shootBackupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := h.Client.Get(ctx, kutil.Key(backupEntry.Namespace, shootBackupEntryName), shootBackupEntry); err != nil {
+	if err := h.Client.Get(ctx, kubernetesutils.Key(backupEntry.Namespace, shootBackupEntryName), shootBackupEntry); err != nil {
 		if apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("could not find original BackupEntry %s: %w", shootBackupEntryName, err))
 		}
@@ -200,7 +200,7 @@ func (h *Handler) admitBastion(seedName string, request admission.Request) admis
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	bastion := &gardenoperationsv1alpha1.Bastion{}
+	bastion := &operationsv1alpha1.Bastion{}
 	if err := h.decoder.Decode(request, bastion); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -223,7 +223,7 @@ func (h *Handler) admitCertificateSigningRequest(seedName string, request admiss
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if ok, reason := gutil.IsSeedClientCert(x509cr, csr.Spec.Usages); !ok {
+	if ok, reason := gardenerutils.IsSeedClientCert(x509cr, csr.Spec.Usages); !ok {
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters: %s", reason))
 	}
 
@@ -238,7 +238,7 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 
 	// Allow gardenlet to create cluster role bindings referencing service accounts which can be used to bootstrap other
 	// gardenlets deployed as part of the ManagedSeed reconciliation.
-	if strings.HasPrefix(request.Name, bootstraputil.ClusterRoleBindingNamePrefix) {
+	if strings.HasPrefix(request.Name, gardenletbootstraputil.ClusterRoleBindingNamePrefix) {
 		clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 		if err := h.decoder.Decode(request, clusterRoleBinding); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
@@ -246,12 +246,12 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 
 		if clusterRoleBinding.RoleRef.APIGroup != rbacv1.GroupName ||
 			clusterRoleBinding.RoleRef.Kind != "ClusterRole" ||
-			clusterRoleBinding.RoleRef.Name != bootstraputil.GardenerSeedBootstrapper {
+			clusterRoleBinding.RoleRef.Name != gardenletbootstraputil.GardenerSeedBootstrapper {
 
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("can only bindings referring to the bootstrapper role"))
 		}
 
-		managedSeedNamespace, managedSeedName := bootstraputil.MetadataFromClusterRoleBindingName(request.Name)
+		managedSeedNamespace, managedSeedName := gardenletbootstraputil.MetadataFromClusterRoleBindingName(request.Name)
 		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, managedSeedNamespace, managedSeedName)
 	}
 
@@ -284,7 +284,7 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 	// Check if the secret is related to a BackupBucket assigned to the seed the gardenlet is responsible for.
 	if strings.HasPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket) {
 		backupBucket := &gardencorev1beta1.BackupBucket{}
-		if err := h.Client.Get(ctx, kutil.Key(strings.TrimPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket)), backupBucket); err != nil {
+		if err := h.Client.Get(ctx, kubernetesutils.Key(strings.TrimPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket)), backupBucket); err != nil {
 			if apierrors.IsNotFound(err) {
 				return admission.Errored(http.StatusForbidden, err)
 			}
@@ -295,9 +295,9 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 	}
 
 	// Check if the secret is related to a Shoot assigned to the seed the gardenlet is responsible for.
-	if shootName, ok := gutil.IsShootProjectSecret(request.Name); ok {
+	if shootName, ok := gardenerutils.IsShootProjectSecret(request.Name); ok {
 		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.Client.Get(ctx, kutil.Key(request.Namespace, shootName), shoot); err != nil {
+		if err := h.Client.Get(ctx, kubernetesutils.Key(request.Namespace, shootName), shoot); err != nil {
 			if apierrors.IsNotFound(err) {
 				return admission.Errored(http.StatusForbidden, err)
 			}
@@ -327,9 +327,9 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("%q must not be set", bootstraptokenapi.BootstrapTokenExtraGroupsKey))
 		}
 
-		managedSeedNamespace, managedSeedName := bootstraputil.MetadataFromDescription(
+		managedSeedNamespace, managedSeedName := gardenletbootstraputil.MetadataFromDescription(
 			string(secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]),
-			bootstraputil.KindManagedSeed,
+			gardenletbootstraputil.KindManagedSeed,
 		)
 
 		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, managedSeedNamespace, managedSeedName)
@@ -343,7 +343,7 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 
 	for _, managedSeed := range managedSeedList.Items {
 		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		if err := h.Client.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
@@ -378,7 +378,7 @@ func (h *Handler) admitSeed(ctx context.Context, seedName string, request admiss
 		// If the deletion request is not allowed, then it might be submitted by the "parent gardenlet".
 		// This is the gardenlet/seed which is responsible for the `managedseed` in question.
 		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-		if err := h.Client.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, request.Name), managedSeed); err != nil {
+		if err := h.Client.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, request.Name), managedSeed); err != nil {
 			if apierrors.IsNotFound(err) {
 				return response
 			}
@@ -400,7 +400,7 @@ func (h *Handler) admitSeed(ctx context.Context, seedName string, request admiss
 		// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
 		// the seed name of the requesting gardenlet.
 		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		if err := h.Client.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
@@ -417,8 +417,8 @@ func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, requ
 
 	// Allow gardenlet to create service accounts which can be used to bootstrap other gardenlets deployed as part of
 	// the ManagedSeed reconciliation.
-	if strings.HasPrefix(request.Name, bootstraputil.ServiceAccountNamePrefix) {
-		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, request.Namespace, strings.TrimPrefix(request.Name, bootstraputil.ServiceAccountNamePrefix))
+	if strings.HasPrefix(request.Name, gardenletbootstraputil.ServiceAccountNamePrefix) {
+		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, request.Namespace, strings.TrimPrefix(request.Name, gardenletbootstraputil.ServiceAccountNamePrefix))
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
@@ -430,7 +430,7 @@ func (h *Handler) admitShootState(ctx context.Context, seedName string, request 
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.Client.Get(ctx, kutil.Key(request.Namespace, request.Name), shoot); err != nil {
+	if err := h.Client.Get(ctx, kubernetesutils.Key(request.Namespace, request.Name), shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -450,7 +450,7 @@ func (h *Handler) admit(seedName string, seedNamesForObject ...*string) admissio
 
 func (h *Handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, seedName, managedSeedNamespace, managedSeedName string) admission.Response {
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := h.Client.Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), managedSeed); err != nil {
+	if err := h.Client.Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusForbidden, err)
 		}
@@ -458,7 +458,7 @@ func (h *Handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := h.Client.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -467,7 +467,7 @@ func (h *Handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 	}
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := h.Client.Get(ctx, kutil.Key(managedSeedName), seed); err != nil {
+	if err := h.Client.Get(ctx, kubernetesutils.Key(managedSeedName), seed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}

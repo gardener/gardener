@@ -23,10 +23,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mocknodelocaldns "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
+	mocknodelocaldns "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -74,10 +74,10 @@ var _ = Describe("NodeLocalDNS", func() {
 	})
 
 	Describe("#DefaultNodeLocalDNS", func() {
-		var kubernetesClient *mockkubernetes.MockInterface
+		var kubernetesClient *kubernetesmock.MockInterface
 
 		BeforeEach(func() {
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot.Networks = &shootpkg.Networks{
@@ -106,7 +106,7 @@ var _ = Describe("NodeLocalDNS", func() {
 	Describe("#ReconcileNodeLocalDNS", func() {
 		var (
 			nodelocaldns     *mocknodelocaldns.MockInterface
-			kubernetesClient *mockkubernetes.MockInterface
+			kubernetesClient *kubernetesmock.MockInterface
 			c                client.Client
 
 			ctx     = context.TODO()
@@ -115,7 +115,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 		BeforeEach(func() {
 			nodelocaldns = mocknodelocaldns.NewMockInterface(ctrl)
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 			botanist.ShootClientSet = kubernetesClient

@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -69,9 +69,9 @@ var _ = Describe("Controller", func() {
 
 	Describe("Reconciler", func() {
 		It("should return nil because object not found", func() {
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -80,17 +80,17 @@ var _ = Describe("Controller", func() {
 			created := time.Now().Add(-maxLifetime / 2)
 			requeueAfter := time.Until(created.Add(maxLifetime))
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				*obj = newShoot(namespace, shootName, &seedName)
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				*obj = newBastion(namespace, bastionName, shootName, &seedName, &created, nil)
 				return nil
 			})
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result.RequeueAfter).To(BeNumerically("~", requeueAfter, 1*time.Second))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -100,28 +100,28 @@ var _ = Describe("Controller", func() {
 			remaining := 30 * time.Second
 			expires := now.Add(remaining)
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				*obj = newShoot(namespace, shootName, &seedName)
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				*obj = newBastion(namespace, bastionName, shootName, &seedName, &now, &expires)
 				return nil
 			})
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result.RequeueAfter).To(BeNumerically("~", remaining, 1*time.Second))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should requeue soon-to-reach-max-lifetime Bastions", func() {
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				*obj = newShoot(namespace, shootName, &seedName)
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				now := time.Now()
 				created := now.Add(-maxLifetime).Add(10 * time.Minute) // reaches end-of-life in 10 minutes
 				expires := now.Add(30 * time.Minute)                   // expires in 30 minutes
@@ -130,15 +130,15 @@ var _ = Describe("Controller", func() {
 				return nil
 			})
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result.RequeueAfter).To(BeNumerically("~", 10*time.Minute, 1*time.Second))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions with missing shoots", func() {
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				created := time.Now().Add(-maxLifetime / 2)
 
 				*obj = newBastion(namespace, bastionName, shootName, &seedName, &created, nil)
@@ -147,13 +147,13 @@ var _ = Describe("Controller", func() {
 
 			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions with shoots in deletion", func() {
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				shoot := newShoot(namespace, shootName, &seedName)
 				now := metav1.Now()
 				shoot.DeletionTimestamp = &now
@@ -161,7 +161,7 @@ var _ = Describe("Controller", func() {
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				created := time.Now().Add(-maxLifetime / 2)
 
 				*obj = newBastion(namespace, bastionName, shootName, &seedName, &created, nil)
@@ -170,18 +170,18 @@ var _ = Describe("Controller", func() {
 
 			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete expired Bastions", func() {
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				*obj = newShoot(namespace, shootName, &seedName)
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				created := time.Now().Add(-maxLifetime / 2)
 				expires := time.Now().Add(-5 * time.Second)
 
@@ -191,18 +191,18 @@ var _ = Describe("Controller", func() {
 
 			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions that have reached their TTL", func() {
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				*obj = newShoot(namespace, shootName, &seedName)
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				created := time.Now().Add(-maxLifetime * 2)
 
 				*obj = newBastion(namespace, bastionName, shootName, &seedName, &created, nil)
@@ -211,7 +211,7 @@ var _ = Describe("Controller", func() {
 
 			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -219,12 +219,12 @@ var _ = Describe("Controller", func() {
 		It("should delete Bastions with outdated seed information", func() {
 			newSeedName := "new-seed-after-migration"
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				*obj = newShoot(namespace, shootName, &newSeedName)
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				created := time.Now().Add(-maxLifetime / 2)
 				expires := time.Now().Add(1 * time.Minute)
 
@@ -234,18 +234,18 @@ var _ = Describe("Controller", func() {
 
 			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions with outdated seed information 2", func() {
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 				*obj = newShoot(namespace, shootName, nil) // shoot was removed from original seed and since then hasn't found a new seed
 				return nil
 			})
 
-			mockClient.EXPECT().Get(ctx, kutil.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion, _ ...client.GetOption) error {
 				created := time.Now().Add(-maxLifetime / 2)
 				expires := time.Now().Add(1 * time.Minute)
 
@@ -255,7 +255,7 @@ var _ = Describe("Controller", func() {
 
 			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 		})

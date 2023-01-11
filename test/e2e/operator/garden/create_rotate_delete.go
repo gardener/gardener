@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
@@ -110,7 +110,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 		defer cancel()
 
-		Expect(gutil.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
+		Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 		Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 		Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
 		waitForGardenToBeDeleted(ctx, garden)

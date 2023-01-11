@@ -19,7 +19,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/autoscaling/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -502,7 +502,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Namespace: namespace,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &v1.CrossVersionObjectReference{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       deploymentDashboard.Name,

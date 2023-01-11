@@ -45,8 +45,8 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -90,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if responsibleSeedName := gutil.GetResponsibleSeedName(backupEntry.Spec.SeedName, backupEntry.Status.SeedName); responsibleSeedName != r.SeedName {
+	if responsibleSeedName := gardenerutils.GetResponsibleSeedName(backupEntry.Spec.SeedName, backupEntry.Status.SeedName); responsibleSeedName != r.SeedName {
 		log.Info("Skipping because BackupEntry is not managed by this gardenlet", "seedName", responsibleSeedName)
 		return reconcile.Result{}, nil
 	}
@@ -242,7 +242,7 @@ func (r *Reconciler) reconcileBackupEntry(
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}
 
-		if kutil.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
+		if kubernetesutils.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
 			if updateErr := removeGardenerOperationAnnotation(ctx, r.GardenClient, backupEntry); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
 			}
@@ -597,7 +597,7 @@ func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardenco
 		gardenSecretRef = backupBucket.Status.GeneratedSecretRef
 	}
 
-	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, gardenSecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, gardenSecretRef)
 	if err != nil {
 		return nil, fmt.Errorf("could not get secret referred in core backup bucket: %w", err)
 	}
@@ -629,9 +629,9 @@ func (r *Reconciler) reconcileBackupEntryExtension(ctx context.Context, backupBu
 		return component.Deploy(ctx)
 	}
 
-	shootName := gutil.GetShootNameFromOwnerReferences(backupEntry)
+	shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry)
 	shootState := &gardencorev1alpha1.ShootState{}
-	if err := r.GardenClient.Get(ctx, kutil.Key(backupEntry.Namespace, shootName), shootState); err != nil {
+	if err := r.GardenClient.Get(ctx, kubernetesutils.Key(backupEntry.Namespace, shootName), shootState); err != nil {
 		return err
 	}
 	return component.Restore(ctx, shootState)

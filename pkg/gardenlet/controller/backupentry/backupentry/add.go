@@ -36,8 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -81,7 +81,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
 		controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
 		&predicate.GenerationChangedPredicate{},
-		predicateutils.SeedNamePredicate(r.SeedName, gutil.GetBackupEntrySeedNames),
+		predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
 	); err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Contex
 		return nil
 	}
 
-	shootTechnicalID, _ := gutil.ExtractShootDetailsFromBackupEntryName(obj.GetName())
+	shootTechnicalID, _ := gardenerutils.ExtractShootDetailsFromBackupEntryName(obj.GetName())
 	if shootTechnicalID == "" {
 		return nil
 	}
@@ -111,7 +111,7 @@ func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Contex
 		return nil
 	}
 	if shoot == nil {
-		log.Info("Shoot is missing in cluster resource", "cluster", kutil.Key(shootTechnicalID))
+		log.Info("Shoot is missing in cluster resource", "cluster", kubernetesutils.Key(shootTechnicalID))
 		return nil
 	}
 

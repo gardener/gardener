@@ -22,13 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	mockauthorizer "github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
@@ -57,8 +57,8 @@ var _ = Describe("validator", func() {
 			admissionHandler       *ValidateShoot
 			ctrl                   *gomock.Controller
 			auth                   *mockauthorizer.MockAuthorizer
-			coreInformerFactory    coreinformers.SharedInformerFactory
-			extCoreInformerFactory extcoreinformers.SharedInformerFactory
+			coreInformerFactory    gardencoreinformers.SharedInformerFactory
+			extCoreInformerFactory gardencoreexternalinformers.SharedInformerFactory
 			cloudProfile           core.CloudProfile
 			seed                   core.Seed
 			secretBinding          core.SecretBinding
@@ -319,10 +319,10 @@ var _ = Describe("validator", func() {
 			admissionHandler, _ = New()
 			admissionHandler.SetAuthorizer(auth)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
-			extCoreInformerFactory = extcoreinformers.NewSharedInformerFactory(nil, 0)
+			extCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetExternalCoreInformerFactory(extCoreInformerFactory)
 
 			authorizeAttributes = authorizer.AttributesRecord{
@@ -667,7 +667,7 @@ var _ = Describe("validator", func() {
 
 			It("should allow adding the deletion confirmation", func() {
 				shoot.Annotations = make(map[string]string)
-				shoot.Annotations[gutil.ConfirmationDeletion] = "true"
+				shoot.Annotations[gardenerutils.ConfirmationDeletion] = "true"
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(ctx, attrs, nil)
@@ -4005,7 +4005,7 @@ var _ = Describe("validator", func() {
 						},
 					}
 					shoot.Annotations = map[string]string{
-						gutil.ConfirmationDeletion: "true",
+						gardenerutils.ConfirmationDeletion: "true",
 					}
 
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())

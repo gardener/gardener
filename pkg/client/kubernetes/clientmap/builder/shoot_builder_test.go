@@ -18,7 +18,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	baseconfig "k8s.io/component-base/config"
+	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -27,13 +27,13 @@ var _ = Describe("ShootClientMapBuilder", func() {
 	var (
 		fakeGardenClient       client.Client
 		fakeSeedClient         client.Client
-		clientConnectionConfig *baseconfig.ClientConnectionConfiguration
+		clientConnectionConfig *componentbaseconfig.ClientConnectionConfiguration
 	)
 
 	BeforeEach(func() {
 		fakeGardenClient = fakeclient.NewClientBuilder().Build()
 		fakeSeedClient = fakeclient.NewClientBuilder().Build()
-		clientConnectionConfig = &baseconfig.ClientConnectionConfiguration{}
+		clientConnectionConfig = &componentbaseconfig.ClientConnectionConfiguration{}
 	})
 
 	Describe("#WithGardenClient", func() {

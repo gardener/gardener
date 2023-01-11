@@ -36,14 +36,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -62,10 +62,10 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
-	shootLister          corelisters.ShootLister
-	secretBindingLister  corelisters.SecretBindingLister
+	shootLister          gardencorelisters.ShootLister
+	secretBindingLister  gardencorelisters.SecretBindingLister
 	secretLister         kubecorev1listers.SecretLister
-	coreClient           coreclientset.Interface
+	coreClient           gardencoreclientset.Interface
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
 }
@@ -93,7 +93,7 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ManagedSeed) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (v *ManagedSeed) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().InternalVersion().Shoots()
 	v.shootLister = shootInformer.Lister()
 
@@ -112,7 +112,7 @@ func (v *ManagedSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFacto
 }
 
 // SetInternalCoreClientset sets the garden core clientset.
-func (v *ManagedSeed) SetInternalCoreClientset(c coreclientset.Interface) {
+func (v *ManagedSeed) SetInternalCoreClientset(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 
@@ -207,7 +207,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 
 	// Ensure shoot can be registered as seed (specifies a domain)
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", kutil.ObjectName(shoot)))))
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", kubernetesutils.ObjectName(shoot)))))
 	}
 	if gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller")))
@@ -222,7 +222,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
 	}
 	if ms != nil && ms.Name != managedSeed.Name {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", kutil.ObjectName(shoot), kutil.ObjectName(ms)))))
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", kubernetesutils.ObjectName(shoot), kubernetesutils.ObjectName(ms)))))
 	}
 
 	if managedSeed.Spec.Gardenlet != nil {
@@ -248,7 +248,7 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot 
 		configPath := fldPath.Child("config")
 
 		// Convert gardenlet config to an internal version
-		gardenletConfig, err := confighelper.ConvertGardenletConfiguration(gardenlet.Config)
+		gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(gardenlet.Config)
 		if err != nil {
 			return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
 		}
@@ -265,7 +265,7 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot 
 		}
 
 		// Convert gardenlet config to an external version and set it back to gardenlet.Config
-		gardenlet.Config, err = confighelper.ConvertGardenletConfigurationExternal(gardenletConfig)
+		gardenlet.Config, err = gardenlethelper.ConvertGardenletConfigurationExternal(gardenletConfig)
 		if err != nil {
 			return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
 		}
@@ -283,7 +283,7 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	}
 
 	// Initialize and validate DNS and ingress
-	ingressDomain := fmt.Sprintf("%s.%s", gutil.IngressPrefix, *(shoot.Spec.DNS.Domain))
+	ingressDomain := fmt.Sprintf("%s.%s", gardenerutils.IngressPrefix, *(shoot.Spec.DNS.Domain))
 	if spec.Ingress != nil {
 		if spec.DNS.Provider == nil {
 			dnsProvider, err := v.getSeedDNSProvider(shoot)
@@ -369,7 +369,7 @@ func (v *ManagedSeed) getSeedDNSProvider(shoot *gardencore.Shoot) (*gardencore.S
 		}
 	}
 	if dnsProvider == nil {
-		return nil, fmt.Errorf("domain of shoot %s is neither a custom domain nor a default domain", kutil.ObjectName(shoot))
+		return nil, fmt.Errorf("domain of shoot %s is neither a custom domain nor a default domain", kubernetesutils.ObjectName(shoot))
 	}
 	return dnsProvider, nil
 }
@@ -381,7 +381,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencore.Shoot)
 		return nil, nil
 	}
 	if primaryProvider.Type == nil {
-		return nil, fmt.Errorf("primary DNS provider of shoot %s does not have a type", kutil.ObjectName(shoot))
+		return nil, fmt.Errorf("primary DNS provider of shoot %s does not have a type", kubernetesutils.ObjectName(shoot))
 	}
 	if *primaryProvider.Type == gardencore.DNSUnmanaged {
 		return nil, nil
@@ -422,7 +422,7 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot
 
 	// Search for a default domain secret that matches the shoot domain
 	for _, secret := range defaultDomainSecrets {
-		provider, domain, _, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+		provider, domain, _, includeZones, excludeZones, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get domain info from domain secret annotations: %v", err))
 		}
@@ -458,7 +458,7 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 	if err != nil && apierrors.IsNotFound(err) {
 		// Read from the client to ensure that if the managed seed has been created shortly after the shoot
 		// and the shoot is not yet present in the lister cache, it could still be found
-		return v.coreClient.Core().Shoots(namespace).Get(ctx, name, clientkubernetes.DefaultGetOptions())
+		return v.coreClient.Core().Shoots(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
 	}
 	return shoot, err
 }

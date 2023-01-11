@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,7 +53,7 @@ type terraformStateV4 struct {
 // GetState returns the Terraform state as byte slice.
 func (t *terraformer) GetState(ctx context.Context) ([]byte, error) {
 	configMap := &corev1.ConfigMap{}
-	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), configMap); err != nil {
+	if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, t.stateName), configMap); err != nil {
 		return nil, err
 	}
 
@@ -107,7 +107,7 @@ func (t *terraformer) IsStateEmpty(ctx context.Context) bool {
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}},
 	} {
 		resourceName := obj.GetName()
-		if err := t.client.Get(ctx, kutil.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
+		if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
 			t.logger.Error(err, "Failed to get resource", "name", resourceName)
 			return false
 		}
@@ -203,7 +203,7 @@ func CreateState(ctx context.Context, c client.Client, namespace, name string, o
 	}
 
 	if ownerRef != nil {
-		configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
+		configMap.SetOwnerReferences(kubernetesutils.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 	}
 
 	return client.IgnoreAlreadyExists(c.Create(ctx, configMap))
@@ -223,7 +223,7 @@ func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, 
 		configMap.Data[StateKey] = *cus.State
 
 		if ownerRef != nil {
-			configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
+			configMap.SetOwnerReferences(kubernetesutils.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 		}
 		return nil
 	})

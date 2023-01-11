@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"net/http"
 
-	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
+	admissionwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 	auditv1alpha1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1beta1"
@@ -102,7 +102,7 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 	case configmapGK:
 		return h.admitConfigMap(ctx, req)
 	}
-	return acadmission.Allowed("resource is not *core.gardener.cloud/v1beta1.Shoot or *corev1.ConfigMap")
+	return admissionwebhook.Allowed("resource is not *core.gardener.cloud/v1beta1.Shoot or *corev1.ConfigMap")
 }
 
 func (h *Handler) admitShoot(ctx context.Context, request admission.Request) admission.Response {
@@ -114,7 +114,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	if shoot.DeletionTimestamp != nil {
 		// don't mutate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
 		// controller's request, because we changed the spec
-		return acadmission.Allowed("shoot is already marked for deletion")
+		return admissionwebhook.Allowed("shoot is already marked for deletion")
 	}
 
 	var oldAuditPolicyConfigMapName, newAuditPolicyConfigMapName, oldShootKubernetesVersion, newShootKubernetesVersion string
@@ -128,7 +128,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		// skip verification if spec wasn't changed
 		// this way we make sure, that users/gardenlet can always annotate/label the shoot if the spec doesn't change
 		if apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) {
-			return acadmission.Allowed("shoot spec was not changed")
+			return admissionwebhook.Allowed("shoot spec was not changed")
 		}
 
 		oldShootKubernetesVersion = oldShoot.Spec.Kubernetes.Version
@@ -138,18 +138,18 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	newAuditPolicyConfigMapName = gardencorehelper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 
 	if newAuditPolicyConfigMapName == "" {
-		return acadmission.Allowed("shoot resource is not specifying any audit policy")
+		return admissionwebhook.Allowed("shoot resource is not specifying any audit policy")
 	}
 
 	// oldAuditPolicyConfigMapName is empty for CREATE shoot requests that specify audit policy reference
 	// if Kubernetes version is changed we need to revalidate if the audit policy API version is compatible with
 	// new Kubernetes version
 	if oldAuditPolicyConfigMapName == newAuditPolicyConfigMapName && oldShootKubernetesVersion == newShootKubernetesVersion {
-		return acadmission.Allowed("audit policy configmap was not changed")
+		return admissionwebhook.Allowed("audit policy configmap was not changed")
 	}
 
 	auditPolicyCm := &corev1.ConfigMap{}
-	if err := h.APIReader.Get(ctx, kutil.Key(shoot.Namespace, newAuditPolicyConfigMapName), auditPolicyCm); err != nil {
+	if err := h.APIReader.Get(ctx, kubernetesutils.Key(shoot.Namespace, newAuditPolicyConfigMapName), auditPolicyCm); err != nil {
 		if apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced audit policy does not exist: namespace: %s, name: %s", shoot.Namespace, newAuditPolicyConfigMapName))
 		}
@@ -171,7 +171,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(errCode, err)
 	}
 
-	return acadmission.Allowed("referenced audit policy is valid")
+	return admissionwebhook.Allowed("referenced audit policy is valid")
 }
 
 func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
@@ -181,7 +181,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 	)
 
 	if request.Operation != admissionv1.Update {
-		return acadmission.Allowed("operation is not update")
+		return admissionwebhook.Allowed("operation is not update")
 	}
 
 	if err := h.decoder.Decode(request, cm); err != nil {
@@ -196,14 +196,14 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 
 	configMapIsReferenced := false
 	for _, shoot := range shootList.Items {
-		if gardencorev1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer) == request.Name {
+		if v1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer) == request.Name {
 			configMapIsReferenced = true
 			break
 		}
 	}
 
 	if !configMapIsReferenced {
-		return acadmission.Allowed("configmap is not referenced by a Shoot")
+		return admissionwebhook.Allowed("configmap is not referenced by a Shoot")
 	}
 
 	auditPolicy, err := getAuditPolicy(cm)
@@ -216,7 +216,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 	}
 	oldAuditPolicy, ok := oldCm.Data[auditPolicyConfigMapDataKey]
 	if ok && oldAuditPolicy == auditPolicy {
-		return acadmission.Allowed("audit policy not changed")
+		return admissionwebhook.Allowed("audit policy not changed")
 	}
 
 	errCode, err := validateAuditPolicySemantics(auditPolicy)
@@ -224,7 +224,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admission.Errored(errCode, err)
 	}
 
-	return acadmission.Allowed("configmap change is valid")
+	return admissionwebhook.Allowed("configmap change is valid")
 }
 
 func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object) error {

@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -87,7 +87,7 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 	}
 
 	if cfg.SeedConfig != nil {
-		allErrs = append(allErrs, corevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
 	}
 
 	resourcesPath := fldPath.Child("resources")
@@ -138,7 +138,7 @@ func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *config.GardenletConfig
 	allErrs := field.ErrorList{}
 
 	if newCfg.SeedConfig != nil && oldCfg.SeedConfig != nil {
-		allErrs = append(allErrs, corevalidation.ValidateSeedTemplateUpdate(&newCfg.SeedConfig.SeedTemplate, &oldCfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplateUpdate(&newCfg.SeedConfig.SeedTemplate, &oldCfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
 	}
 
 	return allErrs

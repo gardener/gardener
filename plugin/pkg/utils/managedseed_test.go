@@ -22,7 +22,7 @@ import (
 	"k8s.io/client-go/testing"
 
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	seedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
+	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	. "github.com/gardener/gardener/plugin/pkg/utils"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -58,10 +58,10 @@ var _ = Describe("ManagedSeed utils", func() {
 	})
 
 	Describe("#GetManagedSeed", func() {
-		var seedManagementClient *seedmanagementfake.Clientset
+		var seedManagementClient *fakeseedmanagement.Clientset
 
 		BeforeEach(func() {
-			seedManagementClient = &seedmanagementfake.Clientset{}
+			seedManagementClient = &fakeseedmanagement.Clientset{}
 		})
 
 		It("should return the ManagedSeed for the given shoot namespace and name, if it exists", func() {

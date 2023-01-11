@@ -40,17 +40,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -90,7 +90,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		// for unmarshal of GardenletConfiguration
 		Expect(gardenletconfig.AddToScheme(s)).To(Succeed())
-		Expect(gardenletconfigv1alpha1.AddToScheme(s)).To(Succeed())
+		Expect(gardenletv1alpha1.AddToScheme(s)).To(Succeed())
 		// for priority class
 		Expect(schedulingv1.AddToScheme(s)).To(Succeed())
 		// for ClusterRole and ClusterRoleBinding
@@ -117,7 +117,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		mapper.Add(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"), meta.RESTScopeRoot)
 
 		// set the git version required for rendering of the Gardenlet chart -  chart helpers determine resource API versions based on that
-		renderer := cr.NewWithServerVersion(&version.Info{
+		renderer := chartrenderer.NewWithServerVersion(&version.Info{
 			GitVersion: "1.14.0",
 		})
 
@@ -146,7 +146,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			bootstrapKubeconfig *corev1.SecretReference,
 			bootstrapKubeconfigSecret *corev1.SecretReference,
 			bootstrapKubeconfigContent *string,
-			seedConfig *gardenletconfigv1alpha1.SeedConfig,
+			seedConfig *gardenletv1alpha1.SeedConfig,
 			deploymentConfiguration *seedmanagement.GardenletDeployment,
 			imageVectorOverwrite *string,
 			componentImageVectorOverwrites *string,
@@ -363,12 +363,12 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			Namespace: "garden",
 		}, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		}, pointer.String("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil, map[string]string{
 			"gardenlet-configmap": "gardenlet-configmap-72fee494",
 		}),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil,
-			&gardenletconfigv1alpha1.SeedConfig{
+			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",
@@ -379,7 +379,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-df47eaf0"}),
 		Entry("verify deployment with two replica and three zones", nil, nil, nil, nil, nil,
-			&gardenletconfigv1alpha1.SeedConfig{
+			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",
@@ -394,7 +394,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				ReplicaCount: pointer.Int32(2),
 			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5de2a0f2"}),
 		Entry("verify deployment with only one replica", nil, nil, nil, nil, nil,
-			&gardenletconfigv1alpha1.SeedConfig{
+			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",
@@ -409,7 +409,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				ReplicaCount: pointer.Int32(1),
 			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5de2a0f2"}),
 		Entry("verify deployment with only one zone", nil, nil, nil, nil, nil,
-			&gardenletconfigv1alpha1.SeedConfig{
+			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",
@@ -507,7 +507,7 @@ func validateKubeconfigSecret(ctx context.Context, c client.Client, secret *core
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(secret.Namespace, name),
+		kubernetesutils.Key(secret.Namespace, name),
 		secret,
 	)).ToNot(HaveOccurred())
 	Expect(secret.Labels).To(Equal(expectedSecret.Labels))
@@ -524,7 +524,7 @@ func validateImageVectorOverwriteConfigMap(ctx context.Context, c client.Client,
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(cm.Namespace, uniqueName),
+		kubernetesutils.Key(cm.Namespace, uniqueName),
 		cm,
 	)).ToNot(HaveOccurred())
 
@@ -536,7 +536,7 @@ func getEmptyImageVectorOverwriteConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet-imagevector-overwrite",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 }
@@ -545,7 +545,7 @@ func getEmptyImageVectorOverwriteComponentsConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet-imagevector-overwrite-components",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 }
@@ -554,7 +554,7 @@ func getEmptyKubeconfigGardenSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet-kubeconfig-garden",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 }
@@ -563,7 +563,7 @@ func getEmptyKubeconfigSeedSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet-kubeconfig-seed",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 }
@@ -572,7 +572,7 @@ func getEmptyKubeconfigGardenBootstrapSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet-kubeconfig-bootstrap",
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 }

@@ -16,10 +16,10 @@ package managedseed_test
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -85,18 +85,18 @@ var _ = Describe("ManagedSeed controller test", func() {
 			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespaceGarden), &corev1.Namespace{})).To(Succeed())
 		}).Should(Succeed())
 
-		gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletconfigv1alpha1.GardenletConfiguration{
+		gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
-			GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
+			GardenClientConnection: &gardenletv1alpha1.GardenClientConnection{
 				KubeconfigSecret: &corev1.SecretReference{
 					Name:      "gardenlet-kubeconfig",
 					Namespace: gardenNamespaceGarden.Name,
 				},
 			},
-			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+			SeedConfig: &gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
@@ -307,7 +307,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		It("should set the ShootReconciled status of ManagedSeed to false because the shoot is not yet reconciled", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				condition := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
+				condition := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
 				g.Expect(condition).NotTo(BeNil())
 				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciling))
@@ -323,7 +323,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		It("should set the ShootReconciled status to true,create seed secrets specified in spec.backup.secretRef and spec.secretRef field of seed template and deploy gardenlet ", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				condition := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
+				condition := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
 				g.Expect(condition).NotTo(BeNil())
 				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
 				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))

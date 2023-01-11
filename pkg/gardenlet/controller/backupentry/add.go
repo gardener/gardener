@@ -22,7 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -42,7 +42,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && gardenlethelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
 		if err := (&migration.Reconciler{
 			Config:   *cfg.Controllers.BackupEntryMigration,
 			SeedName: cfg.SeedConfig.Name,

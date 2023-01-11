@@ -22,7 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	utiltime "github.com/gardener/gardener/pkg/utils/time"
+	timeutils "github.com/gardener/gardener/pkg/utils/time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -136,16 +136,16 @@ func (f *namespaceFinalizer) HasFinalizers(obj client.Object) (bool, error) {
 }
 
 type cleaner struct {
-	time      utiltime.Ops
+	time      timeutils.Ops
 	finalizer Finalizer
 }
 
-// NewCleaner instantiates a new Cleaner with the given utiltime.Ops and finalizer.
-func NewCleaner(time utiltime.Ops, finalizer Finalizer) Cleaner {
+// NewCleaner instantiates a new Cleaner with the given timeutils.Ops and finalizer.
+func NewCleaner(time timeutils.Ops, finalizer Finalizer) Cleaner {
 	return &cleaner{time, finalizer}
 }
 
-var defaultCleaner = NewCleaner(utiltime.DefaultOps(), defaultFinalizer)
+var defaultCleaner = NewCleaner(timeutils.DefaultOps(), defaultFinalizer)
 
 // DefaultCleaner is the default Cleaner.
 func DefaultCleaner() Cleaner {
@@ -154,7 +154,7 @@ func DefaultCleaner() Cleaner {
 
 // NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
 func NewNamespaceCleaner(namespaceInterface typedcorev1.NamespaceInterface) Cleaner {
-	return NewCleaner(utiltime.DefaultOps(), NewNamespaceFinalizer(namespaceInterface))
+	return NewCleaner(timeutils.DefaultOps(), NewNamespaceFinalizer(namespaceInterface))
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.
@@ -210,7 +210,7 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 var _ Cleaner = (*volumeSnapshotContentCleaner)(nil)
 
 type volumeSnapshotContentCleaner struct {
-	time utiltime.Ops
+	time timeutils.Ops
 }
 
 // Clean annotates the VolumeSnapshotContents so that they are cleaned up by the CSI snapshot controller.
@@ -227,7 +227,7 @@ func (v *volumeSnapshotContentCleaner) Clean(ctx context.Context, c client.Clien
 	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
 
-func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t utiltime.Ops) bool {
+func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t timeutils.Ops) bool {
 	if obj.GetDeletionTimestamp().IsZero() {
 		return false
 	}
@@ -275,13 +275,13 @@ func (v *volumeSnapshotContentCleaner) triggerVolumeSnapshotDeletion(ctx context
 
 // NewVolumeSnapshotContentCleaner instantiates a new Cleaner with ability to clean VolumeSnapshotContents
 // **after** they got deleted and the given deletion grace period is passed.
-func NewVolumeSnapshotContentCleaner(time utiltime.Ops) Cleaner {
+func NewVolumeSnapshotContentCleaner(time timeutils.Ops) Cleaner {
 	return &volumeSnapshotContentCleaner{
 		time: time,
 	}
 }
 
-var defaultVolumeSnapshotContentCleaner = NewVolumeSnapshotContentCleaner(utiltime.DefaultOps())
+var defaultVolumeSnapshotContentCleaner = NewVolumeSnapshotContentCleaner(timeutils.DefaultOps())
 
 // DefaultVolumeSnapshotContentCleaner is the default cleaner for VolumeSnapshotContents.
 // The VolumeSnapshotCleaner initiates the deletion of VolumeSnapshots **after** they got deleted

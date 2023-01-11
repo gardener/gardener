@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -218,12 +218,12 @@ var _ = Describe("Shoot References", func() {
 				m              sync.Mutex
 				updatedSecrets []*corev1.Secret
 			)
-			gardenClient.EXPECT().Get(gomock.Any(), kutil.Key(secrets[0].Namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(secrets[0].Namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = secrets[0]
 					return nil
 				})
-			gardenClient.EXPECT().Get(gomock.Any(), kutil.Key(secrets[1].Namespace, secretName2), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(secrets[1].Namespace, secretName2), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = secrets[1]
 					return nil
@@ -422,7 +422,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			gardenClient.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = secrets[1]
 					return nil
@@ -530,7 +530,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			gardenClient.EXPECT().Get(gomock.Any(), kutil.Key(configMaps[1].Namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(configMaps[1].Namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = configMaps[1]
 					return nil
@@ -727,7 +727,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			gardenClient.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = configMaps[1]
 					return nil

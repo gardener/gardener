@@ -21,14 +21,14 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -125,9 +125,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for %s to become ready", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+			return v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 		}
-		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, err), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err)...)
+		return v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, err), v1beta1helper.DeprecatedDetermineErrorCodes(err)...)
 	}
 
 	return nil
@@ -142,7 +142,7 @@ func DeleteExtensionObject(
 	obj extensionsv1alpha1.Object,
 	deleteOpts ...client.DeleteOption,
 ) error {
-	if err := gutil.ConfirmDeletion(ctx, c, obj); err != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, c, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
@@ -226,7 +226,7 @@ func WaitUntilExtensionObjectDeleted(
 
 		if lastErr := obj.GetExtensionStatus().GetLastError(); lastErr != nil {
 			log.Error(fmt.Errorf(lastErr.Description), "Object did not get deleted yet")
-			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
+			lastObservedError = v1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
 
 		var message = fmt.Sprintf("%s is still present", extensionKey(kind, namespace, name))
@@ -237,9 +237,9 @@ func WaitUntilExtensionObjectDeleted(
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+			return v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 		}
-		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, err), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err)...)
+		return v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, err), v1beta1helper.DeprecatedDetermineErrorCodes(err)...)
 	}
 
 	return nil
@@ -278,7 +278,7 @@ func RestoreExtensionObjectState(
 	if shootState.Spec.Extensions != nil {
 		resourceName := extensionObj.GetName()
 		purpose := extensionObj.GetExtensionSpec().GetExtensionPurpose()
-		list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+		list := v1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
 		if extensionResourceState := list.Get(kind, &resourceName, purpose); extensionResourceState != nil {
 			patch := client.MergeFrom(extensionObj.DeepCopyObject().(client.Object))
 			extensionStatus := extensionObj.GetExtensionStatus()
@@ -286,7 +286,7 @@ func RestoreExtensionObjectState(
 			extensionStatus.SetResources(extensionResourceState.Resources)
 
 			if err := c.Status().Patch(ctx, extensionObj, patch); err != nil {
-				return gardencorev1beta1helper.NewErrorWithCodes(err, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err)...)
+				return v1beta1helper.NewErrorWithCodes(err, v1beta1helper.DeprecatedDetermineErrorCodes(err)...)
 			}
 
 			for _, r := range extensionResourceState.Resources {
@@ -295,16 +295,16 @@ func RestoreExtensionObjectState(
 		}
 	}
 	if shootState.Spec.Resources != nil {
-		list := gardencorev1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+		list := v1alpha1helper.ResourceDataList(shootState.Spec.Resources)
 		for _, resourceRef := range resourceRefs {
 			resourceData := list.Get(&resourceRef)
 			if resourceData != nil {
 				obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&resourceData.Data)
 				if err != nil {
-					return gardencorev1beta1helper.DeprecatedDetermineError(err)
+					return v1beta1helper.DeprecatedDetermineError(err)
 				}
 				if err := unstructuredutils.CreateOrPatchObjectByRef(ctx, c, &resourceRef, extensionObj.GetNamespace(), obj); err != nil {
-					return gardencorev1beta1helper.DeprecatedDetermineError(err)
+					return v1beta1helper.DeprecatedDetermineError(err)
 				}
 			}
 		}
@@ -340,7 +340,7 @@ func MigrateExtensionObjects(
 		return err
 	}
 
-	return gardencorev1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
+	return v1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
 }
 
 // WaitUntilExtensionObjectMigrated waits until the migrate operation for the extension object is successful.
@@ -372,7 +372,7 @@ func WaitUntilExtensionObjectMigrated(
 
 		return retry.MinorError(fmt.Errorf("error while waiting for %s to be successfully migrated", extensionKey(kind, obj.GetNamespace(), obj.GetName())))
 	}); err != nil {
-		return gardencorev1beta1helper.DeprecatedDetermineError(err)
+		return v1beta1helper.DeprecatedDetermineError(err)
 	}
 	return nil
 }
@@ -397,14 +397,14 @@ func WaitUntilExtensionObjectsMigrated(
 		return err
 	}
 
-	return gardencorev1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
+	return v1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
 }
 
 // AnnotateObjectWithOperation annotates the object with the provided operation annotation value.
 func AnnotateObjectWithOperation(ctx context.Context, w client.Writer, obj client.Object, operation string) error {
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
-	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerOperation, operation)
-	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerOperation, operation)
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 	return w.Patch(ctx, obj, patch)
 }
 

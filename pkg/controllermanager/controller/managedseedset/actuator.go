@@ -30,7 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 // Actuator acts upon ManagedSeedSet resources.
@@ -295,7 +295,7 @@ func (a *actuator) reconcileReplica(
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.SeedNotReadyReason, nil)
 		return true, nil
 
-	case r.GetShootHealthStatus() != operationshoot.StatusHealthy && !scalingIn:
+	case r.GetShootHealthStatus() != shootpkg.StatusHealthy && !scalingIn:
 		// This replica's shoot is not healthy, wait for it to be healthy before moving to the next replica
 		log.Info("Waiting for Shoot to be healthy")
 		a.infoEventf(managedSeedSet, EventWaitingForShootHealthy, "Waiting for Shoot %s to be healthy", r.GetFullName())
@@ -401,7 +401,7 @@ func getNextOrdinal(replicas []Replica, status *seedmanagementv1alpha1.ManagedSe
 }
 
 func replicaIsReady(r Replica) bool {
-	return r.GetStatus() == StatusManagedSeedRegistered && r.IsSeedReady() && r.GetShootHealthStatus() == operationshoot.StatusHealthy
+	return r.GetStatus() == StatusManagedSeedRegistered && r.IsSeedReady() && r.GetShootHealthStatus() == shootpkg.StatusHealthy
 }
 
 func debugReplica(r Replica, log logr.Logger) {
@@ -455,7 +455,7 @@ func (ap ascendingPriority) Less(i, j int) bool {
 
 	// Then, compare replica shoot health statuses
 	// Replicas with "worse" status are considered lower priority
-	if vi, vj := operationshoot.StatusValue(ap[i].GetShootHealthStatus()), operationshoot.StatusValue(ap[j].GetShootHealthStatus()); vi != vj {
+	if vi, vj := shootpkg.StatusValue(ap[i].GetShootHealthStatus()), shootpkg.StatusValue(ap[j].GetShootHealthStatus()); vi != vj {
 		return vi < vj
 	}
 

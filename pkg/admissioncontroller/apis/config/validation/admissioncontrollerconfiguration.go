@@ -15,7 +15,7 @@
 package validation
 
 import (
-	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -25,7 +25,7 @@ import (
 )
 
 // ValidateAdmissionControllerConfiguration validates the given `AdmissionControllerConfiguration`.
-func ValidateAdmissionControllerConfiguration(config *apisconfig.AdmissionControllerConfiguration) field.ErrorList {
+func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.AdmissionControllerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if !sets.NewString(logger.AllLogLevels...).Has(config.LogLevel) {
@@ -43,9 +43,9 @@ func ValidateAdmissionControllerConfiguration(config *apisconfig.AdmissionContro
 }
 
 // ValidateResourceAdmissionConfiguration validates the given `ResourceAdmissionConfiguration`.
-func validateResourceAdmissionConfiguration(config *apisconfig.ResourceAdmissionConfiguration, fldPath *field.Path) field.ErrorList {
+func validateResourceAdmissionConfiguration(config *admissioncontrollerconfig.ResourceAdmissionConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	validValues := sets.NewString(string(apisconfig.AdmissionModeBlock), string(apisconfig.AdmissionModeLog))
+	validValues := sets.NewString(string(admissioncontrollerconfig.AdmissionModeBlock), string(admissioncontrollerconfig.AdmissionModeLog))
 
 	if config.OperationMode != nil && !validValues.Has(string(*config.OperationMode)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), string(*config.OperationMode), validValues.UnsortedList()))

@@ -29,9 +29,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
@@ -97,17 +97,17 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	}
 
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)))
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretutils.DataKeyCertificateBundle]))
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretsutils.DataKeyCertificateBundle]))
 
 	if v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()) {
 		sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
 		}
-		publicKeys := []string{string(sshKeypairSecret.Data[secretutils.DataKeySSHAuthorizedKeys])}
+		publicKeys := []string{string(sshKeypairSecret.Data[secretsutils.DataKeySSHAuthorizedKeys])}
 
 		if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
-			publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secretutils.DataKeySSHAuthorizedKeys]))
+			publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secretsutils.DataKeySSHAuthorizedKeys]))
 		}
 
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
@@ -233,7 +233,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 		return err
 	}
 
-	return kutil.DeleteObjectsFromListConditionally(ctx, b.SeedClientSet.Client(), secretList, func(obj runtime.Object) bool {
+	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, b.SeedClientSet.Client(), secretList, func(obj runtime.Object) bool {
 		acc, err := meta.Accessor(obj)
 		if err != nil {
 			return false

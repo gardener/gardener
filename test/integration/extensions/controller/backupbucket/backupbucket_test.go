@@ -20,7 +20,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	backupbucketcontroller "github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
+	extensionsbackupbucketcontroller "github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -155,7 +155,7 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 
 	DeferCleanup(func() {
 		By("deleting cloudprovider secret")
-		Expect(controllerutils.RemoveFinalizers(ctx, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
+		Expect(controllerutils.RemoveFinalizers(ctx, c, secret, extensionsbackupbucketcontroller.FinalizerName)).To(Succeed())
 		Expect(client.IgnoreNotFound(c.Delete(ctx, secret))).To(Succeed())
 	})
 
@@ -174,7 +174,7 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 
 	By("verify secret handling")
 	Expect(c.Get(ctx, secretObjectKey, secret)).To(Succeed())
-	Expect(secret.Finalizers).To(ConsistOf(backupbucketcontroller.FinalizerName))
+	Expect(secret.Finalizers).To(ConsistOf(extensionsbackupbucketcontroller.FinalizerName))
 
 	By("verify backupbucket readiness (reconciliation should have happened)")
 	backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -341,7 +341,7 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 	By("check if finalizer has been released from secret")
 	secret = &corev1.Secret{}
 	Expect(c.Get(ctx, secretObjectKey, secret)).To(Succeed())
-	Expect(secret.Finalizers).NotTo(ConsistOf(backupbucketcontroller.FinalizerName))
+	Expect(secret.Finalizers).NotTo(ConsistOf(extensionsbackupbucketcontroller.FinalizerName))
 }
 
 func patchBackupBucketObject(ctx context.Context, c client.Client, backupBucket *extensionsv1alpha1.BackupBucket, transform func()) error {
@@ -384,7 +384,7 @@ func waitForBackupBucketToBeDeleted(ctx context.Context, log logr.Logger, backup
 
 func verifyBackupBucket(backupBucket *extensionsv1alpha1.BackupBucket, generation, observedGeneration int64, expectedTimeOut string, expectedLastOperationType, expectedLastOperationState gomegatypes.GomegaMatcher) {
 	ExpectWithOffset(1, backupBucket.Generation).To(Equal(generation))
-	ExpectWithOffset(1, backupBucket.Finalizers).To(ConsistOf(backupbucketcontroller.FinalizerName))
+	ExpectWithOffset(1, backupBucket.Finalizers).To(ConsistOf(extensionsbackupbucketcontroller.FinalizerName))
 	ExpectWithOffset(1, backupBucket.Status.LastOperation.Type).To(expectedLastOperationType)
 	ExpectWithOffset(1, backupBucket.Status.LastOperation.State).To(expectedLastOperationState)
 	ExpectWithOffset(1, backupBucket.Status.ObservedGeneration).To(Equal(observedGeneration))

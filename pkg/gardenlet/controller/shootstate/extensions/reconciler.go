@@ -28,12 +28,12 @@ import (
 
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 )
 
@@ -93,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// Delete resources which are no longer present in the extension state from the ShootState.Spec.Resources list
 	for _, resource := range currentResources {
-		if gardencorev1beta1helper.GetResourceByName(newResources, resource.Name) == nil {
+		if v1beta1helper.GetResourceByName(newResources, resource.Name) == nil {
 			updateShootStateResourceData(shootState, &resource.ResourceRef, nil)
 		}
 	}
@@ -124,8 +124,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *gardencorev1alpha1.ShootState, namespace string, newResources []gardencorev1beta1.NamedResourceReference) (gardencorev1alpha1helper.ResourceDataList, error) {
-	var resourcesToAddUpdate gardencorev1alpha1helper.ResourceDataList
+func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *gardencorev1alpha1.ShootState, namespace string, newResources []gardencorev1beta1.NamedResourceReference) (v1alpha1helper.ResourceDataList, error) {
+	var resourcesToAddUpdate v1alpha1helper.ResourceDataList
 
 	for _, newResource := range newResources {
 		obj, err := unstructuredutils.GetObjectByRef(ctx, r.SeedClient, &newResource.ResourceRef, namespace)
@@ -141,7 +141,7 @@ func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *garde
 			return nil, err
 		}
 
-		resourceList := gardencorev1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+		resourceList := v1alpha1helper.ResourceDataList(shootState.Spec.Resources)
 		currentResource := resourceList.Get(&newResource.ResourceRef)
 
 		if currentResource == nil || !apiequality.Semantic.DeepEqual(currentResource.Data, newResource) {
@@ -156,7 +156,7 @@ func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *garde
 }
 
 func getShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.ShootState, kind string, name, purpose *string) (*runtime.RawExtension, []gardencorev1beta1.NamedResourceReference) {
-	list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+	list := v1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
 	s := list.Get(kind, name, purpose)
 	if s != nil {
 		return s.State, s.Resources
@@ -165,7 +165,7 @@ func getShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.Shoo
 }
 
 func updateShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.ShootState, kind string, name, purpose *string, state *runtime.RawExtension, resources []gardencorev1beta1.NamedResourceReference) {
-	list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+	list := v1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
 	if state != nil || len(resources) > 0 {
 		list.Upsert(&gardencorev1alpha1.ExtensionResourceState{
 			Kind:      kind,
@@ -181,7 +181,7 @@ func updateShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.S
 }
 
 func updateShootStateResourceData(shootState *gardencorev1alpha1.ShootState, ref *autoscalingv1.CrossVersionObjectReference, data *runtime.RawExtension) {
-	list := gardencorev1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+	list := v1alpha1helper.ResourceDataList(shootState.Spec.Resources)
 	if data != nil {
 		list.Upsert(&gardencorev1alpha1.ResourceData{
 			CrossVersionObjectReference: *ref,
@@ -204,7 +204,7 @@ func (r *Reconciler) getClusterNameFromRequest(req reconcile.Request) string {
 	var clusterName string
 	if req.Namespace == "" {
 		// Handling for cluster-scoped backupentry extension resources.
-		clusterName, _ = gutil.ExtractShootDetailsFromBackupEntryName(req.Name)
+		clusterName, _ = gardenerutils.ExtractShootDetailsFromBackupEntryName(req.Name)
 	} else {
 		clusterName = req.Namespace
 	}

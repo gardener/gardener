@@ -21,7 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -104,7 +104,7 @@ var _ = Describe("reconciler", func() {
 		})
 
 		It("should behave as expected for new clusters", func() {
-			c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{})).Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("controlplane"), shoot.Name))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{})).Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("controlplane"), shoot.Name))
 
 			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				cluster, ok := obj.(*extensionsv1alpha1.Cluster)
@@ -121,7 +121,7 @@ var _ = Describe("reconciler", func() {
 		It("should do nothing if the minimum shoot version is not reached", func() {
 			shoot.Spec.Kubernetes.Version = "1.17.1"
 
-			c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 
 			_, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 			Expect(err).To(Succeed())
@@ -130,7 +130,7 @@ var _ = Describe("reconciler", func() {
 		It("should do nothing if the shoot is hibernated", func() {
 			shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.Bool(true)}
 
-			c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 
 			_, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 			Expect(err).To(Succeed())
@@ -144,7 +144,7 @@ var _ = Describe("reconciler", func() {
 			})
 
 			It("should requeue if not all nodes are updated", func() {
-				c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
+				c.EXPECT().Get(ctx, kubernetesutils.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 
 				oldNewClientForShoot := NewClientForShoot
 				defer func() { NewClientForShoot = oldNewClientForShoot }()
@@ -174,7 +174,7 @@ var _ = Describe("reconciler", func() {
 			})
 
 			It("should perform the migration steps correctly if all nodes are updated", func() {
-				c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
+				c.EXPECT().Get(ctx, kubernetesutils.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 
 				oldNewClientForShoot := NewClientForShoot
 				defer func() { NewClientForShoot = oldNewClientForShoot }()

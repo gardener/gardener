@@ -27,8 +27,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // IsDeleting is a predicate for objects having a deletion timestamp.
@@ -258,12 +258,12 @@ type isBeingMigratedPredicate struct {
 }
 
 func (p *isBeingMigratedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
-// IsObjectBeingMigrated is an alias for gutil.IsObjectBeingMigrated.
-var IsObjectBeingMigrated = gutil.IsObjectBeingMigrated
+// IsObjectBeingMigrated is an alias for gardenerutils.IsObjectBeingMigrated.
+var IsObjectBeingMigrated = gardenerutils.IsObjectBeingMigrated
 
 func (p *isBeingMigratedPredicate) Create(e event.CreateEvent) bool {
 	return IsObjectBeingMigrated(p.ctx, p.reader, e.Object, p.seedName, p.getSeedNamesFromObject)
@@ -286,6 +286,6 @@ func (p *isBeingMigratedPredicate) Generic(e event.GenericEvent) bool {
 func SeedNamePredicate(seedName string, getSeedNamesFromObject func(client.Object) (*string, *string)) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		specSeedName, statusSeedName := getSeedNamesFromObject(obj)
-		return gutil.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
+		return gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
 	})
 }

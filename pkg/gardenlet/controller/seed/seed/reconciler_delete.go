@@ -33,7 +33,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
@@ -56,7 +56,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -114,8 +114,8 @@ func (r *Reconciler) delete(
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
-		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
+		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
 		}
@@ -207,7 +207,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 
 	// TODO(rfranzke): Delete this in a future version.
 	{
-		if err := kutil.DeleteObjects(ctx, seedClient,
+		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
 			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
 		); err != nil {

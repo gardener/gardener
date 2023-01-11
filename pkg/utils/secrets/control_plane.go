@@ -18,8 +18,8 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	configlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
 // ControlPlaneSecretDataKeyCertificatePEM returns the data key inside a Secret of type ControlPlane whose value
@@ -137,7 +137,7 @@ func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 	var (
 		name                 = secret.KubeConfigRequests[0].ClusterName
 		authContextName      string
-		authInfos            = []configv1.NamedAuthInfo{}
+		authInfos            = []clientcmdv1.NamedAuthInfo{}
 		tokenContextName     = fmt.Sprintf("%s-token", name)
 		basicAuthContextName = fmt.Sprintf("%s-basic-auth", name)
 	)
@@ -151,9 +151,9 @@ func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 	}
 
 	if certificate != nil && certificate.CertificatePEM != nil && certificate.PrivateKeyPEM != nil {
-		authInfos = append(authInfos, configv1.NamedAuthInfo{
+		authInfos = append(authInfos, clientcmdv1.NamedAuthInfo{
 			Name: name,
-			AuthInfo: configv1.AuthInfo{
+			AuthInfo: clientcmdv1.AuthInfo{
 				ClientCertificateData: certificate.CertificatePEM,
 				ClientKeyData:         certificate.PrivateKeyPEM,
 			},
@@ -161,28 +161,28 @@ func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 	}
 
 	if secret.Token != nil {
-		authInfos = append(authInfos, configv1.NamedAuthInfo{
+		authInfos = append(authInfos, clientcmdv1.NamedAuthInfo{
 			Name: tokenContextName,
-			AuthInfo: configv1.AuthInfo{
+			AuthInfo: clientcmdv1.AuthInfo{
 				Token: secret.Token.Token,
 			},
 		})
 	}
 
 	if secret.BasicAuth != nil {
-		authInfos = append(authInfos, configv1.NamedAuthInfo{
+		authInfos = append(authInfos, clientcmdv1.NamedAuthInfo{
 			Name: basicAuthContextName,
-			AuthInfo: configv1.AuthInfo{
+			AuthInfo: clientcmdv1.AuthInfo{
 				Username: secret.BasicAuth.Username,
 				Password: secret.BasicAuth.Password,
 			},
 		})
 	}
 
-	config := &configv1.Config{
+	config := &clientcmdv1.Config{
 		CurrentContext: name,
-		Clusters:       []configv1.NamedCluster{},
-		Contexts:       []configv1.NamedContext{},
+		Clusters:       []clientcmdv1.NamedCluster{},
+		Contexts:       []clientcmdv1.NamedContext{},
 		AuthInfos:      authInfos,
 	}
 
@@ -192,21 +192,21 @@ func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 			caData = certificate.CA.CertificatePEM
 		}
 
-		config.Clusters = append(config.Clusters, configv1.NamedCluster{
+		config.Clusters = append(config.Clusters, clientcmdv1.NamedCluster{
 			Name: req.ClusterName,
-			Cluster: configv1.Cluster{
+			Cluster: clientcmdv1.Cluster{
 				CertificateAuthorityData: caData,
 				Server:                   fmt.Sprintf("https://%s", req.APIServerHost),
 			},
 		})
-		config.Contexts = append(config.Contexts, configv1.NamedContext{
+		config.Contexts = append(config.Contexts, clientcmdv1.NamedContext{
 			Name: req.ClusterName,
-			Context: configv1.Context{
+			Context: clientcmdv1.Context{
 				Cluster:  req.ClusterName,
 				AuthInfo: authContextName,
 			},
 		})
 	}
 
-	return runtime.Encode(configlatest.Codec, config)
+	return runtime.Encode(clientcmdlatest.Codec, config)
 }

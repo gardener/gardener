@@ -30,7 +30,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 )
@@ -100,7 +100,7 @@ func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, sh
 		v1beta1constants.ETCDRoleMain,
 	} {
 		numberOfZones := 1
-		if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
+		if v1beta1helper.IsMultiZonalShootControlPlane(shoot) {
 			numberOfZones = 3
 		}
 

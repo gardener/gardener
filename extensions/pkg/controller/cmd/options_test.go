@@ -18,8 +18,8 @@ import (
 	"errors"
 	"fmt"
 
-	mockcmd "github.com/gardener/gardener/extensions/pkg/controller/cmd/mock"
-	mockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
+	extensionsmockcmd "github.com/gardener/gardener/extensions/pkg/controller/cmd/mock"
+	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -67,7 +67,7 @@ var _ = Describe("Options", func() {
 
 		It("should add the prefix to the flags", func() {
 			var bar string
-			flagger := mockcmd.NewMockFlagger(ctrl)
+			flagger := extensionsmockcmd.NewMockFlagger(ctrl)
 			flagger.EXPECT().AddFlags(gomock.Any()).Do(func(fs *pflag.FlagSet) {
 				fs.StringVar(&bar, flagName, "", "bar")
 			})
@@ -98,7 +98,7 @@ var _ = Describe("Options", func() {
 
 		It("should add the prefix to the flags", func() {
 			var bar string
-			option := mockcmd.NewMockOption(ctrl)
+			option := extensionsmockcmd.NewMockOption(ctrl)
 			option.EXPECT().AddFlags(gomock.Any()).Do(func(fs *pflag.FlagSet) {
 				fs.StringVar(&bar, flagName, "", "bar")
 			})
@@ -119,8 +119,8 @@ var _ = Describe("Options", func() {
 	Context("OptionAggregator", func() {
 		Describe("#NewOptionAggregator", func() {
 			It("should register the options correctly", func() {
-				o1 := mockcmd.NewMockOption(ctrl)
-				o2 := mockcmd.NewMockOption(ctrl)
+				o1 := extensionsmockcmd.NewMockOption(ctrl)
+				o2 := extensionsmockcmd.NewMockOption(ctrl)
 
 				aggregated := NewOptionAggregator(o1, o2)
 
@@ -130,8 +130,8 @@ var _ = Describe("Options", func() {
 
 		Describe("#Register", func() {
 			It("should register the options correctly", func() {
-				o1 := mockcmd.NewMockOption(ctrl)
-				o2 := mockcmd.NewMockOption(ctrl)
+				o1 := extensionsmockcmd.NewMockOption(ctrl)
+				o2 := extensionsmockcmd.NewMockOption(ctrl)
 
 				aggregated := NewOptionAggregator()
 				aggregated.Register(o1, o2)
@@ -140,9 +140,9 @@ var _ = Describe("Options", func() {
 			})
 
 			It("should append the newly added options", func() {
-				o1 := mockcmd.NewMockOption(ctrl)
-				o2 := mockcmd.NewMockOption(ctrl)
-				o3 := mockcmd.NewMockOption(ctrl)
+				o1 := extensionsmockcmd.NewMockOption(ctrl)
+				o2 := extensionsmockcmd.NewMockOption(ctrl)
+				o3 := extensionsmockcmd.NewMockOption(ctrl)
 
 				aggregated := NewOptionAggregator(o1)
 				aggregated.Register(o2, o3)
@@ -154,8 +154,8 @@ var _ = Describe("Options", func() {
 		Describe("#AddFlags", func() {
 			It("should add the flags of all options", func() {
 				fs := pflag.NewFlagSet("", pflag.ExitOnError)
-				o1 := mockcmd.NewMockOption(ctrl)
-				o2 := mockcmd.NewMockOption(ctrl)
+				o1 := extensionsmockcmd.NewMockOption(ctrl)
+				o2 := extensionsmockcmd.NewMockOption(ctrl)
 				gomock.InOrder(
 					o1.EXPECT().AddFlags(fs),
 					o2.EXPECT().AddFlags(fs),
@@ -169,8 +169,8 @@ var _ = Describe("Options", func() {
 
 		Describe("#Complete", func() {
 			It("should call complete on all options", func() {
-				o1 := mockcmd.NewMockOption(ctrl)
-				o2 := mockcmd.NewMockOption(ctrl)
+				o1 := extensionsmockcmd.NewMockOption(ctrl)
+				o2 := extensionsmockcmd.NewMockOption(ctrl)
 				gomock.InOrder(
 					o1.EXPECT().Complete(),
 					o2.EXPECT().Complete(),
@@ -182,8 +182,8 @@ var _ = Describe("Options", func() {
 			})
 
 			It("should return abort after the first error and return it", func() {
-				o1 := mockcmd.NewMockOption(ctrl)
-				o2 := mockcmd.NewMockOption(ctrl)
+				o1 := extensionsmockcmd.NewMockOption(ctrl)
+				o2 := extensionsmockcmd.NewMockOption(ctrl)
 				err := errors.New("error")
 				gomock.InOrder(
 					o1.EXPECT().Complete().Return(err),
@@ -719,8 +719,8 @@ var _ = Describe("Options", func() {
 		Describe("#AddToManager", func() {
 			It("should return a configuration that does not add the disabled controllers", func() {
 				var (
-					f1 = mockcontroller.NewMockAddToManager(ctrl)
-					f2 = mockcontroller.NewMockAddToManager(ctrl)
+					f1 = extensionsmockcontroller.NewMockAddToManager(ctrl)
+					f2 = extensionsmockcontroller.NewMockAddToManager(ctrl)
 
 					name1 = "name1"
 					name2 = "name2"

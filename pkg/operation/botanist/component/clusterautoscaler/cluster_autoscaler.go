@@ -42,8 +42,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -168,7 +168,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 				Port:     portMetrics,
 			},
 		}
-		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
+		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 		return nil
 	}); err != nil {
 		return err
@@ -218,7 +218,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 							},
 							{
 								Name:  "TARGET_KUBECONFIG",
-								Value: gutil.PathGenericKubeconfig,
+								Value: gardenerutils.PathGenericKubeconfig,
 							},
 						},
 						Resources: corev1.ResourceRequirements{
@@ -235,7 +235,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err
@@ -307,7 +307,7 @@ func getLabels() map[string]string {
 }
 
 func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
-	return kutil.DeleteObjects(
+	return kubernetesutils.DeleteObjects(
 		ctx,
 		c.client,
 		c.emptyManagedResource(),
@@ -345,8 +345,8 @@ func (c *clusterAutoscaler) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: c.namespace}}
 }
 
-func (c *clusterAutoscaler) newShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameClusterAutoscaler, c.namespace)
+func (c *clusterAutoscaler) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameClusterAutoscaler, c.namespace)
 }
 
 func (c *clusterAutoscaler) emptyDeployment() *appsv1.Deployment {
@@ -375,7 +375,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		command = []string{
 			"./cluster-autoscaler",
 			fmt.Sprintf("--address=:%d", portMetrics),
-			"--kubeconfig=" + gutil.PathGenericKubeconfig,
+			"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 			"--cloud-provider=mcm",
 			"--stderrthreshold=info",
 			"--skip-nodes-with-system-pods=false",

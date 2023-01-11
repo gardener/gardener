@@ -26,7 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -510,7 +510,7 @@ var _ = Describe("Project controller tests", func() {
 			for _, name := range []string{"gardener.cloud:system:project-member", "gardener.cloud:system:project-viewer", "gardener.cloud:system:project-serviceaccountmanager"} {
 				roleBindings = append(roleBindings, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: projectNamespaceKey.Name}})
 			}
-			Expect(kutil.DeleteObjects(ctx, testClient, roleBindings...)).To(Succeed())
+			Expect(kubernetesutils.DeleteObjects(ctx, testClient, roleBindings...)).To(Succeed())
 
 			By("Ensure RoleBindings are recreated")
 			Eventually(func(g Gomega) {

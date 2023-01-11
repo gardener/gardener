@@ -17,7 +17,7 @@ package rest
 import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/operations"
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	bastionstore "github.com/gardener/gardener/pkg/registry/operations/bastion/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +32,7 @@ type StorageProvider struct{}
 // NewRESTStorage creates a new API group info object and registers the v1alpha1 operations storage.
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(operations.GroupName, api.Scheme, metav1.ParameterCodec, api.Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap[gardenoperationsv1alpha1.SchemeGroupVersion.Version] = p.v1alpha1Storage(restOptionsGetter)
+	apiGroupInfo.VersionedResourcesStorageMap[operationsv1alpha1.SchemeGroupVersion.Version] = p.v1alpha1Storage(restOptionsGetter)
 	return apiGroupInfo
 }
 

@@ -22,7 +22,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -62,7 +62,7 @@ var _ = Describe("Reconciler", func() {
 		fakeClient := fakeclientset.NewSimpleClientset()
 		fakeCertificatesClient = fakeClient.CertificatesV1().CertificateSigningRequests()
 
-		privateKey, _ = secretutils.FakeGenerateKey(rand.Reader, 4096)
+		privateKey, _ = secretsutils.FakeGenerateKey(rand.Reader, 4096)
 		csr = &certificatesv1.CertificateSigningRequest{
 			TypeMeta: metav1.TypeMeta{Kind: "CertificateSigningRequest"},
 			ObjectMeta: metav1.ObjectMeta{

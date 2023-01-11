@@ -43,8 +43,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -80,7 +80,7 @@ const (
 	componentConfigTmpl = `apiVersion: {{ .apiVersion }}
 kind: KubeSchedulerConfiguration
 clientConnection:
-  kubeconfig: ` + gutil.PathGenericKubeconfig + `
+  kubeconfig: ` + gardenerutils.PathGenericKubeconfig + `
 leaderElection:
   leaderElect: true
 {{- if eq .profile "bin-packing" }}
@@ -155,7 +155,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  v1beta1constants.DeploymentNameKubeScheduler,
-		DNSNames:                    kutil.DNSNamesForService(serviceName, k.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(serviceName, k.namespace),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -185,7 +185,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		},
 		Data: map[string]string{dataKeyComponentConfig: componentConfigYAML},
 	}
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	var (
 		vpa                 = k.emptyVPA()
@@ -218,7 +218,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Port:     port,
 			},
 		}
-		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
+		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 		return nil
 	}); err != nil {
 		return err
@@ -343,7 +343,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
 	}); err != nil {
@@ -435,8 +435,8 @@ func (k *kubeScheduler) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}}
 }
 
-func (k *kubeScheduler) newShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeScheduler, k.namespace)
+func (k *kubeScheduler) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeScheduler, k.namespace)
 }
 
 func (k *kubeScheduler) reconcileShootResources(ctx context.Context, serviceAccountName string) error {
@@ -530,8 +530,8 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 	command = append(command,
 		"/usr/local/bin/kube-scheduler",
 		fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyComponentConfig),
-		"--authentication-kubeconfig="+gutil.PathGenericKubeconfig,
-		"--authorization-kubeconfig="+gutil.PathGenericKubeconfig,
+		"--authentication-kubeconfig="+gardenerutils.PathGenericKubeconfig,
+		"--authorization-kubeconfig="+gardenerutils.PathGenericKubeconfig,
 		fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathClientCA, fileNameClientCA),
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
@@ -543,7 +543,7 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 	}
 
 	if k.config != nil {
-		command = append(command, kutil.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
+		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
 	}
 
 	command = append(command, "--v=2")

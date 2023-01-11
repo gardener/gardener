@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -49,7 +49,7 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
-	coreClient           coreclientset.Interface
+	coreClient           gardencoreclientset.Interface
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
 }
@@ -75,7 +75,7 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreClientset sets the garden core clientset.
-func (v *ManagedSeed) SetInternalCoreClientset(c coreclientset.Interface) {
+func (v *ManagedSeed) SetInternalCoreClientset(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 

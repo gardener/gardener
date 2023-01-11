@@ -28,7 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles ControllerDeployment.
@@ -45,7 +45,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	log := logf.FromContext(ctx)
 
 	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-	if err := r.Client.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(req.Name), controllerDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil

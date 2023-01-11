@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -35,7 +35,7 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 				return
 			}
 
-			if !strings.HasPrefix(serviceAccount.Name, bootstraputil.ServiceAccountNamePrefix) {
+			if !strings.HasPrefix(serviceAccount.Name, gardenletbootstraputil.ServiceAccountNamePrefix) {
 				return
 			}
 
@@ -67,7 +67,7 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 				return
 			}
 
-			if !strings.HasPrefix(serviceAccount.Name, bootstraputil.ServiceAccountNamePrefix) {
+			if !strings.HasPrefix(serviceAccount.Name, gardenletbootstraputil.ServiceAccountNamePrefix) {
 				return
 			}
 

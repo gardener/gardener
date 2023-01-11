@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -97,7 +97,7 @@ func ReconcileWebhooksForAllNamespaces(
 		)
 
 		fns = append(fns, func(ctx context.Context) error {
-			if err := c.Get(ctx, kutil.Key(namespaceName, networkPolicyName), &networkingv1.NetworkPolicy{}); err != nil {
+			if err := c.Get(ctx, kubernetesutils.Key(namespaceName, networkPolicyName), &networkingv1.NetworkPolicy{}); err != nil {
 				if !errors.IsNotFound(err) {
 					return err
 				}

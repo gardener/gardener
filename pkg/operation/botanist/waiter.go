@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,7 +34,7 @@ import (
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {
 	const timeout = 10 * time.Minute
 
-	loadBalancerIngress, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.ShootClientSet.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout)
+	loadBalancerIngress, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.ShootClientSet.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout)
 	if err != nil {
 		return err
 	}

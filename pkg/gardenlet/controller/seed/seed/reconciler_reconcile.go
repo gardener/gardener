@@ -86,11 +86,11 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -138,7 +138,7 @@ func (r *Reconciler) reconcile(
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
 	// does exist.
 	if seed.Spec.SecretRef != nil {
-		secret, err := kutil.GetSecretByReference(ctx, r.GardenClient, seed.Spec.SecretRef)
+		secret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, seed.Spec.SecretRef)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -161,7 +161,7 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, log, r.GardenClient, gutil.ComputeGardenNamespace(seed.Name), true)
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.Name), true)
 	if err != nil {
 		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
 		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
@@ -261,10 +261,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// Deploy dedicated CA certificate for seed cluster, auto-rotate it roughly once a month and drop the old CA 24 hours
 	// after rotation.
-	if _, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:       v1beta1constants.SecretNameCASeed,
 		CommonName: "kubernetes",
-		CertType:   secretutils.CACert,
+		CertType:   secretsutils.CACert,
 		Validity:   pointer.Duration(30 * 24 * time.Hour),
 	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
 		return err
@@ -342,8 +342,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 		globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
 		globalMonitoringSecretSeed.Immutable = globalMonitoringSecretGarden.Immutable
 
-		if _, ok := globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth]; !ok {
-			globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecretGarden.Data[secretutils.DataKeyUserName], globalMonitoringSecretGarden.Data[secretutils.DataKeyPassword])
+		if _, ok := globalMonitoringSecretSeed.Data[secretsutils.DataKeySHA1Auth]; !ok {
+			globalMonitoringSecretSeed.Data[secretsutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecretGarden.Data[secretsutils.DataKeyUserName], globalMonitoringSecretGarden.Data[secretsutils.DataKeyPassword])
 		}
 
 		return nil
@@ -375,7 +375,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	log.Info("Deploying custom resource definitions")
 
 	if hvpaEnabled {
-		if err := kutil.DeleteObjects(ctx, seedClient,
+		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
 			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
 			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
 		); err != nil {
@@ -507,7 +507,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 				shootInfo := &corev1.ConfigMap{}
 				maintenanceBegin := "220000-0000"
 				maintenanceEnd := "230000-0000"
-				if err := seedClient.Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
+				if err := seedClient.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return err
 					}
@@ -533,7 +533,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 					},
 				}
 
-				currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameLoki))
+				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameLoki))
 				if err != nil {
 					return err
 				}
@@ -610,7 +610,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 
 		// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
-		kutil.ByName().Sort(existingConfigMaps)
+		kubernetesutils.ByName().Sort(existingConfigMaps)
 		modifyFilter := `
     Name          modify
     Match         kubernetes.*
@@ -673,7 +673,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	if hvpaEnabled {
 		for resource := range monitoringResources {
-			currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(r.GardenNamespace, resource))
+			currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, resource))
 			if err != nil {
 				return err
 			}
@@ -722,7 +722,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
 
-	wildcardCert, err := gutil.GetWildcardCertificate(ctx, seedClient)
+	wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, seedClient)
 	if err != nil {
 		return err
 	}
@@ -736,12 +736,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 		grafanaIngressTLSSecretName = wildcardCert.GetName()
 		prometheusIngressTLSSecretName = wildcardCert.GetName()
 	} else {
-		grafanaIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		grafanaIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "grafana-tls",
 			CommonName:                  "grafana",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{seed.GetIngressFQDN(grafanaPrefix)},
-			CertType:                    secretutils.ServerCert,
+			CertType:                    secretsutils.ServerCert,
 			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
@@ -749,12 +749,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "aggregate-prometheus-tls",
 			CommonName:                  "prometheus",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{seed.GetIngressFQDN(prometheusPrefix)},
-			CertType:                    secretutils.ServerCert,
+			CertType:                    secretsutils.ServerCert,
 			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
@@ -781,7 +781,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	ingressClass, err := gutil.ComputeNginxIngressClassForSeed(seed.GetInfo(), seed.GetInfo().Status.KubernetesVersion)
+	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(seed.GetInfo(), seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -884,7 +884,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// TODO(rfranzke): Delete this in a future version.
 	{
-		if err := kutil.DeleteObjects(ctx, seedClient,
+		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
 			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
 		); err != nil {
@@ -1055,7 +1055,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log logr.Logger, k8sClient client.Client, newStorageQuantity resource.Quantity) error {
 	// Check if we need resizing
 	pvc := &corev1.PersistentVolumeClaim{}
-	if err := k8sClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "loki-loki-0"), pvc); err != nil {
+	if err := k8sClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, "loki-loki-0"), pvc); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 
@@ -1257,7 +1257,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 			return nil, err
 		}
 
-		ingressLoadBalancerAddress, err = kutil.WaitUntilLoadBalancerIsReady(
+		ingressLoadBalancerAddress, err = kubernetesutils.WaitUntilLoadBalancerIsReady(
 			ctx,
 			log,
 			seedClient,

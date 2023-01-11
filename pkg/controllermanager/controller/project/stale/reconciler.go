@@ -23,8 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -71,7 +71,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	// Skip projects whose namespace is annotated with the skip-stale-check annotation.
 	namespace := &corev1.Namespace{}
-	if err := r.Client.Get(ctx, kutil.Key(*project.Spec.Namespace), namespace); err != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(*project.Spec.Namespace), namespace); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	}
 
 	log.Info("Deleting Project now because its auto-delete timestamp is exceeded")
-	if err := gutil.ConfirmDeletion(ctx, r.Client, project); err != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, r.Client, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Project already gone")
 			return nil
@@ -146,11 +146,11 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 }
 
 func (r *Reconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
-	return kutil.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(namespace))
+	return kubernetesutils.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(namespace))
 }
 
 func (r *Reconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {
-	return kutil.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"), client.InNamespace(namespace))
+	return kubernetesutils.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"), client.InNamespace(namespace))
 }
 
 func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
@@ -159,7 +159,7 @@ func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace str
 		ctx,
 		secretList,
 		client.InNamespace(namespace),
-		gutil.UncontrolledSecretSelector,
+		gardenerutils.UncontrolledSecretSelector,
 		client.MatchingLabels{v1beta1constants.LabelSecretBindingReference: "true"},
 	); err != nil {
 		return false, err

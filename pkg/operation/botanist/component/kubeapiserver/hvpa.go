@@ -17,7 +17,7 @@ package kubeapiserver
 import (
 	"context"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +41,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
 
-		return kutil.DeleteObject(ctx, k.client.Client(), hvpa)
+		return kubernetesutils.DeleteObject(ctx, k.client.Client(), hvpa)
 	}
 
 	var (

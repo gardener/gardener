@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -199,26 +199,26 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		}
 	)
 
-	utilruntime.Must(kutil.MakeUnique(configMap))
-	utilruntime.Must(kutil.MakeUnique(dhSecret))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(dhSecret))
 
 	secretCAVPN, found := v.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
 	}
 
-	secretServer, err := v.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	secretServer, err := v.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        "vpn-seed-server",
 		CommonName:                  "vpn-seed-server",
-		DNSNames:                    kutil.DNSNamesForService(ServiceName, v.namespace),
-		CertType:                    secretutils.ServerCert,
+		DNSNames:                    kubernetesutils.DNSNamesForService(ServiceName, v.namespace),
+		CertType:                    secretsutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
 
-	secretTLSAuth, err := v.secretsManager.Generate(ctx, &secretutils.VPNTLSAuthConfig{
+	secretTLSAuth, err := v.secretsManager.Generate(ctx, &secretsutils.VPNTLSAuthConfig{
 		Name: SecretNameTLSAuth,
 	}, secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
@@ -256,7 +256,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				return err
 			}
 		}
-		if err := kutil.DeleteObjects(ctx, v.client,
+		if err := kubernetesutils.DeleteObjects(ctx, v.client,
 			v.emptyDeployment(),
 			v.emptyService(nil),
 			v.emptyDestinationRule(nil),
@@ -277,7 +277,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			objects = append(objects, v.emptyService(&i), v.emptyDestinationRule(&i))
 		}
-		if err := kutil.DeleteObjects(ctx, v.client, objects...); err != nil {
+		if err := kubernetesutils.DeleteObjects(ctx, v.client, objects...); err != nil {
 			return err
 		}
 	}
@@ -413,7 +413,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 											Name: secretCAVPN.Name,
 										},
 										Items: []corev1.KeyToPath{{
-											Key:  secretutils.DataKeyCertificateBundle,
+											Key:  secretsutils.DataKeyCertificateBundle,
 											Path: fileNameCABundle,
 										}},
 									},
@@ -425,12 +425,12 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 										},
 										Items: []corev1.KeyToPath{
 											{
-												Key:  secretutils.DataKeyCertificate,
-												Path: secretutils.DataKeyCertificate,
+												Key:  secretsutils.DataKeyCertificate,
+												Path: secretsutils.DataKeyCertificate,
 											},
 											{
-												Key:  secretutils.DataKeyPrivateKey,
-												Path: secretutils.DataKeyPrivateKey,
+												Key:  secretsutils.DataKeyPrivateKey,
+												Path: secretsutils.DataKeyPrivateKey,
 											},
 										},
 									},
@@ -917,7 +917,7 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 	for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 		objects = append(objects, v.emptyDestinationRule(&i), v.emptyService(&i))
 	}
-	return kutil.DeleteObjects(ctx, v.client, objects...)
+	return kubernetesutils.DeleteObjects(ctx, v.client, objects...)
 }
 
 func (v *vpnSeedServer) Wait(_ context.Context) error        { return nil }
@@ -1011,8 +1011,8 @@ var envoyConfig = `static_resources:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
           common_tls_context:
             tls_certificates:
-            - certificate_chain: { filename: "` + volumeMountPathCerts + `/` + secretutils.DataKeyCertificate + `" }
-              private_key: { filename: "` + volumeMountPathCerts + `/` + secretutils.DataKeyPrivateKey + `" }
+            - certificate_chain: { filename: "` + volumeMountPathCerts + `/` + secretsutils.DataKeyCertificate + `" }
+              private_key: { filename: "` + volumeMountPathCerts + `/` + secretsutils.DataKeyPrivateKey + `" }
             validation_context:
               trusted_ca:
                 filename: ` + volumeMountPathCerts + `/` + fileNameCABundle + `

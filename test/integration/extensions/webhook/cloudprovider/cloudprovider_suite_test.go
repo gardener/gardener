@@ -22,7 +22,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
-	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
+	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -161,8 +161,8 @@ var _ = BeforeSuite(func() {
 })
 
 func addTestWebhookToManager(mgr manager.Manager) error {
-	switchOptions := webhookcmd.NewSwitchOptions(
-		webhookcmd.Switch("cloudprovider", func(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
+	switchOptions := extensionscmdwebhook.NewSwitchOptions(
+		extensionscmdwebhook.Switch("cloudprovider", func(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			return cloudprovider.New(mgr, cloudprovider.Args{
 				Provider:             providerName,
 				Mutator:              cloudprovider.NewMutator(log, testcloudprovider.NewEnsurer(log)),
@@ -171,7 +171,7 @@ func addTestWebhookToManager(mgr manager.Manager) error {
 		}),
 	)
 
-	addToManagerOptions := webhookcmd.NewAddToManagerOptions(providerName, "", nil, &webhookcmd.ServerOptions{
+	addToManagerOptions := extensionscmdwebhook.NewAddToManagerOptions(providerName, "", nil, &extensionscmdwebhook.ServerOptions{
 		Mode: extensionswebhook.ModeURL,
 		URL:  fmt.Sprintf("%s:%d", testEnv.WebhookInstallOptions.LocalServingHost, testEnv.WebhookInstallOptions.LocalServingPort),
 	}, switchOptions)

@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -82,7 +82,7 @@ var _ = Describe("Reconciler", func() {
 		reconciler = &Reconciler{GardenClient: gardenClient, Actuator: actuator, Config: cfg}
 
 		ctx = context.TODO()
-		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}
+		request = reconcile.Request{NamespacedName: kubernetesutils.Key(namespace, name)}
 
 		managedSeed = &seedmanagementv1alpha1.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -107,7 +107,7 @@ var _ = Describe("Reconciler", func() {
 
 	var (
 		expectGetManagedSeed = func() {
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 					*ms = *managedSeed
 					return nil

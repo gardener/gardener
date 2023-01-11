@@ -23,7 +23,7 @@ import (
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/chart"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,7 +52,7 @@ var (
 
 func (w *workerDelegate) GetMachineControllerManagerChartValues(ctx context.Context) (map[string]interface{}, error) {
 	namespace := &corev1.Namespace{}
-	if err := w.Client().Get(ctx, kutil.Key(w.worker.Namespace), namespace); err != nil {
+	if err := w.Client().Get(ctx, kubernetesutils.Key(w.worker.Namespace), namespace); err != nil {
 		return nil, err
 	}
 

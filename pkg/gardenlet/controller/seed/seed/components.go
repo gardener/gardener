@@ -21,7 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -41,10 +41,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -191,14 +191,14 @@ func defaultIstio(
 				MaxReplicas:           maxReplicas,
 				Ports:                 defaultIngressGatewayConfig.Ports,
 				LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
-				Labels:                operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+				Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
 
 		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 			Values: istio.ProxyValues{
-				Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+				Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
@@ -217,7 +217,7 @@ func defaultIstio(
 						ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 						Ports:                 defaultIngressGatewayConfig.Ports,
 						// LoadBalancerIP can currently not be provided for automatic ingress gateways
-						Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+						Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 						Zones:  []string{zone},
 					},
 					Namespace: namespace,
@@ -225,7 +225,7 @@ func defaultIstio(
 
 				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 					Values: istio.ProxyValues{
-						Labels: operation.GetIstioZoneLabels(gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+						Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					},
 					Namespace: namespace,
 				})
@@ -323,7 +323,7 @@ func defaultDependencyWatchdogs(
 	dwdEndpoint = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
 	dwdProbe = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues))
 
-	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
+	if v1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
 		var (
 			dependencyWatchdogEndpointConfigurationFuncs = []dependencywatchdog.EndpointConfigurationFunc{
@@ -351,7 +351,7 @@ func defaultDependencyWatchdogs(
 		dwdEndpoint = dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues)
 	}
 
-	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
+	if v1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
 		var (
 			dependencyWatchdogProbeConfigurationFuncs = []dependencywatchdog.ProbeConfigurationFunc{
@@ -403,7 +403,7 @@ func defaultVPNAuthzServer(
 		return vpnAuthzServer, nil
 	}
 
-	hasVPNSeedDeployments, err := kutil.ResourcesExist(ctx, c, appsv1.SchemeGroupVersion.WithKind("DeploymentList"), client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}))
+	hasVPNSeedDeployments, err := kubernetesutils.ResourcesExist(ctx, c, appsv1.SchemeGroupVersion.WithKind("DeploymentList"), client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}))
 	if err != nil {
 		return nil, err
 	}

@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -57,7 +57,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 	)
 
 	BeforeEach(func() {
-		privateKey, _ = secretutils.FakeGenerateKey(rand.Reader, 4096)
+		privateKey, _ = secretsutils.FakeGenerateKey(rand.Reader, 4096)
 		certificateSubject = &pkix.Name{
 			CommonName:   userName,
 			Organization: []string{user.NodesGroup},

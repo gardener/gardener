@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	"github.com/go-logr/logr"
@@ -163,8 +163,8 @@ func (s *statusUpdater) ErrorCustom(
 	}
 
 	var (
-		errDescription  = gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err))
-		lastOp, lastErr = ReconcileError(lastOperationType, errDescription, 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
+		errDescription  = v1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err))
+		lastOp, lastErr = ReconcileError(lastOperationType, errDescription, 50, v1beta1helper.ExtractErrorCodes(err)...)
 	)
 
 	log.Error(fmt.Errorf(errDescription), "Error") //nolint:logcheck

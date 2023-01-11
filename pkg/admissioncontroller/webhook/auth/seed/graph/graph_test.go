@@ -21,13 +21,13 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -96,14 +96,14 @@ var _ = Describe("graph", func() {
 
 		backupEntry1 *gardencorev1beta1.BackupEntry
 
-		bastion1 *gardenoperationsv1alpha1.Bastion
+		bastion1 *operationsv1alpha1.Bastion
 
 		secretBinding1          *gardencorev1beta1.SecretBinding
 		secretBinding1SecretRef = corev1.SecretReference{Namespace: "foobar", Name: "bazfoo"}
 
 		controllerInstallation1 *gardencorev1beta1.ControllerInstallation
 
-		seedConfig1 *gardenletconfigv1alpha1.SeedConfig
+		seedConfig1 *gardenletv1alpha1.SeedConfig
 
 		managedSeed1                       *seedmanagementv1alpha1.ManagedSeed
 		managedSeedBootstrapMode           = seedmanagementv1alpha1.BootstrapToken
@@ -145,7 +145,7 @@ var _ = Describe("graph", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):                fakeInformerProject,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):           fakeInformerBackupBucket,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):            fakeInformerBackupEntry,
-				gardenoperationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):         fakeInformerBastion,
+				operationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):               fakeInformerBastion,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
@@ -234,9 +234,9 @@ var _ = Describe("graph", func() {
 			},
 		}
 
-		bastion1 = &gardenoperationsv1alpha1.Bastion{
+		bastion1 = &operationsv1alpha1.Bastion{
 			ObjectMeta: metav1.ObjectMeta{Name: "bastion1", Namespace: "bastion1namespace"},
-			Spec: gardenoperationsv1alpha1.BastionSpec{
+			Spec: operationsv1alpha1.BastionSpec{
 				SeedName: &seed1.Name,
 			},
 		}
@@ -255,7 +255,7 @@ var _ = Describe("graph", func() {
 			},
 		}
 
-		seedConfig1 = &gardenletconfigv1alpha1.SeedConfig{
+		seedConfig1 = &gardenletv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
 					Backup: &gardencorev1beta1.SeedBackup{
@@ -273,7 +273,7 @@ var _ = Describe("graph", func() {
 				Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 					Bootstrap: &managedSeedBootstrapMode,
 					Config: runtime.RawExtension{
-						Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+						Object: &gardenletv1alpha1.GardenletConfiguration{
 							SeedConfig: seedConfig1,
 						},
 					},
@@ -309,7 +309,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		}
 
 		serviceAccount1 = &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "sa1ns", Name: bootstraputil.ServiceAccountNamePrefix + "sa1"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "sa1ns", Name: gardenletbootstraputil.ServiceAccountNamePrefix + "sa1"},
 			Secrets: []corev1.ObjectReference{
 				{Name: serviceAccount1Secret1},
 				{Name: serviceAccount1Secret2},
@@ -336,7 +336,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (irrelevant change)")
@@ -348,7 +348,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (remove secret ref)")
@@ -360,7 +360,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (remove backup secret ref)")
@@ -372,7 +372,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (remove DNS provider secret ref)")
@@ -384,7 +384,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (all secret refs)")
@@ -398,7 +398,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("delete")
 		fakeInformerSeed.Delete(seed1)
@@ -407,7 +407,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 	})
 
@@ -790,7 +790,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Status.SeedName)).To(BeFalse())
 	})
 
-	It("should behave as expected for gardenoperationsv1alpha1.Bastion", func() {
+	It("should behave as expected for operationsv1alpha1.Bastion", func() {
 		By("add")
 		fakeInformerBastion.Add(bastion1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
@@ -1118,7 +1118,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
-			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
@@ -1252,7 +1252,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
-			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
@@ -1405,7 +1405,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
-			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
@@ -1552,7 +1552,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
-			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeFalse()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 		}()
 		wg.Add(1)

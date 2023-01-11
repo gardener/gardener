@@ -15,17 +15,17 @@
 package app
 
 import (
-	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionscontrolplanecontroller "github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	extensionsdnsrecordcontroller "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionshealthcheckcontroller "github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	extensionsheartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	extensionsinfrastructurecontroller "github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
-	extensionsoperatingsystemconfgcontroller "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
+	extensionsoperatingsystemconfigcontroller "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
-	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
-	extensioncontrolplanewebhook "github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
-	extensionshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
+	extensionscontrolplanewebhook "github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
+	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	controlplanecontroller "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
@@ -46,34 +46,34 @@ import (
 	shootwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/shoot"
 )
 
-// ControllerSwitchOptions are the controllercmd.SwitchOptions for the provider controllers.
-func ControllerSwitchOptions() *controllercmd.SwitchOptions {
-	return controllercmd.NewSwitchOptions(
-		controllercmd.Switch(backupbucketcontroller.ControllerName, backupbucketcontroller.AddToManager),
-		controllercmd.Switch(backupentrycontroller.ControllerName, backupentrycontroller.AddToManager),
-		controllercmd.Switch(extensionscontrolplanecontroller.ControllerName, controlplanecontroller.AddToManager),
-		controllercmd.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),
-		controllercmd.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
-		controllercmd.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
-		controllercmd.Switch(ingresscontroller.ControllerName, ingresscontroller.AddToManager),
-		controllercmd.Switch(servicecontroller.ControllerName, servicecontroller.AddToManager),
-		controllercmd.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
-		controllercmd.Switch(extensionsoperatingsystemconfgcontroller.ControllerName, operatingsystemconfigcontroller.AddToManager),
-		controllercmd.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
-		controllercmd.Switch(localextensionseedcontroller.ControllerName, localextensionseedcontroller.AddToManager),
-		controllercmd.Switch(localextensionshootcontroller.ControllerName, localextensionshootcontroller.AddToManager),
+// ControllerSwitchOptions are the extensionscmdcontroller.SwitchOptions for the provider controllers.
+func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
+	return extensionscmdcontroller.NewSwitchOptions(
+		extensionscmdcontroller.Switch(backupbucketcontroller.ControllerName, backupbucketcontroller.AddToManager),
+		extensionscmdcontroller.Switch(backupentrycontroller.ControllerName, backupentrycontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionscontrolplanecontroller.ControllerName, controlplanecontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
+		extensionscmdcontroller.Switch(ingresscontroller.ControllerName, ingresscontroller.AddToManager),
+		extensionscmdcontroller.Switch(servicecontroller.ControllerName, servicecontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionsoperatingsystemconfigcontroller.ControllerName, operatingsystemconfigcontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
+		extensionscmdcontroller.Switch(localextensionseedcontroller.ControllerName, localextensionseedcontroller.AddToManager),
+		extensionscmdcontroller.Switch(localextensionshootcontroller.ControllerName, localextensionshootcontroller.AddToManager),
 	)
 }
 
-// WebhookSwitchOptions are the webhookcmd.SwitchOptions for the provider webhooks.
-func WebhookSwitchOptions() *webhookcmd.SwitchOptions {
-	return webhookcmd.NewSwitchOptions(
-		webhookcmd.Switch(extensioncontrolplanewebhook.ExposureWebhookName, controlplaneexposurewebhook.AddToManager),
-		webhookcmd.Switch(extensioncontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
-		webhookcmd.Switch(extensionshootwebhook.WebhookName, shootwebhook.AddToManager),
-		webhookcmd.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),
-		webhookcmd.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
-		webhookcmd.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
-		webhookcmd.Switch(nodewebhook.WebhookNameShoot, nodewebhook.AddShootWebhookToManager),
+// WebhookSwitchOptions are the extensionscmdwebhook.SwitchOptions for the provider webhooks.
+func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
+	return extensionscmdwebhook.NewSwitchOptions(
+		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.ExposureWebhookName, controlplaneexposurewebhook.AddToManager),
+		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
+		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
+		extensionscmdwebhook.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),
+		extensionscmdwebhook.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
+		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
+		extensionscmdwebhook.Switch(nodewebhook.WebhookNameShoot, nodewebhook.AddShootWebhookToManager),
 	)
 }

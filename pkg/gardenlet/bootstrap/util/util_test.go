@@ -45,7 +45,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -351,13 +351,13 @@ var _ = Describe("Util", func() {
 			It("should successfully refresh the bootstrap token", func() {
 				// There are 3 calls requesting the same secret in the code. This can be improved.
 				// However it is not critical as bootstrap token generation does not happen too frequently
-				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					s.Data = map[string][]byte{
 						bootstraptokenapi.BootstrapTokenExpirationKey: []byte(timestampInThePast),
 					}
 					return nil
 				})
-				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(nil).Times(2)
+				c.EXPECT().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(nil).Times(2)
 
 				c.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).
 					DoAndReturn(func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
@@ -384,7 +384,7 @@ var _ = Describe("Util", func() {
 			})
 
 			It("should reuse existing bootstrap token", func() {
-				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					s.Data = map[string][]byte{
 						bootstraptokenapi.BootstrapTokenExpirationKey: []byte(timestampInTheFuture),
 						bootstraptokenapi.BootstrapTokenIDKey:         []byte("dummy"),
@@ -440,7 +440,7 @@ var _ = Describe("Util", func() {
 				})
 
 				// mock existing service account secret
-				c.EXPECT().Get(ctx, kutil.Key("garden", serviceAccountSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, kubernetesutils.Key("garden", serviceAccountSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					s.Data = map[string][]byte{
 						"token": []byte("tokenizer"),
 					}

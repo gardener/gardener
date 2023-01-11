@@ -28,8 +28,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Shoot resources and updates the status for a forceful restoration in case the grace period for
@@ -55,7 +55,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If the shoot is being deleted or no longer being migrated to this seed, clear the migration start time
-	if shoot.DeletionTimestamp != nil || !gutil.IsObjectBeingMigrated(ctx, r.GardenClient, shoot, r.SeedName, gutil.GetShootSeedNames) {
+	if shoot.DeletionTimestamp != nil || !gardenerutils.IsObjectBeingMigrated(ctx, r.GardenClient, shoot, r.SeedName, gardenerutils.GetShootSeedNames) {
 		log.V(1).Info("Clearing migration start time")
 		if err := r.setMigrationStartTime(ctx, shoot, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
@@ -136,7 +136,7 @@ func (r *Reconciler) updateStatusForRestore(ctx context.Context, shoot *gardenco
 }
 
 func hasForceRestoreAnnotation(shoot *gardencorev1beta1.Shoot) bool {
-	return kutil.HasMetaDataAnnotation(shoot, v1beta1constants.AnnotationShootForceRestore, "true")
+	return kubernetesutils.HasMetaDataAnnotation(shoot, v1beta1constants.AnnotationShootForceRestore, "true")
 }
 
 func removeForceRestoreAnnotation(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) error {

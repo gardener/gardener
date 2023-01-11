@@ -41,7 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -404,7 +404,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 			return err
 		}
 	} else {
-		err = kutil.DeleteObjects(ctx, k.client.Client(),
+		err = kubernetesutils.DeleteObjects(ctx, k.client.Client(),
 			k.emptyServiceAccount(),
 			k.emptyRoleHAVPN(),
 			k.emptyRoleBindingHAVPN(),
@@ -449,7 +449,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {
-	return kutil.DeleteObjects(ctx, k.client.Client(),
+	return kubernetesutils.DeleteObjects(ctx, k.client.Client(),
 		k.emptyManagedResource(),
 		k.emptyManagedResourceSecret(),
 		k.emptyHorizontalPodAutoscaler(),
@@ -492,7 +492,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 			return err
 		}
 
-		newestPod, err2 := kutil.NewestPodForDeployment(ctx, k.client.APIReader(), deployment)
+		newestPod, err2 := kubernetesutils.NewestPodForDeployment(ctx, k.client.APIReader(), deployment)
 		if err2 != nil {
 			return fmt.Errorf("failure to find the newest pod for deployment to read the logs: %s: %w", err2.Error(), err)
 		}
@@ -500,7 +500,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 			return err
 		}
 
-		logs, err2 := kutil.MostRecentCompleteLogs(ctx, k.client.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, ContainerNameKubeAPIServer, tailLines, headBytes)
+		logs, err2 := kubernetesutils.MostRecentCompleteLogs(ctx, k.client.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, ContainerNameKubeAPIServer, tailLines, headBytes)
 		if err2 != nil {
 			return fmt.Errorf("failure to read the logs: %s: %w", err2.Error(), err)
 		}

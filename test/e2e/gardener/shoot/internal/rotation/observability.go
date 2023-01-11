@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -44,7 +44,7 @@ func (v *ObservabilityVerifier) Before(ctx context.Context) {
 	By("Verifying old observability secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("username", Not(BeEmpty())),
 			HaveKeyWithValue("password", Not(BeEmpty())),
@@ -82,7 +82,7 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 	By("Verifying new observability secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("username", Equal(v.oldKeypairData["username"])),
 			HaveKeyWithValue("password", Not(Equal(v.oldKeypairData["password"]))),

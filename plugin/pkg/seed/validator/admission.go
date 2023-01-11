@@ -26,8 +26,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -46,8 +46,8 @@ func Register(plugins *admission.Plugins) {
 // ValidateSeed contains listers and admission handler.
 type ValidateSeed struct {
 	*admission.Handler
-	seedLister  corelisters.SeedLister
-	shootLister corelisters.ShootLister
+	seedLister  gardencorelisters.SeedLister
+	shootLister gardencorelisters.ShootLister
 	readyFunc   admission.ReadyFunc
 }
 
@@ -71,7 +71,7 @@ func (v *ValidateSeed) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateSeed) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (v *ValidateSeed) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	seedInformer := f.Core().InternalVersion().Seeds()
 	v.seedLister = seedInformer.Lister()
 

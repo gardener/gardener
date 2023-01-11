@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -33,7 +33,7 @@ import (
 
 var _ = Describe("ExtensionValidator", func() {
 	var (
-		gardenExternalCoreInformerFactory externalcoreinformers.SharedInformerFactory
+		gardenExternalCoreInformerFactory gardencoreexternalinformers.SharedInformerFactory
 		admissionHandler                  *ExtensionValidator
 	)
 
@@ -41,7 +41,7 @@ var _ = Describe("ExtensionValidator", func() {
 		admissionHandler, _ = New()
 		admissionHandler.AssignReadyFunc(func() bool { return true })
 
-		gardenExternalCoreInformerFactory = externalcoreinformers.NewSharedInformerFactory(nil, 0)
+		gardenExternalCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
 		admissionHandler.SetExternalCoreInformerFactory(gardenExternalCoreInformerFactory)
 	})
 
@@ -427,7 +427,7 @@ var _ = Describe("ExtensionValidator", func() {
 
 		It("should not return error if ControllerRegistrationLister, BackupBucketLister and core client are set", func() {
 			dr, _ := New()
-			dr.SetExternalCoreInformerFactory(externalcoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetExternalCoreInformerFactory(gardencoreexternalinformers.NewSharedInformerFactory(nil, 0))
 			err := dr.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
 		})

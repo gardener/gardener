@@ -20,7 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // GetBootstrap returns the value of the given Bootstrap, or None if nil.
@@ -33,7 +33,7 @@ func GetBootstrap(bootstrap *seedmanagementv1alpha1.Bootstrap) seedmanagementv1a
 
 // ExtractSeedTemplateAndGardenletConfig extracts SeedTemplate and GardenletConfig from the given `managedSeed`.
 // An error is returned if either SeedTemplate of GardenletConfig is not specified.
-func ExtractSeedTemplateAndGardenletConfig(managedSeed *seedmanagementv1alpha1.ManagedSeed) (*gardencorev1beta1.SeedTemplate, *configv1alpha1.GardenletConfiguration, error) {
+func ExtractSeedTemplateAndGardenletConfig(managedSeed *seedmanagementv1alpha1.ManagedSeed) (*gardencorev1beta1.SeedTemplate, *gardenletv1alpha1.GardenletConfiguration, error) {
 	var err error
 
 	gardenlet := managedSeed.Spec.Gardenlet
@@ -42,7 +42,7 @@ func ExtractSeedTemplateAndGardenletConfig(managedSeed *seedmanagementv1alpha1.M
 	}
 
 	// Decode gardenlet configuration
-	var gardenletConfig *configv1alpha1.GardenletConfiguration
+	var gardenletConfig *gardenletv1alpha1.GardenletConfiguration
 	gardenletConfig, err = encoding.DecodeGardenletConfiguration(&gardenlet.Config, false)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not decode gardenlet configuration: %w", err)

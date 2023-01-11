@@ -20,13 +20,13 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Operation) *v1beta1helper.WrappedLastErrors {
 	var (
 		botanist                      *botanistpkg.Botanist
 		err                           error
@@ -52,15 +52,15 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		}
 	}
 
-	errorContext := utilerrors.NewErrorContext("Shoot cluster preparation for migration", tasksWithErrors)
+	errorContext := errorsutils.NewErrorContext("Shoot cluster preparation for migration", tasksWithErrors)
 
-	err = utilerrors.HandleErrors(errorContext,
+	err = errorsutils.HandleErrors(errorContext,
 		func(errorID string) error {
 			o.CleanShootTaskError(ctx, errorID)
 			return nil
 		},
 		nil,
-		utilerrors.ToExecute("Create botanist", func() error {
+		errorsutils.ToExecute("Create botanist", func() error {
 			return retryutils.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 				botanist, err = botanistpkg.New(ctx, o)
 				if err != nil {
@@ -69,9 +69,9 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 				return retryutils.Ok()
 			})
 		}),
-		utilerrors.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
+		errorsutils.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeAPIServer := &appsv1.Deployment{}
-			if err := botanist.SeedClientSet.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
+			if err := botanist.SeedClientSet.APIReader().Get(ctx, kubernetesutils.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -82,10 +82,10 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			}
 			return nil
 		}),
-		utilerrors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
+		errorsutils.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
 			return checkIfSeedNamespaceExists(ctx, o, botanist)
 		}),
-		utilerrors.ToExecute("Retrieve the BackupEntry in the garden cluster", func() error {
+		errorsutils.ToExecute("Retrieve the BackupEntry in the garden cluster", func() error {
 			backupEntry := &gardencorev1beta1.BackupEntry{}
 			err := botanist.GardenClient.Get(ctx, client.ObjectKey{Name: botanist.Shoot.BackupEntryName, Namespace: o.Shoot.GetInfo().Namespace}, backupEntry)
 			if err != nil {
@@ -97,7 +97,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			etcdSnapshotRequired = backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == *botanist.Shoot.GetInfo().Status.SeedName
 			return nil
 		}),
-		utilerrors.ToExecute("Retrieve the infrastructure resource", func() error {
+		errorsutils.ToExecute("Retrieve the infrastructure resource", func() error {
 			obj, err := botanist.Shoot.Components.Extensions.Infrastructure.Get(ctx)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
@@ -108,17 +108,17 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			infrastructure = obj
 			return nil
 		}),
-		utilerrors.ToExecute("Check whether control plane restoration is needed", func() error {
+		errorsutils.ToExecute("Check whether control plane restoration is needed", func() error {
 			controlPlaneRestorationNeeded, err = needsControlPlaneDeployment(ctx, o, kubeAPIServerDeploymentFound, infrastructure)
 			return err
 		}),
 	)
 
 	if err != nil {
-		if utilerrors.WasCanceled(err) {
+		if errorsutils.WasCanceled(err) {
 			return nil
 		}
-		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
 	var (
@@ -393,7 +393,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
-		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
 	o.Logger.Info("Successfully prepared Shoot cluster for restoration")

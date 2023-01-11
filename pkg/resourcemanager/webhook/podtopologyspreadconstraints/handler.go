@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler handles admission requests and sets the spec.topologySpreadConstraints field in Pod resources.
@@ -73,7 +73,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		return err
 	}
 
-	log := h.Logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
+	log := h.Logger.WithValues("pod", kubernetesutils.ObjectKeyForCreateWebhooks(pod, req))
 	log.Info("Mutating topology spread constraint label selector")
 	return nil
 }

@@ -59,8 +59,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	errorutils "github.com/gardener/gardener/pkg/utils/errors"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -661,7 +661,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 		deletePVCs      = mr.Spec.DeletePersistentVolumeClaims != nil && *mr.Spec.DeletePersistentVolumeClaims
 		deletionPending = false
 		errorList       = &multierror.Error{
-			ErrorFormat: errorutils.NewErrorFormatFuncWithPrefix("Could not clean all old resources"),
+			ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("Could not clean all old resources"),
 		}
 	)
 
@@ -776,7 +776,7 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logg
 		results   = make(chan error)
 		wg        sync.WaitGroup
 		errorList = &multierror.Error{
-			ErrorFormat: errorutils.NewErrorFormatFuncWithPrefix("Could not release all orphaned resources"),
+			ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("Could not release all orphaned resources"),
 		}
 	)
 
@@ -859,7 +859,7 @@ func eventsForObject(ctx context.Context, scheme *runtime.Scheme, c client.Clien
 
 	for _, gk := range relevantGKs {
 		if gk == obj.GetObjectKind().GroupVersionKind().GroupKind() {
-			return kutil.FetchEventMessages(ctx, scheme, c, obj, corev1.EventTypeWarning, eventLimit)
+			return kubernetesutils.FetchEventMessages(ctx, scheme, c, obj, corev1.EventTypeWarning, eventLimit)
 		}
 	}
 	return "", nil

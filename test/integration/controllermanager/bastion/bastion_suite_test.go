@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
@@ -61,7 +61,7 @@ var (
 	testEnv        *gardenerenvtest.GardenerTestEnvironment
 	testClient     client.Client
 	mgrClient      client.Reader
-	testCoreClient *gardenversionedcoreclientset.Clientset
+	testCoreClient *gardencoreversionedclientset.Clientset
 	logBuffer      *gbytes.Buffer
 
 	testNamespace *corev1.Namespace
@@ -98,7 +98,7 @@ var _ = BeforeSuite(func() {
 	By("creating test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
-	testCoreClient, err = gardenversionedcoreclientset.NewForConfig(restConfig)
+	testCoreClient, err = gardencoreversionedclientset.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")

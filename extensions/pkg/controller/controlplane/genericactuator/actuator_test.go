@@ -23,23 +23,23 @@ import (
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	mockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
-	mockextensionscontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
+	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
+	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
-	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -93,8 +93,8 @@ func TestControlPlane(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVars(
-		&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString,
-		&secretutils.GenerateKey, secretutils.FakeGenerateKey,
+		&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString,
+		&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
 	))
 })
 
@@ -211,7 +211,7 @@ var _ = Describe("Actuator", func() {
 		resourceKeyShootWebhooksNetworkPolicy = client.ObjectKey{Namespace: namespace, Name: "gardener-extension-" + providerName}
 		createdNetworkPolicyForShootWebhooks  = constructNetworkPolicy(providerName, namespace, webhookServerPort)
 		deletedNetworkPolicyForShootWebhooks  = &networkingv1.NetworkPolicy{
-			ObjectMeta: extensionswebhookshoot.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
+			ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
 		}
 
 		resourceKeyShootWebhooks  = client.ObjectKey{Namespace: namespace, Name: ShootWebhooksResourceName}
@@ -272,8 +272,8 @@ var _ = Describe("Actuator", func() {
 			"replicas": 1,
 		}
 
-		shootAccessSecretsFunc         func(string) []*gutil.ShootAccessSecret
-		exposureShootAccessSecretsFunc func(string) []*gutil.ShootAccessSecret
+		shootAccessSecretsFunc         func(string) []*gardenerutils.ShootAccessSecret
+		exposureShootAccessSecretsFunc func(string) []*gardenerutils.ShootAccessSecret
 
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 		logger      = log.Log.WithName("test")
@@ -292,7 +292,7 @@ var _ = Describe("Actuator", func() {
 
 		DeferCleanup(test.WithVars(
 			&rand.Reader, deterministicReader,
-			&secretutils.Clock, fakeClock,
+			&secretsutils.Clock, fakeClock,
 		))
 
 		cp = &extensionsv1alpha1.ControlPlane{
@@ -300,11 +300,11 @@ var _ = Describe("Actuator", func() {
 			Spec:       extensionsv1alpha1.ControlPlaneSpec{},
 		}
 
-		shootAccessSecretsFunc = func(namespace string) []*gutil.ShootAccessSecret {
-			return []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp", namespace)}
+		shootAccessSecretsFunc = func(namespace string) []*gardenerutils.ShootAccessSecret {
+			return []*gardenerutils.ShootAccessSecret{gardenerutils.NewShootAccessSecret("new-cp", namespace)}
 		}
-		exposureShootAccessSecretsFunc = func(namespace string) []*gutil.ShootAccessSecret {
-			return []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp-exposure", namespace)}
+		exposureShootAccessSecretsFunc = func(namespace string) []*gardenerutils.ShootAccessSecret {
+			return []*gardenerutils.ShootAccessSecret{gardenerutils.NewShootAccessSecret("new-cp-exposure", namespace)}
 		}
 	})
 
@@ -370,13 +370,13 @@ webhooks:
 			c.EXPECT().Create(ctx, createdMRForStorageClassesChart).Return(nil)
 
 			// Create mock Gardener clientset and chart applier
-			gardenerClientset := mockkubernetes.NewMockInterface(ctrl)
+			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
-			chartApplier := mockkubernetes.NewMockChartApplier(ctrl)
+			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
 
 			// Create mock chart renderer and factory
 			chartRenderer := mockchartrenderer.NewMockInterface(ctrl)
-			crf := mockextensionscontroller.NewMockChartRendererFactory(ctrl)
+			crf := extensionsmockcontroller.NewMockChartRendererFactory(ctrl)
 			crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
 
 			// Create mock charts
@@ -400,7 +400,7 @@ webhooks:
 			storageClassesChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, storageClassesChartValues).Return(chartName, []byte(renderedContent), nil)
 
 			// Create mock values provider
-			vp := mockgenericactuator.NewMockValuesProvider(ctrl)
+			vp := extensionsmockgenericactuator.NewMockValuesProvider(ctrl)
 			if configName != "" {
 				vp.EXPECT().GetConfigChartValues(ctx, cp, cluster).Return(configChartValues, nil)
 			}
@@ -412,7 +412,7 @@ webhooks:
 			vp.EXPECT().GetStorageClassesChartValues(ctx, cp, cluster).Return(storageClassesChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(&corev1.Secret{
@@ -525,20 +525,20 @@ webhooks:
 			c := mockclient.NewMockClient(ctrl)
 
 			// Create mock Gardener clientset and chart applier
-			gardenerClientset := mockkubernetes.NewMockInterface(ctrl)
+			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
-			chartApplier := mockkubernetes.NewMockChartApplier(ctrl)
+			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
 
 			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
 			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
 
 			// Create mock values provider
-			vp := mockgenericactuator.NewMockValuesProvider(ctrl)
+			vp := extensionsmockgenericactuator.NewMockValuesProvider(ctrl)
 			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, gomock.Any(), exposureChecksums).Return(controlPlaneExposureChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kutil.Key(namespace, exposureShootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, exposureShootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(&corev1.Secret{
@@ -628,7 +628,7 @@ func constructNetworkPolicy(providerName, namespace string, webhookPort int) *ne
 	)
 
 	return &networkingv1.NetworkPolicy{
-		ObjectMeta: extensionswebhookshoot.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
+		ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
 		Spec: networkingv1.NetworkPolicySpec{
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 			Egress: []networkingv1.NetworkPolicyEgressRule{
@@ -668,19 +668,19 @@ func constructNetworkPolicy(providerName, namespace string, webhookPort int) *ne
 func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
 	return []extensionssecretsmanager.SecretConfigWithOptions{
 		{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:       caNameControlPlane,
 				CommonName: caNameControlPlane,
-				CertType:   secretutils.CACert,
+				CertType:   secretsutils.CACert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 		},
 		{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:       "cloud-controller-manager",
 				CommonName: "cloud-controller-manager",
-				DNSNames:   kutil.DNSNamesForService("cloud-controller-manager", namespace),
-				CertType:   secretutils.ServerCert,
+				DNSNames:   kubernetesutils.DNSNamesForService("cloud-controller-manager", namespace),
+				CertType:   secretsutils.ServerCert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
 		},
@@ -690,19 +690,19 @@ func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfig
 func getSecretsConfigsExposure(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
 	return []extensionssecretsmanager.SecretConfigWithOptions{
 		{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:       caNameControlPlaneExposure,
 				CommonName: caNameControlPlaneExposure,
-				CertType:   secretutils.CACert,
+				CertType:   secretsutils.CACert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 		},
 		{
-			Config: &secretutils.CertificateSecretConfig{
+			Config: &secretsutils.CertificateSecretConfig{
 				Name:       "lb-readvertiser",
 				CommonName: "lb-readvertiser",
-				DNSNames:   kutil.DNSNamesForService("lb-readvertiser", namespace),
-				CertType:   secretutils.ServerCert,
+				DNSNames:   kubernetesutils.DNSNamesForService("lb-readvertiser", namespace),
+				CertType:   secretsutils.ServerCert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlaneExposure)},
 		},

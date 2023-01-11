@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -38,17 +38,17 @@ var _ = Describe("Unwrap", func() {
 		)
 
 		fatalErr       = errors.New("fatal")
-		suppressedErr1 = utilerrors.WithSuppressed(singleErr, fatalErr)
+		suppressedErr1 = errorsutils.WithSuppressed(singleErr, fatalErr)
 		wrappedErr1    = fmt.Errorf("err 1: %w", suppressedErr1)
-		seppressedErr2 = utilerrors.WithSuppressed(wrappedErr1, singleErr)
+		seppressedErr2 = errorsutils.WithSuppressed(wrappedErr1, singleErr)
 		wrappedErr2    = fmt.Errorf("err 2: %w", seppressedErr2)
 
 		wrappedErr3 = fmt.Errorf("err 3: %w", wrappedErr2)
-		supperssed3 = utilerrors.WithSuppressed(wrappedErr3, singleErr)
+		supperssed3 = errorsutils.WithSuppressed(wrappedErr3, singleErr)
 	)
 
 	DescribeTable("#Wrapped Errors",
-		func(in error, m types.GomegaMatcher) { Expect(utilerrors.Unwrap(in)).To(m) },
+		func(in error, m types.GomegaMatcher) { Expect(errorsutils.Unwrap(in)).To(m) },
 
 		Entry("return same error", singleErr, BeIdenticalTo(singleErr)),
 		Entry("return root error", wrappedErr, BeIdenticalTo(singleErr)),

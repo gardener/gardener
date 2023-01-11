@@ -58,7 +58,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
@@ -68,8 +68,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Name is a const for the name of this component.
@@ -310,7 +310,7 @@ func (g *garden) Start(ctx context.Context) error {
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
-					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gutil.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
 				},
 				kubernetes.GardenScheme,
 			)(config, opts)
@@ -433,7 +433,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	}
 
 	// Convert gardenlet config to an external version
-	cfg, err := confighelper.ConvertGardenletConfigurationExternal(g.config)
+	cfg, err := gardenlethelper.ConvertGardenletConfigurationExternal(g.config)
 	if err != nil {
 		return fmt.Errorf("could not convert gardenlet configuration: %w", err)
 	}
@@ -456,7 +456,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	defer cancel()
 
 	return wait.PollUntilWithContext(timeoutCtx, 500*time.Millisecond, func(context.Context) (done bool, err error) {
-		if err := gardenClient.Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(g.config.SeedConfig.Name)), &corev1.Namespace{}); err != nil {
+		if err := gardenClient.Get(ctx, kubernetesutils.Key(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)), &corev1.Namespace{}); err != nil {
 			if apierrors.IsNotFound(err) || apierrors.IsForbidden(err) {
 				return false, nil
 			}
@@ -475,7 +475,7 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 	var taskFns []flow.TaskFn
 
 	for _, shoot := range shoots.Items {
-		if specSeedName, statusSeedName := gutil.GetShootSeedNames(&shoot); gutil.GetResponsibleSeedName(specSeedName, statusSeedName) != g.config.SeedConfig.Name {
+		if specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(&shoot); gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) != g.config.SeedConfig.Name {
 			continue
 		}
 

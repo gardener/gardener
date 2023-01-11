@@ -21,8 +21,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 
@@ -43,7 +43,7 @@ var _ = Describe("dns", func() {
 		var (
 			admissionHandler    *DNS
 			kubeInformerFactory kubeinformers.SharedInformerFactory
-			coreInformerFactory coreinformers.SharedInformerFactory
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
 			seed  core.Seed
 			shoot core.Shoot
@@ -77,8 +77,8 @@ var _ = Describe("dns", func() {
 						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
-						gutil.DNSDomain:   domain,
-						gutil.DNSProvider: defaultDomainProvider,
+						gardenerutils.DNSDomain:   domain,
+						gardenerutils.DNSProvider: defaultDomainProvider,
 					},
 				},
 			}
@@ -91,9 +91,9 @@ var _ = Describe("dns", func() {
 						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
-						gutil.DNSDomain:                domainHigherPriority,
-						gutil.DNSDefaultDomainPriority: "5",
-						gutil.DNSProvider:              defaultDomainProvider,
+						gardenerutils.DNSDomain:                domainHigherPriority,
+						gardenerutils.DNSDefaultDomainPriority: "5",
+						gardenerutils.DNSProvider:              defaultDomainProvider,
 					},
 				},
 			}
@@ -106,9 +106,9 @@ var _ = Describe("dns", func() {
 						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
-						gutil.DNSDomain:                domainLowerPriority,
-						gutil.DNSDefaultDomainPriority: "-5",
-						gutil.DNSProvider:              defaultDomainProvider,
+						gardenerutils.DNSDomain:                domainLowerPriority,
+						gardenerutils.DNSDefaultDomainPriority: "-5",
+						gardenerutils.DNSProvider:              defaultDomainProvider,
 					},
 				},
 			}
@@ -136,7 +136,7 @@ var _ = Describe("dns", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
-			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
 			shootBase.Spec.DNS.Domain = nil

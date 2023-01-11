@@ -21,7 +21,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
@@ -59,7 +59,7 @@ var _ = Describe("Networkpolicies", func() {
 		It("should fail if any call fails", func() {
 			allowToAggregatePrometheus := constructNPAllowToAggregatePrometheus(namespace)
 
-			c.EXPECT().Get(ctx, kutil.Key(allowToAggregatePrometheus.Namespace, allowToAggregatePrometheus.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(fakeErr)
+			c.EXPECT().Get(ctx, kubernetesutils.Key(allowToAggregatePrometheus.Namespace, allowToAggregatePrometheus.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(fakeErr)
 
 			Expect(deployer.Deploy(ctx)).To(MatchError(fakeErr))
 		})
@@ -166,7 +166,7 @@ func constructNPAllowToShootNetworks(namespace string, peers []networkingv1.Netw
 }
 
 func expectGetUpdate(ctx context.Context, c *mockclient.MockClient, expected *networkingv1.NetworkPolicy) {
-	c.EXPECT().Get(ctx, kutil.Key(expected.Namespace, expected.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
+	c.EXPECT().Get(ctx, kubernetesutils.Key(expected.Namespace, expected.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
 	c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
 		Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 			Expect(obj).To(DeepEqual(expected))

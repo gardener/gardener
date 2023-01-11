@@ -39,13 +39,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenoperationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
+	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	gardenseedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
-	gardensettingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
+	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
+	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
@@ -94,10 +94,10 @@ func DefaultUpdateOptions() metav1.UpdateOptions { return metav1.UpdateOptions{}
 func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetesscheme.AddToScheme,
-		gardenercoreinstall.AddToScheme,
-		gardenseedmanagementinstall.AddToScheme,
-		gardensettingsinstall.AddToScheme,
-		gardenoperationsinstall.AddToScheme,
+		gardencoreinstall.AddToScheme,
+		seedmanagementinstall.AddToScheme,
+		settingsinstall.AddToScheme,
+		operationsinstall.AddToScheme,
 		apiregistrationscheme.AddToScheme,
 	)
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))

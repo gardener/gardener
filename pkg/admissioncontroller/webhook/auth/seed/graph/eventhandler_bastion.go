@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -28,7 +28,7 @@ import (
 func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) {
 	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			bastion, ok := obj.(*gardenoperationsv1alpha1.Bastion)
+			bastion, ok := obj.(*operationsv1alpha1.Bastion)
 			if !ok {
 				return
 			}
@@ -36,12 +36,12 @@ func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) {
 		},
 
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			oldBastion, ok := oldObj.(*gardenoperationsv1alpha1.Bastion)
+			oldBastion, ok := oldObj.(*operationsv1alpha1.Bastion)
 			if !ok {
 				return
 			}
 
-			newBastion, ok := newObj.(*gardenoperationsv1alpha1.Bastion)
+			newBastion, ok := newObj.(*operationsv1alpha1.Bastion)
 			if !ok {
 				return
 			}
@@ -55,7 +55,7 @@ func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}
-			bastion, ok := obj.(*gardenoperationsv1alpha1.Bastion)
+			bastion, ok := obj.(*operationsv1alpha1.Bastion)
 			if !ok {
 				return
 			}
@@ -64,7 +64,7 @@ func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) {
 	})
 }
 
-func (g *graph) handleBastionCreateOrUpdate(bastion *gardenoperationsv1alpha1.Bastion) {
+func (g *graph) handleBastionCreateOrUpdate(bastion *operationsv1alpha1.Bastion) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("Bastion", "CreateOrUpdate").Observe(time.Since(start).Seconds())
@@ -81,7 +81,7 @@ func (g *graph) handleBastionCreateOrUpdate(bastion *gardenoperationsv1alpha1.Ba
 	}
 }
 
-func (g *graph) handleBastionDelete(bastion *gardenoperationsv1alpha1.Bastion) {
+func (g *graph) handleBastionDelete(bastion *operationsv1alpha1.Bastion) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("Bastion", "Delete").Observe(time.Since(start).Seconds())

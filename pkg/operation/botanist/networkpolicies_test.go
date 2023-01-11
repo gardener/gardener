@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -36,7 +36,7 @@ import (
 var _ = Describe("Networkpolicies", func() {
 	var (
 		ctrl            *gomock.Controller
-		clientInterface *mockkubernetes.MockInterface
+		clientInterface *kubernetesmock.MockInterface
 		c               *mockclient.MockClient
 		botanist        *Botanist
 
@@ -67,7 +67,7 @@ var _ = Describe("Networkpolicies", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		clientInterface = mockkubernetes.NewMockInterface(ctrl)
+		clientInterface = kubernetesmock.NewMockInterface(ctrl)
 		c = mockclient.NewMockClient(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{

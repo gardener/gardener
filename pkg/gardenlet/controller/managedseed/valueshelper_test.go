@@ -21,7 +21,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -49,11 +49,11 @@ var _ = Describe("ValuesHelper", func() {
 		vh ValuesHelper
 
 		deployment      *seedmanagementv1alpha1.GardenletDeployment
-		gardenletConfig *configv1alpha1.GardenletConfiguration
+		gardenletConfig *gardenletv1alpha1.GardenletConfiguration
 		shoot           *gardencorev1beta1.Shoot
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
-		mergedGardenletConfig func(bool) *configv1alpha1.GardenletConfiguration
+		mergedGardenletConfig func(bool) *gardenletv1alpha1.GardenletConfiguration
 
 		gardenletChartValues func(bool, string, int32, map[string]interface{}) map[string]interface{}
 	)
@@ -140,9 +140,9 @@ var _ = Describe("ValuesHelper", func() {
 			},
 			VPA: pointer.Bool(true),
 		}
-		gardenletConfig = &configv1alpha1.GardenletConfiguration{
+		gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
 			FeatureGates: map[string]bool{
@@ -174,7 +174,7 @@ var _ = Describe("ValuesHelper", func() {
 			},
 			VPA: pointer.Bool(true),
 		}
-		mergedGardenletConfig = func(withBootstrap bool) *configv1alpha1.GardenletConfiguration {
+		mergedGardenletConfig = func(withBootstrap bool) *gardenletv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
 			var bootstrapKubeconfig, kubeconfigSecret *corev1.SecretReference
 			if withBootstrap {
@@ -189,12 +189,12 @@ var _ = Describe("ValuesHelper", func() {
 			} else {
 				kubeconfigPath = gardenKubeconfigPath
 			}
-			return &configv1alpha1.GardenletConfiguration{
+			return &gardenletv1alpha1.GardenletConfiguration{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+					APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
 				},
-				GardenClientConnection: &configv1alpha1.GardenClientConnection{
+				GardenClientConnection: &gardenletv1alpha1.GardenClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						Kubeconfig:         kubeconfigPath,
 						AcceptContentTypes: "application/json",
@@ -205,7 +205,7 @@ var _ = Describe("ValuesHelper", func() {
 					BootstrapKubeconfig: bootstrapKubeconfig,
 					KubeconfigSecret:    kubeconfigSecret,
 				},
-				SeedClientConnection: &configv1alpha1.SeedClientConnection{
+				SeedClientConnection: &gardenletv1alpha1.SeedClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						AcceptContentTypes: "application/json",
 						ContentType:        "application/json",
@@ -213,12 +213,12 @@ var _ = Describe("ValuesHelper", func() {
 						Burst:              130,
 					},
 				},
-				Server: configv1alpha1.ServerConfiguration{
-					HealthProbes: &configv1alpha1.Server{
+				Server: gardenletv1alpha1.ServerConfiguration{
+					HealthProbes: &gardenletv1alpha1.Server{
 						BindAddress: "0.0.0.0",
 						Port:        2728,
 					},
-					Metrics: &configv1alpha1.Server{
+					Metrics: &gardenletv1alpha1.Server{
 						BindAddress: "0.0.0.0",
 						Port:        2729,
 					},
@@ -227,7 +227,7 @@ var _ = Describe("ValuesHelper", func() {
 					string("FooFeature"): false,
 					string("BarFeature"): true,
 				},
-				Logging: &configv1alpha1.Logging{
+				Logging: &gardenletv1alpha1.Logging{
 					Enabled: pointer.Bool(true),
 				},
 			}

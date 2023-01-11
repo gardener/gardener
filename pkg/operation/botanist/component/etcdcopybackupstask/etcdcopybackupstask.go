@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -132,14 +132,14 @@ func (e *etcdCopyBackupsTask) Wait(ctx context.Context) error {
 
 // Destroy deletes the EtcdCopyBackupsTask resource.
 func (e *etcdCopyBackupsTask) Destroy(ctx context.Context) error {
-	return kutil.DeleteObject(ctx, e.client, e.task)
+	return kubernetesutils.DeleteObject(ctx, e.client, e.task)
 }
 
 // WaitCleanup waits until the EtcdCopyBackupsTask is deleted.
 func (e *etcdCopyBackupsTask) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, e.waitTimeout)
 	defer cancel()
-	return kutil.WaitUntilResourceDeleted(timeoutCtx, e.client, e.task, e.waitInterval)
+	return kubernetesutils.WaitUntilResourceDeleted(timeoutCtx, e.client, e.task, e.waitInterval)
 }
 
 // SetSourceStore sets the specifications for the object store provider from which backups will be copied.
@@ -159,7 +159,7 @@ func waitForConditions(obj client.Object) error {
 		return fmt.Errorf("expected *druidv1alpha1.EtcdCopyBackupsTask but got %T", obj)
 	}
 	if task.DeletionTimestamp != nil {
-		return fmt.Errorf("task %s has a deletion timestamp", kutil.ObjectName(task))
+		return fmt.Errorf("task %s has a deletion timestamp", kubernetesutils.ObjectName(task))
 	}
 
 	generation := task.Generation

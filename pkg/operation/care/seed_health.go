@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -108,13 +108,13 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
 		managedResources = append(managedResources, hvpa.ManagedResourceName)
 	}
-	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(h.seed.Spec.Settings) {
+	if v1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint)
 	}
-	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(h.seed.Spec.Settings) {
+	if v1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogProbe)
 	}
-	if gardencorev1beta1helper.SeedUsesNginxIngressController(h.seed) {
+	if v1beta1helper.SeedUsesNginxIngressController(h.seed) {
 		managedResources = append(managedResources, nginxingress.ManagedResourceName)
 	}
 
@@ -126,7 +126,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		namespace = pointer.StringDeref(h.namespace, namespace)
 
 		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := h.seedClient.Get(ctx, kutil.Key(namespace, name), mr); err != nil {
+		if err := h.seedClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
 				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil
@@ -139,7 +139,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		}
 	}
 
-	c := gardencorev1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
 	return &c, nil
 }
 

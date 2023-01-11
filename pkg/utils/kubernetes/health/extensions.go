@@ -22,7 +22,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,7 +44,7 @@ func CheckExtensionObject(o client.Object) error {
 
 // ExtensionOperationHasBeenUpdatedSince returns a health check function that checks if an extension Object's last
 // operation has been updated since `lastUpdateTime`.
-func ExtensionOperationHasBeenUpdatedSince(lastUpdateTime v1.Time) Func {
+func ExtensionOperationHasBeenUpdatedSince(lastUpdateTime metav1.Time) Func {
 	return func(o client.Object) error {
 		obj, ok := o.(extensionsv1alpha1.Object)
 		if !ok {

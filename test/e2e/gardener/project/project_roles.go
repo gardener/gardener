@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -88,7 +88,7 @@ var _ = Describe("Project Tests", Label("Project", "default"), func() {
 
 		DeferCleanup(func() {
 			By("Delete Project")
-			Expect(client.IgnoreNotFound(gutil.ConfirmDeletion(ctx, testClient, project))).To(Succeed())
+			Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, testClient, project))).To(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 
 			By("Wait for Project to be gone")

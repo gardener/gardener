@@ -34,11 +34,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ObjectSelector is the object selector for CustomResourceDefinitions used by this admission controller.
-var ObjectSelector = map[string]string{gutil.DeletionProtected: "true"}
+var ObjectSelector = map[string]string{gardenerutils.DeletionProtected: "true"}
 
 // Handler validating DELETE requests for extension CRDs and extension resources, that are marked for deletion
 // protection (`gardener.cloud/deletion-protected`).
@@ -139,7 +139,7 @@ func checkIfObjectDeletionIsConfirmed(log logr.Logger, object runtime.Object) er
 
 	log = log.WithValues("name", obj.GetName())
 
-	if err := gutil.CheckIfDeletionIsConfirmed(obj); err != nil {
+	if err := gardenerutils.CheckIfDeletionIsConfirmed(obj); err != nil {
 		log.Info("Deletion is not confirmed - preventing deletion")
 		return err
 	}

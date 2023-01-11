@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	"k8s.io/utils/pointer"
 )
@@ -53,16 +53,16 @@ func GenerateUnmanagedCertificates(providerName, certDir, mode, url string) ([]b
 
 var caCertificateValidity = 30 * 24 * time.Hour // 30d
 
-func getWebhookCAConfig(name string) *secretutils.CertificateSecretConfig {
-	return &secretutils.CertificateSecretConfig{
+func getWebhookCAConfig(name string) *secretsutils.CertificateSecretConfig {
+	return &secretsutils.CertificateSecretConfig{
 		Name:       name,
 		CommonName: name,
-		CertType:   secretutils.CACert,
+		CertType:   secretsutils.CACert,
 		Validity:   &caCertificateValidity,
 	}
 }
 
-func getWebhookServerCertConfig(name, namespace, componentName, mode, url string) *secretutils.CertificateSecretConfig {
+func getWebhookServerCertConfig(name, namespace, componentName, mode, url string) *secretsutils.CertificateSecretConfig {
 	var (
 		dnsNames    []string
 		ipAddresses []net.IP
@@ -93,20 +93,20 @@ func getWebhookServerCertConfig(name, namespace, componentName, mode, url string
 		}
 	}
 
-	return &secretutils.CertificateSecretConfig{
+	return &secretsutils.CertificateSecretConfig{
 		Name:                        name,
 		CommonName:                  componentName,
 		DNSNames:                    dnsNames,
 		IPAddresses:                 ipAddresses,
-		CertType:                    secretutils.ServerCert,
+		CertType:                    secretsutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}
 }
 
 func writeCertificatesToDisk(certDir string, serverCert, serverKey []byte) error {
 	var (
-		serverKeyPath  = filepath.Join(certDir, secretutils.DataKeyPrivateKey)
-		serverCertPath = filepath.Join(certDir, secretutils.DataKeyCertificate)
+		serverKeyPath  = filepath.Join(certDir, secretsutils.DataKeyPrivateKey)
+		serverCertPath = filepath.Join(certDir, secretsutils.DataKeyCertificate)
 	)
 
 	if err := os.MkdirAll(certDir, 0755); err != nil {

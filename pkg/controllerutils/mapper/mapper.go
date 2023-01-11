@@ -21,7 +21,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,7 +43,7 @@ func (m *clusterToObjectMapper) InjectCache(c cache.Cache) error {
 }
 
 func (m *clusterToObjectMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = contextutil.FromStopChannel(stopCh)
+	m.ctx = contextutils.FromStopChannel(stopCh)
 	return nil
 }
 

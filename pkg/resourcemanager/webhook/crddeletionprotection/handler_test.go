@@ -44,7 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("handler", func() {
@@ -101,7 +101,7 @@ var _ = Describe("handler", func() {
 			}
 			fooResource = metav1.GroupVersionResource{Group: "foo", Version: "bar", Resource: "baz"}
 
-			deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
+			deletionConfirmedAnnotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
 		)
 
 		resourceToId := func(resource metav1.GroupVersionResource) string {
@@ -351,7 +351,7 @@ func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatc
 
 func getListOptions(resource, namespace string) client.ListOption {
 	if resource == "customresourcedefinitions" {
-		return client.MatchingLabels{gutil.DeletionProtected: "true"}
+		return client.MatchingLabels{gardenerutils.DeletionProtected: "true"}
 	}
 	return client.InNamespace(namespace)
 }

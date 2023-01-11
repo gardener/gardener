@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -63,17 +63,17 @@ var _ = Describe("Defaults", func() {
 					Gardenlet: &Gardenlet{
 						Deployment: &GardenletDeployment{},
 						Config: runtime.RawExtension{
-							Object: &configv1alpha1.GardenletConfiguration{
+							Object: &gardenletv1alpha1.GardenletConfiguration{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+									APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 									Kind:       "GardenletConfiguration",
 								},
-								Resources: &configv1alpha1.ResourcesConfiguration{
+								Resources: &gardenletv1alpha1.ResourcesConfiguration{
 									Capacity: corev1.ResourceList{
 										gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 									},
 								},
-								SeedConfig: &configv1alpha1.SeedConfig{},
+								SeedConfig: &gardenletv1alpha1.SeedConfig{},
 							},
 						},
 						Bootstrap:       bootstrapPtr(BootstrapToken),
@@ -86,12 +86,12 @@ var _ = Describe("Defaults", func() {
 		It("should default gardenlet deployment, configuration, and backup secret reference if backup is specified", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Config: runtime.RawExtension{
-					Raw: encode(&configv1alpha1.GardenletConfiguration{
+					Raw: encode(&gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &configv1alpha1.SeedConfig{
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
@@ -113,17 +113,17 @@ var _ = Describe("Defaults", func() {
 					Gardenlet: &Gardenlet{
 						Deployment: &GardenletDeployment{},
 						Config: runtime.RawExtension{
-							Object: &configv1alpha1.GardenletConfiguration{
+							Object: &gardenletv1alpha1.GardenletConfiguration{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+									APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 									Kind:       "GardenletConfiguration",
 								},
-								Resources: &configv1alpha1.ResourcesConfiguration{
+								Resources: &gardenletv1alpha1.ResourcesConfiguration{
 									Capacity: corev1.ResourceList{
 										gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 									},
 								},
-								SeedConfig: &configv1alpha1.SeedConfig{
+								SeedConfig: &gardenletv1alpha1.SeedConfig{
 									SeedTemplate: gardencorev1beta1.SeedTemplate{
 										Spec: gardencorev1beta1.SeedSpec{
 											Backup: &gardencorev1beta1.SeedBackup{

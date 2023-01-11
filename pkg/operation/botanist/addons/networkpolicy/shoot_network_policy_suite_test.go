@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 
@@ -138,7 +138,7 @@ var _ = Describe("Shoot NetworkPolicy Chart", func() {
 
 	JustBeforeEach(func() {
 		ca := kubernetes.NewChartApplier(
-			cr.NewWithServerVersion(&version.Info{}),
+			chartrenderer.NewWithServerVersion(&version.Info{}),
 			kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})),
 		)
 

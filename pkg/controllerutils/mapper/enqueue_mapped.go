@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	ctxutils "github.com/gardener/gardener/pkg/utils/context"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -93,7 +93,7 @@ func (e *enqueueRequestsFromMapFunc) InjectCache(c cache.Cache) error {
 }
 
 func (e *enqueueRequestsFromMapFunc) InjectStopChannel(stopCh <-chan struct{}) error {
-	e.ctx = ctxutils.FromStopChannel(stopCh)
+	e.ctx = contextutils.FromStopChannel(stopCh)
 	return nil
 }
 

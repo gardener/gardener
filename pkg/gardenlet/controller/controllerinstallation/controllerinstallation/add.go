@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -109,7 +109,7 @@ type helmTypePredicate struct {
 }
 
 func (p *helmTypePredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
@@ -126,7 +126,7 @@ func (p *helmTypePredicate) isResponsible(obj client.Object) bool {
 
 	if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
 		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-		if err := p.reader.Get(p.ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
+		if err := p.reader.Get(p.ctx, kubernetesutils.Key(deploymentName.Name), controllerDeployment); err != nil {
 			return false
 		}
 		return controllerDeployment.Type == "helm"

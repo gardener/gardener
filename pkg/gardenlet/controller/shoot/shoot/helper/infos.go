@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -99,15 +99,15 @@ func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock,
 		reconcileInMaintenanceOnly: pointer.BoolDeref(cfg.ReconcileInMaintenanceOnly, false),
 		respectSyncPeriodOverwrite: respectSyncPeriodOverwrite,
 
-		isIgnored:                             gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot),
-		isFailed:                              gutil.IsShootFailedAndUpToDate(shoot),
-		isUpToDate:                            gutil.IsObservedAtLatestGenerationAndSucceeded(shoot),
+		isIgnored:                             gardenerutils.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot),
+		isFailed:                              gardenerutils.IsShootFailedAndUpToDate(shoot),
+		isUpToDate:                            gardenerutils.IsObservedAtLatestGenerationAndSucceeded(shoot),
 		confineSpecUpdateRollout:              v1beta1helper.ShootConfinesSpecUpdateRollout(shoot.Spec.Maintenance),
-		maintenanceTimeWindow:                 gutil.EffectiveShootMaintenanceTimeWindow(shoot),
-		isNowInEffectiveMaintenanceTimeWindow: gutil.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock),
-		alreadyReconciledDuringThisTimeWindow: gutil.LastReconciliationDuringThisTimeWindow(shoot, clock),
+		maintenanceTimeWindow:                 gardenerutils.EffectiveShootMaintenanceTimeWindow(shoot),
+		isNowInEffectiveMaintenanceTimeWindow: gardenerutils.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock),
+		alreadyReconciledDuringThisTimeWindow: gardenerutils.LastReconciliationDuringThisTimeWindow(shoot, clock),
 
-		syncPeriod: gutil.SyncPeriodOfShoot(respectSyncPeriodOverwrite, cfg.SyncPeriod.Duration, shoot),
+		syncPeriod: gardenerutils.SyncPeriodOfShoot(respectSyncPeriodOverwrite, cfg.SyncPeriod.Duration, shoot),
 	}
 
 	i.ShouldReconcileNow = i.shouldReconcileNow()

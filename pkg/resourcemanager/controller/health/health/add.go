@@ -37,7 +37,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // ControllerName is the name of the controller.
@@ -118,12 +118,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
 		r.EnqueueCreateAndUpdate(),
 		predicate.Or(
-			managerpredicate.ClassChangedPredicate(),
+			resourcemanagerpredicate.ClassChangedPredicate(),
 			// start health checks immediately after MR has been reconciled
-			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
-			managerpredicate.NoLongerIgnored(),
+			resourcemanagerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, resourcemanagerpredicate.DefaultConditionChange),
+			resourcemanagerpredicate.NoLongerIgnored(),
 		),
-		managerpredicate.NotIgnored(),
+		resourcemanagerpredicate.NotIgnored(),
 		r.ClassFilter,
 	)
 }

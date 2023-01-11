@@ -22,7 +22,7 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -34,8 +34,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -192,7 +192,7 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	// Get BackupEntries separately as they are not namespaced i.e., they cannot be narrowed down
 	// to a shoot namespace like other extension resources above.
 	be := &extensionsv1alpha1.BackupEntry{}
-	if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.BackupEntryName), be); err == nil {
+	if err := h.seedClient.Client().Get(ctx, kubernetesutils.Key(h.shoot.BackupEntryName), be); err == nil {
 		allExtensions = append(allExtensions, be)
 	} else if !apierrors.IsNotFound(err) {
 		return nil, err
@@ -219,7 +219,7 @@ func (h *Health) getLastHeartbeatTimeForExtension(ctx context.Context, controlle
 	heartBeatLease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      extensions.HeartBeatResourceName,
-			Namespace: gutil.NamespaceNameForControllerInstallation(controllerInstallation),
+			Namespace: gardenerutils.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
 
@@ -296,8 +296,8 @@ func (h *Health) healthChecks(
 		}
 
 		apiserverAvailability = checker.FailedCondition(apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
-		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, nodes, message)
-		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
+		nodes = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, nodes, message)
+		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
 
 		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
 		controlPlane = NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
@@ -363,7 +363,7 @@ func (h *Health) checkControlPlane(
 		return exitCondition, nil
 	}
 
-	c := gardencorev1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
 	return &c, nil
 }
 
@@ -415,7 +415,7 @@ func (h *Health) checkSystemComponents(
 		return &c, nil
 	}
 
-	c := gardencorev1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
 	return &c, nil
 }
 
@@ -435,6 +435,6 @@ func (h *Health) checkClusterNodes(
 		return exitCondition, nil
 	}
 
-	c := gardencorev1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
 	return &c, nil
 }

@@ -15,13 +15,13 @@
 package initializer
 
 import (
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	externalcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
-	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -33,25 +33,25 @@ import (
 
 // WantsInternalCoreInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsInternalCoreInformerFactory interface {
-	SetInternalCoreInformerFactory(coreinformers.SharedInformerFactory)
+	SetInternalCoreInformerFactory(gardencoreinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
 // WantsInternalCoreClientset defines a function which sets Core Clientset for admission plugins that need it.
 type WantsInternalCoreClientset interface {
-	SetInternalCoreClientset(coreclientset.Interface)
+	SetInternalCoreClientset(gardencoreclientset.Interface)
 	admission.InitializationValidator
 }
 
 // WantsExternalCoreInformerFactory defines a function which sets external Core InformerFactory for admission plugins that need it.
 type WantsExternalCoreInformerFactory interface {
-	SetExternalCoreInformerFactory(externalcoreinformers.SharedInformerFactory)
+	SetExternalCoreInformerFactory(gardencoreexternalinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
 // WantsExternalCoreClientset defines a function which sets external Core Clientset for admission plugins that need it.
 type WantsExternalCoreClientset interface {
-	SetExternalCoreClientset(externalcoreclientset.Interface)
+	SetExternalCoreClientset(gardencoreversionedclientset.Interface)
 	admission.InitializationValidator
 }
 
@@ -75,7 +75,7 @@ type WantsSeedManagementClientset interface {
 
 // WantsSettingsInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsSettingsInformerFactory interface {
-	SetSettingsInformerFactory(settingsinformer.SharedInformerFactory)
+	SetSettingsInformerFactory(settingsinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
@@ -104,16 +104,16 @@ type WantsQuotaConfiguration interface {
 }
 
 type pluginInitializer struct {
-	coreInformers coreinformers.SharedInformerFactory
-	coreClient    coreclientset.Interface
+	coreInformers gardencoreinformers.SharedInformerFactory
+	coreClient    gardencoreclientset.Interface
 
-	externalCoreInformers externalcoreinformers.SharedInformerFactory
-	externalCoreClient    externalcoreclientset.Interface
+	externalCoreInformers gardencoreexternalinformers.SharedInformerFactory
+	externalCoreClient    gardencoreversionedclientset.Interface
 
 	seedManagementInformers seedmanagementinformers.SharedInformerFactory
 	seedManagementClient    seedmanagementclientset.Interface
 
-	settingsInformers settingsinformer.SharedInformerFactory
+	settingsInformers settingsinformers.SharedInformerFactory
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface

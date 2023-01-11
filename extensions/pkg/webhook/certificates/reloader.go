@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
@@ -152,7 +152,7 @@ func (r *reloader) getServerCert(ctx context.Context, reader client.Reader) (boo
 	}
 
 	s := secretList.Items[0]
-	return true, s.Name, s.Data[secretutils.DataKeyCertificate], s.Data[secretutils.DataKeyPrivateKey], nil
+	return true, s.Name, s.Data[secretsutils.DataKeyCertificate], s.Data[secretsutils.DataKeyPrivateKey], nil
 }
 
 type nonLeaderElectionRunnable struct {

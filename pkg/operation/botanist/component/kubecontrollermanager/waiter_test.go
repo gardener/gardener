@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -71,7 +71,7 @@ var _ = Describe("WaiterTest", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		seedClient = mockclient.NewMockClient(ctrl)
-		fakeSeedInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(seedClient).WithClient(seedClient).Build()
+		fakeSeedInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(seedClient).WithClient(seedClient).Build()
 		shootClient = mockclient.NewMockClient(ctrl)
 	})
 
@@ -107,7 +107,7 @@ var _ = Describe("WaiterTest", func() {
 
 		It("should fail if the seed client cannot talk to the Seed API Server", func() {
 			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(fakeErr),
+				seedClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(fakeErr),
 			)
 
 			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(fakeErr))
@@ -116,7 +116,7 @@ var _ = Describe("WaiterTest", func() {
 		It("should fail if the kube controller manager deployment does not exist", func() {
 			notFoundError := apierrors.NewNotFound(schema.GroupResource{}, "kube-controller-manager")
 			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(notFoundError),
+				seedClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(notFoundError),
 			)
 
 			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError("kube controller manager deployment not found:  \"kube-controller-manager\" not found"))
@@ -124,7 +124,7 @@ var _ = Describe("WaiterTest", func() {
 
 		It("should fail if it fails to list pods in the shoot namespace in the Seed", func() {
 			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				seedClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).Return(fakeErr),
 			)
 
@@ -133,7 +133,7 @@ var _ = Describe("WaiterTest", func() {
 
 		It("should fail if no kube controller manager pod can be found", func() {
 			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				seedClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
 					*list = corev1.PodList{Items: []corev1.Pod{}}
 					return nil
@@ -145,7 +145,7 @@ var _ = Describe("WaiterTest", func() {
 
 		It("should fail if one of the existing kube controller manager pods has a deletion timestamp", func() {
 			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				seedClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
 					now := metav1.Now()
 					*list = corev1.PodList{Items: []corev1.Pod{
@@ -161,14 +161,14 @@ var _ = Describe("WaiterTest", func() {
 
 		It("should fail if the existing kube controller manager fails to acquire leader election", func() {
 			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				seedClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
 					*list = corev1.PodList{Items: []corev1.Pod{
 						{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}},
 					}}
 					return nil
 				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease, _ ...client.GetOption) error {
+				shootClient.EXPECT().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease, _ ...client.GetOption) error {
 					*actual = coordinationv1.Lease{
 						Spec: coordinationv1.LeaseSpec{
 							RenewTime: &metav1.MicroTime{Time: time.Now().UTC().Add(-10 * time.Second)},
@@ -183,14 +183,14 @@ var _ = Describe("WaiterTest", func() {
 
 		It("should succeed", func() {
 			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				seedClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
 					*list = corev1.PodList{Items: []corev1.Pod{
 						{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}},
 					}}
 					return nil
 				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease, _ ...client.GetOption) error {
+				shootClient.EXPECT().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease, _ ...client.GetOption) error {
 					*actual = coordinationv1.Lease{
 						Spec: coordinationv1.LeaseSpec{
 							RenewTime: &metav1.MicroTime{Time: time.Now().UTC()},

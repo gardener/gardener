@@ -19,11 +19,11 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -96,12 +96,12 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensi
 		}
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
 	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Reconciling the backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kutil.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
@@ -132,7 +132,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
 	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Deleting the BackupBucket"); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -147,7 +147,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kutil.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}

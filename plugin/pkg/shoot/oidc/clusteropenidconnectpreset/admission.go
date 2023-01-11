@@ -24,10 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
-	settingslister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	settingsv1alpha1lister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	applier "github.com/gardener/gardener/plugin/pkg/shoot/oidc"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,8 +52,8 @@ func Register(plugins *admission.Plugins) {
 type ClusterOpenIDConnectPreset struct {
 	*admission.Handler
 
-	projectLister     corelisters.ProjectLister
-	clusterOIDCLister settingslister.ClusterOpenIDConnectPresetLister
+	projectLister     gardencorelisters.ProjectLister
+	clusterOIDCLister settingsv1alpha1lister.ClusterOpenIDConnectPresetLister
 	readyFunc         admission.ReadyFunc
 }
 
@@ -78,7 +78,7 @@ func (c *ClusterOpenIDConnectPreset) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (c *ClusterOpenIDConnectPreset) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (c *ClusterOpenIDConnectPreset) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	projectInformer := f.Core().InternalVersion().Projects()
 	c.projectLister = projectInformer.Lister()
 
@@ -86,7 +86,7 @@ func (c *ClusterOpenIDConnectPreset) SetInternalCoreInformerFactory(f coreinform
 }
 
 // SetSettingsInformerFactory gets Lister from SharedInformerFactory.
-func (c *ClusterOpenIDConnectPreset) SetSettingsInformerFactory(f settingsinformer.SharedInformerFactory) {
+func (c *ClusterOpenIDConnectPreset) SetSettingsInformerFactory(f settingsinformers.SharedInformerFactory) {
 	oidc := f.Settings().V1alpha1().OpenIDConnectPresets()
 
 	clusterOIDC := f.Settings().V1alpha1().ClusterOpenIDConnectPresets()

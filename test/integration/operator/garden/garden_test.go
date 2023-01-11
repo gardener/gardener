@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -48,7 +48,7 @@ var _ = Describe("Garden controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+		DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
 		DeferCleanup(test.WithFeatureGate(operatorfeatures.FeatureGate, features.HVPA, true))
 		DeferCleanup(test.WithVars(
 			&etcd.DefaultInterval, 100*time.Millisecond,

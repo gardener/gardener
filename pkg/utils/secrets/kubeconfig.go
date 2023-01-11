@@ -15,7 +15,7 @@
 package secrets
 
 import (
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -47,7 +47,7 @@ func (s *KubeconfigSecretConfig) GetName() string {
 
 // Generate implements ConfigInterface.
 func (s *KubeconfigSecretConfig) Generate() (DataInterface, error) {
-	kubeconfig := kutil.NewKubeconfig(s.ContextName, s.Cluster, s.AuthInfo)
+	kubeconfig := kubernetesutils.NewKubeconfig(s.ContextName, s.Cluster, s.AuthInfo)
 
 	raw, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
 	if err != nil {

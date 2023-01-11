@@ -19,8 +19,8 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -52,9 +52,9 @@ func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) {
 				!apiequality.Semantic.DeepEqual(oldShoot.Status.SeedName, newShoot.Status.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, newShoot.Spec.SecretBindingName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, newShoot.Spec.CloudProfileName) ||
-				gardencorev1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != gardencorev1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
-				!gardencorev1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
-				!gardencorev1beta1helper.ShootSecretResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) {
+				v1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
+				!v1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
+				!v1beta1helper.ShootSecretResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) {
 				g.handleShootCreateOrUpdate(newShoot)
 			}
 		},
@@ -143,8 +143,8 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 
 	// Those secrets are not directly referenced in the shoot spec, however, they will be created/updated as part of the
 	// gardenlet reconciliation and are bound to the lifetime of the shoot, so let's add them here.
-	for _, suffix := range gutil.GetShootProjectSecretSuffixes() {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, gutil.ComputeShootProjectSecretName(shoot.Name, suffix))
+	for _, suffix := range gardenerutils.GetShootProjectSecretSuffixes() {
+		secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, suffix))
 		g.addEdge(secretVertex, shootVertex)
 	}
 

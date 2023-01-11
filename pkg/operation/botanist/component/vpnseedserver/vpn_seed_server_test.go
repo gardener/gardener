@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -250,8 +250,8 @@ admin:
 		}
 	)
 
-	Expect(kutil.MakeUnique(configMap)).To(Succeed())
-	Expect(kutil.MakeUnique(secretDH)).To(Succeed())
+	Expect(kubernetesutils.MakeUnique(configMap)).To(Succeed())
+	Expect(kubernetesutils.MakeUnique(secretDH)).To(Succeed())
 
 	var (
 		deploymentObjectMeta = &metav1.ObjectMeta{
@@ -855,7 +855,7 @@ admin:
 		sm = fakesecretsmanager.New(c, namespace)
 
 		By("expecting secrets managed outside of this package for whose secretsmanager.Get() will be called")
-		c.EXPECT().Get(ctx, kutil.Key(namespace, "ca-vpn"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
+		c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "ca-vpn"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
 		vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, values)
 	})
@@ -942,7 +942,7 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).Return(fakeErr),
 				)
 
@@ -959,9 +959,9 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
 				)
 
@@ -978,13 +978,13 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).Return(fakeErr),
 				)
 
@@ -1001,11 +1001,11 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).Return(fakeErr),
 				)
 
@@ -1022,13 +1022,13 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()),
 
 					c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
@@ -1037,7 +1037,7 @@ admin:
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
 					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
 
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Return(fakeErr),
 				)
 
@@ -1066,22 +1066,22 @@ admin:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(deployment("")))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(service))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(BeComparableTo(destinationRule(), test.CmpOptsForDestinationRule()))
@@ -1093,7 +1093,7 @@ admin:
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
 					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
 
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
@@ -1129,47 +1129,47 @@ admin:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.StatefulSet{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(statefulSet("")))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(podDisruptionBudget))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName+"-0"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName+"-0"), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(indexedService(0)))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-0"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-0"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(BeComparableTo(indexedDestinationRule(0), test.CmpOptsForDestinationRule()))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName+"-1"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName+"-1"), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(indexedService(1)))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-1"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-1"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(BeComparableTo(indexedDestinationRule(1), test.CmpOptsForDestinationRule()))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName+"-2"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName+"-2"), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(indexedService(2)))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-2"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-2"), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(BeComparableTo(indexedDestinationRule(2), test.CmpOptsForDestinationRule()))
@@ -1179,7 +1179,7 @@ admin:
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
@@ -1208,22 +1208,22 @@ admin:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(deployment(values.Network.NodeCIDR)))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(service))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(BeComparableTo(destinationRule(), test.CmpOptsForDestinationRule()))
@@ -1235,7 +1235,7 @@ admin:
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
 					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
 
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))

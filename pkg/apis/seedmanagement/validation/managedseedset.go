@@ -28,9 +28,9 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -43,7 +43,7 @@ func ValidateManagedSeedSet(ManagedSeedSet *seedmanagement.ManagedSeedSet) field
 		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), ManagedSeedSet.Namespace, "namespace must be garden"))
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&ManagedSeedSet.ObjectMeta, true, corevalidation.ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&ManagedSeedSet.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateManagedSeedSetSpec(&ManagedSeedSet.Spec, field.NewPath("spec"))...)
 
 	return allErrs
@@ -161,7 +161,7 @@ func ValidateManagedSeedSetSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSe
 
 	// Validate updates to template and shootTemplate
 	allErrs = append(allErrs, ValidateManagedSeedTemplateUpdate(&newSpec.Template, &oldSpec.Template, fldPath.Child("template"))...)
-	allErrs = append(allErrs, corevalidation.ValidateShootTemplateUpdate(&newSpec.ShootTemplate, &oldSpec.ShootTemplate, fldPath.Child("shootTemplate"))...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateShootTemplateUpdate(&newSpec.ShootTemplate, &oldSpec.ShootTemplate, fldPath.Child("shootTemplate"))...)
 
 	return allErrs
 }
@@ -180,7 +180,7 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 	// TODO(timuthy): Remove this check once `config` is required.
 	if template.Spec.Gardenlet.Config != nil {
 		configPath := fldPath.Child("spec", "gardenlet", "config")
-		gardenletConfig, err := confighelper.ConvertGardenletConfiguration(template.Spec.Gardenlet.Config)
+		gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(template.Spec.Gardenlet.Config)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(configPath, template.Spec.Gardenlet.Config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
 			return allErrs
@@ -204,7 +204,7 @@ func ValidateShootTemplateForManagedSeedSet(template *gardencore.ShootTemplate, 
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateTemplateLabels(&template.ObjectMeta, selector, fldPath.Child("metadata"))...)
-	allErrs = append(allErrs, corevalidation.ValidateShootTemplate(template, fldPath)...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateShootTemplate(template, fldPath)...)
 
 	return allErrs
 }

@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -147,7 +147,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		Data: n.values.ConfigData,
 	}
 
-	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	var (
 		intStrOne       = intstr.FromInt(1)

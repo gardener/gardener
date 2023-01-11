@@ -21,9 +21,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,13 +65,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		gardencorev1beta1.SeedGardenletReady,
 		gardencorev1beta1.SeedSystemComponentsHealthy,
 	}
-	conditions := gardencorev1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
+	conditions := v1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
 	if seed != nil {
-		conditions = gardencorev1beta1helper.MergeConditions(conditions, seed.Status.Conditions...)
+		conditions = v1beta1helper.MergeConditions(conditions, seed.Status.Conditions...)
 	}
 
 	// Update the shoot conditions if needed
-	if gardencorev1beta1helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
+	if v1beta1helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
 		log.V(1).Info("Updating shoot conditions")
 		shoot.Status.Conditions = conditions
 		// We are using Update here to ensure that we act upon an up-to-date version of the shoot.
@@ -86,14 +86,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *Reconciler) getShootSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	// Get the managed seed referencing this shoot
-	ms, err := kutil.GetManagedSeedWithReader(ctx, r.Client, shoot.Namespace, shoot.Name)
+	ms, err := kubernetesutils.GetManagedSeedWithReader(ctx, r.Client, shoot.Namespace, shoot.Name)
 	if err != nil || ms == nil {
 		return nil, err
 	}
 
 	// Get the seed registered by the managed seed
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.Client.Get(ctx, kutil.Key(ms.Name), seed); err != nil {
+	if err := r.Client.Get(ctx, kubernetesutils.Key(ms.Name), seed); err != nil {
 		return nil, client.IgnoreNotFound(err)
 	}
 	return seed, nil

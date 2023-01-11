@@ -23,7 +23,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -442,7 +442,7 @@ func (f *ShootCreationFramework) Verify() {
 	)
 
 	// Shoot with failure tolerance 'zone' should only be scheduled on seed with at least 3 zones.
-	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
+	if v1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
 		gomega.Expect(len(f.ShootFramework.Seed.Spec.Provider.Zones)).Should(gomega.BeNumerically(">=", 3))
 	}
 

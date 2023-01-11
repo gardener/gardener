@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -84,7 +84,7 @@ func mustIncreaseGeneration(oldManagedSeedSet, newManagedSeedSet *seedmanagement
 	}
 
 	// The operation annotation was added with value "reconcile"
-	if kutil.HasMetaDataAnnotation(&newManagedSeedSet.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
+	if kubernetesutils.HasMetaDataAnnotation(&newManagedSeedSet.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
 		delete(newManagedSeedSet.Annotations, v1beta1constants.GardenerOperation)
 		return true
 	}

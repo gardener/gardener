@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	mockwebhook "github.com/gardener/gardener/extensions/pkg/webhook/mock"
+	extensionsmockwebhook "github.com/gardener/gardener/extensions/pkg/webhook/mock"
 	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
@@ -86,7 +86,7 @@ var _ = Describe("Handler", func() {
 	Describe("#Handle", func() {
 		It("should return an allowing response if the resource wasn't changed by mutator", func() {
 			// Create mock mutator
-			mutator := mockwebhook.NewMockMutator(ctrl)
+			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
 			mutator.EXPECT().Mutate(context.TODO(), svc, nil).Return(nil)
 
 			// Create handler
@@ -108,7 +108,7 @@ var _ = Describe("Handler", func() {
 
 		It("should return an allowing response if the resource wasn't changed by mutator and it's update", func() {
 			// Create mock mutator
-			mutator := mockwebhook.NewMockMutator(ctrl)
+			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
 
 			oldSvc := svc.DeepCopy()
 			oldSvc.ObjectMeta.Generation = 2
@@ -137,7 +137,7 @@ var _ = Describe("Handler", func() {
 
 		It("should return a patch response if the resource was changed by mutator", func() {
 			// Create mock mutator
-			mutator := mockwebhook.NewMockMutator(ctrl)
+			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
 			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(ctx context.Context, obj, oldOjb client.Object) error {
 				obj.SetAnnotations(map[string]string{"foo": "bar"})
 				return nil
@@ -168,7 +168,7 @@ var _ = Describe("Handler", func() {
 
 		It("should return an error response if the mutator returned an error", func() {
 			// Create mock mutator
-			mutator := mockwebhook.NewMockMutator(ctrl)
+			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
 			mutator.EXPECT().Mutate(context.TODO(), svc, nil).Return(errors.New("test error"))
 
 			// Create handler

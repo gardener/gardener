@@ -37,9 +37,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -110,7 +110,7 @@ type shootPredicate struct {
 }
 
 func (p *shootPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
@@ -182,7 +182,7 @@ func (p *shootPredicate) filterShoot(obj client.Object) bool {
 	case seedmanagementv1alpha1.ShootDeleteFailedReason:
 		return !shootDeleteFailed(shoot)
 	case seedmanagementv1alpha1.ShootNotHealthyReason:
-		return shootHealthStatus(shoot) == operationshoot.StatusHealthy
+		return shootHealthStatus(shoot) == shootpkg.StatusHealthy
 	default:
 		return false
 	}
@@ -195,7 +195,7 @@ func (p *shootPredicate) getManagedSeedSetPendingReplicaReason(shoot *gardencore
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kutil.Key(shoot.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := p.reader.Get(p.ctx, kubernetesutils.Key(shoot.Namespace, controllerRef.Name), managedSeedSet); err != nil {
 		return "", false
 	}
 
@@ -217,7 +217,7 @@ type managedSeedPredicate struct {
 }
 
 func (p *managedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
@@ -296,7 +296,7 @@ func (p *managedSeedPredicate) getManagedSeedSetPendingReplicaReason(managedSeed
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kutil.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := p.reader.Get(p.ctx, kubernetesutils.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
 		return "", false
 	}
 
@@ -318,7 +318,7 @@ type seedPredicate struct {
 }
 
 func (p *seedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutil.FromStopChannel(stopChan)
+	p.ctx = contextutils.FromStopChannel(stopChan)
 	return nil
 }
 
@@ -360,7 +360,7 @@ func (p *seedPredicate) filterSeed(obj client.Object) bool {
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := p.reader.Get(p.ctx, kutil.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := p.reader.Get(p.ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
 		return false
 	}
 
@@ -370,7 +370,7 @@ func (p *seedPredicate) filterSeed(obj client.Object) bool {
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kutil.Key(seed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := p.reader.Get(p.ctx, kubernetesutils.Key(seed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
 		return false
 	}
 
@@ -394,7 +394,7 @@ func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logge
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := reader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := reader.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
 		}
@@ -407,7 +407,7 @@ func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logge
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := reader.Get(ctx, kutil.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := reader.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get ManagedSeedSet for ManagedSeed", "managedseed", client.ObjectKeyFromObject(managedSeed))
 		}

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
@@ -98,7 +98,7 @@ func ReportFailedMachines(status machinev1alpha1.MachineDeploymentStatus) error 
 	}
 
 	allErrs := &multierror.Error{
-		ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("machine(s) failed"),
+		ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("machine(s) failed"),
 	}
 	for description, names := range descriptionPerFailedMachines {
 		allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %s", strings.Join(names, ", "), description))

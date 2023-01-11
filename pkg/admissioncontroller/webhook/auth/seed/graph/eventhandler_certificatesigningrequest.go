@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -61,7 +61,7 @@ func (g *graph) handleCertificateSigningRequestCreate(name string, request []byt
 	if err != nil {
 		return
 	}
-	if ok, _ := gutil.IsSeedClientCert(x509cr, usages); !ok {
+	if ok, _ := gardenerutils.IsSeedClientCert(x509cr, usages); !ok {
 		return
 	}
 	seedName, _ := seedidentity.FromCertificateSigningRequest(x509cr)

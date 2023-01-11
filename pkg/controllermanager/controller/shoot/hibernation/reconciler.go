@@ -22,7 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
@@ -116,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	now := r.Clock.Now()
-	if gutil.IsShootFailedAndUpToDate(shoot) {
+	if gardenerutils.IsShootFailedAndUpToDate(shoot) {
 		requeueAfter := nextHibernationTimeDuration(parsedSchedules, now)
 		log.Info("Shoot is in Failed state, requeuing shoot hibernation", "requeueAfter", requeueAfter)
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil

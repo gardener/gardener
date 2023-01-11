@@ -18,8 +18,8 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -35,16 +35,16 @@ var _ = Describe("exposureclass", func() {
 			exposureClassName = "test"
 
 			shoot         *core.Shoot
-			exposureClass *corev1alpha1.ExposureClass
+			exposureClass *gardencorev1alpha1.ExposureClass
 
 			attrs            admission.Attributes
 			admissionHandler *ExposureClass
 
-			gardenCoreInformerFactory externalcoreinformers.SharedInformerFactory
+			gardenCoreInformerFactory gardencoreexternalinformers.SharedInformerFactory
 		)
 
 		BeforeEach(func() {
-			gardenCoreInformerFactory = externalcoreinformers.NewSharedInformerFactory(nil, 0)
+			gardenCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
 
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
@@ -60,11 +60,11 @@ var _ = Describe("exposureclass", func() {
 				},
 			}
 
-			exposureClass = &corev1alpha1.ExposureClass{
+			exposureClass = &gardencorev1alpha1.ExposureClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: exposureClassName,
 				},
-				Scheduling: &corev1alpha1.ExposureClassScheduling{},
+				Scheduling: &gardencorev1alpha1.ExposureClassScheduling{},
 			}
 		})
 
@@ -103,7 +103,7 @@ var _ = Describe("exposureclass", func() {
 
 		Context("SeedSelector", func() {
 			BeforeEach(func() {
-				exposureClass.Scheduling.SeedSelector = &corev1alpha1.SeedSelector{}
+				exposureClass.Scheduling.SeedSelector = &gardencorev1alpha1.SeedSelector{}
 
 				shoot.Spec.SeedSelector = &core.SeedSelector{}
 			})
@@ -190,7 +190,7 @@ var _ = Describe("exposureclass", func() {
 
 		Context("Tolerations", func() {
 			BeforeEach(func() {
-				exposureClass.Scheduling.Tolerations = []corev1alpha1.Toleration{{
+				exposureClass.Scheduling.Tolerations = []gardencorev1alpha1.Toleration{{
 					Key:   "abc",
 					Value: pointer.StringPtr("def"),
 				}}
@@ -201,7 +201,7 @@ var _ = Describe("exposureclass", func() {
 			})
 
 			It("should do nothing as ExposureClass has no tolerations", func() {
-				exposureClass.Scheduling.Tolerations = []corev1alpha1.Toleration{}
+				exposureClass.Scheduling.Tolerations = []gardencorev1alpha1.Toleration{}
 				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)

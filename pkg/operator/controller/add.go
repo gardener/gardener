@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -47,7 +47,7 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 		}
 	}
 
-	identity, err := gutil.DetermineIdentity()
+	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
 	}

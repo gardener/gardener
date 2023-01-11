@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -214,16 +214,16 @@ func completeRotationCA(garden *operatorv1alpha1.Garden) {
 	})
 }
 
-func caCertConfigurations() []secretutils.ConfigInterface {
-	return append([]secretutils.ConfigInterface{
-		&secretutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
+func caCertConfigurations() []secretsutils.ConfigInterface {
+	return append([]secretsutils.ConfigInterface{
+		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
 	}, nonAutoRotatedCACertConfigurations()...)
 }
 
-func nonAutoRotatedCACertConfigurations() []secretutils.ConfigInterface {
-	return []secretutils.ConfigInterface{
-		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},
-		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretutils.CACert},
+func nonAutoRotatedCACertConfigurations() []secretsutils.ConfigInterface {
+	return []secretsutils.ConfigInterface{
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert},
 	}
 }
 

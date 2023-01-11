@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/projectrbac"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -429,41 +429,41 @@ var _ = Describe("ProjectRBAC", func() {
 			roleBindingProjectExtensionRole1.Subjects = []rbacv1.Subject{member1}
 
 			// project admin
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleProjectAdmin.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleProjectAdmin.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
 			c.EXPECT().Patch(ctx, clusterRoleProjectAdmin, gomock.Any())
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingProjectAdmin.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleBindingProjectAdmin.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
 			c.EXPECT().Patch(ctx, clusterRoleBindingProjectAdmin, gomock.Any())
 
 			// project uam
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleProjectUAM.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleProjectUAM.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
 			c.EXPECT().Patch(ctx, clusterRoleProjectUAM, gomock.Any())
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingProjectUAM.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleBindingProjectUAM.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
 			c.EXPECT().Patch(ctx, clusterRoleBindingProjectUAM, gomock.Any())
 
 			// project serviceaccountmanager
-			c.EXPECT().Get(ctx, kutil.Key(roleBindingProjectServiceAccountManager.Namespace, roleBindingProjectServiceAccountManager.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(roleBindingProjectServiceAccountManager.Namespace, roleBindingProjectServiceAccountManager.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
 			c.EXPECT().Patch(ctx, roleBindingProjectServiceAccountManager, gomock.Any())
 
 			// project member
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleProjectMember.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleProjectMember.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
 			c.EXPECT().Patch(ctx, clusterRoleProjectMember, gomock.Any())
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingProjectMember.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleBindingProjectMember.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
 			c.EXPECT().Patch(ctx, clusterRoleBindingProjectMember, gomock.Any())
-			c.EXPECT().Get(ctx, kutil.Key(roleBindingProjectMember.Namespace, roleBindingProjectMember.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(roleBindingProjectMember.Namespace, roleBindingProjectMember.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
 			c.EXPECT().Patch(ctx, roleBindingProjectMember, gomock.Any())
 
 			// project viewer
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleProjectViewer.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleProjectViewer.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
 			c.EXPECT().Patch(ctx, clusterRoleProjectViewer, gomock.Any())
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingProjectViewer.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleBindingProjectViewer.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
 			c.EXPECT().Patch(ctx, clusterRoleBindingProjectViewer, gomock.Any())
-			c.EXPECT().Get(ctx, kutil.Key(roleBindingProjectViewer.Namespace, roleBindingProjectViewer.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(roleBindingProjectViewer.Namespace, roleBindingProjectViewer.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
 			c.EXPECT().Patch(ctx, roleBindingProjectViewer, gomock.Any())
 
 			// project extension roles
-			c.EXPECT().Get(ctx, kutil.Key(clusterRoleProjectExtensionRole1.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleProjectExtensionRole1.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
 			c.EXPECT().Patch(ctx, clusterRoleProjectExtensionRole1, gomock.Any())
-			c.EXPECT().Get(ctx, kutil.Key(roleBindingProjectExtensionRole1.Namespace, roleBindingProjectExtensionRole1.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(roleBindingProjectExtensionRole1.Namespace, roleBindingProjectExtensionRole1.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
 			c.EXPECT().Patch(ctx, roleBindingProjectExtensionRole1, gomock.Any())
 
 			Expect(projectRBAC.Deploy(ctx)).To(Succeed())

@@ -24,7 +24,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/hashicorp/go-multierror"
@@ -233,6 +233,6 @@ func expectWebhookConfigReconciliation(ctx context.Context, fakeClient client.Cl
 }
 
 func expectNoWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string) {
-	ExpectWithOffset(1, fakeClient.Get(ctx, kutil.Key(namespace, managedResourceName), &corev1.Secret{})).To(BeNotFoundError())
-	ExpectWithOffset(1, fakeClient.Get(ctx, kutil.Key(namespace, managedResourceName), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, kubernetesutils.Key(namespace, managedResourceName), &corev1.Secret{})).To(BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, kubernetesutils.Key(namespace, managedResourceName), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 }

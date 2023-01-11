@@ -40,10 +40,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -128,13 +128,13 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v.values.SecretNameServerCA)
 	}
 	v.caSecretName = caSecret.Name
-	v.caBundle = caSecret.Data[secretutils.DataKeyCertificateBundle]
+	v.caBundle = caSecret.Data[secretsutils.DataKeyCertificateBundle]
 
-	serverSecret, err := v.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+	serverSecret, err := v.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        "vpa-admission-controller-server",
 		CommonName:                  fmt.Sprintf("%s.%s.svc", admissionControllerServiceName, v.namespace),
-		DNSNames:                    kutil.DNSNamesForService(admissionControllerServiceName, v.namespace),
-		CertType:                    secretutils.ServerCert,
+		DNSNames:                    kubernetesutils.DNSNamesForService(admissionControllerServiceName, v.namespace),
+		CertType:                    secretsutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
@@ -164,7 +164,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			v1beta1constants.DeploymentNameVPARecommender,
 			v1beta1constants.DeploymentNameVPAUpdater,
 		} {
-			if err := gutil.NewShootAccessSecret(name, v.namespace).Reconcile(ctx, v.client); err != nil {
+			if err := gardenerutils.NewShootAccessSecret(name, v.namespace).Reconcile(ctx, v.client); err != nil {
 				return err
 			}
 		}
@@ -316,7 +316,7 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 		// TODO(shafeeqes): Adapt admission-controller to use kubeconfig too, https://github.com/kubernetes/autoscaler/issues/4844 is fixed in 0.12.0.
 		// But we can't use 0.12.0 for k8s version < 1.21: Ref https://github.com/gardener/gardener/pull/6739#pullrequestreview-1120429778
 		if name != admissionController {
-			utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gutil.SecretNamePrefixShootAccess+deployment.Name))
+			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gardenerutils.SecretNamePrefixShootAccess+deployment.Name))
 		} else {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
 				corev1.EnvVar{
@@ -340,7 +340,7 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 										Name: v.caSecretName,
 									},
 									Items: []corev1.KeyToPath{{
-										Key:  secretutils.DataKeyCertificateBundle,
+										Key:  secretsutils.DataKeyCertificateBundle,
 										Path: "ca.crt",
 									}},
 								},
@@ -348,7 +348,7 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 							{
 								Secret: &corev1.SecretProjection{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: gutil.SecretNamePrefixShootAccess + name,
+										Name: gardenerutils.SecretNamePrefixShootAccess + name,
 									},
 									Items: []corev1.KeyToPath{{
 										Key:  resourcesv1alpha1.DataKeyToken,

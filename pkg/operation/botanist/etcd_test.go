@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -33,7 +33,7 @@ import (
 	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -80,7 +80,7 @@ var _ = Describe("Etcd", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		reader = mockclient.NewMockReader(ctrl)
-		kubernetesClient = fakeclientset.NewClientSetBuilder().
+		kubernetesClient = kubernetesfake.NewClientSetBuilder().
 			WithClient(c).
 			WithAPIReader(reader).
 			Build()
@@ -336,7 +336,7 @@ var _ = Describe("Etcd", func() {
 				}
 
 				expectGetBackupSecret = func() {
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 						func(ctx context.Context, key client.ObjectKey, obj client.Object, opt ...client.GetOption) error {
 							backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 							return nil
@@ -384,7 +384,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should fail when reading the backup secret fails", func() {
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr)
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr)
 
 				Expect(botanist.DeployEtcd(ctx)).To(MatchError(fakeErr))
 			})

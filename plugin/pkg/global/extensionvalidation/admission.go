@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	corev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 
 	"github.com/hashicorp/go-multierror"
@@ -79,7 +79,7 @@ func (e *ExtensionValidator) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (e *ExtensionValidator) SetExternalCoreInformerFactory(f externalcoreinformers.SharedInformerFactory) {
+func (e *ExtensionValidator) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
 	controllerRegistrationInformer := f.Core().V1beta1().ControllerRegistrations()
 	e.controllerRegistrationLister = controllerRegistrationInformer.Lister()
 

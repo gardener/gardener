@@ -35,7 +35,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -74,7 +74,7 @@ var _ = Describe("managedresources", func() {
 	Describe("#CreateForShoot", func() {
 		It("should return the error of the secret reconciliation", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
 
@@ -83,9 +83,9 @@ var _ = Describe("managedresources", func() {
 
 		It("should return the error of the managed resource reconciliation", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
@@ -94,7 +94,7 @@ var _ = Describe("managedresources", func() {
 
 		It("should successfully create secret and managed resource", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "managedresource-" + name,
@@ -103,7 +103,7 @@ var _ = Describe("managedresources", func() {
 					Type: corev1.SecretTypeOpaque,
 					Data: data,
 				}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
@@ -163,7 +163,7 @@ var _ = Describe("managedresources", func() {
 	Describe("#CreateForSeed", func() {
 		It("should return the error of the secret reconciliation", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
 
@@ -172,9 +172,9 @@ var _ = Describe("managedresources", func() {
 
 		It("should return the error of the managed resource reconciliation", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
@@ -183,7 +183,7 @@ var _ = Describe("managedresources", func() {
 
 		It("should successfully create secret and managed resource", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "managedresource-" + name,
@@ -192,7 +192,7 @@ var _ = Describe("managedresources", func() {
 					Type: corev1.SecretTypeOpaque,
 					Data: data,
 				}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
@@ -214,7 +214,7 @@ var _ = Describe("managedresources", func() {
 			namespace := "shoot--foo--bar"
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "managedresource-" + name,
@@ -223,7 +223,7 @@ var _ = Describe("managedresources", func() {
 					Type: corev1.SecretTypeOpaque,
 					Data: data,
 				}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,

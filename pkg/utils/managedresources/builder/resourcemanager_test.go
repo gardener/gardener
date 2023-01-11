@@ -20,7 +20,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -62,7 +62,7 @@ var _ = Describe("Resource Manager", func() {
 			).To(Succeed())
 
 			secret := &corev1.Secret{}
-			Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), secret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -105,7 +105,7 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -166,7 +166,7 @@ var _ = Describe("Resource Manager", func() {
 			).To(Succeed())
 
 			mr := &resourcesv1alpha1.ManagedResource{}
-			Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
@@ -216,7 +216,7 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{

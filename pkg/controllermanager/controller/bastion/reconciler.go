@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -56,7 +56,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
+	shootKey := kubernetesutils.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
 	log = log.WithValues("shoot", shootKey)
 
 	// fetch associated Shoot

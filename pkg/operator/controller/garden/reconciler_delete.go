@@ -37,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -100,7 +100,7 @@ func (r *Reconciler) delete(
 				component.OpDestroyAndWait(etcdEvents).Destroy,
 				// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
 				func(ctx context.Context) error {
-					return kutil.DeleteObject(ctx, r.RuntimeClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}})
+					return kubernetesutils.DeleteObject(ctx, r.RuntimeClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}})
 				},
 			),
 		})

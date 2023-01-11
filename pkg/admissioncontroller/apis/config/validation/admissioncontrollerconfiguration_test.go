@@ -15,7 +15,7 @@
 package validation_test
 
 import (
-	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,19 +32,19 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 		DescribeTable("Operation mode validation",
 			func(mode string, matcher gomegatypes.GomegaMatcher) {
 				var (
-					admissionConfig *apisconfig.ResourceAdmissionConfiguration
-					webhookMode     = apisconfig.ResourceAdmissionWebhookMode(mode)
+					admissionConfig *admissioncontrollerconfig.ResourceAdmissionConfiguration
+					webhookMode     = admissioncontrollerconfig.ResourceAdmissionWebhookMode(mode)
 				)
 				if mode != "" {
-					admissionConfig = &apisconfig.ResourceAdmissionConfiguration{
+					admissionConfig = &admissioncontrollerconfig.ResourceAdmissionConfiguration{
 						OperationMode: &webhookMode,
 					}
 				}
 
-				config := &apisconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
 					LogLevel:  "info",
 					LogFormat: "json",
-					Server: apisconfig.ServerConfiguration{
+					Server: admissioncontrollerconfig.ServerConfiguration{
 						ResourceAdmissionConfiguration: admissionConfig,
 					},
 				}
@@ -71,12 +71,12 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 			func(apiGroups []string, versions []string, resources []string, size string, matcher gomegatypes.GomegaMatcher) {
 				s, err := resource.ParseQuantity(size)
 				utilruntime.Must(err)
-				config := &apisconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
 					LogLevel:  "info",
 					LogFormat: "json",
-					Server: apisconfig.ServerConfiguration{
-						ResourceAdmissionConfiguration: &apisconfig.ResourceAdmissionConfiguration{
-							Limits: []apisconfig.ResourceLimit{
+					Server: admissioncontrollerconfig.ServerConfiguration{
+						ResourceAdmissionConfiguration: &admissioncontrollerconfig.ResourceAdmissionConfiguration{
+							Limits: []admissioncontrollerconfig.ResourceLimit{
 								{
 									APIGroups:   apiGroups,
 									APIVersions: versions,
@@ -133,11 +133,11 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 
 		DescribeTable("User configuration validation",
 			func(kind string, name string, namespace string, apiGroup string, matcher gomegatypes.GomegaMatcher) {
-				config := &apisconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
 					LogLevel:  "info",
 					LogFormat: "json",
-					Server: apisconfig.ServerConfiguration{
-						ResourceAdmissionConfiguration: &apisconfig.ResourceAdmissionConfiguration{
+					Server: admissioncontrollerconfig.ServerConfiguration{
+						ResourceAdmissionConfiguration: &admissioncontrollerconfig.ResourceAdmissionConfiguration{
 							UnrestrictedSubjects: []rbacv1.Subject{
 								{
 									Kind:      kind,
@@ -188,7 +188,7 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 		)
 		DescribeTable("Logging configuration",
 			func(logLevel, logFormat string, matcher gomegatypes.GomegaMatcher) {
-				config := &apisconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
 					LogLevel:  logLevel,
 					LogFormat: logFormat,
 				}

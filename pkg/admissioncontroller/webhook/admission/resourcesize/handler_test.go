@@ -19,7 +19,7 @@ import (
 	"io"
 	"net/http"
 
-	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -71,8 +71,8 @@ var _ = Describe("handler", func() {
 		unrestrictedServiceAccountName      = "unrestrictedServiceAccount"
 		unrestrictedServiceAccountNamespace = "unrestricted"
 
-		config = func() *apisconfig.ResourceAdmissionConfiguration {
-			return &apisconfig.ResourceAdmissionConfiguration{
+		config = func() *admissioncontrollerconfig.ResourceAdmissionConfiguration {
+			return &admissioncontrollerconfig.ResourceAdmissionConfiguration{
 				UnrestrictedSubjects: []rbacv1.Subject{
 					{
 						Kind: rbacv1.GroupKind,
@@ -88,7 +88,7 @@ var _ = Describe("handler", func() {
 						Namespace: unrestrictedServiceAccountNamespace,
 					},
 				},
-				Limits: []apisconfig.ResourceLimit{
+				Limits: []admissioncontrollerconfig.ResourceLimit{
 					{
 						APIGroups:   []string{"*"},
 						APIVersions: []string{"*"},
@@ -276,7 +276,7 @@ var _ = Describe("handler", func() {
 
 	It("should fail because size is not in range for v1alpha1 shoot and mode is block", func() {
 		cfg := config()
-		blockMode := apisconfig.ResourceAdmissionWebhookMode("block")
+		blockMode := admissioncontrollerconfig.ResourceAdmissionWebhookMode("block")
 		cfg.OperationMode = &blockMode
 		handler = &Handler{Logger: log, Config: config()}
 
@@ -285,7 +285,7 @@ var _ = Describe("handler", func() {
 	})
 
 	It("should pass but log because size is not in range for v1alpha1 shoot and mode is log", func() {
-		mode := apisconfig.ResourceAdmissionWebhookMode("log")
+		mode := admissioncontrollerconfig.ResourceAdmissionWebhookMode("log")
 		handler.Config.OperationMode = &mode
 
 		test(shootv1alpha1, restrictedUser, true)

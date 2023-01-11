@@ -43,7 +43,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -148,7 +148,7 @@ func (h *Handler) handleDeployment(
 		return nil, err
 	}
 
-	log := h.Logger.WithValues("deployment", kutil.ObjectKeyForCreateWebhooks(deployment, req))
+	log := h.Logger.WithValues("deployment", kubernetesutils.ObjectKeyForCreateWebhooks(deployment, req))
 
 	if err := mutateReplicas(
 		log,
@@ -196,7 +196,7 @@ func (h *Handler) handleStatefulSet(
 		return nil, err
 	}
 
-	log := h.Logger.WithValues("statefulSet", kutil.ObjectKeyForCreateWebhooks(statefulSet, req))
+	log := h.Logger.WithValues("statefulSet", kubernetesutils.ObjectKeyForCreateWebhooks(statefulSet, req))
 
 	if err := mutateReplicas(
 		log,
@@ -234,7 +234,7 @@ func (h *Handler) handleHvpa(req admission.Request, failureToleranceType *garden
 		return nil, err
 	}
 
-	log := h.Logger.WithValues("hvpa", kutil.ObjectKeyForCreateWebhooks(hvpa, req))
+	log := h.Logger.WithValues("hvpa", kubernetesutils.ObjectKeyForCreateWebhooks(hvpa, req))
 
 	if err := mutateAutoscalingReplicas(
 		log,
@@ -259,7 +259,7 @@ func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureTo
 			return nil, err
 		}
 
-		log := h.Logger.WithValues("hpa", kutil.ObjectKeyForCreateWebhooks(hpa, req))
+		log := h.Logger.WithValues("hpa", kubernetesutils.ObjectKeyForCreateWebhooks(hpa, req))
 
 		if err := mutateAutoscalingReplicas(
 			log,
@@ -280,7 +280,7 @@ func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureTo
 			return nil, err
 		}
 
-		log := h.Logger.WithValues("hpa", kutil.ObjectKeyForCreateWebhooks(hpa, req))
+		log := h.Logger.WithValues("hpa", kubernetesutils.ObjectKeyForCreateWebhooks(hpa, req))
 
 		if err := mutateAutoscalingReplicas(
 			log,
@@ -332,7 +332,7 @@ func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureTole
 		return nil, nil
 	}
 
-	replicas := kutil.GetReplicaCount(failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
+	replicas := kubernetesutils.GetReplicaCount(failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
 	if replicas == nil {
 		return nil, nil
 	}
@@ -395,7 +395,7 @@ func (h *Handler) mutateNodeAffinity(
 	zones []string,
 	podTemplateSpec *corev1.PodTemplateSpec,
 ) {
-	if nodeSelectorRequirement := kutil.GetNodeSelectorRequirementForZones(isZonePinningEnabled, zones); nodeSelectorRequirement != nil {
+	if nodeSelectorRequirement := kubernetesutils.GetNodeSelectorRequirementForZones(isZonePinningEnabled, zones); nodeSelectorRequirement != nil {
 		if podTemplateSpec.Spec.Affinity == nil {
 			podTemplateSpec.Spec.Affinity = &corev1.Affinity{}
 		}
@@ -446,7 +446,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		maxReplicas = replicas
 	}
 
-	if constraints := kutil.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType); constraints != nil {
+	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType); constraints != nil {
 		// Filter existing constraints with the same topology key to prevent that we are trying to add a constraint with
 		// the same key multiple times.
 		var filteredConstraints []corev1.TopologySpreadConstraint

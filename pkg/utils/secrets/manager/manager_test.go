@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -301,7 +301,7 @@ var _ = Describe("Manager", func() {
 
 		DescribeTable("check different label options",
 			func(ignoreChecksum bool, expectedName string, lastRotationInitiationTime string) {
-				config := &secretutils.CertificateSecretConfig{Name: configName}
+				config := &secretsutils.CertificateSecretConfig{Name: configName}
 
 				meta, err := ObjectMeta(namespace, "test", config, ignoreChecksum, lastRotationInitiationTime, nil, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
@@ -327,9 +327,9 @@ var _ = Describe("Manager", func() {
 
 		DescribeTable("check different label options",
 			func(nameInfix string, signingCAChecksum *string, persist *bool, bundleFor *string, extraLabels map[string]string) {
-				config := &secretutils.CertificateSecretConfig{
+				config := &secretsutils.CertificateSecretConfig{
 					Name:      configName,
-					SigningCA: &secretutils.Certificate{},
+					SigningCA: &secretsutils.Certificate{},
 				}
 
 				meta, err := ObjectMeta(namespace, "test", config, false, lastRotationInitiationTime, signingCAChecksum, persist, bundleFor)

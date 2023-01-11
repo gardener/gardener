@@ -28,10 +28,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/operation/common"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -97,7 +97,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 		}
 
-		ingressClass, err := gutil.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
+		ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
 		if err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameShootControlPlane100
 
 	if hvpaEnabled {
-		currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, "loki"))
+		currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, "loki"))
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 		return err
 	}
 
-	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
+	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},

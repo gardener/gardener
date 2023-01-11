@@ -21,7 +21,7 @@ import (
 	"k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/utils/pointer"
 
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
@@ -63,7 +63,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 		[]extensionsv1alpha1.File{
 			{
-				Path:        gardencorev1beta1constants.OperatingSystemConfigFilePathKernelSettings,
+				Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
 				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{

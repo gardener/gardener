@@ -42,14 +42,14 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
-	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
-	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
+	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -139,7 +139,7 @@ var _ = Describe("Certificates tests", func() {
 				Shoot:        runtime.RawExtension{Object: &gardencorev1beta1.Shoot{}},
 			},
 		}
-		shootNetworkPolicy = extensionswebhookshoot.GetNetworkPolicyMeta(shootNamespace.Name, extensionName)
+		shootNetworkPolicy = extensionsshootwebhook.GetNetworkPolicyMeta(shootNamespace.Name, extensionName)
 
 		shootWebhook = admissionregistrationv1.MutatingWebhook{
 			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootWebhookName, extensionType),
@@ -179,15 +179,15 @@ var _ = Describe("Certificates tests", func() {
 
 			By("registering webhooks")
 			var (
-				serverOptions = &webhookcmd.ServerOptions{
+				serverOptions = &extensionscmdwebhook.ServerOptions{
 					Mode:        extensionswebhook.ModeService,
 					ServicePort: servicePort,
 					Namespace:   extensionNamespace.Name,
 				}
-				switchOptions = webhookcmd.NewSwitchOptions(
-					webhookcmd.Switch(shootWebhookName, newShootWebhook),
+				switchOptions = extensionscmdwebhook.NewSwitchOptions(
+					extensionscmdwebhook.Switch(shootWebhookName, newShootWebhook),
 				)
-				webhookOptions = webhookcmd.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
+				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
 			)
 
 			Expect(webhookOptions.Complete()).To(Succeed())
@@ -241,7 +241,7 @@ var _ = Describe("Certificates tests", func() {
 				By("preparing existing shoot webhook resources")
 				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionswebhookshoot.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
@@ -250,8 +250,8 @@ var _ = Describe("Certificates tests", func() {
 
 				DeferCleanup(test.WithVars(
 					&certificates.DefaultSyncPeriod, 100*time.Millisecond,
-					&secretutils.GenerateKey, secretutils.FakeGenerateKey,
-					&secretutils.Clock, fakeClock,
+					&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
+					&secretsutils.Clock, fakeClock,
 				))
 			})
 
@@ -345,16 +345,16 @@ var _ = Describe("Certificates tests", func() {
 
 			By("registering webhooks")
 			var (
-				serverOptions = &webhookcmd.ServerOptions{
+				serverOptions = &extensionscmdwebhook.ServerOptions{
 					Mode:        extensionswebhook.ModeService,
 					ServicePort: servicePort,
 					Namespace:   extensionNamespace.Name,
 				}
-				switchOptions = webhookcmd.NewSwitchOptions(
-					webhookcmd.Switch(seedWebhookName, newSeedWebhook),
-					webhookcmd.Switch(shootWebhookName, newShootWebhook),
+				switchOptions = extensionscmdwebhook.NewSwitchOptions(
+					extensionscmdwebhook.Switch(seedWebhookName, newSeedWebhook),
+					extensionscmdwebhook.Switch(shootWebhookName, newShootWebhook),
 				)
-				webhookOptions = webhookcmd.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
+				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
 			)
 
 			Expect(webhookOptions.Complete()).To(Succeed())
@@ -428,7 +428,7 @@ var _ = Describe("Certificates tests", func() {
 				By("preparing existing shoot webhook resources")
 				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionswebhookshoot.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
@@ -437,8 +437,8 @@ var _ = Describe("Certificates tests", func() {
 
 				DeferCleanup(test.WithVars(
 					&certificates.DefaultSyncPeriod, 100*time.Millisecond,
-					&secretutils.GenerateKey, secretutils.FakeGenerateKey,
-					&secretutils.Clock, fakeClock,
+					&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
+					&secretsutils.Clock, fakeClock,
 				))
 			})
 

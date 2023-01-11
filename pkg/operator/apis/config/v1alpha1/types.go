@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -66,7 +66,7 @@ type GardenControllerConfig struct {
 	// ETCDConfig contains an optional configuration for the
 	// backup compaction feature of ETCD backup-restore functionality.
 	// +optional
-	ETCDConfig *gardenletconfigv1alpha1.ETCDConfig `json:"etcdConfig,omitempty"`
+	ETCDConfig *gardenletv1alpha1.ETCDConfig `json:"etcdConfig,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

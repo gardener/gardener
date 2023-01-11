@@ -23,7 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -109,7 +109,7 @@ func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) 
 		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
 	}
 
-	return kutil.DeleteObjects(ctx, k8sClient, resources...)
+	return kubernetesutils.DeleteObjects(ctx, k8sClient, resources...)
 }
 
 // DeleteSeedLoggingStack deletes all seed resource of the logging stack in the garden namespace.
@@ -126,7 +126,7 @@ func DeleteSeedLoggingStack(ctx context.Context, k8sClient client.Client) error 
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
 	}
 
-	if err := kutil.DeleteObjects(ctx, k8sClient, resources...); err != nil {
+	if err := kubernetesutils.DeleteObjects(ctx, k8sClient, resources...); err != nil {
 		return err
 	}
 
@@ -180,7 +180,7 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		},
 	}
 
-	return kutil.DeleteObjects(ctx, k8sClient, objs...)
+	return kubernetesutils.DeleteObjects(ctx, k8sClient, objs...)
 }
 
 // DeleteGrafanaByRole deletes the monitoring stack for the shoot owner.

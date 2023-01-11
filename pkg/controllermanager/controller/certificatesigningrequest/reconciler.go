@@ -37,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Reconciler reconciles CertificateSigningRequest.
@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("unable to parse csr: %w", err)
 	}
 
-	if ok, reason := gutil.IsSeedClientCert(x509cr, csr.Spec.Usages); !ok {
+	if ok, reason := gardenerutils.IsSeedClientCert(x509cr, csr.Spec.Usages); !ok {
 		log.Info("Ignoring CSR, as it does not match the requirements for a seed client", "reason", reason)
 		return reconcile.Result{}, nil
 	}

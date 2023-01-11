@@ -49,9 +49,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -343,7 +343,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 	if b.imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}
-		utilruntime.Must(kutil.MakeUnique(configMapImageVectorOverwrite))
+		utilruntime.Must(kubernetesutils.MakeUnique(configMapImageVectorOverwrite))
 		resourcesToAdd = append(resourcesToAdd, configMapImageVectorOverwrite)
 
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -414,7 +414,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := gutil.ConfirmDeletion(ctx, b.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCRDName}}); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, b.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCRDName}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -427,7 +427,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.EtcdCopyBackupsTask resources left in the cluster")
 	}
 
-	if err := gutil.ConfirmDeletion(ctx, b.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCopyBackupsTaskCRDName}}); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, b.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCopyBackupsTaskCRDName}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

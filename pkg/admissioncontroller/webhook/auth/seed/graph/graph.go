@@ -21,7 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 
 	"github.com/go-logr/logr"
@@ -71,7 +71,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	}{
 		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
 		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
-		{&gardenoperationsv1alpha1.Bastion{}, g.setupBastionWatch},
+		{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
 		{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
 		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},

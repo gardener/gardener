@@ -20,7 +20,7 @@ import (
 	"crypto/x509/pkix"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -40,7 +40,7 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		privateKey, _ = secretutils.FakeGenerateKey(rand.Reader, 4096)
+		privateKey, _ = secretsutils.FakeGenerateKey(rand.Reader, 4096)
 
 		csr = &certificatesv1.CertificateSigningRequest{
 			// Username, UID, Groups will be injected by API server.

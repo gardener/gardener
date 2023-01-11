@@ -26,11 +26,11 @@ import (
 	"time"
 
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
-	authenticationapiv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -61,8 +61,8 @@ var (
 	_ = rest.GroupVersionKindProvider(&AdminKubeconfigREST{})
 
 	gvk = schema.GroupVersionKind{
-		Group:   authenticationapiv1alpha1.SchemeGroupVersion.Group,
-		Version: authenticationapiv1alpha1.SchemeGroupVersion.Version,
+		Group:   authenticationv1alpha1.SchemeGroupVersion.Group,
+		Version: authenticationv1alpha1.SchemeGroupVersion.Version,
 		Kind:    "AdminKubeconfigRequest",
 	}
 )
@@ -124,7 +124,7 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
-	resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	resourceDataList := v1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 
 	clusterCABundle, err := getClusterCABundle(resourceDataList)
 	if err != nil {
@@ -227,7 +227,7 @@ func findNewestCACertificate(results []*gardencorev1alpha1.GardenerResourceData)
 	return result, nil
 }
 
-func getClusterCABundle(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList) ([]byte, error) {
+func getClusterCABundle(resourceDataList v1alpha1helper.GardenerResourceDataList) ([]byte, error) {
 	var (
 		allCAs   = resourceDataList.Select(caCertificateSelector.Add(nameCAClusterReq))
 		caBundle []byte
@@ -268,7 +268,7 @@ func getClusterCABundle(resourceDataList gardencorev1alpha1helper.GardenerResour
 	return caBundle, nil
 }
 
-func getClientCACertificate(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList) (*secrets.Certificate, error) {
+func getClientCACertificate(resourceDataList v1alpha1helper.GardenerResourceDataList) (*secrets.Certificate, error) {
 	var (
 		ca  *gardencorev1alpha1.GardenerResourceData
 		err error

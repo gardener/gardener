@@ -39,13 +39,13 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -130,13 +130,13 @@ var _ = Describe("Bootstrap", func() {
 				Name:      "gardenlet-kubeconfig",
 				Namespace: "garden",
 			}
-			kubeconfigKey = kutil.ObjectKeyFromSecretRef(secretReference)
+			kubeconfigKey = kubernetesutils.ObjectKeyFromSecretRef(secretReference)
 
 			bootstrapSecretReference := corev1.SecretReference{
 				Name:      "bootstrap-kubeconfig",
 				Namespace: "garden",
 			}
-			bootstrapKubeconfigKey = kutil.ObjectKeyFromSecretRef(bootstrapSecretReference)
+			bootstrapKubeconfigKey = kubernetesutils.ObjectKeyFromSecretRef(bootstrapSecretReference)
 
 			kubeClient = fake.NewSimpleClientset()
 			kubeClient.Fake = testing.Fake{Resources: []*metav1.APIResourceList{
@@ -177,12 +177,12 @@ var _ = Describe("Bootstrap", func() {
 				return true, &approvedCSR, nil
 			})
 
-			bootstrapClientSet := fakeclientset.NewClientSetBuilder().
+			bootstrapClientSet := kubernetesfake.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
 				WithKubernetes(kubeClient).
 				Build()
 
-			seedClient.EXPECT().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			seedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 
 			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
@@ -216,7 +216,7 @@ var _ = Describe("Bootstrap", func() {
 				return true, &deniedCSR, nil
 			})
 
-			bootstrapClientSet := fakeclientset.NewClientSetBuilder().
+			bootstrapClientSet := kubernetesfake.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
 				WithKubernetes(kubeClient).
 				Build()
@@ -234,7 +234,7 @@ var _ = Describe("Bootstrap", func() {
 				return true, &failedCSR, nil
 			})
 
-			bootstrapClientSet := fakeclientset.NewClientSetBuilder().
+			bootstrapClientSet := kubernetesfake.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
 				WithKubernetes(kubeClient).
 				Build()
@@ -247,7 +247,7 @@ var _ = Describe("Bootstrap", func() {
 	Describe("#DeleteBootstrapAuth", func() {
 		var (
 			csrName = "csr-name"
-			csrKey  = kutil.Key(csrName)
+			csrKey  = kubernetesutils.Key(csrName)
 		)
 
 		It("should return an error because the CSR was not found", func() {
@@ -296,7 +296,7 @@ var _ = Describe("Bootstrap", func() {
 				serviceAccountUserName  = serviceaccount.MakeUsername(serviceAccountNamespace, serviceAccountName)
 				serviceAccount          = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: serviceAccountNamespace, Name: serviceAccountName}}
 
-				clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
+				clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: gardenletbootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
 			)
 
 			gomock.InOrder(

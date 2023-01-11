@@ -18,7 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -56,7 +56,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		client = fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		fakeClientSet := fakeclientset.NewClientSetBuilder().
+		fakeClientSet := kubernetesfake.NewClientSetBuilder().
 			WithAPIReader(client).
 			Build()
 

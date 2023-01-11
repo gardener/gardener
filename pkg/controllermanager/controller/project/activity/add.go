@@ -36,7 +36,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -159,7 +159,7 @@ func (r *Reconciler) NeedsSecretBindingReferenceLabelPredicate() predicate.Predi
 
 // MapObjectToProject is a mapper.MapFunc for mapping an object to the Project it belongs to.
 func (r *Reconciler) MapObjectToProject(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	project, err := gutil.ProjectForNamespaceFromReader(ctx, reader, obj.GetNamespace())
+	project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, reader, obj.GetNamespace())
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get project for namespace", "namespace", obj.GetNamespace())

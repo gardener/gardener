@@ -26,14 +26,14 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // SecretConfigWithOptions combines a secret config with options that should be used for generating it.
 type SecretConfigWithOptions struct {
 	// Config contains the secret config to generate.
-	Config secretutils.ConfigInterface
+	Config secretsutils.ConfigInterface
 	// Options contains options for generating Config.
 	Options []secretsmanager.GenerateOption
 }
@@ -68,8 +68,8 @@ type secretsManager struct {
 
 // Generate delegates to the contained SecretsManager but automatically injects the `IgnoreOldSecrets` option if the CA
 // rotation phase is `Completing`. It always injects the rotation policy `KeepOld` for all CA configs.
-func (a secretsManager) Generate(ctx context.Context, config secretutils.ConfigInterface, opts ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
-	if certConfig, ok := config.(*secretutils.CertificateSecretConfig); ok && certConfig.CertType == secretutils.CACert {
+func (a secretsManager) Generate(ctx context.Context, config secretsutils.ConfigInterface, opts ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
+	if certConfig, ok := config.(*secretsutils.CertificateSecretConfig); ok && certConfig.CertType == secretsutils.CACert {
 		// CAs are always rotated in phases (not in-place)
 		opts = append(opts, secretsmanager.Rotate(secretsmanager.KeepOld))
 		if v1beta1helper.GetShootCARotationPhase(a.cluster.Shoot.Status.Credentials) == gardencorev1beta1.RotationCompleting {
@@ -112,8 +112,8 @@ func filterCAConfigs(secretConfigs []SecretConfigWithOptions) []SecretConfigWith
 
 	for _, config := range secretConfigs {
 		switch secretConfig := config.Config.(type) {
-		case *secretutils.CertificateSecretConfig:
-			if secretConfig.CertType == secretutils.CACert {
+		case *secretsutils.CertificateSecretConfig:
+			if secretConfig.CertType == secretsutils.CACert {
 				caConfigs = append(caConfigs, config)
 			}
 		}

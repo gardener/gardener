@@ -16,7 +16,7 @@ package validation_test
 
 import (
 	"github.com/gardener/gardener/pkg/apis/settings"
-	settings_validation "github.com/gardener/gardener/pkg/apis/settings/validation"
+	settingsvalidation "github.com/gardener/gardener/pkg/apis/settings/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -30,7 +30,7 @@ type clusterOpenIDConnectPresetProvider struct {
 }
 
 func (o *clusterOpenIDConnectPresetProvider) providerFunc() field.ErrorList {
-	return settings_validation.ValidateClusterOpenIDConnectPreset(o.new)
+	return settingsvalidation.ValidateClusterOpenIDConnectPreset(o.new)
 }
 func (o *clusterOpenIDConnectPresetProvider) preset() settings.Preset { return o.new }
 
@@ -40,7 +40,7 @@ type clusterOpenIDConnectPresetUpdateProvider struct {
 }
 
 func (o *clusterOpenIDConnectPresetUpdateProvider) providerFunc() field.ErrorList {
-	return settings_validation.ValidateClusterOpenIDConnectPresetUpdate(o.new, o.old)
+	return settingsvalidation.ValidateClusterOpenIDConnectPresetUpdate(o.new, o.old)
 }
 func (o *clusterOpenIDConnectPresetUpdateProvider) preset() settings.Preset { return o.new }
 

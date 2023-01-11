@@ -21,7 +21,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -131,7 +131,7 @@ var _ = Describe("Infrastructure", func() {
 		var (
 			gardenClient  *mockclient.MockClient
 			seedClient    *mockclient.MockClient
-			seedClientSet *mockkubernetes.MockInterface
+			seedClientSet *kubernetesmock.MockInterface
 
 			namespace = "namespace"
 			name      = "name"
@@ -147,7 +147,7 @@ var _ = Describe("Infrastructure", func() {
 		BeforeEach(func() {
 			gardenClient = mockclient.NewMockClient(ctrl)
 			seedClient = mockclient.NewMockClient(ctrl)
-			seedClientSet = mockkubernetes.NewMockInterface(ctrl)
+			seedClientSet = kubernetesmock.NewMockInterface(ctrl)
 
 			botanist.GardenClient = gardenClient
 			botanist.SeedClientSet = seedClientSet

@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -95,7 +95,7 @@ func (r *Reconciler) reconcile(
 	log.V(1).Info("Reconciling")
 	var wait bool
 	if status, wait, err = r.Actuator.Reconcile(ctx, log, ms); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s creation or update: %w", kutil.ObjectName(ms), err)
+		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s creation or update: %w", kubernetesutils.ObjectName(ms), err)
 	}
 	log.V(1).Info("Reconciliation finished")
 
@@ -137,7 +137,7 @@ func (r *Reconciler) delete(
 	// Reconcile deletion
 	log.V(1).Info("Deletion")
 	if status, wait, removeFinalizer, err = r.Actuator.Delete(ctx, log, ms); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s deletion: %w", kutil.ObjectName(ms), err)
+		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s deletion: %w", kubernetesutils.ObjectName(ms), err)
 	}
 	log.V(1).Info("Deletion finished")
 

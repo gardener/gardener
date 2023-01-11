@@ -23,21 +23,21 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/health"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/progressing"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // AddToManager adds all health controllers to the given manager.
 func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg config.ResourceManagerConfiguration, targetCacheDisabled bool) error {
 	if err := (&health.Reconciler{
 		Config:      cfg.Controllers.Health,
-		ClassFilter: managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
+		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
 	}).AddToManager(mgr, sourceCluster, targetCluster, targetCacheDisabled, *cfg.Controllers.ClusterID); err != nil {
 		return fmt.Errorf("failed adding health reconciler: %w", err)
 	}
 
 	if err := (&progressing.Reconciler{
 		Config:      cfg.Controllers.Health,
-		ClassFilter: managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
+		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
 	}).AddToManager(mgr, sourceCluster, targetCluster, targetCacheDisabled, *cfg.Controllers.ClusterID); err != nil {
 		return fmt.Errorf("failed adding progressing reconciler: %w", err)
 	}

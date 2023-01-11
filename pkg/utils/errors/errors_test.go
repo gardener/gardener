@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	errorsmock "github.com/gardener/gardener/pkg/utils/errors/mock"
 
 	"github.com/golang/mock/gomock"
@@ -43,41 +43,41 @@ var _ = Describe("Errors", func() {
 
 	Describe("#WithSuppressed", func() {
 		It("should return nil if the error is nil", func() {
-			Expect(utilerrors.WithSuppressed(nil, err2)).To(BeNil())
+			Expect(errorsutils.WithSuppressed(nil, err2)).To(BeNil())
 		})
 
 		It("should return the error if the suppressed error is nil", func() {
-			Expect(utilerrors.WithSuppressed(err1, nil)).To(BeIdenticalTo(err1))
+			Expect(errorsutils.WithSuppressed(err1, nil)).To(BeIdenticalTo(err1))
 		})
 
 		It("should return an error with cause and suppressed equal to the given errors", func() {
-			err := utilerrors.WithSuppressed(err1, err2)
+			err := errorsutils.WithSuppressed(err1, err2)
 
-			Expect(utilerrors.Unwrap(err)).To(BeIdenticalTo(err1))
-			Expect(utilerrors.Suppressed(err)).To(BeIdenticalTo(err2))
+			Expect(errorsutils.Unwrap(err)).To(BeIdenticalTo(err1))
+			Expect(errorsutils.Suppressed(err)).To(BeIdenticalTo(err2))
 		})
 	})
 
 	Describe("#Suppressed", func() {
 		It("should retrieve the suppressed error", func() {
-			Expect(utilerrors.Suppressed(utilerrors.WithSuppressed(err1, err2))).To(BeIdenticalTo(err2))
+			Expect(errorsutils.Suppressed(errorsutils.WithSuppressed(err1, err2))).To(BeIdenticalTo(err2))
 		})
 
 		It("should retrieve nil if the error doesn't have a suppressed error", func() {
-			Expect(utilerrors.Suppressed(err1)).To(BeNil())
+			Expect(errorsutils.Suppressed(err1)).To(BeNil())
 		})
 	})
 
 	Context("withSuppressed", func() {
 		Describe("#Error", func() {
 			It("should return an error message consisting of the two errors", func() {
-				Expect(utilerrors.WithSuppressed(err1, err2).Error()).To(Equal("error 1, suppressed: error 2"))
+				Expect(errorsutils.WithSuppressed(err1, err2).Error()).To(Equal("error 1, suppressed: error 2"))
 			})
 		})
 
 		Describe("#Format", func() {
 			It("should correctly format the error in verbose mode", func() {
-				Expect(fmt.Sprintf("%+v", utilerrors.WithSuppressed(err1, err2))).
+				Expect(fmt.Sprintf("%+v", errorsutils.WithSuppressed(err1, err2))).
 					To(Equal("error 1\nsuppressed: error 2"))
 			})
 		})
@@ -89,7 +89,7 @@ var _ = Describe("Errors", func() {
 				_ = recover()
 			}()
 
-			errorContext := utilerrors.NewErrorContext("Test context", nil)
+			errorContext := errorsutils.NewErrorContext("Test context", nil)
 			errorContext.AddErrorID("ID1")
 			errorContext.AddErrorID("ID1")
 			Fail("Panic should have occurred")
@@ -98,12 +98,12 @@ var _ = Describe("Errors", func() {
 
 	Describe("Error handling", func() {
 		var (
-			errorContext *utilerrors.ErrorContext
+			errorContext *errorsutils.ErrorContext
 			ctrl         *gomock.Controller
 		)
 
 		BeforeEach(func() {
-			errorContext = utilerrors.NewErrorContext("Test context", nil)
+			errorContext = errorsutils.NewErrorContext("Test context", nil)
 			ctrl = gomock.NewController(GinkgoT())
 		})
 
@@ -113,10 +113,10 @@ var _ = Describe("Errors", func() {
 
 		It("Should update the error context", func() {
 			errID := "x1"
-			Expect(utilerrors.HandleErrors(errorContext,
+			Expect(errorsutils.HandleErrors(errorContext,
 				nil,
 				nil,
-				utilerrors.ToExecute(errID, func() error {
+				errorsutils.ToExecute(errID, func() error {
 					return nil
 				}),
 			)).To(Succeed())
@@ -126,11 +126,11 @@ var _ = Describe("Errors", func() {
 		It("Should call default failure handler", func() {
 			errorID := "x1"
 			errorText := fmt.Sprintf("Error in %s", errorID)
-			expectedErr := utilerrors.WithID(errorID, fmt.Errorf("%s failed (%s)", errorID, errorText))
-			err := utilerrors.HandleErrors(errorContext,
+			expectedErr := errorsutils.WithID(errorID, fmt.Errorf("%s failed (%s)", errorID, errorText))
+			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				nil,
-				utilerrors.ToExecute(errorID, func() error {
+				errorsutils.ToExecute(errorID, func() error {
 					return fmt.Errorf(errorText)
 				}),
 			)
@@ -142,12 +142,12 @@ var _ = Describe("Errors", func() {
 			errID := "x1"
 			errorText := "Error from task"
 			expectedErr := fmt.Errorf("Got %s %s", errID, errorText)
-			err := utilerrors.HandleErrors(errorContext,
+			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				func(errorID string, err error) error {
 					return fmt.Errorf(fmt.Sprintf("Got %s %s", errorID, err))
 				},
-				utilerrors.ToExecute(errID, func() error {
+				errorsutils.ToExecute(errID, func() error {
 					return fmt.Errorf(errorText)
 				}),
 			)
@@ -157,15 +157,15 @@ var _ = Describe("Errors", func() {
 
 		It("Should return a cancelError when manually canceled", func() {
 			errID := "x1"
-			err := utilerrors.HandleErrors(errorContext,
+			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				nil,
-				utilerrors.ToExecute(errID, func() error {
-					return utilerrors.Cancel()
+				errorsutils.ToExecute(errID, func() error {
+					return errorsutils.Cancel()
 				}),
 			)
 
-			Expect(utilerrors.WasCanceled(utilerrors.Unwrap(err))).To(BeTrue())
+			Expect(errorsutils.WasCanceled(errorsutils.Unwrap(err))).To(BeTrue())
 		})
 
 		It("Should stop execution on error", func() {
@@ -178,7 +178,7 @@ var _ = Describe("Errors", func() {
 			f2.EXPECT().Do(errorContext).Return("x2", expectedErr)
 			f3.EXPECT().Do(errorContext).Times(0)
 
-			err := utilerrors.HandleErrors(errorContext,
+			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				func(errorID string, err error) error {
 					return err
@@ -193,16 +193,16 @@ var _ = Describe("Errors", func() {
 
 		It("Should call success handler on error resolution", func() {
 			errID := "x2"
-			errorContext := utilerrors.NewErrorContext("Check success handler", []string{errID})
-			Expect(utilerrors.HandleErrors(errorContext,
+			errorContext := errorsutils.NewErrorContext("Check success handler", []string{errID})
+			Expect(errorsutils.HandleErrors(errorContext,
 				func(errorID string) error {
 					return nil
 				},
 				nil,
-				utilerrors.ToExecute("x1", func() error {
+				errorsutils.ToExecute("x1", func() error {
 					return nil
 				}),
-				utilerrors.ToExecute(errID, func() error {
+				errorsutils.ToExecute(errID, func() error {
 					return nil
 				}),
 			)).To(Succeed())
@@ -219,7 +219,7 @@ var _ = Describe("Errors", func() {
 				f3.EXPECT().Do(errorContext).Return("x3", nil),
 			)
 
-			err := utilerrors.HandleErrors(errorContext,
+			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				func(errorID string, err error) error {
 					return err
@@ -248,7 +248,7 @@ var _ = Describe("Multierrors", func() {
 	Describe("#NewErrorFormatFuncWithPrefix", func() {
 		BeforeEach(func() {
 			allErrs = &multierror.Error{
-				ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("prefix"),
+				ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("prefix"),
 			}
 		})
 

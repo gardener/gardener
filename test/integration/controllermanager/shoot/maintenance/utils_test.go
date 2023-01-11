@@ -25,7 +25,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // waitForShootToBeMaintained uses gomega.Eventually to wait until the maintenance controller has picked up its work
@@ -46,7 +46,7 @@ func waitMachineImageVersionToBeExpiredInCloudProfile(cloudProfileName, imageNam
 		cloudProfile := &gardencorev1beta1.CloudProfile{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile)).To(Succeed())
 
-		found, machineImageVersion := gardencorev1beta1helper.FindMachineImageVersion(cloudProfile, imageName, imageVersion)
+		found, machineImageVersion := v1beta1helper.FindMachineImageVersion(cloudProfile, imageName, imageVersion)
 		g.Expect(found).To(BeTrue())
 		g.Expect(machineImageVersion.Classification).To(PointTo(Equal(gardencorev1beta1.ClassificationDeprecated)))
 		g.Expect(machineImageVersion.ExpirationDate).NotTo(BeNil())
@@ -59,7 +59,7 @@ func waitKubernetesVersionToBeExpiredInCloudProfile(cloudProfileName, k8sVersion
 		cloudProfile := &gardencorev1beta1.CloudProfile{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile)).To(Succeed())
 
-		found, k8sVersion, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(cloudProfile, k8sVersion)
+		found, k8sVersion, err := v1beta1helper.KubernetesVersionExistsInCloudProfile(cloudProfile, k8sVersion)
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(found).To(BeTrue())
 		g.Expect(k8sVersion.Classification).To(PointTo(Equal(gardencorev1beta1.ClassificationDeprecated)))
@@ -78,7 +78,7 @@ func patchCloudProfileForMachineImageMaintenance(ctx context.Context, gardenClie
 
 	// update Cloud Profile with expirationDate for integration test machine image
 	for i, image := range cloudProfile.Spec.MachineImages {
-		versionExists, index := gardencorev1beta1helper.ShootMachineImageVersionExists(image, testMachineImage)
+		versionExists, index := v1beta1helper.ShootMachineImageVersionExists(image, testMachineImage)
 		if versionExists {
 			cloudProfile.Spec.MachineImages[i].Versions[index].ExpirationDate = expirationDate
 			cloudProfile.Spec.MachineImages[i].Versions[index].Classification = classification

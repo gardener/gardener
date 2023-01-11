@@ -32,9 +32,9 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	fakemanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -85,7 +85,7 @@ var _ = Describe("Logging", func() {
 
 		shootRBACProxyDeployer = mockcomponent.NewMockDeployer(ctrl)
 		shootEventLoggerDeployer = mockcomponent.NewMockDeployer(ctrl)
-		fakeSecretManager = fakemanager.New(c, seedNamespace)
+		fakeSecretManager = fakesecretsmanager.New(c, seedNamespace)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -203,7 +203,7 @@ var _ = Describe("Logging", func() {
 				// deploy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
-				c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kutil.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 				// deploy Loki
 				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))),
@@ -219,7 +219,7 @@ var _ = Describe("Logging", func() {
 				shootEventLoggerDeployer.EXPECT().Destroy(ctx),
 				// deploy Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
-				c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kutil.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 				// deploy Loki
 				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))),
@@ -334,7 +334,7 @@ var _ = Describe("Logging", func() {
 				gomock.InOrder(
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx),
-					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kutil.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(gr, "generic-token-kubeconfig")),
+					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(gr, "generic-token-kubeconfig")),
 				)
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
 			})
@@ -369,7 +369,7 @@ var _ = Describe("Logging", func() {
 				gomock.InOrder(
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx),
-					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kutil.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 				)
 
@@ -380,7 +380,7 @@ var _ = Describe("Logging", func() {
 				gomock.InOrder(
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx),
-					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kutil.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 					chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))).Return(fakeErr),
 				)

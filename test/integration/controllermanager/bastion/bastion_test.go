@@ -20,9 +20,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	bastionstrategy "github.com/gardener/gardener/pkg/registry/operations/bastion"
+	bastionregistry "github.com/gardener/gardener/pkg/registry/operations/bastion"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -55,7 +55,7 @@ var _ = Describe("Bastion controller tests", func() {
 		seedName := "foo"
 
 		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: kutil.ObjectMetaFromKey(objectKey),
+			ObjectMeta: kubernetesutils.ObjectMetaFromKey(objectKey),
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: "my-provider-account",
 				CloudProfileName:  "test-cloudprofile",
@@ -83,7 +83,7 @@ var _ = Describe("Bastion controller tests", func() {
 			},
 		}
 		bastion = &operationsv1alpha1.Bastion{
-			ObjectMeta: kutil.ObjectMetaFromKey(objectKey),
+			ObjectMeta: kubernetesutils.ObjectMetaFromKey(objectKey),
 			Spec: operationsv1alpha1.BastionSpec{
 				ShootRef: corev1.LocalObjectReference{
 					Name: shoot.Name,
@@ -205,7 +205,7 @@ var _ = Describe("Bastion controller tests", func() {
 				// Increasing maxLifetime would require creating a dedicated manager per case, because we can't test the other
 				// cases anymore with the same manager.
 				patch := client.MergeFrom(bastion.DeepCopy())
-				t := metav1.NewTime(fakeClock.Now().Add(-bastionstrategy.TimeToLive))
+				t := metav1.NewTime(fakeClock.Now().Add(-bastionregistry.TimeToLive))
 				bastion.Status.LastHeartbeatTimestamp = &t // this basically sets status.expirationTimestamp to time.Now()
 				Expect(testClient.Status().Patch(ctx, bastion, patch)).To(Succeed())
 			})

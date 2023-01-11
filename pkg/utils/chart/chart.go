@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -31,7 +31,7 @@ import (
 type Interface interface {
 	// Apply applies this chart in the given namespace using the given ChartApplier. Before applying the chart,
 	// it collects its values, injecting images and merging the given values as needed.
-	Apply(context.Context, gardenerkubernetes.ChartApplier, string, imagevector.ImageVector, string, string, map[string]interface{}) error
+	Apply(context.Context, kubernetesclient.ChartApplier, string, imagevector.ImageVector, string, string, map[string]interface{}) error
 	// Render renders this chart in the given namespace using the given chartRenderer. Before rendering the chart,
 	// it collects its values, injecting images and merging the given values as needed.
 	Render(chartrenderer.Interface, string, imagevector.ImageVector, string, string, map[string]interface{}) (string, []byte, error)
@@ -58,7 +58,7 @@ type Object struct {
 // it collects its values, injecting images and merging the given values as needed.
 func (c *Chart) Apply(
 	ctx context.Context,
-	chartApplier gardenerkubernetes.ChartApplier,
+	chartApplier kubernetesclient.ChartApplier,
 	namespace string,
 	imageVector imagevector.ImageVector,
 	runtimeVersion, targetVersion string,
@@ -72,7 +72,7 @@ func (c *Chart) Apply(
 	}
 
 	// Apply chart
-	err = chartApplier.Apply(ctx, c.Path, namespace, c.Name, gardenerkubernetes.Values(utils.MergeMaps(values, additionalValues)))
+	err = chartApplier.Apply(ctx, c.Path, namespace, c.Name, kubernetesclient.Values(utils.MergeMaps(values, additionalValues)))
 	if err != nil {
 		return fmt.Errorf("could not apply chart '%s' in namespace '%s': %w", c.Name, namespace, err)
 	}

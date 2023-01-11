@@ -36,7 +36,7 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -1795,12 +1795,12 @@ usernames: ["admin"]
 			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 			kubeAPIServer.EXPECT().Deploy(ctx)
 
-			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
 
 			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 
 			kubeconfigSecret := &corev1.Secret{}
-			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
+			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
 			Expect(kubeconfigSecret.Annotations).To(HaveKeyWithValue("url", "https://api."+externalClusterDomain))
 			Expect(kubeconfigSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "kubeconfig"))
 			Expect(kubeconfigSecret.Data).To(And(
@@ -1837,7 +1837,7 @@ usernames: ["admin"]
 			}
 			Expect(gardenClient.Create(ctx, secret)).To(Succeed())
 
-			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(Succeed())
+			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(Succeed())
 
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
@@ -1863,7 +1863,7 @@ usernames: ["admin"]
 
 			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 
-			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 

@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/migration"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
@@ -67,7 +67,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && gardenlethelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
 		if err := (&migration.Reconciler{
 			Config:   *cfg.Controllers.ShootMigration,
 			SeedName: cfg.SeedConfig.Name,

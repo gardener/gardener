@@ -23,7 +23,7 @@ import (
 	"text/template"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +40,7 @@ var (
 
 	apiextensionsScheme      = runtime.NewScheme()
 	deletionProtectionLabels = map[string]string{
-		gutil.DeletionProtected: "true",
+		gardenerutils.DeletionProtected: "true",
 	}
 )
 

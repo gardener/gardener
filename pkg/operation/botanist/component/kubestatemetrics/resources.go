@@ -21,8 +21,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -36,7 +36,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gutil.ShootAccessSecret) component.ResourceConfigs {
+func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.ShootAccessSecret) component.ResourceConfigs {
 	var (
 		clusterRole        = k.emptyClusterRole()
 		clusterRoleBinding = k.emptyClusterRoleBinding()
@@ -82,8 +82,8 @@ func (k *kubeStateMetrics) reconcileServiceAccount(serviceAccount *corev1.Servic
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
 
-func (k *kubeStateMetrics) newShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, k.namespace)
+func (k *kubeStateMetrics) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, k.namespace)
 }
 
 func (k *kubeStateMetrics) emptyClusterRole() *rbacv1.ClusterRole {
@@ -160,7 +160,7 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 	service.Labels = k.getLabels()
 	service.Spec.Type = corev1.ServiceTypeClusterIP
 	service.Spec.Selector = k.getLabels()
-	service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
+	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
 		{
 			Name:       "metrics",
 			Port:       80,
@@ -178,7 +178,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 	deployment *appsv1.Deployment,
 	serviceAccount *corev1.ServiceAccount,
 	genericTokenKubeconfigSecretName string,
-	shootAccessSecret *gutil.ShootAccessSecret,
+	shootAccessSecret *gardenerutils.ShootAccessSecret,
 ) {
 	var (
 		maxUnavailable = intstr.FromInt(1)
@@ -216,7 +216,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 		args = append(args,
 			"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
 			"--namespaces="+metav1.NamespaceSystem,
-			"--kubeconfig="+gutil.PathGenericKubeconfig,
+			"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
 			"--metric-labels-allowlist=nodes=[*]",
 		)
 	}
@@ -285,7 +285,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 	}
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
 	}
 }
 

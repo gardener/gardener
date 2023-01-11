@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener/pkg/gardenlet/features"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,6 +32,6 @@ func TestBotanist(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
-	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
 })

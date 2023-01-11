@@ -32,7 +32,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // ControllerName is the name of the controller.
@@ -50,7 +50,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster cluster.Clu
 		For(&corev1.Secret{}, builder.WithPredicates(
 			// Only requeue secrets from create/update events with the controller's finalizer to not flood the controller
 			// with too many unnecessary requests for all secrets in cluster/namespace.
-			managerpredicate.HasFinalizer(r.ClassFilter.FinalizerName()),
+			resourcemanagerpredicate.HasFinalizer(r.ClassFilter.FinalizerName()),
 		)).
 		Watches(
 			&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},

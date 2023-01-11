@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
@@ -78,7 +78,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Get kubeconfig and extract token")
-		kubeconfigData, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
+		kubeconfigData, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gardenerutils.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
 
 		kubeconfig := &clientcmdv1.Config{}
@@ -138,14 +138,14 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				Namespace: namespace,
 			},
 		}
-		err := kutil.DeleteObject(ctx, f.ShootClient.Client(), loggerDeploymentToDelete)
+		err := kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
 	}, cleanupTimeout))
 
 	f.Beta().CIt("should copy data to pod", func(ctx context.Context) {
 		ginkgo.By("Get kubeconfig from garden project namespace")
 		kubeCfgSecret := &corev1.Secret{}
-		err := f.GardenClient.Client().Get(ctx, types.NamespacedName{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name + "." + gutil.ShootProjectSecretSuffixKubeconfig}, kubeCfgSecret)
+		err := f.GardenClient.Client().Get(ctx, types.NamespacedName{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name + "." + gardenerutils.ShootProjectSecretSuffixKubeconfig}, kubeCfgSecret)
 		framework.ExpectNoError(err)
 
 		testSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: copyDeployment, Namespace: namespace}}
@@ -212,7 +212,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				Namespace: namespace,
 			},
 		}
-		err := kutil.DeleteObjects(ctx, f.ShootClient.Client(), deploymentToDelete, secretToDelete)
+		err := kubernetesutils.DeleteObjects(ctx, f.ShootClient.Client(), deploymentToDelete, secretToDelete)
 		framework.ExpectNoError(err)
 	}, cleanupTimeout))
 })

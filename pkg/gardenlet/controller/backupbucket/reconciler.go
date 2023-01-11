@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -111,7 +111,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		log.Error(err, "Failed to get backup secret", "secret", client.ObjectKey{Namespace: backupBucket.Spec.SecretRef.Namespace, Name: backupBucket.Spec.SecretRef.Name})
 		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "Failed to get backup secret %s/%s: %w", backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name, err)
@@ -288,7 +288,7 @@ func (r *Reconciler) deleteBackupBucket(
 
 	log.Info("Successfully deleted")
 
-	secret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		log.Error(err, "Failed to get backup secret", "secret", client.ObjectKey{Namespace: backupBucket.Spec.SecretRef.Namespace, Name: backupBucket.Spec.SecretRef.Name})
 		return reconcile.Result{}, err
@@ -321,7 +321,7 @@ func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secre
 }
 
 func (r *Reconciler) reconcileExtensionBackupBucketSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
-	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func (r *Reconciler) syncGeneratedSecretToGarden(ctx context.Context, backupBuck
 	var gardenGeneratedSecretRef *corev1.SecretReference
 
 	if extensionBackupBucket.Status.GeneratedSecretRef != nil {
-		seedGeneratedSecret, err := kutil.GetSecretByReference(ctx, r.SeedClient, extensionBackupBucket.Status.GeneratedSecretRef)
+		seedGeneratedSecret, err := kubernetesutils.GetSecretByReference(ctx, r.SeedClient, extensionBackupBucket.Status.GeneratedSecretRef)
 		if err != nil {
 			return err
 		}

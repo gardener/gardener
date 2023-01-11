@@ -19,12 +19,12 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // CreateShootClientFromStaticTokenKubeconfig retrieves the static token kubeconfig secret and creates a shoot client.
 func CreateShootClientFromStaticTokenKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	return kubernetes.NewClientFromSecret(ctx, gardenClient.Client(), shoot.Namespace, gutil.ComputeShootProjectSecretName(shoot.Name, "kubeconfig"),
+	return kubernetes.NewClientFromSecret(ctx, gardenClient.Client(), shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, "kubeconfig"),
 		kubernetes.WithDisabledCachedClient(),
 	)
 }

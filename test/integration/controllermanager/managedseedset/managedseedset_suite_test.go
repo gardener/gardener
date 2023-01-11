@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	managedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
+	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("registering controller")
-	Expect((&managedseedset.Reconciler{
+	Expect((&managedseedsetcontroller.Reconciler{
 		Config: config.ManagedSeedSetControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 			SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},

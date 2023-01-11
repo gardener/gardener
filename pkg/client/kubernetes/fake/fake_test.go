@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
@@ -51,7 +51,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should correctly set applier attribute", func() {
-		applier := mockkubernetes.NewMockApplier(ctrl)
+		applier := kubernetesmock.NewMockApplier(ctrl)
 		cs := builder.WithApplier(applier).Build()
 
 		Expect(cs.Applier()).To(BeIdenticalTo(applier))
@@ -65,7 +65,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should correctly set chartApplier attribute", func() {
-		chartApplier := mockkubernetes.NewMockChartApplier(ctrl)
+		chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
 		cs := builder.WithChartApplier(chartApplier).Build()
 
 		Expect(cs.ChartApplier()).To(BeIdenticalTo(chartApplier))

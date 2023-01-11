@@ -19,7 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -92,9 +92,9 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 	// If the gardenlet config was decoded without errors to nil,
 	// initialize it with an empty config
 	if gardenletConfig == nil {
-		gardenletConfig = &configv1alpha1.GardenletConfiguration{
+		gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
 		}
@@ -119,10 +119,10 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 	}
 }
 
-func setDefaultsGardenletConfiguration(obj *configv1alpha1.GardenletConfiguration, name, namespace string) {
+func setDefaultsGardenletConfiguration(obj *gardenletv1alpha1.GardenletConfiguration, name, namespace string) {
 	// Initialize resources
 	if obj.Resources == nil {
-		obj.Resources = &configv1alpha1.ResourcesConfiguration{}
+		obj.Resources = &gardenletv1alpha1.ResourcesConfiguration{}
 	}
 
 	// Set resources defaults
@@ -130,14 +130,14 @@ func setDefaultsGardenletConfiguration(obj *configv1alpha1.GardenletConfiguratio
 
 	// Initialize seed config
 	if obj.SeedConfig == nil {
-		obj.SeedConfig = &configv1alpha1.SeedConfig{}
+		obj.SeedConfig = &gardenletv1alpha1.SeedConfig{}
 	}
 
 	// Set seed spec defaults
 	setDefaultsSeedSpec(&obj.SeedConfig.SeedTemplate.Spec, name, namespace, false)
 }
 
-func setDefaultsResources(obj *configv1alpha1.ResourcesConfiguration) {
+func setDefaultsResources(obj *gardenletv1alpha1.ResourcesConfiguration) {
 	if _, ok := obj.Capacity[gardencorev1beta1.ResourceShoots]; !ok {
 		if obj.Capacity == nil {
 			obj.Capacity = make(corev1.ResourceList)

@@ -29,7 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -73,7 +73,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			},
 		}
 
-		timeWindow = *gutil.EffectiveShootMaintenanceTimeWindow(shoot)
+		timeWindow = *gardenerutils.EffectiveShootMaintenanceTimeWindow(shoot)
 		m := timeWindow.Begin()
 		now := cl.Now().UTC()
 		timeWindowBegin = time.Date(now.Year(), now.Month(), now.Day(), m.Hour(), m.Minute(), m.Second(), 0, now.Location())

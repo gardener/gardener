@@ -23,7 +23,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -108,7 +108,7 @@ func dnsRecordsForIngress(ingress *networkingv1.Ingress, ip string, scheme *runt
 				},
 				Annotations: map[string]string{
 					// skip deletion protection, otherwise garbage collector won't be able to delete this DNSRecord object
-					gutil.ConfirmationDeletion: "true",
+					gardenerutils.ConfirmationDeletion: "true",
 				},
 			},
 			Spec: extensionsv1alpha1.DNSRecordSpec{

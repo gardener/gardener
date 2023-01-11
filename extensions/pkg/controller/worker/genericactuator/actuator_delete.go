@@ -24,7 +24,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -284,7 +284,7 @@ func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx conte
 			if ok {
 				acquiredOrReleased = true
 			} else {
-				secret, err := kutil.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
+				secret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
 				if err != nil {
 					return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
 				}

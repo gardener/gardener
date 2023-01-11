@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -44,7 +44,7 @@ const (
 
 // NeedsIngressDNS returns true if the Shoot cluster needs ingress DNS.
 func (b *Botanist) NeedsIngressDNS() bool {
-	return b.NeedsExternalDNS() && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
+	return b.NeedsExternalDNS() && v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
 }
 
 // DefaultIngressDNSRecord creates the default deployer for the ingress DNSRecord resource.
@@ -121,7 +121,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 // the nginx-ingress properly.
 func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	var (
-		enabled = gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
+		enabled = v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
 		values  map[string]interface{}
 	)
 
@@ -241,7 +241,7 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 		"pspDisabled": b.Shoot.PSPDisabled,
 	}
 
-	kubernetesDashboardEnabled := gardencorev1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons)
+	kubernetesDashboardEnabled := v1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons)
 
 	nginxIngressConfig, err := b.GenerateNginxIngressConfig()
 	if err != nil {

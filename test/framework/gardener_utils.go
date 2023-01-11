@@ -21,10 +21,10 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -71,7 +71,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 
 // GetShoot gets the test shoot
 func (f *GardenerFramework) GetShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	return f.GardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shoot)
+	return f.GardenClient.Client().Get(ctx, kubernetesutils.Key(shoot.Namespace, shoot.Name), shoot)
 }
 
 // GetShootProject returns the project of a shoot
@@ -185,7 +185,7 @@ func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1
 
 		// First we annotate the shoot to be deleted.
 		err = f.AnnotateShoot(ctx, shoot, map[string]string{
-			gutil.ConfirmationDeletion: "true",
+			gardenerutils.ConfirmationDeletion: "true",
 		})
 		if err != nil {
 			return retry.MinorError(err)
@@ -414,7 +414,7 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 	}
 
 	restConfig := f.GardenClient.RESTConfig()
-	versionedCoreClient, err := gardenversionedcoreclientset.NewForConfig(restConfig)
+	versionedCoreClient, err := gardencoreversionedclientset.NewForConfig(restConfig)
 	if err != nil {
 		return fmt.Errorf("failed create versioned core client: %w", err)
 	}

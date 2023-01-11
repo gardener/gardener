@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -286,7 +286,7 @@ var _ = Describe("helper", func() {
 		})
 
 		It("should create the allow-to-seed-apiserver Network Policy", func() {
-			mockRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errors.NewNotFound(core.Resource("networkpolicy"), ""))
+			mockRuntimeClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errors.NewNotFound(core.Resource("networkpolicy"), ""))
 			mockRuntimeClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				policy, ok := obj.(*networkingv1.NetworkPolicy)
 				Expect(ok).To(BeTrue())
@@ -307,7 +307,7 @@ var _ = Describe("helper", func() {
 		})
 
 		It("should update the allow-to-seed-apiserver Network Policy", func() {
-			mockRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(nil)
+			mockRuntimeClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(nil)
 			mockRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
 				DoAndReturn(func(_ context.Context, policy *networkingv1.NetworkPolicy, _ client.Patch, _ ...client.PatchOption) error {
 					Expect(policy.Annotations).To(HaveKeyWithValue("gardener.cloud/description", "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace."))

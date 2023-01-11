@@ -25,7 +25,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -98,7 +98,7 @@ var _ = Describe("Bootstrap", func() {
 
 		It("should fail because the managed resource secret cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
 
@@ -107,9 +107,9 @@ var _ = Describe("Bootstrap", func() {
 
 		It("should fail because the managed resource cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
@@ -129,11 +129,11 @@ var _ = Describe("Bootstrap", func() {
 			managedResourceSecret.Data = registry.SerializedObjects()
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(DeepEqual(managedResourceSecret))
 				}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(DeepEqual(managedResource))
 				}),
@@ -168,11 +168,11 @@ var _ = Describe("Bootstrap", func() {
 			managedResourceSecret.Data = registry.SerializedObjects()
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(DeepEqual(managedResourceSecret))
 				}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(DeepEqual(managedResource))
 				}),
@@ -188,7 +188,7 @@ var _ = Describe("Bootstrap", func() {
 			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
 			TimeoutWaitForManagedResource = time.Millisecond
 
-			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
 			Expect(deployer.Wait(ctx)).To(MatchError(fakeErr))
 		})
@@ -198,7 +198,7 @@ var _ = Describe("Bootstrap", func() {
 			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
 			TimeoutWaitForManagedResource = time.Millisecond
 
-			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
 				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
@@ -226,7 +226,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should successfully wait for all resources to be ready", func() {
-			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
 				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
@@ -295,7 +295,7 @@ var _ = Describe("Bootstrap", func() {
 
 		Describe("#WaitCleanup", func() {
 			It("should fail when the wait for the managed resource deletion fails", func() {
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
 				Expect(deployer.WaitCleanup(ctx)).To(MatchError(fakeErr))
 			})
@@ -305,13 +305,13 @@ var _ = Describe("Bootstrap", func() {
 				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
 				TimeoutWaitForManagedResource = time.Millisecond
 
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).AnyTimes()
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).AnyTimes()
 
 				Expect(deployer.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
 
 			It("should successfully wait for all resources to be cleaned up", func() {
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 				Expect(deployer.WaitCleanup(ctx)).To(Succeed())
 			})

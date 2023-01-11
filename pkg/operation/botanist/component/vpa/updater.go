@@ -22,7 +22,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -224,7 +224,7 @@ func (v *vpa) computeUpdaterCommands() []string {
 	out := []string{"./updater"}
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
-		out = append(out, "--kubeconfig="+gutil.PathGenericKubeconfig)
+		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
 	}
 	return out
 }

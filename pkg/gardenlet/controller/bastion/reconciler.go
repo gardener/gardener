@@ -22,7 +22,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -31,7 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// get Shoot for the bastion
 	shoot := gardencorev1beta1.Shoot{}
-	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
+	shootKey := kubernetesutils.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
 	if err := r.GardenClient.Get(ctx, shootKey, &shoot); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %w", shootKey, err)
 	}
@@ -256,10 +256,10 @@ func newBastionExtension(bastion *operationsv1alpha1.Bastion, shoot *gardencorev
 }
 
 func setReadyCondition(bastion *operationsv1alpha1.Bastion, status gardencorev1alpha1.ConditionStatus, reason string, message string) {
-	condition := gardencorev1alpha1helper.GetOrInitCondition(bastion.Status.Conditions, operationsv1alpha1.BastionReady)
-	condition = gardencorev1alpha1helper.UpdatedCondition(condition, status, reason, message)
+	condition := v1alpha1helper.GetOrInitCondition(bastion.Status.Conditions, operationsv1alpha1.BastionReady)
+	condition = v1alpha1helper.UpdatedCondition(condition, status, reason, message)
 
-	bastion.Status.Conditions = gardencorev1alpha1helper.MergeConditions(bastion.Status.Conditions, condition)
+	bastion.Status.Conditions = v1alpha1helper.MergeConditions(bastion.Status.Conditions, condition)
 }
 
 func patchReadyCondition(ctx context.Context, c client.StatusClient, bastion *operationsv1alpha1.Bastion, status gardencorev1alpha1.ConditionStatus, reason string, message string) error {

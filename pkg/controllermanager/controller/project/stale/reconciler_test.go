@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project/stale"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -118,7 +118,7 @@ var _ = Describe("Reconciler", func() {
 			Clock:  fakeClock,
 		}
 
-		k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
+		k8sGardenRuntimeClient.EXPECT().Get(ctx, kubernetesutils.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 			*obj = *project
 			return nil
 		})
@@ -135,7 +135,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		BeforeEach(func() {
-			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+			k8sGardenRuntimeClient.EXPECT().Get(ctx, kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				*obj = *namespace
 				return nil
 			}).AnyTimes()
@@ -443,14 +443,14 @@ var _ = Describe("Reconciler", func() {
 
 					expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, fakeClock)
 
-					defer test.WithVar(&gutil.TimeNow, func() time.Time {
+					defer test.WithVar(&gardenerutils.TimeNow, func() time.Time {
 						return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
 					})()
 
 					projectCopy := project.DeepCopy()
 					projectCopy.Annotations = map[string]string{
-						gutil.ConfirmationDeletion:         "true",
-						v1beta1constants.GardenerTimestamp: gutil.TimeNow().UTC().String(),
+						gardenerutils.ConfirmationDeletion: "true",
+						v1beta1constants.GardenerTimestamp: gardenerutils.TimeNow().UTC().String(),
 					}
 					k8sGardenRuntimeClient.EXPECT().Patch(ctx, projectCopy, gomock.Any())
 					k8sGardenRuntimeClient.EXPECT().Delete(ctx, projectCopy)

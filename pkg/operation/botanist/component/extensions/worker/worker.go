@@ -29,13 +29,13 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -186,7 +186,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 
 		if nodeTemplate == nil || machineType != workerPool.Machine.Type {
 			// initializing nodeTemplate by fetching details from cloudprofile, if present there
-			if machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type); machineDetails != nil {
+			if machineDetails := v1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type); machineDetails != nil {
 				nodeTemplate = &extensionsv1alpha1.NodeTemplate{
 					Capacity: corev1.ResourceList{
 						corev1.ResourceCPU:    machineDetails.CPU,
@@ -206,7 +206,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         gutil.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled),
+			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled),
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{

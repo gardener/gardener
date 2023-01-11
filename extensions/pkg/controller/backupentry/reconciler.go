@@ -21,11 +21,11 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -96,7 +96,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, be):
@@ -132,7 +132,7 @@ func (r *reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
@@ -169,7 +169,7 @@ func (r *reconciler) restore(ctx context.Context, log logr.Logger, be *extension
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
@@ -204,14 +204,14 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
+	operationType := v1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
 	if err := r.statusUpdater.Processing(ctx, log, be, operationType, "Deleting the BackupEntry"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of BackupEntry")
 
-	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
@@ -270,7 +270,7 @@ func (r *reconciler) migrate(ctx context.Context, log logr.Logger, be *extension
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}

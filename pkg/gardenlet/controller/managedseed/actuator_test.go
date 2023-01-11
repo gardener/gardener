@@ -26,14 +26,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	mockclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/mock"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
@@ -68,11 +68,11 @@ var _ = Describe("Actuator", func() {
 		gardenClient      *mockclient.MockClient
 		gardenAPIReader   *mockclient.MockReader
 		seedClient        *mockclient.MockClient
-		shootClientSet    *mockkubernetes.MockInterface
+		shootClientSet    *kubernetesmock.MockInterface
 		shootClientMap    *mockclientmap.MockClientMap
 		vh                *mockmanagedseed.MockValuesHelper
 		shootClient       *mockclient.MockClient
-		shootChartApplier *mockkubernetes.MockChartApplier
+		shootChartApplier *kubernetesmock.MockChartApplier
 		recorder          *mockrecord.MockEventRecorder
 
 		log      logr.Logger
@@ -96,7 +96,7 @@ var _ = Describe("Actuator", func() {
 		gardenletDeployment *appsv1.Deployment
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
-		mergedGardenletConfig *configv1alpha1.GardenletConfiguration
+		mergedGardenletConfig *gardenletv1alpha1.GardenletConfiguration
 		gardenletChartValues  map[string]interface{}
 	)
 
@@ -107,10 +107,10 @@ var _ = Describe("Actuator", func() {
 		gardenAPIReader = mockclient.NewMockReader(ctrl)
 		seedClient = mockclient.NewMockClient(ctrl)
 		shootClient = mockclient.NewMockClient(ctrl)
-		shootClientSet = mockkubernetes.NewMockInterface(ctrl)
+		shootClientSet = kubernetesmock.NewMockInterface(ctrl)
 		shootClientMap = mockclientmap.NewMockClientMap(ctrl)
 		vh = mockmanagedseed.NewMockValuesHelper(ctrl)
-		shootChartApplier = mockkubernetes.NewMockChartApplier(ctrl)
+		shootChartApplier = kubernetesmock.NewMockChartApplier(ctrl)
 		recorder = mockrecord.NewMockEventRecorder(ctrl)
 
 		shootClientSet.EXPECT().Client().Return(shootClient).AnyTimes()
@@ -217,12 +217,12 @@ var _ = Describe("Actuator", func() {
 				VPA: pointer.Bool(true),
 			},
 			Config: runtime.RawExtension{
-				Object: &configv1alpha1.GardenletConfiguration{
+				Object: &gardenletv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					SeedConfig: &configv1alpha1.SeedConfig{
+					SeedConfig: &gardenletv1alpha1.SeedConfig{
 						SeedTemplate: *seedTemplate,
 					},
 				},
@@ -287,7 +287,7 @@ var _ = Describe("Actuator", func() {
 
 	var (
 		expectGetShoot = func() {
-			gardenAPIReader.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+			gardenAPIReader.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 					*s = *shoot
 					return nil
@@ -296,7 +296,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectCreateGardenNamespace = func() {
-			shootClient.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
+			shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Namespace, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("namespace"), v1beta1constants.GardenNamespace)
 				},
@@ -319,7 +319,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectGetGardenNamespace = func(exists bool) {
-			shootClient.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
+			shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
 					if exists {
 						*ns = *gardenNamespace
@@ -332,7 +332,7 @@ var _ = Describe("Actuator", func() {
 
 		expectCheckSeedSpec = func() {
 			// Check if the shoot namespace in the seed contains a vpa-admission-controller deployment
-			seedClient.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+			seedClient.EXPECT().Get(ctx, kubernetesutils.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *appsv1.Deployment, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(appsv1.Resource("deployment"), "vpa-admission-controller")
 				},
@@ -341,13 +341,13 @@ var _ = Describe("Actuator", func() {
 
 		expectCreateSeedSecrets = func() {
 			// Get shoot secret
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, secretBindingName), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretBindingName), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, sb *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
 					*sb = *secretBinding
 					return nil
 				},
 			)
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *secret
 					return nil
@@ -355,7 +355,7 @@ var _ = Describe("Actuator", func() {
 			)
 
 			// Create backup secret
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
 				},
@@ -368,7 +368,7 @@ var _ = Describe("Actuator", func() {
 			)
 
 			// Create seed secret
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, kubeconfigSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, kubeconfigSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *kubeconfigSecret
 					return nil
@@ -384,7 +384,7 @@ var _ = Describe("Actuator", func() {
 
 		expectDeleteSeedSecrets = func() {
 			// Delete backup secret
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *backupSecret
 					return nil
@@ -410,7 +410,7 @@ var _ = Describe("Actuator", func() {
 
 		expectGetSeedSecrets = func(exist bool) {
 			// Get backup secret
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					if exist {
 						*s = *backupSecret
@@ -421,7 +421,7 @@ var _ = Describe("Actuator", func() {
 			)
 
 			// Get seed secret
-			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, seedSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, seedSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					if exist {
 						*s = *seedSecret
@@ -442,7 +442,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectGetSeed = func(exists bool) {
-			gardenClient.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					if exists {
 						*s = *seed
@@ -461,8 +461,8 @@ var _ = Describe("Actuator", func() {
 				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 			}
 
-			mergedGardenletConfig = managedSeed.Spec.Gardenlet.Config.Object.(*configv1alpha1.GardenletConfiguration).DeepCopy()
-			mergedGardenletConfig.GardenClientConnection = &configv1alpha1.GardenClientConnection{
+			mergedGardenletConfig = managedSeed.Spec.Gardenlet.Config.Object.(*gardenletv1alpha1.GardenletConfiguration).DeepCopy()
+			mergedGardenletConfig.GardenClientConnection = &gardenletv1alpha1.GardenClientConnection{
 				ClientConnectionConfiguration: v1alpha1.ClientConnectionConfiguration{
 					Kubeconfig: "kubeconfig",
 				},
@@ -479,7 +479,7 @@ var _ = Describe("Actuator", func() {
 		expectPrepareGardenClientConnection = func(withAlreadyBootstrappedCheck bool) {
 			if withAlreadyBootstrappedCheck {
 				// Check if kubeconfig secret exists
-				shootClient.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "gardenlet-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, "gardenlet-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 						return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
 					},
@@ -487,7 +487,7 @@ var _ = Describe("Actuator", func() {
 			}
 
 			// Create bootstrap token secret
-			gardenClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "bootstrap-token-a82f8a"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, "bootstrap-token-a82f8a"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("secret"), "bootstrap-token-a82f8a")
 				},
@@ -509,8 +509,8 @@ var _ = Describe("Actuator", func() {
 		expectGetGardenletChartValues = func(withBootstrap bool) {
 			gardenletChartValues = map[string]interface{}{"foo": "bar"}
 
-			vh.EXPECT().GetGardenletChartValues(mergedDeployment, gomock.AssignableToTypeOf(&configv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
-				func(_ *seedmanagementv1alpha1.GardenletDeployment, gc *configv1alpha1.GardenletConfiguration, _ string) (map[string]interface{}, error) {
+			vh.EXPECT().GetGardenletChartValues(mergedDeployment, gomock.AssignableToTypeOf(&gardenletv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
+				func(_ *seedmanagementv1alpha1.GardenletDeployment, gc *gardenletv1alpha1.GardenletConfiguration, _ string) (map[string]interface{}, error) {
 					if withBootstrap {
 						Expect(gc.GardenClientConnection.Kubeconfig).To(Equal(""))
 						Expect(gc.GardenClientConnection.KubeconfigSecret).To(Equal(&corev1.SecretReference{
@@ -549,7 +549,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectGetGardenletDeployment = func(exists bool) {
-			shootClient.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.DeploymentNameGardenlet), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+			shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DeploymentNameGardenlet), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, d *appsv1.Deployment, _ ...client.GetOption) error {
 					if exists {
 						*d = *gardenletDeployment
@@ -902,7 +902,7 @@ var _ = Describe("Utils", func() {
 
 			Expect(ensuredDeploymentWithDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithDomain.Env[0].Value).To(Equal(preserveDomain))
-			Expect(ensuredDeploymentWithDomain.Env[0].Value).ToNot(Equal(gutil.GetAPIServerDomain(*dnsWithDomain.Domain)))
+			Expect(ensuredDeploymentWithDomain.Env[0].Value).ToNot(Equal(gardenerutils.GetAPIServerDomain(*dnsWithDomain.Domain)))
 
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Value).To(Equal(preserveDomain))
@@ -921,7 +921,7 @@ var _ = Describe("Utils", func() {
 			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(2))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[1].Name).To(Equal(kubernetesServiceHost))
-			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(gutil.GetAPIServerDomain(*dnsWithDomain.Domain)))
+			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(gardenerutils.GetAPIServerDomain(*dnsWithDomain.Domain)))
 
 		})
 	})

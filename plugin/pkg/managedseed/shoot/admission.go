@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -49,7 +49,7 @@ func Register(plugins *admission.Plugins) {
 // Shoot contains listers and and admission handler.
 type Shoot struct {
 	*admission.Handler
-	shootLister          corelisters.ShootLister
+	shootLister          gardencorelisters.ShootLister
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
 }
@@ -75,7 +75,7 @@ func (v *Shoot) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *Shoot) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (v *Shoot) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().InternalVersion().Shoots()
 	v.shootLister = shootInformer.Lister()
 

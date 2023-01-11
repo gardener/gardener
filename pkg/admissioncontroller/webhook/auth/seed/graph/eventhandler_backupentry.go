@@ -19,7 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -97,7 +97,7 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 		g.addEdge(backupEntryVertex, seedVertex)
 	}
 
-	if shootName := gutil.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
+	if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
 		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, shootName)
 		g.addEdge(backupEntryVertex, shootVertex)
 	}

@@ -22,7 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -31,8 +31,8 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecrets(ctx, log, r.Client, gutil.ComputeGardenNamespace(seed.Name), false)
+	secrets, err := gardenpkg.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -341,7 +341,7 @@ func installedAndRequiredRegistrationNames(controllerInstallationList *gardencor
 		if controllerInstallation.Spec.SeedRef.Name != seedName {
 			continue
 		}
-		if !gardencorev1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
+		if !v1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
 			continue
 		}
 		requiredControllerRegistrationNames.Insert(controllerInstallation.Spec.RegistrationRef.Name)
@@ -412,7 +412,7 @@ func deployNeededInstallations(
 			// Today, only one DeploymentRef element is allowed, which is why can simply pick the first one from the slice.
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
 
-			if err := c.Get(ctx, kutil.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
+			if err := c.Get(ctx, kubernetesutils.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
 				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %w", err)
 			}
 		}
@@ -590,13 +590,13 @@ func getShoots(ctx context.Context, c client.Reader, seed *gardencorev1beta1.See
 	if err := c.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
 		return nil, err
 	}
-	shootListAsItems := gardencorev1beta1helper.ShootItems(*shootList)
+	shootListAsItems := v1beta1helper.ShootItems(*shootList)
 
 	shootList2 := &gardencorev1beta1.ShootList{}
 	if err := c.List(ctx, shootList2, client.MatchingFields{core.ShootStatusSeedName: seed.Name}); err != nil {
 		return nil, err
 	}
-	shootListAsItems2 := gardencorev1beta1helper.ShootItems(*shootList2)
+	shootListAsItems2 := v1beta1helper.ShootItems(*shootList2)
 
 	return shootListAsItems.Union(&shootListAsItems2), nil
 }

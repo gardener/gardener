@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -337,7 +337,7 @@ func (p *projectRBAC) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return kutil.DeleteObjects(ctx, p.client,
+	return kubernetesutils.DeleteObjects(ctx, p.client,
 		emptyClusterRole(namePrefixSpecificProjectAdmin+p.project.Name),
 		emptyClusterRoleBinding(namePrefixSpecificProjectAdmin+p.project.Name),
 

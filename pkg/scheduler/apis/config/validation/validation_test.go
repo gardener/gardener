@@ -21,19 +21,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	schedulerapi "github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfig "github.com/gardener/gardener/pkg/scheduler/apis/config"
 )
 
 var _ = Describe("gardener-scheduler", func() {
 	Describe("#ValidateConfiguration", func() {
-		var defaultAdmissionConfiguration = schedulerapi.SchedulerConfiguration{
+		var defaultAdmissionConfiguration = schedulerconfig.SchedulerConfiguration{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
 				Kind:       "SchedulerConfiguration",
 			},
-			Schedulers: schedulerapi.SchedulerControllerConfiguration{
-				Shoot: &schedulerapi.ShootSchedulerConfiguration{
-					Strategy: schedulerapi.SameRegion,
+			Schedulers: schedulerconfig.SchedulerControllerConfiguration{
+				Shoot: &schedulerconfig.ShootSchedulerConfiguration{
+					Strategy: schedulerconfig.SameRegion,
 				},
 			},
 		}
@@ -41,7 +41,7 @@ var _ = Describe("gardener-scheduler", func() {
 		Context("Validate Admission Plugin SchedulerConfiguration", func() {
 			It("should pass because the Gardener Scheduler Configuration with the 'Same Region' Strategy is a valid configuration", func() {
 				sameRegionConfiguration := defaultAdmissionConfiguration
-				sameRegionConfiguration.Schedulers.Shoot.Strategy = schedulerapi.SameRegion
+				sameRegionConfiguration.Schedulers.Shoot.Strategy = schedulerconfig.SameRegion
 				err := ValidateConfiguration(&sameRegionConfiguration)
 
 				Expect(err).To(BeEmpty())
@@ -49,7 +49,7 @@ var _ = Describe("gardener-scheduler", func() {
 
 			It("should pass because the Gardener Scheduler Configuration with the 'Minimal Distance' Strategy is a valid configuration", func() {
 				minimalDistanceConfiguration := defaultAdmissionConfiguration
-				minimalDistanceConfiguration.Schedulers.Shoot.Strategy = schedulerapi.MinimalDistance
+				minimalDistanceConfiguration.Schedulers.Shoot.Strategy = schedulerconfig.MinimalDistance
 				err := ValidateConfiguration(&minimalDistanceConfiguration)
 
 				Expect(err).To(BeEmpty())

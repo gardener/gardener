@@ -29,7 +29,7 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/network"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -235,7 +235,7 @@ var _ = Describe("#Network", func() {
 		It("should return error when it's not deleted successfully", func() {
 			defer test.WithVars(
 				&extensions.TimeNow, mockNow.Do,
-				&gutil.TimeNow, mockNow.Do,
+				&gardenerutils.TimeNow, mockNow.Do,
 			)()
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -245,7 +245,7 @@ var _ = Describe("#Network", func() {
 					Name:      networkName,
 					Namespace: networkNs,
 					Annotations: map[string]string{
-						gutil.ConfirmationDeletion:         "true",
+						gardenerutils.ConfirmationDeletion: "true",
 						v1beta1constants.GardenerTimestamp: now.UTC().String(),
 					},
 				}}

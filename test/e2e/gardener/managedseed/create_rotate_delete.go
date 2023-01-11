@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test"
@@ -163,7 +163,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				// kube-controller-manager backdates the issued certificate, see https://github.com/kubernetes/kubernetes/blob/252935368ab67f38cb252df0a961a6dcb81d20eb/pkg/controller/certificates/signer/signer.go#L197.
 				// ~40% * 15m =~ 6m. The jittering in gardenlet adds this to the time at which the certificate became
 				// valid and then renews it.
-				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, f.GardenClient.Client(), managedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
+				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, f.GardenClient.Client(), managedSeed, &gardenletv1alpha1.KubeconfigValidity{
 					Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
 					AutoRotationJitterPercentageMin: pointer.Int32(40),
 					AutoRotationJitterPercentageMax: pointer.Int32(41),
@@ -243,18 +243,18 @@ const (
 )
 
 func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.ManagedSeed, error) {
-	gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletconfigv1alpha1.GardenletConfiguration{
+	gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletv1alpha1.GardenletConfiguration{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+			APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "GardenletConfiguration",
 		},
-		GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
+		GardenClientConnection: &gardenletv1alpha1.GardenClientConnection{
 			KubeconfigSecret: &corev1.SecretReference{
 				Name:      gardenletKubeconfigSecretName,
 				Namespace: gardenletKubeconfigSecretNamespace,
 			},
 		},
-		SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+		SeedConfig: &gardenletv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{
@@ -327,7 +327,7 @@ func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
 	ctx context.Context,
 	gardenClient client.Client,
 	managedSeed *seedmanagementv1alpha1.ManagedSeed,
-	kubeconfigValidity *gardenletconfigv1alpha1.KubeconfigValidity,
+	kubeconfigValidity *gardenletv1alpha1.KubeconfigValidity,
 ) error {
 	if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
 		return err
@@ -339,7 +339,7 @@ func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
 	}
 
 	if gardenletConfig.GardenClientConnection == nil {
-		gardenletConfig.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{}
+		gardenletConfig.GardenClientConnection = &gardenletv1alpha1.GardenClientConnection{}
 	}
 	gardenletConfig.GardenClientConnection.KubeconfigValidity = kubeconfigValidity
 

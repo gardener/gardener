@@ -22,7 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,7 +47,7 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 // Resources contains an admission handler and listers.
 type Resources struct {
 	*admission.Handler
-	coreClient coreclientset.Interface
+	coreClient gardencoreclientset.Interface
 	readyFunc  admission.ReadyFunc
 }
 
@@ -71,7 +71,7 @@ func (r *Resources) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalCoreClientset gets the clientset from the Kubernetes client.
-func (r *Resources) SetInternalCoreClientset(c coreclientset.Interface) {
+func (r *Resources) SetInternalCoreClientset(c gardencoreclientset.Interface) {
 	r.coreClient = c
 }
 

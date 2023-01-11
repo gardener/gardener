@@ -22,7 +22,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -60,7 +60,7 @@ var _ = Describe("Extensions", func() {
 		gardenClient = mockclient.NewMockClient(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			GardenClient:  gardenClient,
-			SeedClientSet: fakeclientset.NewClientSet(),
+			SeedClientSet: kubernetesfake.NewClientSet(),
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{

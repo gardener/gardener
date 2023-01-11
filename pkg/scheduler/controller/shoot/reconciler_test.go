@@ -32,7 +32,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Scheduler_Control", func() {
@@ -148,7 +148,7 @@ var _ = Describe("Scheduler_Control", func() {
 		// PASS
 
 		It("should find a seed cluster 1) 'Same Region' seed determination strategy 2) referencing the same profile 3) same region 4) indicating availability", func() {
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -172,7 +172,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// first seed references more shoots then seed-2 -> expect seed-2 to be selected
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -197,7 +197,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -220,7 +220,7 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should fail because it cannot find a seed cluster 1) 'Same Region' seed determination strategy 2) region that no seed supports", func() {
 			shoot.Spec.Region = "another-region"
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -244,7 +244,7 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -273,7 +273,7 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -298,7 +298,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -321,7 +321,7 @@ var _ = Describe("Scheduler_Control", func() {
 			multiZonalSeed.Name = "seed-multi-zonal"
 			multiZonalSeed.Spec.Provider.Zones = []string{"1", "2"}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -360,7 +360,7 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Spec.Provider.Type = anotherType
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -381,7 +381,7 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -402,7 +402,7 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -429,7 +429,7 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Labels = map[string]string{"select": "true"}
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -447,7 +447,7 @@ var _ = Describe("Scheduler_Control", func() {
 		// FAIL
 
 		It("should fail because it cannot find a seed cluster 1) 'MinimalDistance' seed determination strategy 2) no matching provider", func() {
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -471,7 +471,7 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 				ProviderTypes: []string{providerType},
 			}
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -496,7 +496,7 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 			seed.Labels = map[string]string{"select": "true"}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -524,7 +524,7 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability", func() {
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -543,7 +543,7 @@ var _ = Describe("Scheduler_Control", func() {
 			anotherRegion := "another-region"
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -576,7 +576,7 @@ var _ = Describe("Scheduler_Control", func() {
 			anotherRegion := "europe-west3"
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -602,7 +602,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// first seed references more shoots then seed-2 -> expect seed-2 to be selected
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -651,7 +651,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			reader.EXPECT().Get(ctx, kutil.Key(newCloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(newCloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = newCloudProfile
 				return nil
 			})
@@ -706,7 +706,7 @@ var _ = Describe("Scheduler_Control", func() {
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"my-preferred": "seed"}},
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(newCloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(newCloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = newCloudProfile
 				return nil
 			})
@@ -740,7 +740,7 @@ var _ = Describe("Scheduler_Control", func() {
 			thirdShoot.Name = "shoot-3"
 			thirdShoot.Spec.SeedName = &secondSeed.Name
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -771,7 +771,7 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability", func() {
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -794,7 +794,7 @@ var _ = Describe("Scheduler_Control", func() {
 			shoot.Spec.Networking.Pods = nil
 			shoot.Spec.Networking.Services = nil
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -817,7 +817,7 @@ var _ = Describe("Scheduler_Control", func() {
 			secondShoot.Name = "shoot-2"
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -844,7 +844,7 @@ var _ = Describe("Scheduler_Control", func() {
 				Nodes:    seed.Spec.Networks.Nodes,
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -863,7 +863,7 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: "foo"}}
 			shoot.Spec.Tolerations = nil
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -886,7 +886,7 @@ var _ = Describe("Scheduler_Control", func() {
 			secondShoot.Name = "shoot-2"
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -908,7 +908,7 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Spec.Networks.ShootDefaults = nil
 			shoot.Spec.Networking = gardencorev1beta1.Networking{}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -926,7 +926,7 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should fail because it cannot find a seed cluster due to region that no seed supports", func() {
 			shoot.Spec.Region = "another-region"
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -949,7 +949,7 @@ var _ = Describe("Scheduler_Control", func() {
 					},
 				},
 			}
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -973,7 +973,7 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -991,7 +991,7 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should fail because it cannot find a seed cluster due to invalid profile", func() {
 			shoot.Spec.CloudProfileName = "another-profile"
 
-			reader.EXPECT().Get(ctx, kutil.Key("another-profile"), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+			reader.EXPECT().Get(ctx, kubernetesutils.Key("another-profile"), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
 				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
 				return nil
@@ -1015,7 +1015,7 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -1042,7 +1042,7 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})
@@ -1064,7 +1064,7 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
 			})

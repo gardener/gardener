@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -51,7 +51,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		NodeNetworkCIDR:                 b.Shoot.GetInfo().Spec.Networking.Nodes,
 		AutoscalingMode:                 gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
 		KubernetesVersion:               b.Shoot.KubernetesVersion,
-		SearchPathRewritesEnabled:       gardencorev1beta1helper.IsCoreDNSRewritingEnabled(gardenletfeatures.FeatureGate.Enabled(features.CoreDNSQueryRewriting), b.Shoot.GetInfo().GetAnnotations()),
+		SearchPathRewritesEnabled:       v1beta1helper.IsCoreDNSRewritingEnabled(gardenletfeatures.FeatureGate.Enabled(features.CoreDNSQueryRewriting), b.Shoot.GetInfo().GetAnnotations()),
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
 	}
 
@@ -59,7 +59,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		values.APIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 
-	if gardencorev1beta1helper.IsCoreDNSAutoscalingModeUsed(b.Shoot.GetInfo().Spec.SystemComponents, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional) {
+	if v1beta1helper.IsCoreDNSAutoscalingModeUsed(b.Shoot.GetInfo().Spec.SystemComponents, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional) {
 		image, err = b.ImageVector.FindImage(images.ImageNameClusterProportionalAutoscaler, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 		if err != nil {
 			return nil, err

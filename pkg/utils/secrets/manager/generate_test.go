@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/go-logr/logr"
@@ -37,8 +37,8 @@ import (
 )
 
 var _ = BeforeSuite(func() {
-	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
-	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
 })
 
 var _ = Describe("Generate", func() {
@@ -64,12 +64,12 @@ var _ = Describe("Generate", func() {
 		name := "config"
 
 		Context("for non-certificate secrets", func() {
-			var config *secretutils.BasicAuthSecretConfig
+			var config *secretsutils.BasicAuthSecretConfig
 
 			BeforeEach(func() {
-				config = &secretutils.BasicAuthSecretConfig{
+				config = &secretsutils.BasicAuthSecretConfig{
 					Name:           name,
-					Format:         secretutils.BasicAuthFormatNormal,
+					Format:         secretsutils.BasicAuthFormatNormal,
 					Username:       "foo",
 					PasswordLength: 3,
 				}
@@ -325,15 +325,15 @@ var _ = Describe("Generate", func() {
 
 		Context("for CA certificate secrets", func() {
 			var (
-				config     *secretutils.CertificateSecretConfig
+				config     *secretsutils.CertificateSecretConfig
 				commonName = "my-ca-common-name"
 			)
 
 			BeforeEach(func() {
-				config = &secretutils.CertificateSecretConfig{
+				config = &secretsutils.CertificateSecretConfig{
 					Name:       name,
 					CommonName: commonName,
-					CertType:   secretutils.CACert,
+					CertType:   secretsutils.CACert,
 				}
 			})
 
@@ -362,7 +362,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
-				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
 				By("generating new secret")
 				secret, err := m.Generate(ctx, config)
@@ -380,7 +380,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/ custom validity which is ignored for certificates)", func() {
-				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
 				By("generating new secret")
 				secret, err := m.Generate(ctx, config, Validity(time.Hour))
@@ -403,7 +403,7 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				cert, err := secretutils.LoadCertificate("", secret.Data["ca.key"], secret.Data["ca.crt"])
+				cert, err := secretsutils.LoadCertificate("", secret.Data["ca.key"], secret.Data["ca.crt"])
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cert.Certificate.Subject.CommonName).To(Equal(secret.Name))
 			})
@@ -457,31 +457,31 @@ var _ = Describe("Generate", func() {
 		Context("for certificate secrets", func() {
 			var (
 				caName, serverName, clientName       = "ca", "server", "client"
-				caConfig, serverConfig, clientConfig *secretutils.CertificateSecretConfig
+				caConfig, serverConfig, clientConfig *secretsutils.CertificateSecretConfig
 			)
 
 			BeforeEach(func() {
-				caConfig = &secretutils.CertificateSecretConfig{
+				caConfig = &secretsutils.CertificateSecretConfig{
 					Name:       caName,
 					CommonName: caName,
-					CertType:   secretutils.CACert,
+					CertType:   secretsutils.CACert,
 				}
-				serverConfig = &secretutils.CertificateSecretConfig{
+				serverConfig = &secretsutils.CertificateSecretConfig{
 					Name:                        serverName,
 					CommonName:                  serverName,
-					CertType:                    secretutils.ServerCert,
+					CertType:                    secretsutils.ServerCert,
 					SkipPublishingCACertificate: true,
 				}
-				clientConfig = &secretutils.CertificateSecretConfig{
+				clientConfig = &secretsutils.CertificateSecretConfig{
 					Name:                        clientName,
 					CommonName:                  clientName,
-					CertType:                    secretutils.ClientCert,
+					CertType:                    secretsutils.ClientCert,
 					SkipPublishingCACertificate: true,
 				}
 			})
 
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
-				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
@@ -505,7 +505,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/ custom validity which is ignored for certificates)", func() {
-				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
@@ -645,7 +645,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should also accept ControlPlaneSecretConfigs", func() {
-				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
@@ -654,10 +654,10 @@ var _ = Describe("Generate", func() {
 
 				By("generating new control plane secret")
 				serverConfig.Validity = pointer.Duration(1337 * time.Minute)
-				controlPlaneSecretConfig := &secretutils.ControlPlaneSecretConfig{
+				controlPlaneSecretConfig := &secretsutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",
 					CertificateSecretConfig: serverConfig,
-					KubeConfigRequests: []secretutils.KubeConfigRequest{{
+					KubeConfigRequests: []secretsutils.KubeConfigRequest{{
 						ClusterName:   namespace,
 						APIServerHost: "some-host",
 					}},
@@ -676,7 +676,7 @@ var _ = Describe("Generate", func() {
 
 			It("should correctly maintain lifetime labels for ControlPlaneSecretConfigs w/o certificate secret configs", func() {
 				By("generating new control plane secret")
-				cpSecret, err := m.Generate(ctx, &secretutils.ControlPlaneSecretConfig{Name: "control-plane-secret"})
+				cpSecret, err := m.Generate(ctx, &secretsutils.ControlPlaneSecretConfig{Name: "control-plane-secret"})
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, cpSecret)
 
@@ -699,7 +699,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
 				By("verifying server certificate common name")
-				serverCert, err := secretutils.LoadCertificate("", serverSecret.Data["tls.key"], serverSecret.Data["tls.crt"])
+				serverCert, err := secretsutils.LoadCertificate("", serverSecret.Data["tls.key"], serverSecret.Data["tls.crt"])
 				Expect(err).NotTo(HaveOccurred())
 				Expect(serverCert.Certificate.Subject.CommonName).To(Equal(serverConfig.CommonName))
 
@@ -709,17 +709,17 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
 				By("verifying client certificate common name")
-				clientCert, err := secretutils.LoadCertificate("", clientSecret.Data["tls.key"], clientSecret.Data["tls.crt"])
+				clientCert, err := secretsutils.LoadCertificate("", clientSecret.Data["tls.key"], clientSecret.Data["tls.crt"])
 				Expect(err).NotTo(HaveOccurred())
 				Expect(clientCert.Certificate.Subject.CommonName).To(Equal(clientConfig.CommonName))
 			})
 		})
 
 		Context("for RSA Private Key secrets", func() {
-			var config *secretutils.RSASecretConfig
+			var config *secretsutils.RSASecretConfig
 
 			BeforeEach(func() {
-				config = &secretutils.RSASecretConfig{
+				config = &secretsutils.RSASecretConfig{
 					Name: name,
 					Bits: 2048,
 				}
@@ -770,11 +770,11 @@ var _ = Describe("Generate", func() {
 		Context("adoption of existing secret data", func() {
 			var (
 				oldData = map[string][]byte{"id_rsa": []byte("some-old-data")}
-				config  *secretutils.RSASecretConfig
+				config  *secretsutils.RSASecretConfig
 			)
 
 			BeforeEach(func() {
-				config = &secretutils.RSASecretConfig{
+				config = &secretsutils.RSASecretConfig{
 					Name: "foo",
 					Bits: 4096,
 				}
@@ -835,11 +835,11 @@ var _ = Describe("Generate", func() {
 				var (
 					oldKey    = []byte("old-key")
 					oldSecret = []byte("old-secret")
-					config    *secretutils.ETCDEncryptionKeySecretConfig
+					config    *secretsutils.ETCDEncryptionKeySecretConfig
 				)
 
 				BeforeEach(func() {
-					config = &secretutils.ETCDEncryptionKeySecretConfig{
+					config = &secretsutils.ETCDEncryptionKeySecretConfig{
 						Name:         "kube-apiserver-etcd-encryption-key",
 						SecretLength: 32,
 					}
@@ -893,11 +893,11 @@ resources:
 			Context("service account key", func() {
 				var (
 					oldData = map[string][]byte{"id_rsa": []byte("some-old-key")}
-					config  *secretutils.RSASecretConfig
+					config  *secretsutils.RSASecretConfig
 				)
 
 				BeforeEach(func() {
-					config = &secretutils.RSASecretConfig{
+					config = &secretsutils.RSASecretConfig{
 						Name: "service-account-key",
 						Bits: 4096,
 					}

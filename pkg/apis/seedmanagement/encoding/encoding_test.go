@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,9 +29,9 @@ import (
 
 var _ = Describe("Encoding", func() {
 	var (
-		config = &configv1alpha1.GardenletConfiguration{
+		config = &gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
 		}
@@ -47,7 +47,7 @@ var _ = Describe("Encoding", func() {
 
 		It("should decode the raw config to a GardenletConfiguration with defaults", func() {
 			configWithDefaults := config.DeepCopy()
-			configv1alpha1.SetObjectDefaults_GardenletConfiguration(configWithDefaults)
+			gardenletv1alpha1.SetObjectDefaults_GardenletConfiguration(configWithDefaults)
 
 			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Raw: encode(config)}, true)
 

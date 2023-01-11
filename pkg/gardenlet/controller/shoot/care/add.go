@@ -31,7 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
 		r.EventHandler(),
-		predicateutils.SeedNamePredicate(r.SeedName, gutil.GetShootSeedNames),
+		predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetShootSeedNames),
 		r.ShootPredicate(),
 	)
 }

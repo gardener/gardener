@@ -15,13 +15,13 @@
 package initializer
 
 import (
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	externalcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
-	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -33,13 +33,13 @@ import (
 
 // New constructs new instance of PluginInitializer
 func New(
-	coreInformers coreinformers.SharedInformerFactory,
-	coreClient coreclientset.Interface,
-	externalCoreInformers externalcoreinformers.SharedInformerFactory,
-	externalCoreClient externalcoreclientset.Interface,
+	coreInformers gardencoreinformers.SharedInformerFactory,
+	coreClient gardencoreclientset.Interface,
+	externalCoreInformers gardencoreexternalinformers.SharedInformerFactory,
+	externalCoreClient gardencoreversionedclientset.Interface,
 	seedManagementInformers seedmanagementinformers.SharedInformerFactory,
 	seedManagementClient seedmanagementclientset.Interface,
-	settingsInformers settingsinformer.SharedInformerFactory,
+	settingsInformers settingsinformers.SharedInformerFactory,
 	kubeInformers kubeinformers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
 	dynamicClient dynamic.Interface,

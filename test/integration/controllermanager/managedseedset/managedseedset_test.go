@@ -19,7 +19,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
@@ -37,7 +37,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 	var (
 		shoot           *gardencorev1beta1.Shoot
 		seed            *gardencorev1beta1.Seed
-		gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration
+		gardenletConfig *gardenletv1alpha1.GardenletConfiguration
 		managedSeed     *seedmanagementv1alpha1.ManagedSeed
 		managedSeedSet  *seedmanagementv1alpha1.ManagedSeedSet
 		selector        labels.Selector
@@ -133,12 +133,12 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			},
 		}
 
-		gardenletConfig = &gardenletconfigv1alpha1.GardenletConfiguration{
+		gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
-			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+			SeedConfig: &gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: seed.ObjectMeta,
 					Spec:       seed.Spec,

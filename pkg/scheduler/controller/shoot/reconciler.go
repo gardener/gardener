@@ -20,10 +20,10 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +41,7 @@ import (
 type Reconciler struct {
 	Client                  client.Client
 	Config                  *config.ShootSchedulerConfiguration
-	VersionedGardenerClient *gardenversionedcoreclientset.Clientset
+	VersionedGardenerClient *gardencoreversionedclientset.Clientset
 	Recorder                record.EventRecorder
 }
 
@@ -121,7 +121,7 @@ func determineSeed(
 		return nil, err
 	}
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := reader.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err := reader.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return nil, err
 	}
 	filteredSeeds, err := filterUsableSeeds(seedList.Items)
@@ -218,7 +218,7 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 // filterSeedsForZonalShootControlPlanes filters seeds with at least three zones in case the shoot's failure tolerance
 // type is 'zone'.
 func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
-	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
+	if v1beta1helper.IsMultiZonalShootControlPlane(shoot) {
 		var seedsWithAtLeastThreeZones []gardencorev1beta1.Seed
 		for _, seed := range seedList {
 			if len(seed.Spec.Provider.Zones) >= 3 {
@@ -257,7 +257,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1be
 	var (
 		candidates      []gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
-		seedUsage       = gardencorev1beta1helper.CalculateSeedUsage(shootList)
+		seedUsage       = v1beta1helper.CalculateSeedUsage(shootList)
 	)
 
 	for _, seed := range seedList {
@@ -271,7 +271,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1be
 			continue
 		}
 
-		if !gardencorev1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
+		if !v1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
 			candidateErrors[seed.Name] = fmt.Errorf("shoot does not tolerate the seed's taints")
 			continue
 		}
@@ -295,7 +295,7 @@ func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList
 	var (
 		bestCandidate gardencorev1beta1.Seed
 		min           *int
-		seedUsage     = gardencorev1beta1helper.CalculateSeedUsage(shootList)
+		seedUsage     = v1beta1helper.CalculateSeedUsage(shootList)
 	)
 
 	for _, seed := range seedList {
@@ -411,7 +411,7 @@ func ignoreSeedDueToDNSConfiguration(seed *gardencorev1beta1.Seed, shoot *garden
 	if shoot.Spec.DNS == nil {
 		return false
 	}
-	return !gardencorev1beta1helper.ShootUsesUnmanagedDNS(shoot)
+	return !v1beta1helper.ShootUsesUnmanagedDNS(shoot)
 }
 
 func errorMapToString(errs map[string]error) string {
@@ -424,16 +424,16 @@ func errorMapToString(errs map[string]error) string {
 }
 
 func verifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
-	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 		return false
 	}
 
-	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 		return false
 	}
 
 	if seed.Spec.Backup != nil {
-		if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+		if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 			return false
 		}
 	}

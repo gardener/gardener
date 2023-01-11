@@ -20,7 +20,7 @@ import (
 	commonosgenerator "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -84,7 +84,7 @@ func DataForFileContent(ctx context.Context, c client.Client, namespace string, 
 	}
 
 	secret := &corev1.Secret{}
-	if err := c.Get(ctx, kutil.Key(namespace, content.SecretRef.Name), secret); err != nil {
+	if err := c.Get(ctx, kubernetesutils.Key(namespace, content.SecretRef.Name), secret); err != nil {
 		return nil, err
 	}
 

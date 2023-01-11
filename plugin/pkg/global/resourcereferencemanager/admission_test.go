@@ -41,8 +41,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 )
@@ -66,8 +66,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			kubeInformerFactory               kubeinformers.SharedInformerFactory
 			kubeClient                        *fake.Clientset
 			gardenCoreClient                  *internalclientset.Clientset
-			gardenCoreInformerFactory         coreinformers.SharedInformerFactory
-			gardenCoreExternalInformerFactory externalcoreinformers.SharedInformerFactory
+			gardenCoreInformerFactory         gardencoreinformers.SharedInformerFactory
+			gardenCoreExternalInformerFactory gardencoreexternalinformers.SharedInformerFactory
 			fakeAuthorizer                    fakeAuthorizerType
 			scheme                            *runtime.Scheme
 			dynamicClient                     *dynamicfake.FakeDynamicClient
@@ -290,10 +290,10 @@ var _ = Describe("resourcereferencemanager", func() {
 			gardenCoreClient.Fake = testing.Fake{Resources: discoveryGardenClientResources}
 			admissionHandler.SetInternalCoreClientset(gardenCoreClient)
 
-			gardenCoreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
 
-			gardenCoreExternalInformerFactory = externalcoreinformers.NewSharedInformerFactory(nil, 0)
+			gardenCoreExternalInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetExternalCoreInformerFactory(gardenCoreExternalInformerFactory)
 
 			fakeAuthorizer = fakeAuthorizerType{}
@@ -1814,8 +1814,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			internalGardenClient := &internalclientset.Clientset{}
 			rm.SetInternalCoreClientset(internalGardenClient)
 
-			rm.SetInternalCoreInformerFactory(coreinformers.NewSharedInformerFactory(nil, 0))
-			rm.SetExternalCoreInformerFactory(externalcoreinformers.NewSharedInformerFactory(nil, 0))
+			rm.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			rm.SetExternalCoreInformerFactory(gardencoreexternalinformers.NewSharedInformerFactory(nil, 0))
 
 			fakeAuthorizer := fakeAuthorizerType{}
 			rm.SetAuthorizer(fakeAuthorizer)

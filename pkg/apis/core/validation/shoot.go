@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -624,7 +624,7 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 		idxPath := fldPath.Child("providers").Index(i)
 
 		if provider.SecretName != nil && provider.Type != nil {
-			providerName := gutil.GenerateDNSProviderName(*provider.SecretName, *provider.Type)
+			providerName := gardenerutils.GenerateDNSProviderName(*provider.SecretName, *provider.Type)
 			if names.Has(providerName) {
 				allErrs = append(allErrs, field.Invalid(idxPath, providerName, "combination of .secretName and .type must be unique across dns providers"))
 				continue

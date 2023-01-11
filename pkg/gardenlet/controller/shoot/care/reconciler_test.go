@@ -25,15 +25,15 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/care"
-	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -118,13 +118,13 @@ var _ = Describe("Shoot Care Control", func() {
 			gardenSecrets = []corev1.Secret{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "internal-domain-secret",
-					Namespace:   gutil.ComputeGardenNamespace(seedName),
-					Annotations: map[string]string{gutil.DNSProvider: "fooDNS", gutil.DNSDomain: "foo.bar"},
+					Namespace:   gardenerutils.ComputeGardenNamespace(seedName),
+					Annotations: map[string]string{gardenerutils.DNSProvider: "fooDNS", gardenerutils.DNSDomain: "foo.bar"},
 					Labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 				},
 			}}
 
-			req = reconcile.Request{NamespacedName: kutil.Key(shootNamespace, shootName)}
+			req = reconcile.Request{NamespacedName: kubernetesutils.Key(shootNamespace, shootName)}
 
 			gardenletConf = config.GardenletConfiguration{
 				Controllers: &config.GardenletControllerConfiguration{
@@ -152,7 +152,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 					reconciler = &Reconciler{
 						GardenClient:  gardenClient,
-						SeedClientSet: fakeclientset.NewClientSet(),
+						SeedClientSet: kubernetesfake.NewClientSet(),
 						Config:        gardenletConf,
 						Clock:         fakeClock,
 						SeedName:      seedName,
@@ -179,7 +179,7 @@ var _ = Describe("Shoot Care Control", func() {
 					defer test.WithVars(&NewOperation, operationFunc)()
 					reconciler = &Reconciler{
 						GardenClient:  gardenClient,
-						SeedClientSet: fakeclientset.NewClientSet(),
+						SeedClientSet: kubernetesfake.NewClientSet(),
 						Config:        gardenletConf,
 						Clock:         fakeClock,
 						SeedName:      seedName,
@@ -203,9 +203,9 @@ var _ = Describe("Shoot Care Control", func() {
 
 				op := &operation.Operation{
 					GardenClient:  gardenClient,
-					SeedClientSet: fakeclientset.NewClientSetBuilder().Build(),
+					SeedClientSet: kubernetesfake.NewClientSetBuilder().Build(),
 					ManagedSeed:   managedSeed,
-					Shoot:         &operationshoot.Shoot{},
+					Shoot:         &shootpkg.Shoot{},
 					Logger:        logr.Discard(),
 				}
 				op.Shoot.SetInfo(shoot)
@@ -217,7 +217,7 @@ var _ = Describe("Shoot Care Control", func() {
 				))
 				reconciler = &Reconciler{
 					GardenClient:   gardenClient,
-					SeedClientSet:  fakeclientset.NewClientSet(),
+					SeedClientSet:  kubernetesfake.NewClientSet(),
 					ShootClientMap: shootClientMap,
 					Config:         gardenletConf,
 					Clock:          fakeClock,

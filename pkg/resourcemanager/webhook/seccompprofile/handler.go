@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler handles admission requests and sets the spec.securityContext.seccompProfile field in Pod resources.
@@ -43,7 +43,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		return err
 	}
 
-	log := h.Logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
+	log := h.Logger.WithValues("pod", kubernetesutils.ObjectKeyForCreateWebhooks(pod, req))
 
 	// Do not overwrite the seccomp profile if it is already specified
 	if pod.Spec.SecurityContext != nil && pod.Spec.SecurityContext.SeccompProfile != nil && pod.Spec.SecurityContext.SeccompProfile.Type != "" {

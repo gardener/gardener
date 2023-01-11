@@ -23,13 +23,13 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
-	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -101,7 +101,7 @@ type Replica interface {
 	// IsSeedReady returns true if this replica's seed is ready, false otherwise.
 	IsSeedReady() bool
 	// GetShootHealthStatus returns this replica's shoot health status (healthy, progressing, or unhealthy).
-	GetShootHealthStatus() operationshoot.Status
+	GetShootHealthStatus() shootpkg.Status
 	// IsDeletable returns true if this replica can be deleted, false otherwise. A replica can be deleted if it has no
 	// scheduled shoots and is not protected by the "protect-from-deletion" annotation.
 	IsDeletable() bool
@@ -177,7 +177,7 @@ func (r *replica) GetFullName() string {
 	if r.shoot == nil {
 		return ""
 	}
-	return kutil.ObjectName(r.shoot)
+	return kubernetesutils.ObjectName(r.shoot)
 }
 
 // GetObjectKey returns this replica's ObjectKey. This is the namespace/name of the shoot and managed seed of this replica.
@@ -234,9 +234,9 @@ func (r *replica) IsSeedReady() bool {
 }
 
 // GetShootHealthStatus returns this replica's shoot health status (healthy, progressing, or unhealthy).
-func (r *replica) GetShootHealthStatus() operationshoot.Status {
+func (r *replica) GetShootHealthStatus() shootpkg.Status {
 	if r.shoot == nil {
-		return operationshoot.StatusUnhealthy
+		return shootpkg.StatusUnhealthy
 	}
 	return shootHealthStatus(r.shoot)
 }
@@ -244,8 +244,8 @@ func (r *replica) GetShootHealthStatus() operationshoot.Status {
 // IsDeletable returns true if this replica can be deleted, false otherwise. A replica can be deleted if it has no
 // scheduled shoots and is not protected by the "protect-from-deletion" annotation.
 func (r *replica) IsDeletable() bool {
-	shootProtected := r.shoot != nil && kutil.HasMetaDataAnnotation(r.shoot, seedmanagementv1alpha1constants.AnnotationProtectFromDeletion, "true")
-	managedSeedProtected := r.managedSeed != nil && kutil.HasMetaDataAnnotation(r.managedSeed, seedmanagementv1alpha1constants.AnnotationProtectFromDeletion, "true")
+	shootProtected := r.shoot != nil && kubernetesutils.HasMetaDataAnnotation(r.shoot, seedmanagementv1alpha1constants.AnnotationProtectFromDeletion, "true")
+	managedSeedProtected := r.managedSeed != nil && kubernetesutils.HasMetaDataAnnotation(r.managedSeed, seedmanagementv1alpha1constants.AnnotationProtectFromDeletion, "true")
 	return !r.hasScheduledShoots && !shootProtected && !managedSeedProtected
 }
 
@@ -273,7 +273,7 @@ func (r *replica) CreateManagedSeed(ctx context.Context, c client.Client) error 
 // DeleteShoot deletes this replica's shoot using the given context and client.
 func (r *replica) DeleteShoot(ctx context.Context, c client.Client) error {
 	if r.shoot != nil {
-		if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, gutil.ConfirmationDeletion, "true"); err != nil {
+		if err := kubernetesutils.SetAnnotationAndUpdate(ctx, c, r.shoot, gardenerutils.ConfirmationDeletion, "true"); err != nil {
 			return err
 		}
 		return client.IgnoreNotFound(c.Delete(ctx, r.shoot))
@@ -294,7 +294,7 @@ func (r *replica) RetryShoot(ctx context.Context, c client.Client) error {
 	if r.shoot == nil {
 		return nil
 	}
-	return kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+	return kubernetesutils.SetAnnotationAndUpdate(ctx, c, r.shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 }
 
 func shootReconcileSucceeded(shoot *gardencorev1beta1.Shoot) bool {
@@ -319,16 +319,16 @@ func shootDeleteFailed(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func managedSeedRegistered(managedSeed *seedmanagementv1alpha1.ManagedSeed) bool {
-	conditionSeedRegistered := gardencorev1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
+	conditionSeedRegistered := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
 	return managedSeed.Generation == managedSeed.Status.ObservedGeneration && managedSeed.DeletionTimestamp == nil &&
 		conditionSeedRegistered != nil && conditionSeedRegistered.Status == gardencorev1beta1.ConditionTrue
 }
 
 func seedReady(seed *gardencorev1beta1.Seed) bool {
-	conditionGardenletReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
-	conditionBootstrapped := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	conditionBackupBucketsReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
-	conditionSystemComponentsHealthy := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
+	conditionGardenletReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+	conditionBootstrapped := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+	conditionBackupBucketsReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
+	conditionSystemComponentsHealthy := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
 	return seed.Generation == seed.Status.ObservedGeneration && seed.DeletionTimestamp == nil &&
 		conditionGardenletReady != nil && conditionGardenletReady.Status == gardencorev1beta1.ConditionTrue &&
 		conditionBootstrapped != nil && conditionBootstrapped.Status == gardencorev1beta1.ConditionTrue &&
@@ -336,11 +336,11 @@ func seedReady(seed *gardencorev1beta1.Seed) bool {
 		(conditionBackupBucketsReady == nil || conditionBackupBucketsReady.Status == gardencorev1beta1.ConditionTrue)
 }
 
-func shootHealthStatus(shoot *gardencorev1beta1.Shoot) operationshoot.Status {
+func shootHealthStatus(shoot *gardencorev1beta1.Shoot) shootpkg.Status {
 	if value, ok := shoot.Labels[v1beta1constants.ShootStatus]; ok {
-		return operationshoot.Status(value)
+		return shootpkg.Status(value)
 	}
-	return operationshoot.StatusProgressing
+	return shootpkg.StatusProgressing
 }
 
 // newShoot creates a new shoot object for the given set and ordinal.

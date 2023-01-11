@@ -20,9 +20,9 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,9 +33,9 @@ import (
 
 const (
 	// ExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
-	ExternalProbeSecretName = gutil.SecretNamePrefixShootAccess + "dependency-watchdog-external-probe"
+	ExternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-external-probe"
 	// InternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
-	InternalProbeSecretName = gutil.SecretNamePrefixShootAccess + "dependency-watchdog-internal-probe"
+	InternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-internal-probe"
 )
 
 // NewAccess creates a new instance of the deployer for shoot cluster access for the dependency-watchdog.
@@ -79,10 +79,10 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 		ExternalProbeSecretName: d.values.ServerOutOfCluster,
 	} {
 		var (
-			shootAccessSecret = gutil.NewShootAccessSecret(name, d.namespace).WithNameOverride(name)
-			kubeconfig        = kutil.NewKubeconfig(
+			shootAccessSecret = gardenerutils.NewShootAccessSecret(name, d.namespace).WithNameOverride(name)
+			kubeconfig        = kubernetesutils.NewKubeconfig(
 				d.namespace,
-				clientcmdv1.Cluster{Server: server, CertificateAuthorityData: caSecret.Data[secretutils.DataKeyCertificateBundle]},
+				clientcmdv1.Cluster{Server: server, CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle]},
 				clientcmdv1.AuthInfo{Token: ""},
 			)
 		)
@@ -96,7 +96,7 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 }
 
 func (d *dependencyWatchdogAccess) Destroy(ctx context.Context) error {
-	return kutil.DeleteObjects(ctx, d.client,
+	return kubernetesutils.DeleteObjects(ctx, d.client,
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: InternalProbeSecretName, Namespace: d.namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ExternalProbeSecretName, Namespace: d.namespace}},
 	)

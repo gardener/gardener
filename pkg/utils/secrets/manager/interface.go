@@ -17,7 +17,7 @@ package manager
 import (
 	"context"
 
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -35,7 +35,7 @@ type Interface interface {
 	// Generate generates a secret based on the provided configuration. If the secret for the provided configuration
 	// already exists then it is returned with re-generation. The function also automatically rotates/re-generates the
 	// secret only if necessary (e.g., when the config or the signing CA changes).
-	Generate(context.Context, secretutils.ConfigInterface, ...GenerateOption) (*corev1.Secret, error)
+	Generate(context.Context, secretsutils.ConfigInterface, ...GenerateOption) (*corev1.Secret, error)
 
 	Reader
 
