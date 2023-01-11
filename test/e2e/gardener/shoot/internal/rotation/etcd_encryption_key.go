@@ -105,6 +105,8 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 func (v *ETCDEncryptionKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
+	g.Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime).To(BeNil())
+	g.Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTriggeredTime).To(BeNil())
 }
 
 // AfterPrepared is called when the Shoot is in Prepared status.
@@ -112,6 +114,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
 	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "rotation phase should be 'Prepared'")
+	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime).NotTo(BeNil())
+	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime.After(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time)).To(BeTrue())
 
 	By("Verifying etcd encryption key secrets")
 	Eventually(func(g Gomega) {
@@ -160,6 +164,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ETCDEncryptionKeyVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
+	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTriggeredTime).NotTo(BeNil())
+	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime.Time)).To(BeTrue())
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
@@ -169,6 +175,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	etcdEncryptionKeyRotation := v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
 	Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
 	Expect(etcdEncryptionKeyRotation.LastCompletionTime.Time.UTC().After(etcdEncryptionKeyRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
+	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).To(BeNil())
+	Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 
 	By("Verifying new etcd encryption key secret")
 	Eventually(func(g Gomega) {

@@ -129,12 +129,16 @@ func (v *CAVerifier) Before(ctx context.Context) {
 func (v *CAVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
+	g.Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime).To(BeNil())
+	g.Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTriggeredTime).To(BeNil())
 }
 
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "ca rotation phase should be 'Prepared'")
+	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime).NotTo(BeNil())
+	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.After(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time)).To(BeTrue())
 
 	By("Verifying CA secrets of gardenlet after preparation")
 	Eventually(func(g Gomega) {
@@ -192,6 +196,8 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *CAVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
+	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTriggeredTime).NotTo(BeNil())
+	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.Time)).To(BeTrue())
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
@@ -201,6 +207,8 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	caRotation := v.Shoot.Status.Credentials.Rotation.CertificateAuthorities
 	Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
 	Expect(caRotation.LastCompletionTime.Time.UTC().After(caRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
+	Expect(caRotation.LastInitiationFinishedTime).To(BeNil())
+	Expect(caRotation.LastCompletionTriggeredTime).To(BeNil())
 
 	By("Verifying CA secrets of gardenlet after completion")
 	Eventually(func(g Gomega) {

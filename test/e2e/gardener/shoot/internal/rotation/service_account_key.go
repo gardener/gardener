@@ -62,6 +62,8 @@ func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 func (v *ServiceAccountKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
+	g.Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime).To(BeNil())
+	g.Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastCompletionTriggeredTime).To(BeNil())
 }
 
 // AfterPrepared is called when the Shoot is in Prepared status.
@@ -69,6 +71,8 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
 	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "rotation phase should be 'Prepared'")
+	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime).NotTo(BeNil())
+	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.After(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time)).To(BeTrue())
 
 	By("Verifying service account key bundle secret")
 	Eventually(func(g Gomega) {
@@ -88,6 +92,8 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ServiceAccountKeyVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
+	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastCompletionTriggeredTime).NotTo(BeNil())
+	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)).To(BeTrue())
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
@@ -97,6 +103,8 @@ func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 	serviceAccountKeyRotation := v.Shoot.Status.Credentials.Rotation.ServiceAccountKey
 	Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
 	Expect(serviceAccountKeyRotation.LastCompletionTime.Time.UTC().After(serviceAccountKeyRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
+	Expect(serviceAccountKeyRotation.LastInitiationFinishedTime).To(BeNil())
+	Expect(serviceAccountKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 
 	By("Verifying new service account key secret")
 	Eventually(func(g Gomega) {
