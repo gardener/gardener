@@ -53,6 +53,8 @@ var (
 	ConstraintK8sLess125 *semver.Constraints
 	// ConstraintK8sGreaterEqual126 is a version constraint for versions >= 1.26.
 	ConstraintK8sGreaterEqual126 *semver.Constraints
+	// ConstraintK8sLess126 is a version constraint for versions < 1.26.
+	ConstraintK8sLess126 *semver.Constraints
 )
 
 func init() {
@@ -86,6 +88,8 @@ func init() {
 	ConstraintK8sLess125, err = semver.NewConstraint("< 1.25-0")
 	utilruntime.Must(err)
 	ConstraintK8sGreaterEqual126, err = semver.NewConstraint(">= 1.26-0")
+	utilruntime.Must(err)
+	ConstraintK8sLess126, err = semver.NewConstraint("< 1.26-0")
 	utilruntime.Must(err)
 }
 
