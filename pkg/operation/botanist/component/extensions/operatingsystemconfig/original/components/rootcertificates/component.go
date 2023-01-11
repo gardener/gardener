@@ -20,6 +20,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -47,9 +48,7 @@ func init() {
 		New(tplNameUpdateLocalCaCertificates).
 		Funcs(sprig.TxtFuncMap()).
 		Parse(tplContentUpdateLocalCaCertificates)
-	if err != nil {
-		panic(err)
-	}
+	utilruntime.Must(err)
 }
 
 type component struct{}
@@ -68,7 +67,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, nil
 	}
 
-	updateLocalCaCertificatesScriptFile, err := getUpdateLocalCaCertificatesScriptFile()
+	updateLocalCaCertificatesScriptFile, err := updateLocalCACertificatesScriptFile()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,7 +125,7 @@ WantedBy=multi-user.target`),
 		nil
 }
 
-func getUpdateLocalCaCertificatesScriptFile() (extensionsv1alpha1.File, error) {
+func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
 	var script bytes.Buffer
 	if err := tplUpdateLocalCaCertificates.Execute(&script, map[string]interface{}{
 		"pathLocalSSLCerts": pathLocalSSLCerts,
