@@ -1,8 +1,8 @@
 ---
-title: Gardenlet API Access
+title: gardenlet API Access
 ---
 
-# Scoped API Access for Gardenlets
+# Scoped API Access for gardenlets
 
 By default, `gardenlet`s have administrative access in the garden cluster.
 They are able to execute any API request on any object independent of whether the object is related to the seed cluster the `gardenlet` is responsible for.
@@ -20,7 +20,7 @@ It can be translated to Gardener and Gardenlets with their `Seed` and `Shoot` re
 ## Flow Diagram
 
 The following diagram shows how the two plugins are included in the request flow of a `gardenlet`.
-When they are not enabled then the `kube-apiserver` is internally authorizing the request via RBAC before forwarding the request directly to the `gardener-apiserver`, i.e., the `gardener-admission-controller` would not be consulted (this is not entirely correct because it also serves other admission webhook handlers, but for simplicity reasons this document focuses on the API access scope only).
+When they are not enabled, then the `kube-apiserver` is internally authorizing the request via RBAC before forwarding the request directly to the `gardener-apiserver`, i.e., the `gardener-admission-controller` would not be consulted (this is not entirely correct because it also serves other admission webhook handlers, but for simplicity reasons this document focuses on the API access scope only).
 
 When enabling the plugins, there is one additional step for each before the `gardener-apiserver` responds to the request.
 
@@ -51,19 +51,19 @@ Today, the following rules are implemented:
 | `Namespace`                 | `get`                                                           | `Namespace` -> `Shoot` -> `Seed`                                                                                              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Always allow `get` requests for the `garden` `Namespace`. |
 | `Project`                   | `get`                                                           | `Project` -> `Namespace` -> `Shoot` -> `Seed`                                                                                 | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 | `SecretBinding`             | `get`                                                           | `SecretBinding` -> `Shoot` -> `Seed`                                                                                          | Allow only `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
-| `Secret`                    | `create`, `get`, `update`, `patch`, `delete`(, `list`, `watch`) | `Secret` -> `Seed`, `Secret` -> `Shoot` -> `Seed`, `Secret` -> `SecretBinding` -> `Shoot` -> `Seed`, `BackupBucket` -> `Seed` | Allow `get`, `list`, `watch` requests for all `Secret`s in the `seed-<name>` namespace. Allow only `create`, `get`, `update`, `patch`, `delete` requests for the `Secret`s related to resources assigned to the gardenlet`'s `Seed`s. |
+| `Secret`                    | `create`, `get`, `update`, `patch`, `delete`(, `list`, `watch`) | `Secret` -> `Seed`, `Secret` -> `Shoot` -> `Seed`, `Secret` -> `SecretBinding` -> `Shoot` -> `Seed`, `BackupBucket` -> `Seed` | Allow `get`, `list`, `watch` requests for all `Secret`s in the `seed-<name>` namespace. Allow only `create`, `get`, `update`, `patch`, `delete` requests for the `Secret`s related to resources assigned to the `gardenlet`'s `Seed`s. |
 | `Seed`                      | `get`, `list`, `watch`, `create`, `update`, `patch`, `delete`   | `Seed`                                                                                                                        | Allow `get`, `list`, `watch` requests for all `Seed`s. Allow only `create`, `update`, `patch`, `delete` requests for the `gardenlet`'s `Seed`s. [1] |
-| `ServiceAccount`            | `create`, `get`, `update`, `patch`, `delete`                    | `ServiceAccount` -> `ManagedSeed` -> `Shoot` -> `Seed`                                                                        | Allow `create`, `get`, `update`, `patch` requests for `ManagedSeed`s in the bootstrapping phase assigned to the gardenlet's `Seed`s. Allow `delete` requests from gardenlets bootstrapped via `ManagedSeed`s. |
+| `ServiceAccount`            | `create`, `get`, `update`, `patch`, `delete`                    | `ServiceAccount` -> `ManagedSeed` -> `Shoot` -> `Seed`                                                                        | Allow `create`, `get`, `update`, `patch` requests for `ManagedSeed`s in the bootstrapping phase assigned to the `gardenlet`'s `Seed`s. Allow `delete` requests from gardenlets bootstrapped via `ManagedSeed`s. |
 | `Shoot`                     | `get`, `list`, `watch`, `update`, `patch`                       | `Shoot` -> `Seed`                                                                                                             | Allow `get`, `list`, `watch` requests for all `Shoot`s. Allow only `update`, `patch` requests for `Shoot`s assigned to the `gardenlet`'s `Seed`. |
 | `ShootState`                | `get`, `create`, `update`, `patch`                              | `ShootState` -> `Shoot` -> `Seed`                                                                                             | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 
-[1] If you use `ManagedSeed` resources then the gardenlet reconciling them ("parent gardenlet") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent gardenlet" is not responsible for them):
+> [1] If you use `ManagedSeed` resources then the `gardenlet` reconciling them ("parent `gardenlet`") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent `gardenlet`" is not responsible for them):
 
-- ℹ️ It is allowed to delete the `Seed` resources if the corresponding `ManagedSeed` objects already have a `deletionTimestamp` (this is secure as gardenlets themselves don't have permissions for deleting `ManagedSeed`s).
+ℹ️ It is allowed to delete the `Seed` resources if the corresponding `ManagedSeed` objects already have a `deletionTimestamp` (this is secure as `gardenlet`s themselves don't have permissions for deleting `ManagedSeed`s).
 
 ## `SeedAuthorizer` Authorization Webhook Enablement
 
-The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and part of the [`gardener-admission-controller`](../concepts/admission-controller.md) component running in the garden cluster.
+The `SeedAuthorizer` is implemented as a [Kubernetes authorization webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and part of the [`gardener-admission-controller`](../concepts/admission-controller.md) component running in the garden cluster.
 
 🎛 In order to activate it, you have to follow these steps:
 
@@ -93,9 +93,9 @@ The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https:
    current-context: auth-webhook
    ```
 
-3. When deploying the [Gardener `controlplane` Helm chart](../../charts/gardener/controlplane), set `.global.rbac.seedAuthorizer.enabled=true`. This will prevent that the RBAC resources granting global access for all gardenlets will be deployed.
+3. When deploying the [Gardener `controlplane` Helm chart](../../charts/gardener/controlplane), set `.global.rbac.seedAuthorizer.enabled=true`. This will ensure that the RBAC resources granting global access for all `gardenlet`s will be deployed.
 
-4. Delete the existing RBAC resources granting global access for all gardenlets by running:
+4. Delete the existing RBAC resources granting global access for all `gardenlet`s by running:
    ```bash
    kubectl delete \
      clusterrole.rbac.authorization.k8s.io/gardener.cloud:system:seeds \
@@ -105,7 +105,7 @@ The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https:
 
 Please note that you should activate the [`SeedRestriction`](#seedrestriction-admission-webhook-enablement) admission handler as well.
 
-> [1] The reason for the fact that `Webhook` authorization plugin should appear after `RBAC` is that the `kube-apiserver` will be depending on the `gardener-admission-controller` (serving the webhook). However, the `gardener-admission-controller` can only start when `gardener-apiserver` runs, but `gardener-apiserver` itself can only start when `kube-apiserver` runs. If `Webhook` is before `RBAC` then `gardener-apiserver` might not be able to start, leading to a deadlock.
+> [1] The reason for the fact that `Webhook` authorization plugin should appear after `RBAC` is that the `kube-apiserver` will be depending on the `gardener-admission-controller` (serving the webhook). However, the `gardener-admission-controller` can only start when `gardener-apiserver` runs, but `gardener-apiserver` itself can only start when `kube-apiserver` runs. If `Webhook` is before `RBAC`, then `gardener-apiserver` might not be able to start, leading to a deadlock.
 
 ### Authorizer Decisions
 
@@ -118,7 +118,7 @@ As mentioned earlier, it's the authorizer's job to evaluate API requests and ret
 For backwards compatibility, no requests are denied at the moment, so that they are still deferred to a subsequent authorizer like RBAC.
 Though, this might change in the future.
 
-First, the `SeedAuthorizer` extracts the `Seed` name from the API request. This requires a proper TLS certificate the `gardenlet` uses to contact the API server and is automatically given if [TLS bootstrapping](../concepts/gardenlet.md#TLS-Bootstrapping) is used.
+First, the `SeedAuthorizer` extracts the `Seed` name from the API request. This requires a proper TLS certificate that the `gardenlet` uses to contact the API server and is automatically given if [TLS bootstrapping](../concepts/gardenlet.md#TLS-Bootstrapping) is used.
 Concretely, the authorizer checks the certificate for name `gardener.cloud:system:seed:<seed-name>` and group `gardener.cloud:system:seeds`.
 In cases where this information is missing e.g., when a custom Kubeconfig is used, the authorizer cannot make any decision. Thus, RBAC is still a considerable option to restrict the `gardenlet`'s access permission if the above explained preconditions are not given.
 
@@ -126,7 +126,7 @@ With the `Seed` name at hand, the authorizer checks for an **existing path** fro
 
 ### Implementation Details
 
-Internally, the `SeedAuthorizer` uses a directed, acyclic graph data structure in order to efficiently respond to authorization requests for gardenlets:
+Internally, the `SeedAuthorizer` uses a directed, acyclic graph data structure in order to efficiently respond to authorization requests for `gardenlet`s:
 
 * A vertex in this graph represents a Kubernetes resource with its kind, namespace, and name (e.g., `Shoot:garden-my-project/my-shoot`).
 * An edge from vertex `u` to vertex `v` in this graph exists when
@@ -139,14 +139,14 @@ However, there might also be a `ShootState` or a `BackupEntry` resource strictly
 
 ![Resource Dependency Graph](content/gardenlet_api_access_graph.png)
 
-In above picture the resources that are actively watched have are shaded.
-Gardener resources are green while Kubernetes resources are blue.
-It shows the dependencies between the resources and how the graph is built based on above rules.
+In the above picture, the resources that are actively watched are shaded.
+Gardener resources are green, while Kubernetes resources are blue.
+It shows the dependencies between the resources and how the graph is built based on the above rules.
 
-ℹ️ Above picture shows all resources that may be accessed by `gardenlet`s, except for the `Quota` resource which is only included for completeness.
+ℹ️ The above picture shows all resources that may be accessed by `gardenlet`s, except for the `Quota` resource which is only included for completeness.
 
-Now, when a `gardenlet` wants to access certain resources then the `SeedAuthorizer` uses a Depth-First traversal starting from the vertex representing the resource in question, e.g., from a `Project` vertex.
-If there is a path from the `Project` vertex to the vertex representing the `Seed` the gardenlet is responsible for then it allows the request.
+Now, when a `gardenlet` wants to access certain resources, then the `SeedAuthorizer` uses a Depth-First traversal starting from the vertex representing the resource in question, e.g., from a `Project` vertex.
+If there is a path from the `Project` vertex to the vertex representing the `Seed` the `gardenlet` is responsible for. then it allows the request.
 
 #### Metrics
 
@@ -159,13 +159,13 @@ The `SeedAuthorizer` registers the following metrics related to the mentioned gr
 
 #### Debug Handler
 
-When the `.server.enableDebugHandlers` field in the `gardener-admission-controller`'s component configuration is set to `true` then it serves a handler that can be used for debugging the resource dependency graph under `/debug/resource-dependency-graph`.
+When the `.server.enableDebugHandlers` field in the `gardener-admission-controller`'s component configuration is set to `true`, then it serves a handler that can be used for debugging the resource dependency graph under `/debug/resource-dependency-graph`.
 
-🚨 Only use this setting for development purposes as it enables unauthenticated users to view all data if they have access to the `gardener-admission-controller` component.
+🚨 Only use this setting for development purposes, as it enables unauthenticated users to view all data if they have access to the `gardener-admission-controller` component.
 
 The handler renders an HTML page displaying the current graph with a list of vertices and its associated incoming and outgoing edges to other vertices.
 Depending on the size of the Gardener landscape (and consequently, the size of the graph), it might not be possible to render it in its entirety.
-If there are more than 2000 vertices then the default filtering will selected for `kind=Seed` to prevent overloading the output.
+If there are more than 2000 vertices, then the default filtering will selected for `kind=Seed` to prevent overloading the output.
 
 _Example output_:
 
@@ -216,7 +216,7 @@ However, this does only work for vertices belonging to resources that are only c
 For example, the vertex for a `SecretBinding` can either be created in the `SecretBinding` handler itself or in the `Shoot` handler.
 In such cases, deleting the vertex before (re-)computing the edges might lead to race conditions and potentially renders the graph invalid.
 Consequently, instead of deleting the vertex, only the edges the respective handler is responsible for are deleted.
-If the vertex ends up with no remaining edges then it also gets deleted automatically.
+If the vertex ends up with no remaining edges, then it also gets deleted automatically.
 Afterwards, the vertex can either be added again or the updated edges can be created.
 
 ## `SeedRestriction` Admission Webhook Enablement
@@ -230,6 +230,6 @@ Please note that it should only be activated when the `SeedAuthorizer` is active
 ### Admission Decisions
 
 The admission's purpose is to perform extended validation on requests which require the body of the object in question.
-Additionally, it handles `CREATE` requests of gardenlets (above discussed resource dependency graph cannot be used in such cases because there won't be any vertex/edge for non-existing resources).
+Additionally, it handles `CREATE` requests of `gardenlet`s (the above discussed resource dependency graph cannot be used in such cases because there won't be any vertex/edge for non-existing resources).
 
 Gardenlets are restricted to only create new resources which are somehow related to the seed clusters they are responsible for.

@@ -6,12 +6,12 @@ This document describes the maximum version skew supported between various Garde
 
 Gardener versions are expressed as `x.y.z`, where `x` is the major version, `y` is the minor version, and `z` is the patch version, following Semantic Versioning terminology.
 
-The Gardener project maintains release branches for the most recent three minor releases.
+The Gardener project maintains release branches for the three most recent minor releases.
 
 Applicable fixes, including security fixes, may be backported to those three release branches, depending on severity and feasibility.
 Patch releases are cut from those branches at a regular cadence, plus additional urgent releases when required.
 
-For more information, see [this document](../development/process.md#releases).
+For more information, see the [Releases document](../development/process.md#releases).
 
 ### Supported Version Skew
 
@@ -45,26 +45,26 @@ This section describes the order in which components must be upgraded to transit
 
 #### gardener-apiserver
 
-Pre-requisites:
+Prerequisites:
 
-- In a single-instance setup, the existing `gardener-apiserver` instance is **1.37**
-- In a multi-instance setup, all `gardener-apiserver` instances are at **1.37** or **1.38** (this ensures maximum skew of 1 minor version between the oldest and newest `gardener-apiserver` instance)
-- The `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` instances that communicate with this `gardener-apiserver` are at version **1.37** (this ensures they are not newer than the existing API server version and are within 1 minor version of the new API server version)
+- In a single-instance setup, the existing `gardener-apiserver` instance is **1.37**.
+- In a multi-instance setup, all `gardener-apiserver` instances are at **1.37** or **1.38** (this ensures maximum skew of 1 minor version between the oldest and newest `gardener-apiserver` instance).
+- The `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` instances that communicate with this `gardener-apiserver` are at version **1.37** (this ensures they are not newer than the existing API server version and are within 1 minor version of the new API server version).
 
-Action:
+Actions:
 
-- Upgrade `gardener-apiserver` to **1.38**
+- Upgrade `gardener-apiserver` to **1.38**.
 
 #### gardener-controller-manager, gardener-scheduler, gardener-admission-controller, gardenlet
 
-Pre-requisites:
+Prerequisites:
 
 - The `gardener-apiserver` instances these components communicate with are at **1.38** (in multi-instance setups in which these components can communicate with any `gardener-apiserver` instance in the cluster, all `gardener-apiserver` instances must be upgraded before upgrading these components)
 
-Action:
+Actions:
 
 - Upgrade `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` to **1.38**
 
 ## Supported Kubernetes Versions
 
-Please refer to [this document](../usage/supported_k8s_versions.md).
+Please refer to [Supported Kubernetes Versions](../usage/supported_k8s_versions.md).

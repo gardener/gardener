@@ -4,19 +4,19 @@ This page contains an overview of the various feature gates an administrator can
 
 ## Overview
 
-Feature gates are a set of key=value pairs that describe Gardener features. You can turn these features on or off using the a component configuration file for a specific component.
+Feature gates are a set of key=value pairs that describe Gardener features. You can turn these features on or off using the component configuration file for a specific component.
 
-Each Gardener component lets you enable or disable a set of feature gates that are relevant to that component. For example this is the configuration of the [gardenlet](../../example/20-componentconfig-gardenlet.yaml) component.
+Each Gardener component lets you enable or disable a set of feature gates that are relevant to that component. For example, this is the configuration of the [gardenlet](../../example/20-componentconfig-gardenlet.yaml) component.
 
 The following tables are a summary of the feature gates that you can set on different Gardener components.
 
 * The “Since” column contains the Gardener release when a feature is introduced or its release stage is changed.
 * The “Until” column, if not empty, contains the last Gardener release in which you can still use a feature gate.
-* If a feature is in the Alpha or Beta state, you can find the feature listed in the Alpha/Beta feature gate table.
+* If a feature is in the *Alpha* or *Beta* state, you can find the feature listed in the Alpha/Beta feature gate table.
 * If a feature is stable you can find all stages for that feature listed in the Graduated/Deprecated feature gate table.
 * The Graduated/Deprecated feature gate table also lists deprecated and withdrawn features.
 
-## Feature gates for Alpha or Beta features
+## Feature Gates for Alpha or Beta Features
 
 | Feature                                      | Default | Stage   | Since  | Until  |
 | -------------------------------------------- | ------- | ------- | ------ | ------ |
@@ -37,7 +37,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DefaultSeccompProfile                        | `false` | `Alpha` | `1.54` |        |
 | CoreDNSQueryRewriting                        | `false` | `Alpha` | `1.55` |        |
 
-## Feature gates for graduated or deprecated features
+## Feature Gates for Graduated or Deprecated Features
 
 | Feature                                      | Default | Stage        | Since  | Until  |
 |----------------------------------------------|---------|--------------|--------|--------|
@@ -110,7 +110,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `true`  | `Beta`       | `1.42` | `1.62` |
 | ReversedVPN                                  | `true`  | `GA`         | `1.63` |        |
 
-## Using a feature
+## Using a Feature
 
 A feature can be in *Alpha*, *Beta* or *GA* stage.
 An *Alpha* feature means:
@@ -151,9 +151,9 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | HVPA                                       | `gardenlet`, `gardener-operator`                                 | Enables simultaneous horizontal and vertical scaling in garden or seed clusters. |
 | HVPAForShootedSeed                         | `gardenlet`                                                      | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters. |
 | ManagedIstio (deprecated)                  | `gardenlet`                                                      | Enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information. |
-| APIServerSNI (deprecated)                  | `gardenlet`                                                      | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details. |
+| APIServerSNI (deprecated)                  | `gardenlet`                                                      | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in the Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details. |
 | SeedChange                                 | `gardener-apiserver`                                             | Enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration. |
-| ReversedVPN                                | `gardenlet`                                                      | Reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md). |
+| ReversedVPN                                | `gardenlet`                                                      | Reverses the connection setup of the VPN tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the VPN tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md). |
 | CopyEtcdBackupsDuringControlPlaneMigration | `gardenlet`                                                      | Enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration. |
 | SecretBindingProviderValidation            | `gardener-apiserver`                                             | Enables validations on Gardener API server that:<br>- requires the provider type of a SecretBinding to be set (on SecretBinding creation)<br>- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)<br>- enforces immutability on the provider type of a SecretBinding |
 | ForceRestore                               | `gardenlet`                                                      | Enables forcing the shoot's restoration to the destination seed during control plane migration if the preparation for migration in the source seed is not finished after a certain grace period and is considered unlikely to succeed (falling back to the [control plane migration "bad case" scenario](../proposals/17-shoot-control-plane-migration-bad-case.md)). If you enable this feature gate, make sure to also enable `CopyEtcdBackupsDuringControlPlaneMigration`. |
