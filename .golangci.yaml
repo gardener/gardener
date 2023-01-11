@@ -203,20 +203,16 @@ linters-settings:
         alias: mock${1}
       - pkg: github.com/gardener/gardener/pkg/operation/.*/(\w+)/mock$
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/operation/garden
-        alias: gardenpkg
-      - pkg: github.com/gardener/gardener/pkg/operation/seed
-        alias: seedpkg
-      - pkg: github.com/gardener/gardener/pkg/operation/shoot
-        alias: shootpkg
+      - pkg: github.com/gardener/gardener/pkg/operation/(\w+)
+        alias: ${1}pkg
       - pkg: github.com/gardener/gardener/pkg/operator/client
         alias: operatorclient
       - pkg: github.com/gardener/gardener/pkg/registry/(\w+)/rest
         alias: ${1}rest
-      - pkg: github.com/gardener/gardener/pkg/registry/\w+/(\w+)/storage$
-        alias: ${1}store
       - pkg: github.com/gardener/gardener/pkg/registry/\w+/([^r]\w+)
         alias: ${1}registry
+      - pkg: github.com/gardener/gardener/pkg/registry/\w+/(\w+)/storage$
+        alias: ${1}store
       - pkg: github.com/gardener/gardener/pkg/resourcemanager/client
         alias: resourcemanagerclient
       - pkg: github.com/gardener/gardener/pkg/resourcemanager/predicate

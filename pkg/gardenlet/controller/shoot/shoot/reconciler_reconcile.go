@@ -98,7 +98,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		kubeProxyEnabled                = v1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
 		deployKubeAPIServerTaskTimeout  = defaultTimeout
-		shootSSHAccessEnabled           = gardencorev1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo())
+		shootSSHAccessEnabled           = v1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo())
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the

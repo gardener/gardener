@@ -184,8 +184,8 @@ var _ = Describe("Secrets", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				gardenSecret := &corev1.Secret{}
-				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(BeNotFoundError())
-				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(BeNotFoundError())
+				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(BeNotFoundError())
+				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(BeNotFoundError())
 			})
 		})
 
