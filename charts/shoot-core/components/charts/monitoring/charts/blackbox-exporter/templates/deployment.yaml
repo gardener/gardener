@@ -34,11 +34,6 @@ spec:
         networking.gardener.cloud/to-apiserver: allowed
     spec:
       serviceAccountName: blackbox-exporter
-      tolerations:
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
       priorityClassName: system-cluster-critical
       securityContext:
         runAsUser: 65534

@@ -289,13 +289,6 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 						}),
 					},
 					Spec: corev1.PodSpec{
-						Tolerations: []corev1.Toleration{{
-							Effect:   corev1.TaintEffectNoSchedule,
-							Operator: corev1.TolerationOpExists,
-						}, {
-							Effect:   corev1.TaintEffectNoExecute,
-							Operator: corev1.TolerationOpExists,
-						}},
 						PriorityClassName: "system-cluster-critical",
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsUser:          pointer.Int64(65534),

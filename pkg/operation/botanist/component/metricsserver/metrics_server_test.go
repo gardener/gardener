@@ -287,11 +287,6 @@ spec:
         supplementalGroups:
         - 1
       serviceAccountName: metrics-server
-      tolerations:
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
       volumes:
       - name: metrics-server
         secret:
