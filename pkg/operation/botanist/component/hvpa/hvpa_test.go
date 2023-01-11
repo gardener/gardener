@@ -218,7 +218,7 @@ var _ = Describe("HVPA", func() {
 								"./manager",
 								"--logtostderr=true",
 								"--enable-detailed-metrics=true",
-								"--metrics-addr=:9569",
+								"--metrics-bind-address=:9569",
 								"--v=2",
 							},
 							Resources: corev1.ResourceRequirements{
