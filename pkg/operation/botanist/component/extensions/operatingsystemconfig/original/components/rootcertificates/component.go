@@ -15,14 +15,41 @@
 package rootcertificates
 
 import (
+	"bytes"
+	_ "embed"
+	"text/template"
+
+	"github.com/Masterminds/sprig"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/pointer"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
-
-	"k8s.io/utils/pointer"
 )
+
+const (
+	pathLocalSSLCerts             = "/var/lib/ca-certificates-local"
+	pathUpdateLocalCaCertificates = "/etc/ssl/update-local-ca-certificates.sh"
+)
+
+var (
+	tplNameUpdateLocalCaCertificates = "update-local-ca-certificates"
+	//go:embed templates/scripts/update-local-ca-certificates.tpl.sh
+	tplContentUpdateLocalCaCertificates string
+	tplUpdateLocalCaCertificates        *template.Template
+)
+
+func init() {
+	var err error
+	tplUpdateLocalCaCertificates, err = template.
+		New(tplNameUpdateLocalCaCertificates).
+		Funcs(sprig.TxtFuncMap()).
+		Parse(tplContentUpdateLocalCaCertificates)
+	utilruntime.Must(err)
+}
 
 type component struct{}
 
@@ -40,7 +67,12 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, nil
 	}
 
-	const pathEtcdSSLCerts = "/etc/ssl/certs"
+	updateLocalCaCertificatesScriptFile, err := updateLocalCACertificatesScriptFile()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	const pathEtcSSLCerts = "/etc/ssl/certs"
 	var caBundleBase64 = utils.EncodeBase64([]byte(*ctx.CABundle))
 
 	return []extensionsv1alpha1.Unit{
@@ -48,25 +80,28 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 				Name:    "updatecacerts.service",
 				Command: pointer.String("start"),
 				Content: pointer.String(`[Unit]
-Description=Update CA bundle at ` + pathEtcdSSLCerts + `/ca-certificates.crt
+Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
 Wants=systemd-tmpfiles-setup.service clean-ca-certificates.service
 After=systemd-tmpfiles-setup.service clean-ca-certificates.service
 Before=sysinit.target ` + kubelet.UnitName + `
-ConditionPathIsReadWrite=` + pathEtcdSSLCerts + `
+ConditionPathIsReadWrite=` + pathEtcSSLCerts + `
+ConditionPathIsReadWrite=` + pathLocalSSLCerts + `
 ConditionPathExists=!` + kubelet.PathKubeconfigReal + `
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/update-ca-certificates --fresh
+ExecStart=` + pathUpdateLocalCaCertificates + `
 ExecStartPost=/bin/systemctl restart ` + docker.UnitName + `
 [Install]
 WantedBy=multi-user.target`),
 			},
 		},
 		[]extensionsv1alpha1.File{
+			updateLocalCaCertificatesScriptFile,
+			// This file contains Gardener CAs for Debian based OS
 			{
-				Path:        pathEtcdSSLCerts + "/ROOTcerts.pem",
+				Path:        pathLocalSSLCerts + "/ROOTcerts.crt",
 				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
@@ -75,6 +110,7 @@ WantedBy=multi-user.target`),
 					},
 				},
 			},
+			// This file contains Gardener CAs for Redhat/SUSE OS
 			{
 				Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
 				Permissions: pointer.Int32(0644),
@@ -87,4 +123,24 @@ WantedBy=multi-user.target`),
 			},
 		},
 		nil
+}
+
+func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
+	var script bytes.Buffer
+	if err := tplUpdateLocalCaCertificates.Execute(&script, map[string]interface{}{
+		"pathLocalSSLCerts": pathLocalSSLCerts,
+	}); err != nil {
+		return extensionsv1alpha1.File{}, err
+	}
+
+	return extensionsv1alpha1.File{
+		Path:        pathUpdateLocalCaCertificates,
+		Permissions: pointer.Int32(0744),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(script.Bytes()),
+			},
+		},
+	}, nil
 }
