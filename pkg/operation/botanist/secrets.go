@@ -526,21 +526,38 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 		log := b.Logger.WithValues("serviceAccount", client.ObjectKeyFromObject(&serviceAccount))
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			// If the ServiceAccount has none or only one secret then there is nothing left to clean up. Otherwise, we
-			// should drop all secrets except for the first one in the list (which is the most recent secret signed with
-			// the new token key).
-			if len(serviceAccount.Secrets) <= 1 {
-				return nil
-			}
-
-			var secretsToDelete []client.Object
-			for _, secretReference := range serviceAccount.Secrets[1:] {
-				secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretReference.Name, Namespace: serviceAccount.Namespace}})
-			}
-
 			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
 			if err := limiter.Wait(ctx); err != nil {
 				return err
+			}
+
+			var (
+				secretsToDelete  []client.Object
+				remainingSecrets []corev1.ObjectReference
+			)
+
+			// In the CreateNewServiceAccountSecrets function we add a new ServiceAccount secret as the first one to the
+			// .secrets[] list in the ServiceAccount resource. However, when we reach this code now, the user could have
+			// already removed this secret or changed the .secrets[] list. Hence, we now check which of the secrets in
+			// the list have been created before the credentials rotation completion has been triggered. We only delete
+			// those and keep the rest of the list untouched to not interfere with the user's operations.
+			for _, secretReference := range serviceAccount.Secrets {
+				secret := &corev1.Secret{}
+				if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKey{Name: secretReference.Name, Namespace: serviceAccount.Namespace}, secret); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return err
+					}
+					// We don't care about secrets in the list which do not exist actually - it is the responsibility of the user to clean this up.
+				} else if secret.CreationTimestamp.UTC().Before(b.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time.UTC()) {
+					secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace}})
+					continue
+				}
+
+				remainingSecrets = append(remainingSecrets, secretReference)
+			}
+
+			if len(secretsToDelete) == 0 {
+				return nil
 			}
 
 			if err := kubernetesutils.DeleteObjects(ctx, b.ShootClientSet.Client(), secretsToDelete...); err != nil {
@@ -562,7 +579,7 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 
 				patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
 				delete(serviceAccount.Labels, labelKeyRotationKeyName)
-				serviceAccount.Secrets = []corev1.ObjectReference{serviceAccount.Secrets[0]}
+				serviceAccount.Secrets = remainingSecrets
 
 				if err := b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch); err != nil {
 					if apierrors.IsConflict(err) {

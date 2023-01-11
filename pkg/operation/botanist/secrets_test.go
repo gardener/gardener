@@ -16,6 +16,7 @@ package botanist_test
 
 import (
 	"context"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -375,28 +376,65 @@ var _ = Describe("Secrets", func() {
 
 		Describe("#DeleteOldServiceAccountSecrets", func() {
 			It("should delete old service account secrets", func() {
-				sa3.Secrets = append([]corev1.ObjectReference{{Name: "new-sa-secret"}}, sa3.Secrets...)
-				Expect(shootClient.Update(ctx, sa3)).To(Succeed())
+				now := time.Now()
 
-				sa3OldSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "sa3secret1", Namespace: sa3.Namespace}}
-				Expect(shootClient.Create(ctx, sa3OldSecret)).To(Succeed())
+				By("Create old ServiceAccount secrets")
+				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:              "sa1secret1",
+					Namespace:         sa1.Namespace,
+					CreationTimestamp: metav1.Time{Time: now},
+				}})).To(Succeed())
+				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:              "sa2secret1",
+					Namespace:         sa2.Namespace,
+					CreationTimestamp: metav1.Time{Time: now},
+				}})).To(Succeed())
+				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:              "sa3secret1",
+					Namespace:         sa3.Namespace,
+					CreationTimestamp: metav1.Time{Time: now},
+				}})).To(Succeed())
 
-				sa1Copy := sa1.DeepCopy()
-				sa1Copy.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ServiceAccount"}
-				sa2Copy := sa2.DeepCopy()
-				sa2Copy.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ServiceAccount"}
+				By("Set credentials rotation status in Shoot")
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						Credentials: &gardencorev1beta1.ShootCredentials{
+							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+								ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{
+									LastInitiationFinishedTime: &metav1.Time{Time: now.Add(time.Minute)},
+								},
+							},
+						},
+					},
+				})
 
+				By("Create new ServiceAccount secret")
+				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:              sa2.Secrets[0].Name,
+					Namespace:         sa2.Namespace,
+					CreationTimestamp: metav1.Time{Time: botanist.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Add(time.Minute)},
+				}})).To(Succeed())
+
+				By("Run cleanup procedure")
 				Expect(botanist.DeleteOldServiceAccountSecrets(ctx)).To(Succeed())
 
+				By("Read ServiceAccounts after running cleanup procedure")
 				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
 				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
 				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
 
-				Expect(sa1).To(Equal(sa1Copy))
+				By("Performing assertions")
+				Expect(shootClient.Get(ctx, client.ObjectKey{Name: "sa1secret1", Namespace: sa1.Namespace}, &corev1.Secret{})).To(BeNotFoundError())
+				Expect(shootClient.Get(ctx, client.ObjectKey{Name: "sa2secret1", Namespace: sa2.Namespace}, &corev1.Secret{})).To(BeNotFoundError())
+				Expect(shootClient.Get(ctx, client.ObjectKey{Name: "sa3secret1", Namespace: sa3.Namespace}, &corev1.Secret{})).To(BeNotFoundError())
+
+				Expect(sa1.Secrets).To(BeEmpty())
+
 				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}))
+				Expect(shootClient.Get(ctx, client.ObjectKey{Name: sa2.Secrets[0].Name, Namespace: sa2.Namespace}, &corev1.Secret{})).To(Succeed())
+
 				Expect(sa3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
-				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "new-sa-secret"}))
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa3OldSecret), &corev1.Secret{})).To(BeNotFoundError())
+				Expect(sa3.Secrets).To(BeEmpty())
 			})
 		})
 	})
