@@ -2329,6 +2329,21 @@ Kubernetes meta/v1.Time
 </tr>
 <tr>
 <td>
+<code>lastInitiationFinishedTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was
+completed.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>lastCompletionTime</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
@@ -2340,6 +2355,21 @@ Kubernetes meta/v1.Time
 <em>(Optional)</em>
 <p>LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTriggeredTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+triggered.</p>
 </td>
 </tr>
 </tbody>
@@ -9451,6 +9481,21 @@ Kubernetes meta/v1.Time
 </tr>
 <tr>
 <td>
+<code>lastInitiationFinishedTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was
+completed.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>lastCompletionTime</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
@@ -9462,6 +9507,21 @@ Kubernetes meta/v1.Time
 <em>(Optional)</em>
 <p>LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
 completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTriggeredTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+triggered.</p>
 </td>
 </tr>
 </tbody>
@@ -9763,6 +9823,21 @@ Kubernetes meta/v1.Time
 </tr>
 <tr>
 <td>
+<code>lastInitiationFinishedTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was
+completed.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>lastCompletionTime</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
@@ -9774,6 +9849,21 @@ Kubernetes meta/v1.Time
 <em>(Optional)</em>
 <p>LastCompletionTime is the most recent time when the service account key credential rotation was successfully
 completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTriggeredTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+triggered.</p>
 </td>
 </tr>
 </tbody>

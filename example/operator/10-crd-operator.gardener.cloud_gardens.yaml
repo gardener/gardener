@@ -295,6 +295,18 @@ spec:
                               successfully completed.
                             format: date-time
                             type: string
+                          lastCompletionTriggeredTime:
+                            description: LastCompletionTriggeredTime is the recent
+                              time when the certificate authority credential rotation
+                              completion was triggered.
+                            format: date-time
+                            type: string
+                          lastInitiationFinishedTime:
+                            description: LastInitiationFinishedTime is the recent
+                              time when the certificate authority credential rotation
+                              initiated was completed.
+                            format: date-time
+                            type: string
                           lastInitiationTime:
                             description: LastInitiationTime is the most recent time
                               when the certificate authority credential rotation was
