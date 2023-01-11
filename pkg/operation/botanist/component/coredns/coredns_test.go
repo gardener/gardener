@@ -373,9 +373,6 @@ spec:
         supplementalGroups:
         - 1
       serviceAccountName: coredns
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
       volumes:
       - configMap:
           items:
@@ -576,9 +573,6 @@ spec:
         supplementalGroups:
         - 65534
       serviceAccountName: coredns-autoscaler
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
 status: {}
 `
 

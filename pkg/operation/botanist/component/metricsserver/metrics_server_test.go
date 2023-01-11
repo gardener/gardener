@@ -288,8 +288,6 @@ spec:
         - 1
       serviceAccountName: metrics-server
       tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
       - effect: NoSchedule
         operator: Exists
       - effect: NoExecute

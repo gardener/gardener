@@ -513,10 +513,6 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 					Type: corev1.SeccompProfileTypeRuntimeDefault,
 				},
 			},
-			Tolerations: []corev1.Toleration{{
-				Key:      "CriticalAddonsOnly",
-				Operator: corev1.TolerationOpExists,
-			}},
 			InitContainers: v.getInitContainers(),
 			Volumes:        v.getVolumes(secrets, secretCA, secretTLSAuth, secretDH),
 		},

@@ -508,10 +508,6 @@ status: {}
 						ServiceAccountName:           "vpn-shoot",
 						PriorityClassName:            "system-cluster-critical",
 						DNSPolicy:                    corev1.DNSDefault,
-						Tolerations: []corev1.Toleration{{
-							Key:      "CriticalAddonsOnly",
-							Operator: corev1.TolerationOpExists,
-						}},
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,

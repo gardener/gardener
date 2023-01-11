@@ -392,10 +392,6 @@ import custom/*.server
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},
 						},
-						Tolerations: []corev1.Toleration{{
-							Key:      "CriticalAddonsOnly",
-							Operator: corev1.TolerationOpExists,
-						}},
 						Containers: []corev1.Container{{
 							Name:            containerName,
 							Image:           c.values.Image,
@@ -590,10 +586,6 @@ import custom/*.server
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},
 						},
-						Tolerations: []corev1.Toleration{{
-							Key:      "CriticalAddonsOnly",
-							Operator: corev1.TolerationOpExists,
-						}},
 						Containers: []corev1.Container{{
 							Name:            "autoscaler",
 							Image:           c.values.ClusterProportionalAutoscalerImage,

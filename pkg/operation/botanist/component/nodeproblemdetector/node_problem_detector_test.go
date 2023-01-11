@@ -309,8 +309,6 @@ spec:
       tolerations:
       - effect: NoSchedule
         operator: Exists
-      - key: CriticalAddonsOnly
-        operator: Exists
       - effect: NoExecute
         operator: Exists
       volumes:

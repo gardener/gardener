@@ -288,10 +288,6 @@ ip6.arpa:53 {
 						},
 						Tolerations: []corev1.Toleration{
 							{
-								Key:      "CriticalAddonsOnly",
-								Operator: corev1.TolerationOpExists,
-							},
-							{
 								Operator: corev1.TolerationOpExists,
 								Effect:   corev1.TaintEffectNoExecute,
 							},

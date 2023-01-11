@@ -278,10 +278,6 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 								Operator: corev1.TolerationOpExists,
 							},
 							{
-								Key:      "CriticalAddonsOnly",
-								Operator: corev1.TolerationOpExists,
-							},
-							{
 								Effect:   corev1.TaintEffectNoExecute,
 								Operator: corev1.TolerationOpExists,
 							},
