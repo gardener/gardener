@@ -52,6 +52,7 @@ PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
 REPORT_COLLECTOR           := $(TOOLS_BIN_DIR)/report-collector
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
+TERRAFORM                  := $(TOOLS_BIN_DIR)/terraform
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
 
@@ -65,6 +66,7 @@ HELM_VERSION ?= v3.6.3
 KIND_VERSION ?= v0.14.0
 KUBECTL_VERSION ?= v1.24.3
 SKAFFOLD_VERSION ?= v1.39.1
+TERRAFORM_VERSION ?= 1.3.7
 YQ_VERSION ?= v4.30.4
 
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
@@ -187,6 +189,12 @@ $(SETUP_ENVTEST): go.mod
 $(SKAFFOLD): $(call tool_version_file,$(SKAFFOLD),$(SKAFFOLD_VERSION))
 	curl -Lo $(SKAFFOLD) https://storage.googleapis.com/skaffold/releases/$(SKAFFOLD_VERSION)/skaffold-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 	chmod +x $(SKAFFOLD)
+
+$(TERRAFORM): $(call tool_version_file,$(TERRAFORM),$(TERRAFORM_VERSION))
+	TMP_DIR=$$(mktemp -d); \
+		curl -Lo $$TMP_DIR/terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').zip; \
+		unzip -o $$TMP_DIR/terraform.zip terraform -d $(TOOLS_BIN_DIR)
+	chmod +x $(TERRAFORM)
 
 $(YAML2JSON): go.mod
 	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json
