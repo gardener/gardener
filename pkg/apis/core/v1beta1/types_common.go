@@ -155,10 +155,6 @@ const (
 	EventMigrationPreparationFailed = "MigrationPreparationFailed"
 )
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// High Availability relevant types                                                             //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // HighAvailability specifies the configuration settings for high availability for a resource. Typical
 // usages could be to configure HA for shoot control plane or for seed system components.
 type HighAvailability struct {
