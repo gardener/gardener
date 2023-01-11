@@ -2144,14 +2144,6 @@ message SeedSettingScheduling {
   optional bool visible = 1;
 }
 
-// SeedSettingShootDNS controls the shoot DNS settings for the seed.
-message SeedSettingShootDNS {
-  // Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the
-  // seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here.
-  // This is useful for environments where DNS is not required.
-  optional bool enabled = 1;
-}
-
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
 // seed.
 message SeedSettingVerticalPodAutoscaler {
@@ -2170,11 +2162,6 @@ message SeedSettings {
   // Scheduling controls settings for scheduling decisions for the seed.
   // +optional
   optional SeedSettingScheduling scheduling = 2;
-
-  // ShootDNS controls the shoot DNS settings for the seed.
-  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
-  // +optional
-  optional SeedSettingShootDNS shootDNS = 3;
 
   // LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
   // +optional
