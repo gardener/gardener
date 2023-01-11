@@ -115,12 +115,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		defer cancel()
 		Expect(f.ShootFramework.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/skip-readiness", "")
-			// Use maintain operation to also execute skipped steps in the reconcile flow.
+			// Use maintain operation to also execute tasks in the reconcile flow which are only performed during maintenance.
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "maintain")
 			return nil
 		})).To(Succeed())
 
-		By("Wait for operation annotation to be gone. Controller picked up reconciliation request.")
+		By("Wait for operation annotation to be gone (meaning controller picked up reconciliation request)")
 		Eventually(func(g Gomega) {
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{

@@ -684,7 +684,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until extension resources hibernated after kube-apiserver hibernation",
+			Name:         "Waiting until extension resources hibernated after kube-apiserver hibernation are ready",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer).DoIf(o.Shoot.HibernationEnabled).SkipIf(skipReadiness),
 			Dependencies: flow.NewTaskIDs(hibernateExtensionResourcesAfterKAPIHibernation),
 		})
@@ -770,12 +770,15 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		}
 	}
 
-	o.Logger.Info("Removing one-off annotations")
-	if err := o.Shoot.UpdateInfo(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-		delete(shoot.ObjectMeta.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
-		return nil
-	}); err != nil {
-		return nil
+	if _, ok := o.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootSkipReadiness]; ok {
+		o.Logger.Info("Removing skip-readiness annotation")
+
+		if err := o.Shoot.UpdateInfo(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+			delete(shoot.ObjectMeta.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
+			return nil
+		}); err != nil {
+			return nil
+		}
 	}
 
 	o.Logger.Info("Successfully reconciled Shoot cluster", "operation", utils.IifString(isRestoring, "restored", "reconciled"))
