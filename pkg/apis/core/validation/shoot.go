@@ -409,16 +409,23 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 	return allErrs
 }
 
+const (
+	// kube-controller-manager's default value for --node-cidr-mask-size for IPv4
+	defaultNodeCIDRMaskSizeV4 = 24
+	// kube-controller-manager's default value for --node-cidr-mask-size for IPv6
+	defaultNodeCIDRMaskSizeV6 = 64
+)
+
 // ValidateNodeCIDRMaskWithMaxPod validates if the Pod Network has enough ip addresses (configured via the NodeCIDRMask on the kube controller manager) to support the highest max pod setting on the shoot
 func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networking core.Networking) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	totalBitLen := int32(32) // entire IPv4 bit length
-	defaultNodeCIDRMaskSize := 24
+	totalBitLen := int32(net.IPv4len * 8) // entire IPv4 bit length
+	defaultNodeCIDRMaskSize := defaultNodeCIDRMaskSizeV4
 
 	if core.IsIPv6SingleStack(networking.IPFamilies) {
-		totalBitLen = 128 // entire IPv6 bit length
-		defaultNodeCIDRMaskSize = 64
+		totalBitLen = net.IPv6len * 8 // entire IPv6 bit length
+		defaultNodeCIDRMaskSize = defaultNodeCIDRMaskSizeV6
 	}
 
 	// Each Node gets assigned a subnet of the entire pod network with a mask size of nodeCIDRMaskSize,
@@ -443,9 +450,9 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networ
 func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	nodeCIDRMaskSize := int64(24) // kube-controller-manager's default for IPv4
+	nodeCIDRMaskSize := int64(defaultNodeCIDRMaskSizeV4)
 	if core.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
-		nodeCIDRMaskSize = 64 // kube-controller-manager's default for IPv6
+		nodeCIDRMaskSize = defaultNodeCIDRMaskSizeV6
 	}
 	if shoot.Spec.Kubernetes.KubeControllerManager != nil && shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
 		nodeCIDRMaskSize = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize)
