@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -43,6 +42,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
+
+const (
+	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
+	SeedSpecHash = "seed-spec-hash"
+	// ControllerDeploymentHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
+	ControllerDeploymentHash = "deployment-hash"
+	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
+	RegistrationSpecHash = "registration-spec-hash"
 )
 
 // Reconciler determines which ControllerRegistrations are required for a given Seed by checking all objects in the
@@ -463,14 +471,14 @@ func deployNeededInstallation(
 			return err
 		}
 		seedSpecHash := utils.HashForMap(seedSpecMap)[:16]
-		metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.SeedSpecHash, seedSpecHash)
+		metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, SeedSpecHash, seedSpecHash)
 
 		registrationSpecMap, err := convertObjToMap(controllerRegistration.Spec)
 		if err != nil {
 			return err
 		}
 		registrationSpecHash := utils.HashForMap(registrationSpecMap)[:16]
-		metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
+		metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, RegistrationSpecHash, registrationSpecHash)
 
 		if controllerDeployment != nil {
 			// Add all fields that are relevant for the hash calculation as `ControllerDeployment`s don't have a `spec` field.
@@ -484,7 +492,7 @@ func deployNeededInstallation(
 				return err
 			}
 			deploymentSpecHash := utils.HashForMap(deploymentMap)[:16]
-			metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.ControllerDeploymentHash, deploymentSpecHash)
+			metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, ControllerDeploymentHash, deploymentSpecHash)
 		}
 		controllerInstallation.Spec = installationSpec
 		return nil

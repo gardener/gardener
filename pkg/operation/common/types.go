@@ -38,13 +38,6 @@ const (
 	// ManagedResourceAddonsName is the name of the addons managed resource.
 	ManagedResourceAddonsName = "addons"
 
-	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
-	SeedSpecHash = "seed-spec-hash"
-	// ControllerDeploymentHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
-	ControllerDeploymentHash = "deployment-hash"
-	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
-	RegistrationSpecHash = "registration-spec-hash"
-
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
 )
