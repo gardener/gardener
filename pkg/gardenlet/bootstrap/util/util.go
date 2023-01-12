@@ -319,28 +319,25 @@ func TokenID(meta metav1.ObjectMeta) string {
 }
 
 // ClusterRoleBindingName concatenates the gardener seed bootstrapper group with the given name, separated by a colon.
-func ClusterRoleBindingName(namespace, name string) string {
-	suffix := name
-	if namespace != "" {
-		suffix = namespace + clusterRoleBindingNameDelimiter + name
-	}
-	return ClusterRoleBindingNamePrefix + suffix
+func ClusterRoleBindingName(managedSeedNamespace, serviceAccountName string) string {
+	return ClusterRoleBindingNamePrefix + managedSeedNamespace + clusterRoleBindingNameDelimiter + serviceAccountName
 }
 
-// MetadataFromClusterRoleBindingName returns the namespace and name for a given cluster role binding name.
-func MetadataFromClusterRoleBindingName(clusterRoleBindingName string) (namespace, name string) {
+// ManagedSeedInfoFromClusterRoleBindingName returns the namespace and name of the related ManagedSeed for a given
+// cluster role binding name.
+func ManagedSeedInfoFromClusterRoleBindingName(clusterRoleBindingName string) (managedSeedNamespace, managedSeedName string) {
 	var (
 		metadata = strings.TrimPrefix(clusterRoleBindingName, ClusterRoleBindingNamePrefix)
 		split    = strings.Split(metadata, clusterRoleBindingNameDelimiter)
 	)
 
+	managedSeedName = split[0]
 	if len(split) > 1 {
-		namespace = split[0]
-		name = split[1]
-		return
+		managedSeedNamespace = split[0]
+		managedSeedName = split[1]
 	}
 
-	name = split[0]
+	managedSeedName = strings.TrimPrefix(managedSeedName, ServiceAccountNamePrefix)
 	return
 }
 
@@ -350,8 +347,6 @@ func ServiceAccountName(name string) string {
 }
 
 const (
-	// KindSeed is a constant for the "seed" kind.
-	KindSeed = "seed"
 	// KindManagedSeed is a constant for the "managed seed" kind.
 	KindManagedSeed = "managed seed"
 	// ServiceAccountNamePrefix is the prefix used for service account names.

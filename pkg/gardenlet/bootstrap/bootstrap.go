@@ -104,7 +104,7 @@ func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer clien
 		)
 
 	case strings.HasPrefix(csr.Spec.Username, serviceaccount.ServiceAccountUsernamePrefix):
-		namespace, name, err := serviceaccount.SplitUsername(csr.Spec.Username)
+		serviceAccountNamespace, serviceAccountName, err := serviceaccount.SplitUsername(csr.Spec.Username)
 		if err != nil {
 			return err
 		}
@@ -112,13 +112,13 @@ func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer clien
 		resourcesToDelete = append(resourcesToDelete,
 			&corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
+					Name:      serviceAccountName,
+					Namespace: serviceAccountNamespace,
 				},
 			},
 			&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: gardenletbootstraputil.ClusterRoleBindingName(v1beta1constants.GardenNamespace, seedName),
+					Name: gardenletbootstraputil.ClusterRoleBindingName(serviceAccountNamespace, serviceAccountName),
 				},
 			},
 		)

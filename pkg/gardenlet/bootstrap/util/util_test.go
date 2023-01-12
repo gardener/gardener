@@ -486,32 +486,21 @@ var _ = Describe("Util", func() {
 			namespace = "bar"
 			name      = "baz"
 
-			clusterRoleNameWithoutNamespace = "gardener.cloud:system:seed-bootstrapper:" + name
-			clusterRoleNameWithNamespace    = "gardener.cloud:system:seed-bootstrapper:" + namespace + ":" + name
+			clusterRoleNameWithNamespace = "gardener.cloud:system:seed-bootstrapper:" + namespace + ":" + name
 
 			descriptionWithoutNamespace = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s.", kind, name)
 			descriptionWithNamespace    = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s/%s.", kind, namespace, name)
 		)
 
 		Describe("#ClusterRoleBindingName", func() {
-			It("should return the correct name (w/o namespace)", func() {
-				Expect(ClusterRoleBindingName("", name)).To(Equal(fmt.Sprintf("gardener.cloud:system:seed-bootstrapper:%s", name)))
-			})
-
-			It("should return the correct name (w/ namespace)", func() {
+			It("should return the correct name", func() {
 				Expect(ClusterRoleBindingName(namespace, name)).To(Equal(fmt.Sprintf("gardener.cloud:system:seed-bootstrapper:%s:%s", namespace, name)))
 			})
 		})
 
-		Describe("#MetadataFromClusterRoleBindingName", func() {
-			It("should return the expected namespace/name from a cluster role binding name (w/o namespace)", func() {
-				resultNamespace, resultName := MetadataFromClusterRoleBindingName(clusterRoleNameWithoutNamespace)
-				Expect(resultNamespace).To(BeEmpty())
-				Expect(resultName).To(Equal(name))
-			})
-
-			It("should return the expected namespace/name from a cluster role binding name (w/ namespace)", func() {
-				resultNamespace, resultName := MetadataFromClusterRoleBindingName(clusterRoleNameWithNamespace)
+		Describe("#ManagedSeedInfoFromClusterRoleBindingName", func() {
+			It("should return the expected namespace/name from a cluster role binding name", func() {
+				resultNamespace, resultName := ManagedSeedInfoFromClusterRoleBindingName(clusterRoleNameWithNamespace)
 				Expect(resultNamespace).To(Equal(namespace))
 				Expect(resultName).To(Equal(name))
 			})
