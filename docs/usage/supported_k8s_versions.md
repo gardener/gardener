@@ -41,3 +41,6 @@ Beginning with 2023, a new policy has been introduced:
 
 The three versions 1.20, 1.21, 1.22 (which all are officially out of maintenance already) are handled specially to allow users to adapt to this new policy.
 Beginning with 1.23, the support of the oldest version is dropped after the support of a new version was introduced.
+
+> ⚠️ Note that this guideline only concerns the code of `gardener/gardener` and is not related to the versions offered in `CloudProfile`s.
+> It is recommended to always only offer the last three minor versions with `supported` classification in `CloudProfile`s and deprecate the oldest version with an expiration date before a new minor Kubernetes version is released.
