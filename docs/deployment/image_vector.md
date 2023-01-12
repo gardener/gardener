@@ -25,7 +25,7 @@ images:
 ...
 ```
 
-That means that the Gardenlet will use the `pause-container` in with tag `3.4` for all seed/shoot clusters with Kubernetes version `1.20.x`, and tag `3.5` for all clusters with Kubernetes `>= 1.21`.
+That means that the Gardenlet will use the `pause-container` with tag `3.4` for all seed/shoot clusters with Kubernetes version `1.20.x`, and tag `3.5` for all clusters with Kubernetes `>= 1.21`.
 
 ## Image Vector Architecture
 
@@ -53,21 +53,21 @@ images:
 ...
 ```
 
-Architectures is an optional field of image. It is a list of strings specifying CPU architecture of machines on which this image can be used. The valid options for architectures field are as follows:
-- `amd64` : This specifies image can run only on machines having CPU architecture `amd64`.
-- `arm64` : This specifies image can run only on machines having CPU architecture `arm64`.
+`architectures` is an optional field of image. It is a list of strings specifying CPU architecture of machines on which this image can be used. The valid options for the architectures field are as follows:
+- `amd64` : This specifies that the image can run only on machines having CPU architecture `amd64`.
+- `arm64` : This specifies that the image can run only on machines having CPU architecture `arm64`.
 
-If image doesn't specify any architectures then by default it is considered to support both `amd64` and `arm64` architectures.
+If an image doesn't specify any architectures, then by default it is considered to support both `amd64` and `arm64` architectures.
 
-## Overwrite image vector
+## Overwrite Image Vector
 
-In some environment it is not possible to use these "pre-defined" images that come with a Gardener release.
-A prominent example for that is Alicloud in China which does not allow access to Google's GCR.
-In these cases you might want to overwrite certain images, e.g., point the `pause-container` to a different registry.
+In some environments it is not possible to use these "pre-defined" images that come with a Gardener release.
+A prominent example for that is Alicloud in China, which does not allow access to Google's GCR.
+In these cases, you might want to overwrite certain images, e.g., point the `pause-container` to a different registry.
 
-:warning: If you specify an image that does not fit to the resource manifest then the seed/shoot reconciliation might fail.
+:warning: If you specify an image that does not fit to the resource manifest, then the seed/shoot reconciliation might fail.
 
-In order to overwrite the images you must provide a similar file to Gardenlet:
+In order to overwrite the images, you must provide a similar file to gardenlet:
 
 ```yaml
 images:
@@ -84,8 +84,8 @@ images:
 ...
 ```
 
-During deployment of the gardenlet create a `ConfigMap` containing the above content and mount it as a volume into the gardenlet pod.
-Next, specify the environment variable `IMAGEVECTOR_OVERWRITE` whose value must be the path to the file you just mounted:
+During deployment of the gardenlet, create a `ConfigMap` containing the above content and mount it as a volume into the gardenlet pod.
+Next, specify the environment variable `IMAGEVECTOR_OVERWRITE`, whose value must be the path to the file you just mounted:
 
 ```yaml
 apiVersion: v1
@@ -123,7 +123,7 @@ spec:
   ...
 ```
 
-## Image vectors for dependent components
+## Image Vectors for Dependent Components
 
 The gardenlet is deploying a lot of different components that might deploy other images themselves.
 These components might use an image vector as well.

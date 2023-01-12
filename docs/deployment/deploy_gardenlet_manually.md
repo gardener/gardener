@@ -1,4 +1,4 @@
-# Deploy a Gardenlet Manually
+# Deploy a gardenlet Manually
 
 Manually deploying a gardenlet is required in the following cases:
 
@@ -14,11 +14,11 @@ Manually deploying a gardenlet is required in the following cases:
   (The gardenlet is not restricted to run in the seed cluster or
   to be deployed into a Kubernetes cluster at all).
 
-> Once you’ve deployed a gardenlet manually, for example, behind a firewall, you can deploy new gardenlets automatically. The manually deployed gardenlet is then used as a template for the new gardenlets. More information: [Automatic Deployment of Gardenlets](deploy_gardenlet_automatically.md).
+> Once you’ve deployed a gardenlet manually, for example, behind a firewall, you can deploy new gardenlets automatically. The manually deployed gardenlet is then used as a template for the new gardenlets. For more information, see [Automatic Deployment of Gardenlets](deploy_gardenlet_automatically.md).
 
 ## Prerequisites
 
-### Kubernetes cluster that should be registered as a seed cluster
+### Kubernetes Cluster that Should Be Registered as a Seed Cluster
 
 - Verify that the cluster has a [supported Kubernetes version](../usage/supported_k8s_versions.md).
 
@@ -26,9 +26,9 @@ Manually deploying a gardenlet is required in the following cases:
   You need to configure this information in the `Seed` configuration.
   Gardener uses this information to check that the shoot cluster isn’t created with overlapping CIDR ranges.
 
-- Every Seed cluster needs an Ingress controller which distributes external requests to internal components like grafana and prometheus. Gardener supports two approaches to achieve this:
+- Every seed cluster needs an Ingress controller which distributes external requests to internal components like Grafana and Prometheus. Gardener supports two approaches to achieve this:
 
-a. Gardener managed Ingress controller and DNS records. For this configure the following lines in your [Seed resource](../../example/50-seed.yaml):
+a. Gardener managed Ingress controller and DNS records. For this, configure the following lines in your [Seed resource](../../example/50-seed.yaml):
 ```yaml
 spec:
   dns:
@@ -45,25 +45,25 @@ spec:
         <some-optional-provider-specific-config-for-the-ingressController>
 ```
 
-⚠ Please note that if you set `.spec.ingress` then `.spec.dns.ingressDomain` must be `nil`.
+⚠ Please note that if you set `.spec.ingress`, then `.spec.dns.ingressDomain` must be `nil`.
 
 b. Self-managed DNS record and Ingress controller:
 
 :warning:
-There should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `.dns.ingressDomain` field of [a Seed cluster resource](../../example/50-seed.yaml) (or the [respective Gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml#L84-L85)).
+There should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>`, where `<SEED-CLUSTER-DOMAIN>` is the value of the `.dns.ingressDomain` field of [a Seed cluster resource](../../example/50-seed.yaml) (or the [respective Gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml#L84-L85)).
 
 *This is how it could be done for the Nginx ingress controller*
 
 Deploy nginx into the `kube-system` namespace in the Kubernetes cluster that should be registered as a `Seed`.
 
-Nginx will on most cloud providers create the service with type `LoadBalancer` with an external ip.
+Nginx will, on most cloud providers, create the service with type `LoadBalancer` with an external IP.
 
 ```
 NAME                        TYPE           CLUSTER-IP    EXTERNAL-IP
 nginx-ingress-controller    LoadBalancer   10.0.15.46    34.200.30.30
 ```
 
-Create a wildcard `A` record (e.g *.ingress.sweet-seed.<my-domain>. IN A 34.200.30.30) with your DNS provider and point it to the external ip of the ingress service. This ingress domain is later required to register the `Seed` cluster.
+Create a wildcard `A` record (e.g *.ingress.sweet-seed.<my-domain>. IN A 34.200.30.30) with your DNS provider and point it to the external IP of the ingress service. This ingress domain is later required to register the `Seed` cluster.
 
 Please configure the ingress domain in the `Seed` specification as follows:
 
@@ -73,7 +73,7 @@ spec:
     ingressDomain: ingress.sweet-seed.<my-domain>
 ```
 
-⚠ Please note that if you set `.spec.dns.ingressDomain` then `.spec.ingress` must be `nil`.
+⚠ Please note that if you set `.spec.dns.ingressDomain`, then `.spec.ingress` must be `nil`.
 
 ### `kubeconfig` for the Seed Cluster
 
@@ -86,7 +86,7 @@ that the gardenlet deployment uses by default to talk to the Seed API server.
 > If the gardenlet isn’t deployed in the seed cluster,
 > the gardenlet can be configured to use a `kubeconfig`,
 > which also requires the above-mentioned privileges, from a mounted directory.
-> The `kubeconfig` is specified in section `seedClientConnection.kubeconfig`
+> The `kubeconfig` is specified in the `seedClientConnection.kubeconfig` section
 > of the [Gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml).
 > This configuration option isn’t used in the following,
 > as this procedure only describes the recommended setup option
@@ -103,19 +103,18 @@ that the gardenlet deployment uses by default to talk to the Seed API server.
 1. [Deploy the gardenlet](#deploy-the-gardenlet)
 1. [Check that the gardenlet is successfully deployed](#check-that-the-gardenlet-is-successfully-deployed)
 
-## Create a bootstrap token secret in the `kube-system` namespace of the garden cluster
+## Create a Bootstrap Token Secret in the `kube-system` Namespace of the Garden Cluster
 
 The gardenlet needs to talk to the [Gardener API server](../concepts/apiserver.md) residing in the garden cluster.
 
 The gardenlet can be configured with an already existing garden cluster `kubeconfig` in one of the following ways:
 
-  - Either by specifying `gardenClientConnection.kubeconfig`
-    in the [Gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml) or
-
-  - by supplying the environment variable `GARDEN_KUBECONFIG` pointing to
+  - By specifying `gardenClientConnection.kubeconfig`
+    in the [Gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml).
+  - By supplying the environment variable `GARDEN_KUBECONFIG` pointing to
     a mounted `kubeconfig` file).
 
-The preferred way however, is to use the gardenlets ability to request
+The preferred way, however, is to use the gardenlet's ability to request
 a signed certificate for the garden cluster by leveraging
 [Kubernetes Certificate Signing Requests](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/).
 The gardenlet performs a TLS bootstrapping process that is similar to the
@@ -124,7 +123,7 @@ Make sure that the API server of the garden cluster has
 [bootstrap token authentication](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/#enabling-bootstrap-token-authentication)
 enabled.
 
-The client credentials required for the gardenlets TLS bootstrapping process,
+The client credentials required for the gardenlet's TLS bootstrapping process
 need to be either `token` or `certificate` (OIDC isn’t supported) and have permissions
 to create a Certificate Signing Request ([CSR](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/)).
 It’s recommended to use [bootstrap tokens](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/)
@@ -161,7 +160,7 @@ stringData:
 When you later prepare the gardenlet Helm chart,
 a `kubeconfig` based on this token is shared with the gardenlet upon deployment.
 
-## Create RBAC roles for the gardenlet to allow bootstrapping in the garden cluster
+## Create RBAC Roles for the gardenlet to Allow Bootstrapping in the Garden Cluster
 
 This step is only required if the gardenlet you deploy is the first gardenlet
 in the Gardener installation.
@@ -239,14 +238,14 @@ subjects:
 
 ℹ️ After bootstrapping, the gardenlet has full administrative access to the garden cluster.
 You might be interested to harden this and limit its permissions to only resources related to the seed cluster it is responsible for.
-Please take a look into [this document](gardenlet_api_access.md).
+Please take a look at [Scoped API Access for Gardenlets](gardenlet_api_access.md).
 
-## Prepare the gardenlet Helm chart
+## Prepare the gardenlet Helm Chart
 
 This section only describes the minimal configuration,
 using the global configuration values of the gardenlet Helm chart.
 For an overview over all values, see the [configuration values](../../charts/gardener/gardenlet/values.yaml).
-We refer to the global configuration values as _gardenlet configuration_ in the remaining procedure.
+We refer to the global configuration values as _gardenlet configuration_ in the following procedure.
 
 1.  Create a gardenlet configuration `gardenlet-values.yaml` based on [this template](https://github.com/gardener/gardener/blob/master/charts/gardener/gardenlet/values.yaml).
 
@@ -274,7 +273,7 @@ We refer to the global configuration values as _gardenlet configuration_ in the 
         token: <bootstrap-token>
     ```
 
-3.  In section `gardenClientConnection.bootstrapKubeconfig` of your gardenlet configuration, provide the bootstrap `kubeconfig` together with a name and namespace to the gardenlet Helm chart.
+3.  In the `gardenClientConnection.bootstrapKubeconfig` section of your gardenlet configuration, provide the bootstrap `kubeconfig` together with a name and namespace to the gardenlet Helm chart.
 
     ```yaml
     gardenClientConnection:
@@ -287,7 +286,7 @@ We refer to the global configuration values as _gardenlet configuration_ in the 
 
     The bootstrap `kubeconfig` is stored in the specified secret.
 
-4.  In section `gardenClientConnection.kubeconfigSecret` of your gardenlet configuration,
+4.  In the `gardenClientConnection.kubeconfigSecret` section of your gardenlet configuration,
     define a name and a namespace where the gardenlet stores
     the real `kubeconfig` that it creates during the bootstrap process. If the secret doesn't exist,
     the gardenlet creates it for you.
@@ -299,11 +298,11 @@ We refer to the global configuration values as _gardenlet configuration_ in the 
         namespace: garden
     ```
 
-### Updating the garden cluster CA
+### Updating the Garden Cluster CA
 
-The kubeconfig created by the gardenlet in step 4 will not be recreated as long as it exists, even if a new bootstrap kubeconfig is provided. To enable rotation of the garden cluster CA certificate, a new bundle can be provided via the `gardenClientConnection.gardenClusterCACert` field. If the provided bundle differs from the one currently in the gardenlet's kubeconfig secret then it will be updated. To remove the CA completely (e.g. when switching to a publicly trusted endpoint) this field can be set to either `none` or `null`.
+The kubeconfig created by the gardenlet in step 4 will not be recreated as long as it exists, even if a new bootstrap kubeconfig is provided. To enable rotation of the garden cluster CA certificate, a new bundle can be provided via the `gardenClientConnection.gardenClusterCACert` field. If the provided bundle differs from the one currently in the gardenlet's kubeconfig secret then it will be updated. To remove the CA completely (e.g. when switching to a publicly trusted endpoint), this field can be set to either `none` or `null`.
 
-## Automatically register shoot cluster as a seed cluster
+## Automatically Register a Shoot Cluster as a Seed Cluster
 
 A seed cluster can either be registered by manually creating
 the [`Seed` resource](../../example/50-seed.yaml)
@@ -315,12 +314,12 @@ However, it can also be used to have a streamlined seed cluster registration pro
 
 > This procedure doesn’t describe all the possible configurations
 > for the `Seed` resource. For more information, see:
-> * [Example Seed resource](../../example/50-seed.yaml)
-> * [Configurable Seed settings](../usage/seed_settings.md).
+> - [Example Seed resource](../../example/50-seed.yaml)
+> - [Configurable Seed settings](../usage/seed_settings.md)
 
-### Adjust the gardenlet component configuration
+### Adjust the gardenlet Component Configuration
 
-1. Supply the `Seed` resource in section `seedConfig` of your gardenlet configuration `gardenlet-values.yaml`.
+1. Supply the `Seed` resource in the `seedConfig` section of your gardenlet configuration `gardenlet-values.yaml`.
 1. Add the `seedConfig` to your gardenlet configuration `gardenlet-values.yaml`.
 The field `seedConfig.spec.provider.type` specifies the infrastructure provider type (for example, `aws`) of the seed cluster.
 For all supported infrastructure providers, see [Known Extension Implementations](../../extensions/README.md#known-extension-implementations).
@@ -345,7 +344,7 @@ For all supported infrastructure providers, see [Known Extension Implementations
           type: <provider>
     ```
 
-### Optional: Enable HA mode
+### Optional: Enable HA Mode
 
 You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot control planes](../usage/shoot_high_availability.md).
 Therefore, the following Helm chart values define the degree of high availability you want to achieve for the `gardenlet` deployment.
@@ -355,7 +354,7 @@ replicaCount: 2 # or more if a higher failure tolerance is required.
 failureToleranceType: zone # One of `zone` or `node` - defines how replicas are spread.
 ```
 
-### Optional: Enable backup and restore
+### Optional: Enable Backup and Restore
 
 The seed cluster can be set up with backup and restore
 for the main `etcds` of shoot clusters.
@@ -382,7 +381,7 @@ data:
   # client credentials format is provider specific
 ```
 
-Configure the `Seed` resource in section `seedConfig` of your gardenlet configuration to use backup and restore:
+Configure the `Seed` resource in the `seedConfig` section of your gardenlet configuration to use backup and restore:
 
 ```yaml
 ...
@@ -454,7 +453,7 @@ config:
           namespace: garden
 ```
 
-Deploy the gardenlet Helm chart to the Kubernetes cluster.
+Deploy the gardenlet Helm chart to the Kubernetes cluster:
 
 ```bash
 helm install gardenlet charts/gardener/gardenlet \
@@ -470,7 +469,7 @@ This helm chart creates:
 - The secret (`garden`/`gardenlet-bootstrap-kubeconfig`) containing the bootstrap `kubeconfig`.
 - The gardenlet deployment in the `garden` namespace.
 
-## Check that the gardenlet is successfully deployed
+## Check that the gardenlet Is Successfully Deployed
 
 1.  Check that the gardenlets certificate bootstrap was successful.
 
@@ -536,6 +535,5 @@ This helm chart creates:
 
 ## Related Links
 
-[Issue #1724: Harden Gardenlet RBAC privileges](https://github.com/gardener/gardener/issues/1724).
-
-[Backup and Restore](../concepts/backup-restore.md).
+- [Issue #1724: Harden Gardenlet RBAC privileges](https://github.com/gardener/gardener/issues/1724).
+- [Backup and Restore](../concepts/backup-restore.md).
