@@ -274,7 +274,6 @@ func createSeed(providerType, region string, zones []string) *gardencorev1beta1.
 				Zones:  zones,
 			},
 			Settings: &gardencorev1beta1.SeedSettings{
-				ShootDNS:   &gardencorev1beta1.SeedSettingShootDNS{Enabled: true},
 				Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
 			},
 			Networks: gardencorev1beta1.SeedNetworks{

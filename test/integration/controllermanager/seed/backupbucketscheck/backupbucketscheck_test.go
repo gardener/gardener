@@ -53,7 +53,6 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 					Type:   "providerType",
 				},
 				Settings: &gardencorev1beta1.SeedSettings{
-					ShootDNS:   &gardencorev1beta1.SeedSettingShootDNS{Enabled: true},
 					Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
