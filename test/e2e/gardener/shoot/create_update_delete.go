@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -107,6 +109,32 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			GardenerFramework: f.GardenerFramework,
 			Shoot:             f.Shoot,
 		}, nil, nil)
+
+		By("Add skip readiness annotation")
+		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
+		defer cancel()
+		Expect(f.ShootFramework.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/skip-readiness", "")
+			// Use maintain operation to also execute tasks in the reconcile flow which are only performed during maintenance.
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "maintain")
+			return nil
+		})).To(Succeed())
+
+		By("Wait for operation annotation to be gone (meaning controller picked up reconciliation request)")
+		Eventually(func(g Gomega) {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      f.Shoot.Name,
+					Namespace: f.Shoot.Namespace,
+				},
+			}
+
+			g.Expect(f.GetShoot(ctx, shoot)).To(Succeed())
+			g.Expect(shoot.Annotations).ToNot(HaveKey("gardener.cloud/operation"))
+		}).Should(Succeed())
+
+		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
+		Expect(f.Shoot.Annotations).ToNot(HaveKey("shoot.gardener.cloud/skip-readiness"))
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)

@@ -49,4 +49,16 @@ If you already have a shoot cluster with non-HA control plane then following upg
 
 **Disallowed Transitions**
 
-If you have already set-up a HA shoot control plane with `node` failure tolerance then an upgrade to `zone` failure tolerance is currently not supported, mainly because already existing volumes are bound to the zone they were created in.
+If you have already set-up an HA shoot control plane with `node` failure tolerance, then an upgrade to `zone` failure tolerance is currently not supported, mainly because already existing volumes are bound to the zone they were created in originally.
+
+## Zone Outage Situation
+
+An availability zone outage might lead to the requirement to change your cluster setup temporarily and on short notice, in order to compensate failures and shortages resulting from the outage.
+For instance, if the shoot cluster has worker nodes across three zones where one zone goes down, the computing power from these nodes is also gone during that time.
+Changing the worker pool (`shoot.spec.provider.workers[]`) and infrastructure (`shoot.spec.provider.infrastructureConfig`) configuration can eliminate this disbalance, having enough machines in healthy availability zones that can cope with the requests of your applications.
+
+Gardener relies on a sophisticated reconciliation flow with several dependencies for which various flow steps wait for the _readiness_ of prior ones.
+During a zone outage, this can block the entire flow, e.g. because all three `etcd` replicas can never be ready when a zone is down, and required changes mentioned above can never be accomplished.
+For this, a special one-off annotation `shoot.gardener.cloud/skip-readiness` helps to skip any readiness checks in the flow.
+
+> The `shoot.gardener.cloud/skip-readiness` annotation serves as a last resort if reconciliation is stuck because of important changes during an AZ outage. Use it with caution, only in exceptional cases and after a case-by-case evaluation with your Gardener landscape administrator. If used together with other operations like Kubernetes version upgrades or credential rotation, the annotation may lead to a severe outage of your shoot control plane.
