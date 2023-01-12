@@ -128,7 +128,9 @@ func (r *Reconciler) reconcileBackupEntry(
 
 	var (
 		mustReconcileExtensionBackupEntry = false
-		mustReconcileExtensionSecret      = false
+		// we should reconcile the secret only when the data has changed, since now we depend on
+		// the timestamp in the secret to reconcile the extension.
+		mustReconcileExtensionSecret = false
 
 		lastObservedError error
 		extensionSecret   = r.emptyExtensionSecret(backupEntry)
