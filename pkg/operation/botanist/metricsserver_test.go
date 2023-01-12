@@ -21,7 +21,8 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -38,7 +39,10 @@ var _ = Describe("MetricsServer", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		botanist = &Botanist{Operation: &operation.Operation{}}
+		botanist = &Botanist{Operation: &operation.Operation{
+			Garden: &garden.Garden{},
+			Shoot:  &shoot.Shoot{},
+		}}
 	})
 
 	AfterEach(func() {
@@ -52,9 +56,6 @@ var _ = Describe("MetricsServer", func() {
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 
 			botanist.SeedClientSet = kubernetesClient
-			botanist.Shoot = &shootpkg.Shoot{
-				DisableDNS: true,
-			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{

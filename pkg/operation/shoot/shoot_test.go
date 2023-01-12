@@ -316,13 +316,6 @@ var _ = Describe("shoot", func() {
 		})
 
 		Describe("#ComputeOutOfClusterAPIServerAddress", func() {
-			It("should return the apiserver address as DNS is disabled", func() {
-				s := &Shoot{DisableDNS: true}
-				apiServerAddress := "abcd"
-
-				Expect(s.ComputeOutOfClusterAPIServerAddress(apiServerAddress, false)).To(Equal(apiServerAddress))
-			})
-
 			It("should return the internal domain as shoot's external domain is unmanaged", func() {
 				unmanaged := "unmanaged"
 				internalDomain := "foo"

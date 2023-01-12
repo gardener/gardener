@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockkubernetesdashboard "github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard/mock"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -44,8 +45,10 @@ var _ = Describe("Kubernetes Dashboard", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		botanist = &Botanist{Operation: &operation.Operation{}}
-		botanist.Shoot = &shootpkg.Shoot{}
+		botanist = &Botanist{Operation: &operation.Operation{
+			Garden: &garden.Garden{},
+			Shoot:  &shootpkg.Shoot{},
+		}}
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Addons: &gardencorev1beta1.Addons{
@@ -71,7 +74,6 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			kubernetesClient.EXPECT().Client().AnyTimes()
 
 			botanist.SeedClientSet = kubernetesClient
-			botanist.Shoot.DisableDNS = true
 			botanist.Shoot.SetInfo(shoot)
 		})
 

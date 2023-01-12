@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver/mock"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -54,7 +55,9 @@ var _ = Describe("VPNSeedServer", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		botanist = &Botanist{Operation: &operation.Operation{}}
+		botanist = &Botanist{Operation: &operation.Operation{
+			Garden: &garden.Garden{},
+		}}
 	})
 
 	AfterEach(func() {
@@ -70,7 +73,6 @@ var _ = Describe("VPNSeedServer", func() {
 
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
-				DisableDNS: true,
 				Networks: &shootpkg.Networks{
 					Services: &net.IPNet{IP: net.IP{10, 0, 0, 1}, Mask: net.CIDRMask(10, 24)},
 					Pods:     &net.IPNet{IP: net.IP{10, 0, 0, 2}, Mask: net.CIDRMask(10, 24)},
