@@ -209,45 +209,21 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 			return nil
 		}
 
-		if oldShoot.Spec.SeedName != nil {
-			if *oldShoot.Spec.SeedName != *shoot.Spec.SeedName {
-				if err := checkIfShootMigrationIsPossible(a, d.seedLister, oldShoot, shoot); err != nil {
-					return err
-				}
-				if shoot.Spec.DNS != nil {
-					return checkFunctionlessDNSProviders(a, shoot)
-				}
-				return nil
-			}
-			if shoot.Spec.DNS != nil {
-				return checkFunctionlessDNSProviders(a, shoot)
-			}
+		if oldShoot.Spec.SeedName != nil && shoot.Spec.DNS != nil {
+			return checkFunctionlessDNSProviders(a, shoot)
 		}
 	}
 
 	specPath := field.NewPath("spec")
 
-	dnsDisabled, err := seedDisablesDNS(d.seedLister, *shoot.Spec.SeedName)
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not get referenced seed: %+v", err.Error()))
-	}
-	if dnsDisabled {
-		if shoot.Spec.DNS != nil {
-			fieldErr := field.Invalid(specPath.Child("dns"), shoot.Spec.DNS, "shoot's .spec.dns section must be nil if seed with disabled DNS is chosen")
-			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
-		}
-		return nil
-	}
-
-	// Generate a Shoot domain if none is configured (at this point in time we know that the chosen seed does
-	// not disable DNS.
+	// Generate a Shoot domain if none is configured.
 	if !helper.ShootUsesUnmanagedDNS(shoot) {
 		if err := assignDefaultDomainIfNeeded(a, shoot, d.projectLister, defaultDomains); err != nil {
 			return err
 		}
 
 		if !isShootDomainSet(shoot) {
-			fieldErr := field.Required(specPath.Child("DNS"), fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s and assigned to a seed which does not disable DNS", core.DNSUnmanaged))
+			fieldErr := field.Required(specPath.Child("DNS"), fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s", core.DNSUnmanaged))
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}
 	}
@@ -270,20 +246,6 @@ func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) er
 		if !pointer.BoolDeref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
 			fieldErr := field.Required(field.NewPath("spec", "dns", "providers"), "non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
-		}
-	}
-	return nil
-}
-
-func checkIfShootMigrationIsPossible(a admission.Attributes, seedLister gardencorelisters.SeedLister, oldShoot, newShoot *core.Shoot) error {
-	for _, seedName := range []string{*oldShoot.Spec.SeedName, *newShoot.Spec.SeedName} {
-		seedDNSDisabled, err := seedDisablesDNS(seedLister, seedName)
-		if err != nil {
-			return apierrors.NewInternalError(fmt.Errorf("could not get referenced seed: %+v", err.Error()))
-		}
-		if seedDNSDisabled {
-			fieldErr := field.Invalid(field.NewPath("spec", "settings", "shootDNS", "enabled"), seedName, "source and destination seeds must enable DNS so that the shoot can be migrated")
-			return apierrors.NewInvalid(a.GetKind().GroupKind(), seedName, field.ErrorList{fieldErr})
 		}
 	}
 	return nil
@@ -339,14 +301,6 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 		dns.Providers[0].Primary = pointer.Bool(true)
 	}
 	return nil
-}
-
-func seedDisablesDNS(seedLister gardencorelisters.SeedLister, seedName string) (bool, error) {
-	seed, err := seedLister.Get(seedName)
-	if err != nil {
-		return false, err
-	}
-	return !seed.Spec.Settings.ShootDNS.Enabled, nil
 }
 
 // assignDefaultDomainIfNeeded generates a domain <shoot-name>.<project-name>.<default-domain>
