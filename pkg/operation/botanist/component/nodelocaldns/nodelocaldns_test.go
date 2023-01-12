@@ -316,10 +316,6 @@ status:
 								DNSPolicy:          corev1.DNSDefault,
 								Tolerations: []corev1.Toleration{
 									{
-										Key:      "CriticalAddonsOnly",
-										Operator: corev1.TolerationOpExists,
-									},
-									{
 										Operator: corev1.TolerationOpExists,
 										Effect:   corev1.TaintEffectNoExecute,
 									},

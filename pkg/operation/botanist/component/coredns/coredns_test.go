@@ -363,8 +363,6 @@ spec:
           name: custom-config-volume
           readOnly: true
       dnsPolicy: Default
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
       priorityClassName: system-cluster-critical
       securityContext:
         fsGroup: 1
@@ -375,9 +373,6 @@ spec:
         supplementalGroups:
         - 1
       serviceAccountName: coredns
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
       volumes:
       - configMap:
           items:
@@ -580,9 +575,6 @@ spec:
         supplementalGroups:
         - 65534
       serviceAccountName: coredns-autoscaler
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
 status: {}
 `
 

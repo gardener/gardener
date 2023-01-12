@@ -299,9 +299,6 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						Labels: getLabels(name),
 					},
 					Spec: corev1.PodSpec{
-						NodeSelector: map[string]string{
-							v1beta1constants.LabelWorkerPoolSystemComponents: "true",
-						},
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsUser:          pointer.Int64(1001),
 							RunAsGroup:         pointer.Int64(2001),
@@ -402,9 +399,6 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						Labels: getLabels(scraperName),
 					},
 					Spec: corev1.PodSpec{
-						NodeSelector: map[string]string{
-							v1beta1constants.LabelWorkerPoolSystemComponents: "true",
-						},
 						SecurityContext: &corev1.PodSecurityContext{
 							FSGroup:            pointer.Int64(1),
 							SupplementalGroups: []int64{1},

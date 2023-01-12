@@ -382,7 +382,6 @@ import custom/*.server
 					Spec: corev1.PodSpec{
 						PriorityClassName:  "system-cluster-critical",
 						ServiceAccountName: serviceAccount.Name,
-						NodeSelector:       map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:       pointer.Bool(true),
@@ -393,10 +392,6 @@ import custom/*.server
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},
 						},
-						Tolerations: []corev1.Toleration{{
-							Key:      "CriticalAddonsOnly",
-							Operator: corev1.TolerationOpExists,
-						}},
 						Containers: []corev1.Container{{
 							Name:            containerName,
 							Image:           c.values.Image,
@@ -591,10 +586,6 @@ import custom/*.server
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},
 						},
-						Tolerations: []corev1.Toleration{{
-							Key:      "CriticalAddonsOnly",
-							Operator: corev1.TolerationOpExists,
-						}},
 						Containers: []corev1.Container{{
 							Name:            "autoscaler",
 							Image:           c.values.ClusterProportionalAutoscalerImage,

@@ -303,8 +303,6 @@ spec:
           name: kubernetes-dashboard-certs
         - mountPath: /tmp
           name: tmp-volume
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
       securityContext:
         fsGroup: 1
         runAsGroup: 2001
@@ -387,8 +385,6 @@ spec:
 			out += `        volumeMounts:
         - mountPath: /tmp
           name: tmp-volume
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
       securityContext:
         fsGroup: 1
         supplementalGroups:

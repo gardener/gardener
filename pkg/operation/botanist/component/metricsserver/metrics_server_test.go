@@ -278,8 +278,6 @@ spec:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
       dnsPolicy: Default
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
       priorityClassName: system-cluster-critical
       securityContext:
         fsGroup: 65534
@@ -289,13 +287,6 @@ spec:
         supplementalGroups:
         - 1
       serviceAccountName: metrics-server
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
       volumes:
       - name: metrics-server
         secret:
