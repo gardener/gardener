@@ -43,7 +43,7 @@ type CIDR interface {
 	ValidateNotOverlap(subsets ...CIDR) field.ErrorList
 	// ValidateParse returns errors CIDR can't be parsed.
 	ValidateParse() field.ErrorList
-	// ValidateIPFamily returns error if IPFamily does not match CIDR
+	// ValidateIPFamily returns error if IPFamily does not match CIDR.
 	ValidateIPFamily(ipFamily string) field.ErrorList
 	// ValidateSubset returns errors if subsets is not a subset.
 	ValidateSubset(subsets ...CIDR) field.ErrorList
@@ -133,7 +133,7 @@ func (c *cidrPath) ValidateParse() field.ErrorList {
 	return allErrs
 }
 
-// ValidateIPFamily returns error if IPFamily does not match CIDR
+// ValidateIPFamily returns error if IPFamily does not match CIDR.
 func (c *cidrPath) ValidateIPFamily(ipFamily string) field.ErrorList {
 	allErrs := field.ErrorList{}
 
