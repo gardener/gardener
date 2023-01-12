@@ -361,13 +361,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 				newShoot := prepareShootForUpdate(shoot)
 				errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should pass as non-HA Shoot ControlPlane Spec has not changed", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid to change the Shoot ControlPlane spec", func() {
@@ -405,7 +405,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 				errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
@@ -431,7 +431,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid to change the exposure class", func() {
@@ -767,7 +767,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		Context("Provider validation", func() {
@@ -892,7 +892,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should allow removing a worker pool", func() {
@@ -905,7 +905,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should allow swapping worker pools", func() {
@@ -921,7 +921,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			Context("Worker nodes max count validation", func() {
@@ -1109,7 +1109,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid specifying invalid domain", func() {
@@ -1315,7 +1315,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid having more than one primary provider", func() {
@@ -1446,7 +1446,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
@@ -1456,7 +1456,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid specifying admission plugins without a name", func() {
@@ -1870,7 +1870,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = makeDurationPointer(5 * time.Minute)
 
 				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should fail updating immutable fields", func() {
@@ -1961,7 +1961,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
-							Expect(ValidateShoot(shoot)).To(HaveLen(0))
+							Expect(ValidateShoot(shoot)).To(BeEmpty())
 						})
 
 						It("should deny too large nodeCIDRMaskSize", func() {
@@ -1988,7 +1988,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
-							Expect(ValidateShoot(shoot)).To(HaveLen(0))
+							Expect(ValidateShoot(shoot)).To(BeEmpty())
 						})
 
 						It("should deny too large nodeCIDRMaskSize", func() {
@@ -2871,7 +2871,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
@@ -2901,7 +2901,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		Describe("kubeconfig rotation", func() {
@@ -2921,14 +2921,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 					errorList := ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, shoot.ObjectMeta, field.NewPath("metadata"))
 
 					if expectedError {
-						Expect(errorList).ToNot(HaveLen(0))
+						Expect(errorList).ToNot(BeEmpty())
 						Expect(errorList).To(ConsistOfFields(Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
 							"Detail": ContainSubstring(`kubeconfig rotations is not allowed for clusters in deletion`),
 						}))
 					} else {
-						Expect(errorList).To(HaveLen(0))
+						Expect(errorList).To(BeEmpty())
 					}
 				},
 				Entry("should allow kubeconfig rotation for cluster not in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, false, false),
@@ -4041,7 +4041,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid changing the uid", func() {
@@ -4064,7 +4064,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid changing the technical id", func() {
@@ -4086,7 +4086,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should not fail to set the cluster identity if it is missing", func() {
 				newShoot.Status.ClusterIdentity = &clusterIdentity
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should fail to set the cluster identity if it is already set", func() {
@@ -4702,9 +4702,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("containerd is a valid CRI name for k8s < 1.23", core.CRINameContainerD, "1.22.0", HaveLen(0)),
-			Entry("containerd is a valid CRI name for k8s >= 1.23", core.CRINameContainerD, "1.23.0", HaveLen(0)),
-			Entry("docker is a valid CRI name for k8s < 1.23", core.CRINameDocker, "1.22.0", HaveLen(0)),
+			Entry("containerd is a valid CRI name for k8s < 1.23", core.CRINameContainerD, "1.22.0", BeEmpty()),
+			Entry("containerd is a valid CRI name for k8s >= 1.23", core.CRINameContainerD, "1.23.0", BeEmpty()),
+			Entry("docker is a valid CRI name for k8s < 1.23", core.CRINameDocker, "1.22.0", BeEmpty()),
 			Entry("docker is NOT a valid CRI name for k8s >= 1.23", core.CRINameDocker, "1.23.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("cri.name"),
@@ -4725,8 +4725,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("amd64 is a valid architecture name", pointer.String(v1beta1constants.ArchitectureAMD64), HaveLen(0)),
-			Entry("arm64 is a valid architecture name", pointer.String(v1beta1constants.ArchitectureARM64), HaveLen(0)),
+			Entry("amd64 is a valid architecture name", pointer.String(v1beta1constants.ArchitectureAMD64), BeEmpty()),
+			Entry("arm64 is a valid architecture name", pointer.String(v1beta1constants.ArchitectureARM64), BeEmpty()),
 			Entry("foo is an invalid architecture name", pointer.String("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("architecture"),
@@ -4799,7 +4799,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
-			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, HaveLen(0)),
+			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, BeEmpty()),
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeForbidden),
@@ -4843,7 +4843,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type": Equal(field.ErrorTypeForbidden),
 				})),
 			)),
-			Entry("at least one worker pool allows system components", zero, zero, one, one, true, true, nil, nil, HaveLen(0)),
+			Entry("at least one worker pool allows system components", zero, zero, one, one, true, true, nil, nil, BeEmpty()),
 			Entry("one active but taints prevent scheduling", one, one, zero, zero, true, true, []corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}}, nil, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeForbidden),
@@ -4875,23 +4875,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Entry(
 				"no pools with taints",
-				HaveLen(0),
+				BeEmpty(),
 				[]corev1.Taint{},
 			),
 			Entry(
 				"all pools with PreferNoSchedule taints",
-				HaveLen(0),
+				BeEmpty(),
 				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
 			),
 			Entry(
 				"at least one pools with either no or PreferNoSchedule taints (1)",
-				HaveLen(0),
+				BeEmpty(),
 				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
 				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
 			),
 			Entry(
 				"at least one pools with either no or PreferNoSchedule taints (2)",
-				HaveLen(0),
+				BeEmpty(),
 				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
 				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
 			),
@@ -4996,7 +4996,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", validResourceQuantityValueMi, validResourceQuantityValueKi, validPercentValue, validPercentValue, validPercentValue, HaveLen(0)),
+			Entry("valid configuration", validResourceQuantityValueMi, validResourceQuantityValueKi, validPercentValue, validPercentValue, validPercentValue, BeEmpty()),
 			Entry("only allow resource.Quantity or percent value for any value", invalidValue, validPercentValue, validPercentValue, validPercentValue, validPercentValue, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -5091,8 +5091,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", "1.25", true, nil, HaveLen(0)),
-			Entry("valid configuration with set feature gate", "1.25", true, pointer.Bool(true), HaveLen(0)),
+			Entry("valid configuration", "1.25", true, nil, BeEmpty()),
+			Entry("valid configuration with set feature gate", "1.25", true, pointer.Bool(true), BeEmpty()),
 			Entry("do not allow to set SeccompDefault to true when k8s version < 1.25", "1.24", true, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("seccompDefault"),
@@ -5130,7 +5130,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, HaveLen(0)),
+			Entry("valid configuration", validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, BeEmpty()),
 			Entry("only allow positive resource.Quantity for any value", invalidResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("evictionMinimumReclaim.memoryAvailable").String()),
@@ -5156,7 +5156,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", validDuration, validDuration, validDuration, validDuration, validDuration, HaveLen(0)),
+			Entry("valid configuration", validDuration, validDuration, validDuration, validDuration, validDuration, BeEmpty()),
 			Entry("only allow positive Duration for any value", invalidDuration, validDuration, validDuration, validDuration, validDuration, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -5175,7 +5175,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", validDuration, HaveLen(0)),
+			Entry("valid configuration", validDuration, BeEmpty()),
 			Entry("only allow positive Duration", invalidDuration, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -5198,11 +5198,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateKubeletConfig(kubeletConfig, "", true, nil)).To(matcher)
 				},
 
-				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
-				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, HaveLen(0)),
-				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, HaveLen(0)),
-				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, HaveLen(0)),
-				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, HaveLen(0)),
+				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, BeEmpty()),
+				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, BeEmpty()),
+				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, BeEmpty()),
+				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, BeEmpty()),
+				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, BeEmpty()),
 				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(field.NewPath("kubeReserved.cpu").String()),
@@ -5222,11 +5222,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateKubeletConfig(kubeletConfig, "", true, nil)).To(matcher)
 				},
 
-				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
-				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, HaveLen(0)),
-				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, HaveLen(0)),
-				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, HaveLen(0)),
-				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, HaveLen(0)),
+				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, BeEmpty()),
+				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, BeEmpty()),
+				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, BeEmpty()),
+				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, BeEmpty()),
+				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, BeEmpty()),
 				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(field.NewPath("systemReserved.cpu").String()),
@@ -5245,7 +5245,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", validDuration, true, HaveLen(0)),
+			Entry("valid configuration", validDuration, true, BeEmpty()),
 			Entry("only allow positive Duration", invalidDuration, true, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -5339,7 +5339,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", int32(90), HaveLen(0)),
+			Entry("valid configuration", int32(90), BeEmpty()),
 			Entry("only allow positive number", int32(-3), ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -5359,7 +5359,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", int32(110), HaveLen(0)),
+			Entry("valid configuration", int32(110), BeEmpty()),
 			Entry("only allow positive number", int32(-3), ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -5443,7 +5443,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errList := ValidateKubeletConfig(kubeletConfig, "", false, nil)
 
-				Expect(errList).To(HaveLen(0))
+				Expect(errList).To(BeEmpty())
 			})
 
 		})
