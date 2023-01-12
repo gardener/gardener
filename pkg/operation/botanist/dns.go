@@ -28,8 +28,7 @@ const (
 
 // NeedsExternalDNS returns true if the Shoot cluster needs external DNS.
 func (b *Botanist) NeedsExternalDNS() bool {
-	return !b.Shoot.DisableDNS &&
-		b.Shoot.GetInfo().Spec.DNS != nil &&
+	return b.Shoot.GetInfo().Spec.DNS != nil &&
 		b.Shoot.GetInfo().Spec.DNS.Domain != nil &&
 		b.Shoot.ExternalClusterDomain != nil &&
 		!strings.HasSuffix(*b.Shoot.ExternalClusterDomain, ".nip.io") &&
@@ -39,8 +38,7 @@ func (b *Botanist) NeedsExternalDNS() bool {
 
 // NeedsInternalDNS returns true if the Shoot cluster needs internal DNS.
 func (b *Botanist) NeedsInternalDNS() bool {
-	return !b.Shoot.DisableDNS &&
-		b.Garden.InternalDomain != nil &&
+	return b.Garden.InternalDomain != nil &&
 		b.Garden.InternalDomain.Provider != "unmanaged"
 }
 

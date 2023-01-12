@@ -133,7 +133,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	if !b.Shoot.DisableDNS && !b.APIServerSNIEnabled() {
+	if !b.APIServerSNIEnabled() {
 		if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy(ctx); err != nil {
 			return err
 		}

@@ -168,7 +168,6 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.Secret = secret
 
-	shoot.DisableDNS = b.disableDNS
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.SeedNamespace = ComputeTechnicalID(b.projectName, shootObject)
 	shoot.InternalClusterDomain = ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
@@ -402,10 +401,6 @@ func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) stri
 // ComputeOutOfClusterAPIServerAddress returns the external address for the shoot API server depending on whether
 // the caller wants to use the internal cluster domain and whether DNS is disabled on this seed.
 func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, useInternalClusterDomain bool) string {
-	if s.DisableDNS {
-		return apiServerAddress
-	}
-
 	if v1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
