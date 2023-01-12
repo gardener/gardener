@@ -32,7 +32,7 @@ spec:
       maxSurge: 1
       maxUnavailable: 0
   kubernetes:
-    version: 1.24.0
+    version: 1.24.8
     kubelet:
       serializeImagePulls: false
       registryPullQPS: 10
