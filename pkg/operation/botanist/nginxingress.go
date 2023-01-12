@@ -16,11 +16,10 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/operation/botanist/addons/nginxingress"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingressshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -36,36 +35,38 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		return nil, err
 	}
 
-	values := nginxingress.Values{
-		NginxControllerImage:     imageController.String(),
-		DefaultBackendImage:      imageDefaultBackend.String(),
-		KubernetesVersion:        b.Shoot.KubernetesVersion,
-		ConfigData:               b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config,
-		LoadBalancerSourceRanges: b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
-		ExternalTrafficPolicy:    *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy,
-		VPAEnabled:               b.Shoot.WantsVerticalPodAutoscaler,
-		PSPDisabled:              b.Shoot.PSPDisabled,
+	values := nginxingressshoot.Values{
+		NginxControllerImage: imageController.String(),
+		DefaultBackendImage:  imageDefaultBackend.String(),
+		KubernetesVersion:    b.Shoot.KubernetesVersion,
+		VPAEnabled:           b.Shoot.WantsVerticalPodAutoscaler,
+		PSPDisabled:          b.Shoot.PSPDisabled,
 	}
 
 	if b.APIServerSNIEnabled() {
 		values.KubeAPIServerHost = b.outOfClusterAPIServerFQDN()
 	}
 
-	return nginxingress.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
+	if b.Shoot.GetInfo().Spec.Addons.NginxIngress != nil && b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config != nil {
+		values.ConfigData = b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config
+	}
+
+	if b.Shoot.GetInfo().Spec.Addons.NginxIngress != nil && b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges != nil {
+		values.LoadBalancerSourceRanges = b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges
+	}
+
+	if b.Shoot.GetInfo().Spec.Addons.NginxIngress != nil && b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy != nil {
+		values.ExternalTrafficPolicy = *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy
+	}
+
+	return nginxingressshoot.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
 }
 
 // DeployNginxIngressAddon deploys the NginxIngress Addon component.
 func (b *Botanist) DeployNginxIngressAddon(ctx context.Context) error {
-	if !gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons) {
+	if !v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons) {
 		return b.Shoot.Components.Addons.NginxIngress.Destroy(ctx)
 	}
 
 	return b.Shoot.Components.Addons.NginxIngress.Deploy(ctx)
-}
-
-// outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver
-// with dot "." suffix. It'll prevent extra requests to the DNS in case the record is not
-// available.
-func (b *Botanist) outOfClusterAPIServerFQDN() string {
-	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
 }

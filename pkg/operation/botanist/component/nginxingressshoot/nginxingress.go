@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nginxingress
+package nginxingressshoot
 
 import (
 	"context"
@@ -163,7 +163,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					labelKeyRelease:           labelValueAddons,
 					labelKeyComponent:         labelValueController,
 				},
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 			},
 			Data: n.values.ConfigData,
 		}
@@ -171,7 +171,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceAccountName,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.LabelApp:         labelAppValue,
 					labelKeyRelease:                   labelValueAddons,
@@ -257,7 +257,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		deploymentBackend = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentNameBackend,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.LabelApp:   labelAppValue,
 					labelKeyComponent:           labelValueBackend,
@@ -335,7 +335,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		deploymentController = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentNameController,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleOptionalAddon,
 					v1beta1constants.LabelApp:   labelAppValue,
@@ -466,7 +466,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      roleName,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.LabelApp: labelAppValue,
 					labelKeyRelease:           labelValueAddons,
@@ -500,7 +500,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      roleBindingName,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.LabelApp: labelAppValue,
 					labelKeyRelease:           labelValueAddons,
@@ -524,7 +524,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		serviceController = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceNameController,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.LabelApp: labelAppValue,
 					labelKeyRelease:           labelValueAddons,
@@ -566,7 +566,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					labelKeyComponent:         labelValueBackend,
 					labelKeyRelease:           labelValueAddons,
 				},
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeClusterIP,
@@ -592,7 +592,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      vpaName,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -622,7 +622,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		roleBindingPSP = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      roleBindingPSPName,
-				Namespace: n.namespace,
+				Namespace: metav1.NamespaceSystem,
 				Annotations: map[string]string{
 					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
 				},
@@ -680,14 +680,14 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
 	out := []string{
 		"/nginx-ingress-controller",
-		"--default-backend-service=" + n.namespace + "/" + serviceNameBackend,
+		"--default-backend-service=" + metav1.NamespaceSystem + "/" + serviceNameBackend,
 		"--enable-ssl-passthrough=true",
-		"--publish-service=" + n.namespace + "/" + serviceNameController,
+		"--publish-service=" + metav1.NamespaceSystem + "/" + serviceNameController,
 		"--election-id=ingress-controller-seed-leader",
 		"--update-status=true",
 		"--annotations-prefix=nginx.ingress.kubernetes.io",
 		"--ingress-class=nginx",
-		"--configmap=" + n.namespace + "/" + configMap.Name,
+		"--configmap=" + metav1.NamespaceSystem + "/" + configMap.Name,
 	}
 
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {

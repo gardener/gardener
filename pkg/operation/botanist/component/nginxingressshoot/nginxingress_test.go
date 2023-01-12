@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nginxingress
+package nginxingressshoot
 
 import (
 	"context"
@@ -79,7 +79,7 @@ metadata:
     component: controller
     release: addons
   name: addons-nginx-ingress-controller
-  namespace: ` + namespace + `
+  namespace: kube-system
 `
 
 		ingressClassYAML = `apiVersion: networking.k8s.io/v1
@@ -107,7 +107,7 @@ metadata:
     app: nginx-ingress
     release: addons
   name: addons-nginx-ingress
-  namespace: ` + namespace + `
+  namespace: kube-system
 `
 
 		serviceBackendYAML = `apiVersion: v1
@@ -119,7 +119,7 @@ metadata:
     component: nginx-ingress-k8s-backend
     release: addons
   name: addons-nginx-ingress-nginx-ingress-k8s-backend
-  namespace: ` + namespace + `
+  namespace: kube-system
 spec:
   ports:
   - port: 80
@@ -225,7 +225,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: addons-nginx-ingress
-  namespace: ` + namespace + `
+  namespace: kube-system
 `
 
 		serviceControllerYAML = `apiVersion: v1
@@ -239,7 +239,7 @@ metadata:
     component: controller
     release: addons
   name: addons-nginx-ingress-controller
-  namespace: ` + namespace + `
+  namespace: kube-system
 spec:
   ports:
   - name: http
@@ -270,7 +270,7 @@ metadata:
     origin: gardener
     release: addons
   name: addons-nginx-ingress-nginx-ingress-k8s-backend
-  namespace: ` + namespace + `
+  namespace: kube-system
 spec:
   replicas: 1
   revisionHistoryLimit: 1
@@ -336,7 +336,7 @@ metadata:
     origin: gardener
     release: addons
   name: addons-nginx-ingress-controller
-  namespace: ` + namespace + `
+  namespace: kube-system
 spec:
   replicas: 1
   revisionHistoryLimit: 1
@@ -361,14 +361,14 @@ spec:
       containers:
       - args:
         - /nginx-ingress-controller
-        - --default-backend-service=` + namespace + `/addons-nginx-ingress-nginx-ingress-k8s-backend
+        - --default-backend-service=kube-system/addons-nginx-ingress-nginx-ingress-k8s-backend
         - --enable-ssl-passthrough=true
-        - --publish-service=` + namespace + `/addons-nginx-ingress-controller
+        - --publish-service=kube-system/addons-nginx-ingress-controller
         - --election-id=ingress-controller-seed-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --ingress-class=nginx
-        - --configmap=` + namespace + `/addons-nginx-ingress-controller`
+        - --configmap=kube-system/addons-nginx-ingress-controller`
 
 			if k8sVersionGreaterEqual122 {
 				out += `
@@ -461,7 +461,7 @@ metadata:
     app: nginx-ingress
     release: addons
   name: addons-nginx-ingress
-  namespace: ` + namespace + `
+  namespace: kube-system
 rules:
 - apiGroups:
   - ""
@@ -507,7 +507,7 @@ metadata:
     app: nginx-ingress
     release: addons
   name: addons-nginx-ingress
-  namespace: ` + namespace + `
+  namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -515,7 +515,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: addons-nginx-ingress
-  namespace: ` + namespace + `
+  namespace: kube-system
 `
 
 		roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
@@ -525,7 +525,7 @@ metadata:
     resources.gardener.cloud/delete-on-invalid-update: "true"
   creationTimestamp: null
   name: gardener.cloud:psp:addons-nginx-ingress
-  namespace: ` + namespace + `
+  namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -533,7 +533,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: addons-nginx-ingress
-  namespace: ` + namespace + `
+  namespace: kube-system
 `
 
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
@@ -541,7 +541,7 @@ kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
   name: addons-nginx-ingress-controller
-  namespace: ` + namespace + `
+  namespace: kube-system
 spec:
   resourcePolicy:
     containerPolicies:
@@ -610,15 +610,15 @@ status: {}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 
-			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
-			Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
-			Expect(string(managedResourceSecret.Data["role__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["role__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
 		})
 
 		Context("Kubernetes version >= 1.22", func() {
@@ -630,7 +630,7 @@ status: {}
 				Expect(managedResourceSecret.Data).To(HaveLen(11))
 
 				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
 			})
 		})
 
@@ -642,7 +642,7 @@ status: {}
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(10))
 
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
 			})
 		})
 
@@ -652,7 +652,7 @@ status: {}
 			})
 
 			It("should successfully deploy VPA resource", func() {
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
 			})
 		})
 
@@ -662,7 +662,7 @@ status: {}
 			})
 
 			It("should successfully deploy PSP RoleBinding resource", func() {
-				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
+				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
 			})
 		})
 	})

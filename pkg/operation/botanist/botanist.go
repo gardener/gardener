@@ -269,3 +269,10 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 
 	return nil
 }
+
+// outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver
+// with dot "." suffix. It'll prevent extra requests to the DNS in case the record is not
+// available.
+func (b *Botanist) outOfClusterAPIServerFQDN() string {
+	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
+}

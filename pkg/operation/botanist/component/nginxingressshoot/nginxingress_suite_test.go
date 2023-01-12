@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nginxingress
+package nginxingressshoot
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNginxIngressAddon(t *testing.T) {
+func TestNginxIngressAddonShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component NginxIngress Addon Suite")
+	RunSpecs(t, "Botanist Component Nginx Ingress Addon Suite")
 }
