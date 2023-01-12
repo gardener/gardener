@@ -135,11 +135,6 @@ var _ = Describe("Namespaces", func() {
 						Type:  seedProviderType,
 						Zones: seedZones,
 					},
-					Settings: &gardencorev1beta1.SeedSettings{
-						ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-							Enabled: true,
-						},
-					},
 				},
 			}
 			botanist.Seed.SetInfo(defaultSeedInfo)

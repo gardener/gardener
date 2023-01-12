@@ -143,15 +143,6 @@ var _ = Describe("KubeAPIServer", func() {
 			},
 		}
 
-		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
-			Spec: gardencorev1beta1.SeedSpec{
-				Settings: &gardencorev1beta1.SeedSettings{
-					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-						Enabled: true,
-					},
-				},
-			},
-		})
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
@@ -1472,7 +1463,7 @@ usernames: ["admin"]
 					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 				},
 
-				Entry("seed enables DNS, shoot has external domain",
+				Entry("shoot has external domain",
 					nil,
 					kubeapiserver.ServerCertificateConfig{
 						ExtraIPAddresses: []net.IP{apiServerNetwork},
@@ -1484,7 +1475,7 @@ usernames: ["admin"]
 						},
 					},
 				),
-				Entry("seed enables DNS, shoot has no external domain",
+				Entry("shoot has no external domain",
 					func() {
 						botanist.Shoot.DisableDNS = true
 						botanist.Shoot.ExternalClusterDomain = nil
@@ -1494,40 +1485,6 @@ usernames: ["admin"]
 						ExtraDNSNames: []string{
 							"api." + internalClusterDomain,
 							seedNamespace,
-						},
-					},
-				),
-				Entry("seed disables DNS, api server address is IP",
-					func() {
-						seedCopy := botanist.Seed.GetInfo().DeepCopy()
-						seedCopy.Spec.Settings.ShootDNS.Enabled = false
-						botanist.Seed.SetInfo(seedCopy)
-					},
-					kubeapiserver.ServerCertificateConfig{
-						ExtraIPAddresses: []net.IP{apiServerNetwork, net.ParseIP(apiServerAddress)},
-						ExtraDNSNames: []string{
-							"api." + internalClusterDomain,
-							seedNamespace,
-							externalClusterDomain,
-							"api." + externalClusterDomain,
-						},
-					},
-				),
-				Entry("seed disables DNS, api server address is hostname",
-					func() {
-						seedCopy := botanist.Seed.GetInfo().DeepCopy()
-						seedCopy.Spec.Settings.ShootDNS.Enabled = false
-						botanist.Seed.SetInfo(seedCopy)
-						botanist.APIServerAddress = "some-hostname.com"
-					},
-					kubeapiserver.ServerCertificateConfig{
-						ExtraIPAddresses: []net.IP{apiServerNetwork},
-						ExtraDNSNames: []string{
-							"api." + internalClusterDomain,
-							seedNamespace,
-							"some-hostname.com",
-							externalClusterDomain,
-							"api." + externalClusterDomain,
 						},
 					},
 				),

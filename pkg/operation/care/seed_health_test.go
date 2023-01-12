@@ -96,9 +96,6 @@ var _ = Describe("Seed health", func() {
 					},
 				},
 				Settings: &gardencorev1beta1.SeedSettings{
-					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-						Enabled: true,
-					},
 					DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{
 						Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{
 							Enabled: true,

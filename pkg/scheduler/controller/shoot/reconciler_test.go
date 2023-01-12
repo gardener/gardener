@@ -75,9 +75,6 @@ var _ = Describe("Scheduler_Control", func() {
 					Scheduling: &gardencorev1beta1.SeedSettingScheduling{
 						Visible: true,
 					},
-					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-						Enabled: true,
-					},
 				},
 			},
 			Status: gardencorev1beta1.SeedStatus{
