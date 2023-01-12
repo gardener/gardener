@@ -206,7 +206,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 								"./manager",
 								"--logtostderr=true",
 								"--enable-detailed-metrics=true",
-								fmt.Sprintf("--metrics-addr=:%d", portMetrics),
+								fmt.Sprintf("--metrics-bind-address=:%d", portMetrics),
 								"--v=2",
 							},
 							Resources: corev1.ResourceRequirements{
