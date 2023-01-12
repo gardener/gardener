@@ -413,19 +413,23 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networking core.Networking) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	bitLen := int32(32)
+	totalBitLen := int32(32) // entire IPv4 bit length
 	defaultNodeCIDRMaskSize := 24
+
 	if core.IsIPv6SingleStack(networking.IPFamilies) {
-		bitLen = 128
+		totalBitLen = 128 // entire IPv6 bit length
 		defaultNodeCIDRMaskSize = 64
 	}
-	bitLen -= nodeCIDRMaskSize
 
-	// Calculate how many addresses a single node podCIDR contains.
-	// This will overflow uint64 if nodeCIDRMaskSize <= 64 (default in IPv6), so use big.Int
+	// Each Node gets assigned a subnet of the entire pod network with a mask size of nodeCIDRMaskSize,
+	// calculate bit length of a single podCIDR subnet (Node.status.podCIDR).
+	subnetBitLen := totalBitLen - nodeCIDRMaskSize
+
+	// Calculate how many addresses a single podCIDR subnet contains.
+	// This will overflow uint64 if nodeCIDRMaskSize <= 64 (subnetBitLen >= 64, default in IPv6), so use big.Int
 	ipAdressesAvailable := &big.Int{}
-	ipAdressesAvailable.Exp(big.NewInt(2), big.NewInt(int64(bitLen)), nil)
-	// first and last ips are reserved
+	ipAdressesAvailable.Exp(big.NewInt(2), big.NewInt(int64(subnetBitLen)), nil)
+	// first and last ips are reserved, subtract 2
 	ipAdressesAvailable.Sub(ipAdressesAvailable, big.NewInt(2))
 
 	if ipAdressesAvailable.Cmp(big.NewInt(int64(maxPod))) < 0 {
