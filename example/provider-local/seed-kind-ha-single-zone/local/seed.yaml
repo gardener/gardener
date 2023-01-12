@@ -41,7 +41,5 @@ spec:
       enabled: false
     scheduling:
       visible: true
-    shootDNS:
-      enabled: true
     verticalPodAutoscaler:
       enabled: true

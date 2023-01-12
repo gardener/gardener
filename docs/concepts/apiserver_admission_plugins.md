@@ -90,7 +90,6 @@ However, it also has some special behaviours for certain resources:
 
 * `CloudProfile`s: It rejects removing Kubernetes or machine image versions if there is at least one `Shoot` that refers to them.
 * `Project`s: It sets the `.spec.createdBy` field for newly created `Project` resources, and defaults the `.spec.owner` field in case it is empty (to the same value of `.spec.createdBy`).
-* `Seed`s: It rejects changing the `.spec.settings.shootDNS.enabled` value if there is at least one `Shoot` that refers to this seed.
 * `Shoot`s: It sets the `gardener.cloud/created-by=<username>` annotation for newly created `Shoot` resources.
 
 ## `SeedValidator`
@@ -105,8 +104,8 @@ Rejects the deletion if `Shoot`(s) reference the seed cluster.
 _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
-It tries to assign a default domain to the `Shoot` if it gets scheduled to a seed that enables DNS for shoots (`.spec.settings.shootDNS.enabled=true`).
-It also validates that the DNS configuration (`.spec.dns`) is not set if the seed disables DNS for shoots.
+It tries to assign a default domain to the `Shoot`.
+It also validates the DNS configuration (`.spec.dns`) for shoots.
 
 ## `ShootNodeLocalDNSEnabledByDefault`
 
