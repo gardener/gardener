@@ -272,27 +272,16 @@ func ReadGardenSecrets(
 		}
 	}
 
-	// Check if an internal domain secret is required
-	seedList := &gardencorev1beta1.SeedList{}
-	if err := c.List(ctx, seedList); err != nil {
-		return nil, err
-	}
-	for _, seed := range seedList.Items {
-		if !seed.Spec.Settings.ShootDNS.Enabled {
-			continue
-		}
-
-		// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
-		// of the LB (ip or hostname) can change we cannot directly write it into the kubeconfig of the components
-		// which talk from outside (kube-proxy, kubelet etc.) (otherwise those kubeconfigs would be broken once ip/hostname
-		// of LB changed; and we don't have means to exchange kubeconfigs currently).
-		// Therefore, to have a stable endpoint, we create a DNS record pointing to the ip/hostname of the LB. This DNS record
-		// is used in all kubeconfigs. With that we have a robust endpoint stable against underlying ip/hostname changes.
-		// And there can only be one of this internal domain secret because otherwise the gardener would not know which
-		// domain it should use.
-		if enforceInternalDomainSecret && numberOfInternalDomainSecrets == 0 {
-			return nil, fmt.Errorf("need an internal domain secret but found none")
-		}
+	// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
+	// of the LB (ip or hostname) can change we cannot directly write it into the kubeconfig of the components
+	// which talk from outside (kube-proxy, kubelet etc.) (otherwise those kubeconfigs would be broken once ip/hostname
+	// of LB changed; and we don't have means to exchange kubeconfigs currently).
+	// Therefore, to have a stable endpoint, we create a DNS record pointing to the ip/hostname of the LB. This DNS record
+	// is used in all kubeconfigs. With that we have a robust endpoint stable against underlying ip/hostname changes.
+	// And there can only be one of this internal domain secret because otherwise the gardener would not know which
+	// domain it should use.
+	if enforceInternalDomainSecret && numberOfInternalDomainSecrets == 0 {
+		return nil, fmt.Errorf("need an internal domain secret but found none")
 	}
 
 	// The VPN bridge from a Shoot's control plane running in the Seed cluster to the worker nodes of the Shoots is based

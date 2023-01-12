@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -129,12 +128,6 @@ func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
 	return b
 }
 
-// WithDisableDNS sets the disableDNS attribute at the Builder.
-func (b *Builder) WithDisableDNS(disableDNS bool) *Builder {
-	b.disableDNS = disableDNS
-	return b
-}
-
 // WithProjectName sets the projectName attribute at the Builder.
 func (b *Builder) WithProjectName(projectName string) *Builder {
 	b.projectName = projectName
@@ -230,7 +223,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.Networks = networks
 
-	shoot.NodeLocalDNSEnabled = helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
+	shoot.NodeLocalDNSEnabled = v1beta1helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
 	shoot.Purpose = v1beta1helper.GetPurpose(shootObject)
 
 	shoot.PSPDisabled = v1beta1helper.IsPSPDisabled(shoot.GetInfo())
@@ -612,24 +605,22 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		}
 	}
 
-	if seed.Spec.Settings.ShootDNS.Enabled {
-		if shoot.Spec.DNS != nil {
-			for _, provider := range shoot.Spec.DNS.Providers {
-				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
-					if provider.Primary != nil && *provider.Primary {
-						requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, *provider.Type))
-					}
+	if shoot.Spec.DNS != nil {
+		for _, provider := range shoot.Spec.DNS.Providers {
+			if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
+				if provider.Primary != nil && *provider.Primary {
+					requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, *provider.Type))
 				}
 			}
 		}
+	}
 
-		if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
-		}
+	if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
+		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
+	}
 
-		if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
-		}
+	if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
+		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
 	}
 
 	for _, controllerRegistration := range controllerRegistrationList.Items {

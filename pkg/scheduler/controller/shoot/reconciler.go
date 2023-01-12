@@ -266,11 +266,6 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1be
 			continue
 		}
 
-		if ignoreSeedDueToDNSConfiguration(&seed, shoot) {
-			candidateErrors[seed.Name] = fmt.Errorf("seed does not support DNS")
-			continue
-		}
-
 		if !v1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
 			candidateErrors[seed.Name] = fmt.Errorf("shoot does not tolerate the seed's taints")
 			continue
@@ -401,17 +396,6 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 	}
 
 	return len(errorMessages) == 0, fmt.Errorf("invalid networks: %s", errorMessages)
-}
-
-// ignore seed if it disables DNS and shoot has DNS but not unmanaged
-func ignoreSeedDueToDNSConfiguration(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) bool {
-	if seed.Spec.Settings.ShootDNS.Enabled {
-		return false
-	}
-	if shoot.Spec.DNS == nil {
-		return false
-	}
-	return !v1beta1helper.ShootUsesUnmanagedDNS(shoot)
 }
 
 func errorMapToString(errs map[string]error) string {
