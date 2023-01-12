@@ -10,7 +10,6 @@ rules:
 - selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis
-  - github.com/gardener/gardener/pkg/features
   # imports brought in by defaulting, helpers and validation
   - github.com/gardener/gardener/pkg/utils/errors
   - github.com/gardener/gardener/pkg/utils/timewindow

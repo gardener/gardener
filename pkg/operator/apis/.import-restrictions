@@ -11,7 +11,6 @@ rules:
 - selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis/core
-  - github.com/gardener/gardener/pkg/features
   - github.com/gardener/gardener/pkg/gardenlet/apis
   - github.com/gardener/gardener/pkg/logger
   - github.com/gardener/gardener/pkg/operator/apis

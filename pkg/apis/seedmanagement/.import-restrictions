@@ -8,7 +8,6 @@ rules:
 - selectorRegexp: github[.]com/gardener/gardener/pkg
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis
-  - github.com/gardener/gardener/pkg/features
   - github.com/gardener/gardener/pkg/gardenlet/apis/config
   - github.com/gardener/gardener/pkg/utils
 - selectorRegexp: k8s[.]io/component-base
