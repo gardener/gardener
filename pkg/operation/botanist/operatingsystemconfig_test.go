@@ -122,19 +122,6 @@ var _ = Describe("operatingsystemconfig", func() {
 	})
 
 	Describe("#DeployOperatingSystemConfig", func() {
-		Context("deploy (DNS disabled)", func() {
-			It("should deploy successfully (DisableDNS=true)", func() {
-				botanist.Shoot.DisableDNS = true
-
-				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://%s", apiServerAddress))
-				operatingSystemConfig.EXPECT().SetCABundle(nil)
-				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
-
-				operatingSystemConfig.EXPECT().Deploy(ctx)
-				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
-			})
-		})
-
 		Context("deploy", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))

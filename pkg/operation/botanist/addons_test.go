@@ -155,15 +155,6 @@ var _ = Describe("addons", func() {
 	})
 
 	Describe("#SetNginxIngressAddress", func() {
-		It("does nothing when DNS is disabled", func() {
-			b.Shoot.DisableDNS = true
-
-			ingressDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA).Times(0)
-			ingressDNSRecord.EXPECT().SetValues([]string{address}).Times(0)
-
-			b.SetNginxIngressAddress(address, client)
-		})
-
 		It("does nothing when nginx is disabled", func() {
 			b.Shoot.GetInfo().Spec.Addons.NginxIngress.Enabled = false
 
@@ -317,7 +308,7 @@ var _ = Describe("addons", func() {
 	})
 
 	Describe("#DeployOrDestroyIngressDNSRecord", func() {
-		Context("deploy (DNS enabled)", func() {
+		Context("deploy", func() {
 			It("should call Deploy and Wait and succeed if they succeeded", func() {
 				ingressDNSRecord.EXPECT().Deploy(ctx)
 				ingressDNSRecord.EXPECT().Wait(ctx)
@@ -330,7 +321,7 @@ var _ = Describe("addons", func() {
 			})
 		})
 
-		Context("restore (DNS enabled and restore operation)", func() {
+		Context("restore", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
 			BeforeEach(func() {
@@ -354,9 +345,13 @@ var _ = Describe("addons", func() {
 			})
 		})
 
-		Context("destroy (DNS disabled)", func() {
+		Context("destroy (Addon disabled)", func() {
 			BeforeEach(func() {
-				b.Shoot.DisableDNS = true
+				b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Addons: nil,
+					},
+				})
 			})
 
 			It("should call Destroy and WaitCleanup and succeed if they succeeded", func() {

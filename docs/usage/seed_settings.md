@@ -52,16 +52,7 @@ Shoots can still use the invisible seed but only by explicitly specifying the na
 Seed clusters can be marked visible/invisible via the `.spec.settings.scheduling.visible` field.
 It defaults to `true`.
 
-## Shoot DNS
-
-Generally, the Gardenlet creates a few DNS records during the creation/reconciliation of a shoot cluster (see [here](configuration.md)).
-However, some infrastructures don't need/want this behaviour.
-Instead, they want to directly use the IP addresses/hostnames of load balancers.
-Another use-case is a local development setup where DNS is not needed for simplicity reasons.
-
-By setting the `.spec.settings.shootDNS.enabled` field this behavior can be controlled.
-
-ℹ️ In previous Gardener versions (< 1.5) these settings were controlled via taint keys (`seed.gardener.cloud/{disable-capacity-reservation,disable-dns,invisible}`).
+ℹ️ In previous Gardener versions (< 1.5) these settings were controlled via taint keys (`seed.gardener.cloud/{disable-capacity-reservation,invisible}`).
 The taint keys are no longer supported and removed in version 1.12.
 The rationale behind it is the implementation of tolerations similar to Kubernetes tolerations.
 More information about it can be found in [#2193](https://github.com/gardener/gardener/issues/2193).

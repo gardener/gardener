@@ -49,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
 func TestShootCare(t *testing.T) {
@@ -153,7 +154,6 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			DefaultSelector: cache.ObjectSelector{
 				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
@@ -162,6 +162,9 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
+
+	// We create the seed namespace in the garden and delete it after every test, so let's ensure it gets finalized.
+	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
 	By("setting up field indexes")
 	Expect(indexer.AddManagedSeedShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())

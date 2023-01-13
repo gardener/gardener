@@ -521,17 +521,6 @@ var _ = Describe("helper", func() {
 		Entry("scheduling 'visible' is true", &core.SeedSettings{Scheduling: &core.SeedSettingScheduling{Visible: true}}, true),
 	)
 
-	DescribeTable("#SeedSettingShootDNSEnabled",
-		func(settings *core.SeedSettings, expectation bool) {
-			Expect(SeedSettingShootDNSEnabled(settings)).To(Equal(expectation))
-		},
-
-		Entry("setting is nil", nil, true),
-		Entry("shoot dns is nil", &core.SeedSettings{}, true),
-		Entry("shoot dns 'enabled' is false", &core.SeedSettings{ShootDNS: &core.SeedSettingShootDNS{Enabled: false}}, false),
-		Entry("shoot dns 'enabled' is true", &core.SeedSettings{ShootDNS: &core.SeedSettingShootDNS{Enabled: true}}, true),
-	)
-
 	DescribeTable("#SeedSettingOwnerChecksEnabled",
 		func(settings *core.SeedSettings, expected bool) {
 			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))

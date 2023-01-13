@@ -28,17 +28,20 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Shoot Care controller tests", func() {
 	var (
-		project       *gardencorev1beta1.Project
-		seed          *gardencorev1beta1.Seed
-		secret        *corev1.Secret
-		secretBinding *gardencorev1beta1.SecretBinding
-		shoot         *gardencorev1beta1.Shoot
-		cluster       *extensionsv1alpha1.Cluster
+		project              *gardencorev1beta1.Project
+		seed                 *gardencorev1beta1.Seed
+		seedNamespace        *corev1.Namespace
+		secret               *corev1.Secret
+		internalDomainSecret *corev1.Secret
+		secretBinding        *gardencorev1beta1.SecretBinding
+		shoot                *gardencorev1beta1.Shoot
+		cluster              *extensionsv1alpha1.Cluster
 	)
 
 	BeforeEach(func() {
@@ -72,6 +75,27 @@ var _ = Describe("Shoot Care controller tests", func() {
 				},
 			},
 		}
+
+		seedNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   gardenerutils.ComputeGardenNamespace(seed.Name),
+				Labels: map[string]string{testID: testRunID},
+			},
+		}
+
+		internalDomainSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "secret-",
+			Namespace:    seedNamespace.Name,
+			Labels: map[string]string{
+				"gardener.cloud/role": "internal-domain",
+				testID:                testRunID,
+			},
+			Annotations: map[string]string{
+				"dns.gardener.cloud/provider": "test",
+				"dns.gardener.cloud/domain":   "example.com",
+			},
+		}}
+
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret-" + testRunID,
@@ -135,6 +159,23 @@ var _ = Describe("Shoot Care controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
+		// Typically, GCM creates the seed-specific namespace, but it doesn't run in this test, hence we have to do it.
+		By("Create seed-specific namespace")
+		Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+
+		By("Wait until the manager cache observes the namespace")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace)
+		}).Should(Succeed())
+
+		By("Create InternalDomainSecret")
+		Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+
+		By("Wait until the manager cache observes the internal domain secret")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
+		}).Should(Succeed())
+
 		By("Create Shoot")
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", shoot.Name)
@@ -152,6 +193,22 @@ var _ = Describe("Shoot Care controller tests", func() {
 		}).ShouldNot(BeEmpty())
 
 		DeferCleanup(func() {
+			By("Delete seed-specific namespace")
+			Expect(testClient.Delete(ctx, seedNamespace)).To(Succeed())
+
+			By("Ensure Namespace is gone")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace)
+			}).Should(BeNotFoundError())
+
+			By("Delete Secret")
+			Expect(testClient.Delete(ctx, internalDomainSecret)).To(Succeed())
+
+			By("Ensure Secret is gone")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
+			}).Should(BeNotFoundError())
+
 			By("Delete Shoot")
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
 

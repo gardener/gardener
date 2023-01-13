@@ -60,7 +60,6 @@ type Builder struct {
 	projectName      string
 	internalDomain   *garden.Domain
 	defaultDomains   []*garden.Domain
-	disableDNS       bool
 }
 
 // Shoot is an object containing information about a Shoot cluster.
@@ -75,7 +74,6 @@ type Shoot struct {
 	KubernetesVersion *semver.Version
 	GardenerVersion   *semver.Version
 
-	DisableDNS            bool
 	InternalClusterDomain string
 	ExternalClusterDomain *string
 	ExternalDomain        *garden.Domain

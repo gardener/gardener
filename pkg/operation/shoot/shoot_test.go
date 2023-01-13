@@ -316,13 +316,6 @@ var _ = Describe("shoot", func() {
 		})
 
 		Describe("#ComputeOutOfClusterAPIServerAddress", func() {
-			It("should return the apiserver address as DNS is disabled", func() {
-				s := &Shoot{DisableDNS: true}
-				apiServerAddress := "abcd"
-
-				Expect(s.ComputeOutOfClusterAPIServerAddress(apiServerAddress, false)).To(Equal(apiServerAddress))
-			})
-
 			It("should return the internal domain as shoot's external domain is unmanaged", func() {
 				unmanaged := "unmanaged"
 				internalDomain := "foo"
@@ -434,11 +427,6 @@ var _ = Describe("shoot", func() {
 					Provider: gardencorev1beta1.SeedProvider{
 						Type: seedProvider,
 					},
-					Settings: &gardencorev1beta1.SeedSettings{
-						ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-							Enabled: true,
-						},
-					},
 				},
 			}
 			shoot = &gardencorev1beta1.Shoot{
@@ -511,26 +499,6 @@ var _ = Describe("shoot", func() {
 				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
-				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
-			)))
-		})
-
-		It("should compute the correct list of required extensions (seed disables DNS)", func() {
-			seed.Spec.Settings.ShootDNS.Enabled = false
-
-			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
-
-			Expect(result).To(Equal(sets.NewString(
-				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
-				extensions.Id(extensionsv1alpha1.BackupEntryResource, backupProvider),
-				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
-				extensions.Id(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				extensions.Id(extensionsv1alpha1.InfrastructureResource, shootProvider),
-				extensions.Id(extensionsv1alpha1.NetworkResource, networkingType),
-				extensions.Id(extensionsv1alpha1.WorkerResource, shootProvider),
-				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType1),
-				extensions.Id(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
-				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 			)))
 		})

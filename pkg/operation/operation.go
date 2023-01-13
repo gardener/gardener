@@ -175,7 +175,6 @@ func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet
 			WithCloudProfileObjectFromCluster(seedClientSet, shootNamespace).
 			WithShootSecretFrom(gardenClient).
 			WithProjectName(gardenObj.Project.Name).
-			WithDisableDNS(!seedObj.GetInfo().Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
 			Build(ctx, c)

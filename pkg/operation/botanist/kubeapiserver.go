@@ -442,14 +442,6 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 		}
 	)
 
-	if !b.Seed.GetInfo().Spec.Settings.ShootDNS.Enabled {
-		if addr := net.ParseIP(b.APIServerAddress); addr != nil {
-			ipAddresses = append(ipAddresses, addr)
-		} else {
-			dnsNames = append(dnsNames, b.APIServerAddress)
-		}
-	}
-
 	if b.Shoot.ExternalClusterDomain != nil {
 		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
 	}

@@ -282,28 +282,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		}
 		err = r.ensureSeedReferences(ctx, seed)
 
-		if operation == admission.Update {
-			oldSeed, ok := a.GetOldObject().(*core.Seed)
-			if !ok {
-				return apierrors.NewBadRequest("could not convert old resource into Seed object")
-			}
-
-			if oldSeed.Spec.Settings.ShootDNS.Enabled != seed.Spec.Settings.ShootDNS.Enabled {
-				shootList, err2 := r.shootLister.List(labels.Everything())
-				if err2 != nil {
-					return err2
-				}
-
-				for _, shoot := range shootList {
-					if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName != seed.Name {
-						continue
-					}
-
-					err = errors.New("may not change shoot DNS enablement setting when shoots are still referencing to a seed")
-				}
-			}
-		}
-
 	case core.Kind("Shoot"):
 		var (
 			oldShoot, shoot *core.Shoot

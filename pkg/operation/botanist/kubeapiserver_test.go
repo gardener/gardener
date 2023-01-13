@@ -143,15 +143,6 @@ var _ = Describe("KubeAPIServer", func() {
 			},
 		}
 
-		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
-			Spec: gardencorev1beta1.SeedSpec{
-				Settings: &gardencorev1beta1.SeedSettings{
-					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-						Enabled: true,
-					},
-				},
-			},
-		})
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
@@ -1472,7 +1463,7 @@ usernames: ["admin"]
 					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 				},
 
-				Entry("seed enables DNS, shoot has external domain",
+				Entry("shoot has external domain",
 					nil,
 					kubeapiserver.ServerCertificateConfig{
 						ExtraIPAddresses: []net.IP{apiServerNetwork},
@@ -1484,9 +1475,9 @@ usernames: ["admin"]
 						},
 					},
 				),
-				Entry("seed enables DNS, shoot has no external domain",
+				Entry("shoot has no external domain(Uses Unmanaged Provider type)",
 					func() {
-						botanist.Shoot.DisableDNS = true
+						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: pointer.String("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
 					},
 					kubeapiserver.ServerCertificateConfig{
@@ -1494,40 +1485,6 @@ usernames: ["admin"]
 						ExtraDNSNames: []string{
 							"api." + internalClusterDomain,
 							seedNamespace,
-						},
-					},
-				),
-				Entry("seed disables DNS, api server address is IP",
-					func() {
-						seedCopy := botanist.Seed.GetInfo().DeepCopy()
-						seedCopy.Spec.Settings.ShootDNS.Enabled = false
-						botanist.Seed.SetInfo(seedCopy)
-					},
-					kubeapiserver.ServerCertificateConfig{
-						ExtraIPAddresses: []net.IP{apiServerNetwork, net.ParseIP(apiServerAddress)},
-						ExtraDNSNames: []string{
-							"api." + internalClusterDomain,
-							seedNamespace,
-							externalClusterDomain,
-							"api." + externalClusterDomain,
-						},
-					},
-				),
-				Entry("seed disables DNS, api server address is hostname",
-					func() {
-						seedCopy := botanist.Seed.GetInfo().DeepCopy()
-						seedCopy.Spec.Settings.ShootDNS.Enabled = false
-						botanist.Seed.SetInfo(seedCopy)
-						botanist.APIServerAddress = "some-hostname.com"
-					},
-					kubeapiserver.ServerCertificateConfig{
-						ExtraIPAddresses: []net.IP{apiServerNetwork},
-						ExtraDNSNames: []string{
-							"api." + internalClusterDomain,
-							seedNamespace,
-							"some-hostname.com",
-							externalClusterDomain,
-							"api." + externalClusterDomain,
 						},
 					},
 				),
@@ -1727,7 +1684,7 @@ usernames: ["admin"]
 
 				Entry("SNI enabled but no need for internal DNS",
 					func() {
-						botanist.Shoot.DisableDNS = true
+
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
@@ -1736,10 +1693,9 @@ usernames: ["admin"]
 				),
 				Entry("SNI enabled but no need for external DNS",
 					func() {
-						botanist.Shoot.DisableDNS = true
+						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: pointer.String("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
 						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
-						botanist.Shoot.GetInfo().Spec.DNS = nil
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
@@ -1748,7 +1704,6 @@ usernames: ["admin"]
 				),
 				Entry("SNI and both DNS enabled",
 					func() {
-						botanist.Shoot.DisableDNS = false
 						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("some-domain")

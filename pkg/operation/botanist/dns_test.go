@@ -99,39 +99,29 @@ var _ = Describe("dns", func() {
 	})
 
 	Context("NeedsExternalDNS", func() {
-		It("should be false when dns disabled", func() {
-			b.Shoot.DisableDNS = true
-			Expect(b.NeedsExternalDNS()).To(BeFalse())
-		})
-
 		It("should be false when Shoot's DNS is nil", func() {
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = nil
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot DNS's domain is nil", func() {
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: nil}
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalClusterDomain is nil", func() {
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = nil
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalClusterDomain is in nip.io", func() {
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("foo.nip.io")
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalDomain is nil", func() {
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = nil
@@ -140,7 +130,6 @@ var _ = Describe("dns", func() {
 		})
 
 		It("should be false when Shoot ExternalDomain provider is unamanaged", func() {
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "unmanaged"}
@@ -149,7 +138,6 @@ var _ = Describe("dns", func() {
 		})
 
 		It("should be true when Shoot ExternalDomain provider is valid", func() {
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
@@ -159,25 +147,17 @@ var _ = Describe("dns", func() {
 	})
 
 	Context("NeedsInternalDNS", func() {
-		It("should be false when dns disabled", func() {
-			b.Shoot.DisableDNS = true
-			Expect(b.NeedsInternalDNS()).To(BeFalse())
-		})
-
 		It("should be false when the internal domain is nil", func() {
-			b.Shoot.DisableDNS = false
 			b.Garden.InternalDomain = nil
 			Expect(b.NeedsInternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when the internal domain provider is unmanaged", func() {
-			b.Shoot.DisableDNS = false
 			b.Garden.InternalDomain = &garden.Domain{Provider: "unmanaged"}
 			Expect(b.NeedsInternalDNS()).To(BeFalse())
 		})
 
 		It("should be true when the internal domain provider is not unmanaged", func() {
-			b.Shoot.DisableDNS = false
 			b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
 			Expect(b.NeedsInternalDNS()).To(BeTrue())
 		})
@@ -264,15 +244,8 @@ var _ = Describe("dns", func() {
 			ctrl.Finish()
 		})
 
-		It("does nothing when DNS is disabled", func() {
-			b.Shoot.DisableDNS = true
-
-			b.newDNSComponentsTargetingAPIServerAddress()
-		})
-
 		It("sets internal and external DNSRecords", func() {
 			b.Shoot.GetInfo().Status.ClusterIdentity = pointer.String("shoot-cluster-identity")
-			b.Shoot.DisableDNS = false
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.InternalClusterDomain = "bar"
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")

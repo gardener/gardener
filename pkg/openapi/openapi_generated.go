@@ -163,7 +163,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServicesZones":   schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServicesZones(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks":                 schema_pkg_apis_core_v1alpha1_SeedSettingOwnerChecks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                  schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS":                    schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler":       schema_pkg_apis_core_v1alpha1_SeedSettingVerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings":                           schema_pkg_apis_core_v1alpha1_SeedSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSpec":                               schema_pkg_apis_core_v1alpha1_SeedSpec(ref),
@@ -320,7 +319,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones":    schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks":                  schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                   schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS":                     schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler":        schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings":                            schema_pkg_apis_core_v1beta1_SeedSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec":                                schema_pkg_apis_core_v1beta1_SeedSpec(ref),
@@ -6570,28 +6568,6 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref common.ReferenceCal
 	}
 }
 
-func schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingShootDNS controls the shoot DNS settings for the seed.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here. This is useful for environments where DNS is not required.",
-							Default:     false,
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"enabled"},
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1alpha1_SeedSettingVerticalPodAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6633,12 +6609,6 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling"),
 						},
 					},
-					"shootDNS": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ShootDNS controls the shoot DNS settings for the seed. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"),
-						},
-					},
 					"loadBalancerServices": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
@@ -6667,7 +6637,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 
@@ -13902,28 +13872,6 @@ func schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref common.ReferenceCall
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingShootDNS controls the shoot DNS settings for the seed.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here. This is useful for environments where DNS is not required.",
-							Default:     false,
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"enabled"},
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -13965,12 +13913,6 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling"),
 						},
 					},
-					"shootDNS": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ShootDNS controls the shoot DNS settings for the seed. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"),
-						},
-					},
 					"loadBalancerServices": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
@@ -13999,7 +13941,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 

@@ -95,25 +95,11 @@ var _ = Describe("Shoot Care Control", func() {
 			careSyncPeriod time.Duration
 
 			gardenSecrets []corev1.Secret
-			seed          *gardencorev1beta1.Seed
 			req           reconcile.Request
 		)
 
 		BeforeEach(func() {
 			careSyncPeriod = 1 * time.Minute
-
-			seed = &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-				Spec: gardencorev1beta1.SeedSpec{
-					Settings: &gardencorev1beta1.SeedSettings{
-						ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-							Enabled: true,
-						},
-					},
-				},
-			}
 
 			gardenSecrets = []corev1.Secret{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -137,7 +123,6 @@ var _ = Describe("Shoot Care Control", func() {
 
 		JustBeforeEach(func() {
 			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
-			Expect(gardenClient.Create(ctx, seed)).To(Succeed())
 
 			for _, secret := range gardenSecrets {
 				Expect(gardenClient.Create(ctx, secret.DeepCopy())).To(Succeed())

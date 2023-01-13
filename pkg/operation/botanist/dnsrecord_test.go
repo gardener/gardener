@@ -428,7 +428,7 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#DeployOrDestroyExternalDNSRecord", func() {
-		Context("deploy (DNS enabled)", func() {
+		Context("deploy", func() {
 			It("should call Deploy and Wait and succeed if they succeeded", func() {
 				externalDNSRecord.EXPECT().Deploy(ctx)
 				externalDNSRecord.EXPECT().Wait(ctx)
@@ -441,7 +441,7 @@ var _ = Describe("dnsrecord", func() {
 			})
 		})
 
-		Context("restore (DNS enabled and restore operation)", func() {
+		Context("restore", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
 			JustBeforeEach(func() {
@@ -465,9 +465,13 @@ var _ = Describe("dnsrecord", func() {
 			})
 		})
 
-		Context("destroy (DNS disabled)", func() {
+		Context("destroy (Shoot DNS is set to nil)", func() {
 			JustBeforeEach(func() {
-				b.Shoot.DisableDNS = true
+				b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: nil,
+					},
+				})
 			})
 
 			It("should call Destroy and WaitCleanup and succeed if they succeeded", func() {
@@ -484,7 +488,7 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#DeployOrDestroyInternalDNSRecord", func() {
-		Context("deploy (DNS enabled)", func() {
+		Context("deploy", func() {
 			It("should call Deploy and Wait and succeed if they succeeded", func() {
 				internalDNSRecord.EXPECT().Deploy(ctx)
 				internalDNSRecord.EXPECT().Wait(ctx)
@@ -497,7 +501,7 @@ var _ = Describe("dnsrecord", func() {
 			})
 		})
 
-		Context("restore (DNS enabled and restore operation)", func() {
+		Context("restore", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
 			JustBeforeEach(func() {
@@ -521,9 +525,9 @@ var _ = Describe("dnsrecord", func() {
 			})
 		})
 
-		Context("destroy (DNS disabled)", func() {
+		Context("destroy (Garden InternalDomain is set to nil)", func() {
 			JustBeforeEach(func() {
-				b.Shoot.DisableDNS = true
+				b.Garden.InternalDomain = nil
 			})
 
 			It("should call Destroy and WaitCleanup and succeed if they succeeded", func() {

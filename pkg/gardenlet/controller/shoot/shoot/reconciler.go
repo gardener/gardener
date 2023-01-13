@@ -346,7 +346,6 @@ func (r *Reconciler) initializeOperation(
 		WithCloudProfileObject(cloudProfile).
 		WithShootSecretFrom(r.GardenClient).
 		WithProjectName(project.Name).
-		WithDisableDNS(!seed.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
 		Build(ctx, r.GardenClient)
