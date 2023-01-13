@@ -238,14 +238,24 @@ message CARotation {
   // Phase describes the phase of the certificate authority credential rotation.
   optional string phase = 1;
 
-  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
-
   // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
   // completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
+
+  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+  // triggered.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
 }
 
 // CRI contains information about the Container Runtimes.
@@ -2381,14 +2391,24 @@ message ShootETCDEncryptionKeyRotation {
   // Phase describes the phase of the ETCD encryption key credential rotation.
   optional string phase = 1;
 
-  // LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
-
   // LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
   // completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+
+  // LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
+
+  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+  // triggered.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -2466,14 +2486,24 @@ message ShootServiceAccountKeyRotation {
   // Phase describes the phase of the service account key credential rotation.
   optional string phase = 1;
 
-  // LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
-
   // LastCompletionTime is the most recent time when the service account key credential rotation was successfully
   // completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+
+  // LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
+
+  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+  // triggered.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
 }
 
 // ShootSpec is the specification of a Shoot.

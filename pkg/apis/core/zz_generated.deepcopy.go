@@ -451,8 +451,16 @@ func (in *CARotation) DeepCopyInto(out *CARotation) {
 		in, out := &in.LastInitiationTime, &out.LastInitiationTime
 		*out = (*in).DeepCopy()
 	}
+	if in.LastInitiationFinishedTime != nil {
+		in, out := &in.LastInitiationFinishedTime, &out.LastInitiationFinishedTime
+		*out = (*in).DeepCopy()
+	}
 	if in.LastCompletionTime != nil {
 		in, out := &in.LastCompletionTime, &out.LastCompletionTime
+		*out = (*in).DeepCopy()
+	}
+	if in.LastCompletionTriggeredTime != nil {
+		in, out := &in.LastCompletionTriggeredTime, &out.LastCompletionTriggeredTime
 		*out = (*in).DeepCopy()
 	}
 	return
@@ -4177,8 +4185,16 @@ func (in *ShootETCDEncryptionKeyRotation) DeepCopyInto(out *ShootETCDEncryptionK
 		in, out := &in.LastInitiationTime, &out.LastInitiationTime
 		*out = (*in).DeepCopy()
 	}
+	if in.LastInitiationFinishedTime != nil {
+		in, out := &in.LastInitiationFinishedTime, &out.LastInitiationFinishedTime
+		*out = (*in).DeepCopy()
+	}
 	if in.LastCompletionTime != nil {
 		in, out := &in.LastCompletionTime, &out.LastCompletionTime
+		*out = (*in).DeepCopy()
+	}
+	if in.LastCompletionTriggeredTime != nil {
+		in, out := &in.LastCompletionTriggeredTime, &out.LastCompletionTriggeredTime
 		*out = (*in).DeepCopy()
 	}
 	return
@@ -4353,8 +4369,16 @@ func (in *ShootServiceAccountKeyRotation) DeepCopyInto(out *ShootServiceAccountK
 		in, out := &in.LastInitiationTime, &out.LastInitiationTime
 		*out = (*in).DeepCopy()
 	}
+	if in.LastInitiationFinishedTime != nil {
+		in, out := &in.LastInitiationFinishedTime, &out.LastInitiationFinishedTime
+		*out = (*in).DeepCopy()
+	}
 	if in.LastCompletionTime != nil {
 		in, out := &in.LastCompletionTime, &out.LastCompletionTime
+		*out = (*in).DeepCopy()
+	}
+	if in.LastCompletionTriggeredTime != nil {
+		in, out := &in.LastCompletionTriggeredTime, &out.LastCompletionTriggeredTime
 		*out = (*in).DeepCopy()
 	}
 	return

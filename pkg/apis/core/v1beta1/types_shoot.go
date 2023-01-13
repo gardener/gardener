@@ -247,13 +247,21 @@ type ShootCredentialsRotation struct {
 type CARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
 	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
-	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
-	// +optional
-	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// completed.
+	// +optional
+	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
+	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// triggered.
+	// +optional
+	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -290,26 +298,42 @@ type ShootObservabilityRotation struct {
 type ShootServiceAccountKeyRotation struct {
 	// Phase describes the phase of the service account key credential rotation.
 	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
-	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
-	// +optional
-	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
 	// completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// completed.
+	// +optional
+	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
+	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// triggered.
+	// +optional
+	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
 }
 
 // ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
 type ShootETCDEncryptionKeyRotation struct {
 	// Phase describes the phase of the ETCD encryption key credential rotation.
 	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
-	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
-	// +optional
-	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
 	// completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// completed.
+	// +optional
+	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
+	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// triggered.
+	// +optional
+	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
 }
 
 // CredentialsRotationPhase is a string alias.
@@ -334,10 +358,6 @@ type ShootAdvertisedAddress struct {
 	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
 	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Addons relevant types                                                                        //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
@@ -387,10 +407,6 @@ type NginxIngress struct {
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,4,opt,name=externalTrafficPolicy,casttype=k8s.io/api/core/v1.ServiceExternalTrafficPolicyType"`
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// ControlPlane relevant types                                                             //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // ControlPlane holds information about the general settings for the control plane of a shoot.
 type ControlPlane struct {
 	// HighAvailability holds the configuration settings for high availability of the
@@ -398,10 +414,6 @@ type ControlPlane struct {
 	// +optional
 	HighAvailability *HighAvailability `json:"highAvailability,omitempty" protobuf:"bytes,1,name=highAvailability"`
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// DNS relevant types                                                                           //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
@@ -452,10 +464,6 @@ type DNSIncludeExclude struct {
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
 const DefaultDomain = "cluster.local"
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Extension relevant types                                                                     //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Extension contains type and provider information for Shoot extensions.
 type Extension struct {
 	// Type is the type of the extension resource.
@@ -468,10 +476,6 @@ type Extension struct {
 	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// NamedResourceReference relevant types                                                        //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // NamedResourceReference is a named reference to a resource.
 type NamedResourceReference struct {
 	// Name of the resource reference.
@@ -479,10 +483,6 @@ type NamedResourceReference struct {
 	// ResourceRef is a reference to a resource.
 	ResourceRef autoscalingv1.CrossVersionObjectReference `json:"resourceRef" protobuf:"bytes,2,opt,name=resourceRef"`
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Hibernation relevant types                                                                   //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
@@ -509,10 +509,6 @@ type HibernationSchedule struct {
 	// +optional
 	Location *string `json:"location,omitempty" protobuf:"bytes,3,opt,name=location"`
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Kubernetes relevant types                                                                    //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {
@@ -1174,10 +1170,6 @@ type KubeletConfigReserved struct {
 	PID *resource.Quantity `json:"pid,omitempty" protobuf:"bytes,4,opt,name=pid"`
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Networking relevant types                                                                    //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
 	// Type identifies the type of the networking plugin. This field is immutable.
@@ -1202,10 +1194,6 @@ const (
 	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
 	DefaultServiceNetworkCIDR = "100.64.0.0/13"
 )
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Maintenance relevant types                                                                   //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
 	// MaintenanceTimeWindowDurationMinimum is the minimum duration for a maintenance time window.
@@ -1252,10 +1240,6 @@ type MaintenanceTimeWindow struct {
 	End string `json:"end" protobuf:"bytes,2,opt,name=end"`
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Monitoring relevant types                                                                    //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Monitoring contains information about the monitoring configuration for the shoot.
 type Monitoring struct {
 	// Alerting contains information about the alerting configuration for the shoot cluster.
@@ -1269,10 +1253,6 @@ type Alerting struct {
 	// +optional
 	EmailReceivers []string `json:"emailReceivers,omitempty" protobuf:"bytes,1,rep,name=emailReceivers"`
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Provider relevant types                                                                      //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
@@ -1502,10 +1482,6 @@ var (
 	DefaultWorkerSystemComponentsAllow = true
 )
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// System components relevant types                                                             //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 type SystemComponents struct {
 	// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
@@ -1567,10 +1543,6 @@ type NodeLocalDNS struct {
 	// +optional
 	DisableForwardToUpstreamDNS *bool `json:"disableForwardToUpstreamDNS,omitempty" protobuf:"varint,4,opt,name=disableForwardToUpstreamDNS"`
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Other/miscellaneous constants and types                                                      //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
 	// ShootMaintenanceFailed indicates that a shoot maintenance operation failed.

@@ -114,22 +114,22 @@ var _ = Describe("Warnings", func() {
 						rotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
 					},
 				),
-				Entry("ca completion is due (never completed yet)", ContainElement(ContainSubstring("the certificate authorities rotation was initiated more than")), nil,
+				Entry("ca completion is due (never completed yet)", ContainElement(ContainSubstring("the certificate authorities rotation initiation was finished more than")), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.CertificateAuthorities.LastCompletionTime = nil
+						rotation.CertificateAuthorities.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.CertificateAuthorities.LastCompletionTriggeredTime = nil
 					},
 				),
-				Entry("ca completion is due (current rotation not completed)", ContainElement(ContainSubstring("the certificate authorities rotation was initiated more than")), nil,
+				Entry("ca completion is due (current rotation not completed)", ContainElement(ContainSubstring("the certificate authorities rotation initiation was finished more than")), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.CertificateAuthorities.LastCompletionTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval)}
+						rotation.CertificateAuthorities.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.CertificateAuthorities.LastCompletionTriggeredTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval)}
 					},
 				),
-				Entry("ca completion is not due (current rotation not completed)", Not(ContainElement(ContainSubstring("the certificate authorities rotation was initiated more than"))), nil,
+				Entry("ca completion is not due (current rotation not completed)", Not(ContainElement(ContainSubstring("the certificate authorities rotation initiation was finished more than"))), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.CertificateAuthorities.LastCompletionTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 3)}
+						rotation.CertificateAuthorities.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.CertificateAuthorities.LastCompletionTriggeredTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 3)}
 					},
 				),
 
@@ -148,22 +148,22 @@ var _ = Describe("Warnings", func() {
 						rotation.ETCDEncryptionKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
 					},
 				),
-				Entry("etcdEncryptionKey completion is due (never completed yet)", ContainElement(ContainSubstring("the ETCD encryption key rotation was initiated more than")), nil,
+				Entry("etcdEncryptionKey completion is due (never completed yet)", ContainElement(ContainSubstring("the ETCD encryption key rotation initiation was finished more than")), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.ETCDEncryptionKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.ETCDEncryptionKey.LastCompletionTime = nil
+						rotation.ETCDEncryptionKey.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.ETCDEncryptionKey.LastCompletionTriggeredTime = nil
 					},
 				),
-				Entry("etcdEncryptionKey completion is due (current rotation not completed)", ContainElement(ContainSubstring("the ETCD encryption key rotation was initiated more than")), nil,
+				Entry("etcdEncryptionKey completion is due (current rotation not completed)", ContainElement(ContainSubstring("the ETCD encryption key rotation initiation was finished more than")), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.ETCDEncryptionKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.ETCDEncryptionKey.LastCompletionTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval)}
+						rotation.ETCDEncryptionKey.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.ETCDEncryptionKey.LastCompletionTriggeredTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval)}
 					},
 				),
-				Entry("etcdEncryptionKey completion is not due (current rotation not completed)", Not(ContainElement(ContainSubstring("the ETCD encryption key rotation was initiated more than"))), nil,
+				Entry("etcdEncryptionKey completion is not due (current rotation not completed)", Not(ContainElement(ContainSubstring("the ETCD encryption key rotation initiation was finished more than"))), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.ETCDEncryptionKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.ETCDEncryptionKey.LastCompletionTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 3)}
+						rotation.ETCDEncryptionKey.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.ETCDEncryptionKey.LastCompletionTriggeredTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 3)}
 					},
 				),
 
@@ -237,22 +237,22 @@ var _ = Describe("Warnings", func() {
 						rotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
 					},
 				),
-				Entry("serviceAccountKey completion is due (never completed yet)", ContainElement(ContainSubstring("the ServiceAccount token signing key rotation was initiated more than")), nil,
+				Entry("serviceAccountKey completion is due (never completed yet)", ContainElement(ContainSubstring("the ServiceAccount token signing key rotation initiation was finished more than")), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.ServiceAccountKey.LastCompletionTime = nil
+						rotation.ServiceAccountKey.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.ServiceAccountKey.LastCompletionTriggeredTime = nil
 					},
 				),
-				Entry("serviceAccountKey completion is due (current rotation not completed)", ContainElement(ContainSubstring("the ServiceAccount token signing key rotation was initiated more than")), nil,
+				Entry("serviceAccountKey completion is due (current rotation not completed)", ContainElement(ContainSubstring("the ServiceAccount token signing key rotation initiation was finished more than")), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.ServiceAccountKey.LastCompletionTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval)}
+						rotation.ServiceAccountKey.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.ServiceAccountKey.LastCompletionTriggeredTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval)}
 					},
 				),
-				Entry("serviceAccountKey completion is not due (current rotation not completed)", Not(ContainElement(ContainSubstring("the ServiceAccount token signing key rotation was initiated more than"))), nil,
+				Entry("serviceAccountKey completion is not due (current rotation not completed)", Not(ContainElement(ContainSubstring("the ServiceAccount token signing key rotation initiation was finished more than"))), nil,
 					func(rotation *core.ShootCredentialsRotation) {
-						rotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
-						rotation.ServiceAccountKey.LastCompletionTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 3)}
+						rotation.ServiceAccountKey.LastInitiationFinishedTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
+						rotation.ServiceAccountKey.LastCompletionTriggeredTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 3)}
 					},
 				),
 

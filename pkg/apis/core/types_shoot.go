@@ -198,9 +198,15 @@ type CARotation struct {
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
 	LastInitiationTime *metav1.Time
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// completed.
+	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
 	LastCompletionTime *metav1.Time
+	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// triggered.
+	LastCompletionTriggeredTime *metav1.Time
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -233,9 +239,15 @@ type ShootServiceAccountKeyRotation struct {
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// completed.
+	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
 	// completed.
 	LastCompletionTime *metav1.Time
+	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// triggered.
+	LastCompletionTriggeredTime *metav1.Time
 }
 
 // ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
@@ -244,9 +256,15 @@ type ShootETCDEncryptionKeyRotation struct {
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// completed.
+	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
 	// completed.
 	LastCompletionTime *metav1.Time
+	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// triggered.
+	LastCompletionTriggeredTime *metav1.Time
 }
 
 // CredentialsRotationPhase is a string alias.
@@ -271,10 +289,6 @@ type ShootAdvertisedAddress struct {
 	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
 	URL string
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Addons relevant types                                                                        //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
@@ -318,20 +332,12 @@ type NginxIngress struct {
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// ControlPlane relevant types                                                             //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // ControlPlane holds information about the general settings for the control plane of a shoot.
 type ControlPlane struct {
 	// HighAvailability holds the configuration settings for high availability of the
 	// control plane of a shoot.
 	HighAvailability *HighAvailability
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// DNS relevant types                                                                           //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
@@ -372,10 +378,6 @@ type DNSIncludeExclude struct {
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
 const DefaultDomain = "cluster.local"
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Extension relevant types                                                                     //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Extension contains type and provider information for Shoot extensions.
 type Extension struct {
 	// Type is the type of the extension resource.
@@ -386,10 +388,6 @@ type Extension struct {
 	Disabled *bool
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// NamedResourceReference relevant types                                                        //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // NamedResourceReference is a named reference to a resource.
 type NamedResourceReference struct {
 	// Name of the resource reference.
@@ -397,10 +395,6 @@ type NamedResourceReference struct {
 	// ResourceRef is a reference to a resource.
 	ResourceRef autoscalingv1.CrossVersionObjectReference
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Hibernation relevant types                                                                   //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
@@ -422,10 +416,6 @@ type HibernationSchedule struct {
 	// Location is the time location in which both start and and shall be evaluated.
 	Location *string
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Kubernetes relevant types                                                                    //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {
@@ -917,10 +907,6 @@ type KubeletConfigReserved struct {
 	PID *resource.Quantity
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Networking relevant types                                                                    //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
 	// Type identifies the type of the networking plugin. This field is immutable.
@@ -941,10 +927,6 @@ const (
 	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
 	DefaultServiceNetworkCIDR = "100.64.0.0/13"
 )
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Maintenance relevant types                                                                   //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
 	// MaintenanceTimeWindowDurationMinimum is the minimum duration for a maintenance time window.
@@ -984,10 +966,6 @@ type MaintenanceTimeWindow struct {
 	End string
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Monitoring relevant types                                                                    //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Monitoring contains information about the monitoring configuration for the shoot.
 type Monitoring struct {
 	// Alerting contains information about the alerting configuration for the shoot cluster.
@@ -999,10 +977,6 @@ type Alerting struct {
 	// MonitoringEmailReceivers is a list of recipients for alerts
 	EmailReceivers []string
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Provider relevant types                                                                      //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
@@ -1190,10 +1164,6 @@ type SSHAccess struct {
 	Enabled bool
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// System components relevant types                                                             //
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 type SystemComponents struct {
 	// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
@@ -1248,10 +1218,6 @@ type NodeLocalDNS struct {
 	// +optional
 	DisableForwardToUpstreamDNS *bool `json:"disableForwardToUpstreamDNS,omitempty" protobuf:"varint,4,opt,name=disableForwardToUpstreamDNS"`
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Other/miscellaneous constants and types                                                      //
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
 	// ShootEventImageVersionMaintenance indicates that a maintenance operation regarding the image version has been performed.

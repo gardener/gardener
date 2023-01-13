@@ -539,16 +539,16 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		startRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
-		completeRotationCA(shoot)
-		completeRotationServiceAccountKey(shoot)
-		completeRotationETCDEncryptionKey(shoot)
+		completeRotationCA(shoot, &now)
+		completeRotationServiceAccountKey(shoot, &now)
+		completeRotationETCDEncryptionKey(shoot, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
 		startRotationCA(shoot, &now)
 	case v1beta1constants.OperationRotateCAComplete:
 		mustRemoveOperationAnnotation = true
-		completeRotationCA(shoot)
+		completeRotationCA(shoot, &now)
 
 	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
 		mustRemoveOperationAnnotation = true
@@ -567,14 +567,14 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		startRotationServiceAccountKey(shoot, &now)
 	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
 		mustRemoveOperationAnnotation = true
-		completeRotationServiceAccountKey(shoot)
+		completeRotationServiceAccountKey(shoot, &now)
 
 	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
 		mustRemoveOperationAnnotation = true
 		startRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
-		completeRotationETCDEncryptionKey(shoot)
+		completeRotationETCDEncryptionKey(shoot, &now)
 	}
 
 	if err := r.GardenClient.Status().Update(ctx, shoot); err != nil {
@@ -674,12 +674,15 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	case gardencorev1beta1.RotationPreparing:
 		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
 			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
 		})
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
 		})
 	}
 
@@ -687,12 +690,15 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	case gardencorev1beta1.RotationPreparing:
 		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
 		})
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
 		})
 	}
 
@@ -700,12 +706,15 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	case gardencorev1beta1.RotationPreparing:
 		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
 		})
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
 		})
 	}
 
@@ -872,12 +881,15 @@ func startRotationCA(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
 	v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
 	})
 }
 
-func completeRotationCA(shoot *gardencorev1beta1.Shoot) {
+func completeRotationCA(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
 	v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
 	})
 }
 
@@ -885,12 +897,15 @@ func startRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot, now *metav1.
 	v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
 	})
 }
 
-func completeRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot) {
+func completeRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
 	v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
 	})
 }
 
@@ -898,12 +913,15 @@ func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *metav1.
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
 	})
 }
 
-func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot) {
+func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
 	})
 }
 

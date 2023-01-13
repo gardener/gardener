@@ -157,14 +157,14 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		startRotationCA(garden, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
-		completeRotationCA(garden)
+		completeRotationCA(garden, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
 		startRotationCA(garden, &now)
 	case v1beta1constants.OperationRotateCAComplete:
 		mustRemoveOperationAnnotation = true
-		completeRotationCA(garden)
+		completeRotationCA(garden, &now)
 	}
 
 	if err := r.RuntimeClient.Status().Update(ctx, garden); err != nil {
@@ -189,12 +189,15 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 	case gardencorev1beta1.RotationPreparing:
 		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
 		})
 
 	case gardencorev1beta1.RotationCompleting:
 		helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
 		})
 	}
 
@@ -205,12 +208,15 @@ func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
 	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
 	})
 }
 
-func completeRotationCA(garden *operatorv1alpha1.Garden) {
+func completeRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
 	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
 	})
 }
 
