@@ -46,7 +46,7 @@ const (
 func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
-	By("Verifying old service account key secret")
+	By("Verify old service account key secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -74,7 +74,7 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime).NotTo(BeNil())
 	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.After(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time)).To(BeTrue())
 
-	By("Verifying service account key bundle secret")
+	By("Verify service account key bundle secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -106,7 +106,7 @@ func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 	Expect(serviceAccountKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	Expect(serviceAccountKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 
-	By("Verifying new service account key secret")
+	By("Verify new service account key secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())

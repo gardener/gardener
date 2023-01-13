@@ -148,7 +148,7 @@ var _ = Describe("KubeAPIServer", func() {
 		kubernetesInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, sm, values)
 
-		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())

@@ -790,7 +790,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should keep the old data if an existing secrets indicate keeping it", func() {
-				By("creating existing secret with old key")
+				By("Create existing secret with old key")
 				existingSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "some-existing-secret",
@@ -811,7 +811,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should return an error if multiple existing secrets indicate keeping the old data", func() {
-				By("creating existing secret with old key")
+				By("Create existing secret with old key")
 				for i := 0; i < 2; i++ {
 					existingSecret := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
@@ -869,7 +869,7 @@ resources:
   - secrets
 `
 
-					By("creating existing secret with old encryption configuration")
+					By("Create existing secret with old encryption configuration")
 					existingSecret := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "etcd-encryption-secret",
@@ -913,7 +913,7 @@ resources:
 				})
 
 				It("should keep the existing key if old secret still exists", func() {
-					By("creating existing secret with old key")
+					By("Create existing secret with old key")
 					existingSecret := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "service-account-key",

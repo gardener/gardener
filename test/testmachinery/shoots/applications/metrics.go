@@ -109,7 +109,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 			}),
 		)
 	}, metricsTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("cleanup metrics test deployment")
+		ginkgo.By("Cleanup metrics test deployment")
 		err := f.ShootClient.Client().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
 		framework.ExpectNoError(client.IgnoreNotFound(err))
 	}, cleanupTimeout))

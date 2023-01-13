@@ -79,7 +79,7 @@ var _ = Describe("#Wait", func() {
 		sm = fakesecretsmanager.New(c, testNamespace)
 		log = logr.Discard()
 
-		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
 
 		waiter = &retryfake.Ops{MaxAttempts: 1}

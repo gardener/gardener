@@ -39,7 +39,7 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		By("creating test namespace")
+		By("Create test Namespace")
 		testNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -50,7 +50,7 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting test namespace")
+			By("Delete test Namespace")
 			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
@@ -276,12 +276,12 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 				}))
 			}).Should(Succeed())
 
-			By("Adding fake finalizer to Infrastructure to prolong deletion")
+			By("Add fake finalizer to Infrastructure to prolong deletion")
 			patch = client.MergeFrom(infrastructure.DeepCopy())
 			Expect(controllerutil.AddFinalizer(infrastructure, "foo.com/bar")).To(BeTrue())
 			Expect(testClient.Patch(ctx, infrastructure, patch)).To(Succeed())
 
-			By("Deleting Infrastructure")
+			By("Delete Infrastructure")
 			Expect(testClient.Delete(ctx, infrastructure)).To(Succeed())
 
 			By("Patch status.state in Infrastructure to some new information")
@@ -327,7 +327,7 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 					}))
 				}).Should(Succeed())
 
-				By("Adding operation annotation")
+				By("Add operation annotation")
 				patch = client.MergeFrom(infrastructure.DeepCopy())
 				metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, "gardener.cloud/operation", operationAnnotation)
 				Expect(testClient.Patch(ctx, infrastructure, patch)).To(Succeed())

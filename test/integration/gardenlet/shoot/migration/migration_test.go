@@ -38,7 +38,7 @@ var _ = Describe("Shoot migration controller tests", func() {
 	BeforeEach(func() {
 		fakeClock.SetTime(time.Now().Round(time.Second))
 
-		By("creating source seed")
+		By("Create source seed")
 		sourceSeed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "seed-",
@@ -68,11 +68,11 @@ var _ = Describe("Shoot migration controller tests", func() {
 		log.Info("Created source Seed for migration", "seed", sourceSeed.Name)
 
 		DeferCleanup(func() {
-			By("deleting source seed")
+			By("Delete source seed")
 			Expect(testClient.Delete(ctx, sourceSeed)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating Shoot for migration")
+		By("Create Shoot for migration")
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -111,7 +111,7 @@ var _ = Describe("Shoot migration controller tests", func() {
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 		DeferCleanup(func() {
-			By("deleting Shoot")
+			By("Delete Shoot")
 			Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
 		})
 

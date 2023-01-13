@@ -64,7 +64,7 @@ var _ = Describe("Infrastructure", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 
-		By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this function for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: namespace}})).To(Succeed())
 
 		botanist = &Botanist{

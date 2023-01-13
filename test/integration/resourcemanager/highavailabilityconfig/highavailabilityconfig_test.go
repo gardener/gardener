@@ -702,7 +702,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		var scalingObject client.Object
 
 		JustBeforeEach(func() {
-			By("Creating scaling object")
+			By("Create scaling object")
 			Expect(testClient.Create(ctx, scalingObject)).To(Succeed())
 		})
 

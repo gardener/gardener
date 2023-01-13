@@ -59,7 +59,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{}
 
 	var err error
@@ -68,15 +68,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -87,7 +87,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
@@ -100,17 +100,17 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	By("creating Project")
+	By("Create Project")
 	Expect(testClient.Create(ctx, project)).To(Succeed())
 	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
 
 	DeferCleanup(func() {
-		By("deleting Project")
+		By("Delete Project")
 		Expect(client.IgnoreNotFound(gardener.ConfirmDeletion(ctx, testClient, project))).To(Succeed())
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
-	By("ensuring that garden namespace exists")
+	By("Ensure that garden namespace exists")
 	Expect(testClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).
 		To(Or(Succeed(), BeAlreadyExistsError()))
 })

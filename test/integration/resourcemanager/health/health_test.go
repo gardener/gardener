@@ -47,7 +47,7 @@ var _ = Describe("Health controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		By("creating ManagedResource for test")
+		By("Create ManagedResource for test")
 		Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 		log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
 	})
@@ -62,7 +62,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		JustBeforeEach(func() {
-			By("set ManagedResource to be applied successfully")
+			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
@@ -79,7 +79,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		It("checks ManagedResource again if it is responsible now", func() {
-			By("update ManagedResource to default class")
+			By("Update ManagedResource to default class")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Spec.Class = nil
 			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
@@ -100,7 +100,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		JustBeforeEach(func() {
-			By("set ManagedResource to be applied successfully")
+			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
@@ -117,7 +117,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		It("checks ManagedResource again if it is no longer ignored", func() {
-			By("update ManagedResource and remove ignore annotation")
+			By("Update ManagedResource and remove ignore annotation")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
 			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
@@ -174,7 +174,7 @@ var _ = Describe("Health controller tests", func() {
 
 	Describe("Health Reconciler", func() {
 		JustBeforeEach(func() {
-			By("set ManagedResource to be applied successfully")
+			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
@@ -190,7 +190,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		It("sets ManagedResource to unhealthy as resource is missing (registered in target scheme)", func() {
-			By("add resources to ManagedResource status")
+			By("Add resources to ManagedResource status")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
 				ObjectReference: corev1.ObjectReference{
@@ -211,7 +211,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		It("sets ManagedResource to unhealthy as resource is missing (not registered in target scheme)", func() {
-			By("add resources to ManagedResource status")
+			By("Add resources to ManagedResource status")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
 				ObjectReference: corev1.ObjectReference{
@@ -232,7 +232,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		It("sets ManagedResource to unhealthy as resource's API group does not exist", func() {
-			By("add resources to ManagedResource status")
+			By("Add resources to ManagedResource status")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
 				ObjectReference: corev1.ObjectReference{
@@ -256,16 +256,16 @@ var _ = Describe("Health controller tests", func() {
 			var pod *corev1.Pod
 
 			JustBeforeEach(func() {
-				By("create Pod test resource")
+				By("Create Pod test resource")
 				pod = generatePodTestResource(managedResource.Name)
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 				DeferCleanup(func() {
-					By("delete Pod test resource")
+					By("Delete Pod test resource")
 					Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
 				})
 
-				By("add resources to ManagedResource status")
+				By("Add resources to ManagedResource status")
 				patch := client.MergeFrom(managedResource.DeepCopy())
 				managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
 					ObjectReference: corev1.ObjectReference{
@@ -301,7 +301,7 @@ var _ = Describe("Health controller tests", func() {
 			})
 
 			It("sets ManagedResource to healthy as Pod is running", func() {
-				By("add resources to ManagedResource status")
+				By("Add resources to ManagedResource status")
 				patch := client.MergeFrom(pod.DeepCopy())
 				pod.Status.Phase = corev1.PodRunning
 				Expect(testClient.Status().Patch(ctx, pod, patch)).To(Succeed())
@@ -318,14 +318,14 @@ var _ = Describe("Health controller tests", func() {
 
 	Describe("Progressing Reconciler", func() {
 		JustBeforeEach(func() {
-			By("set ManagedResource to be applied successfully")
+			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
 		It("sets Progressing to false as it does not contain any resources of interest", func() {
-			By("add resources to ManagedResource status")
+			By("Add resources to ManagedResource status")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
 				ObjectReference: corev1.ObjectReference{
@@ -346,7 +346,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		It("ignores missing resources", func() {
-			By("add resources to ManagedResource status")
+			By("Add resources to ManagedResource status")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
 				ObjectReference: corev1.ObjectReference{
@@ -374,7 +374,7 @@ var _ = Describe("Health controller tests", func() {
 			)
 
 			JustBeforeEach(func() {
-				By("create test resources")
+				By("Create test resources")
 				deployment = generateDeploymentTestResource(managedResource.Name)
 				deploymentStatus := deployment.Status.DeepCopy()
 				Expect(testClient.Create(ctx, deployment)).To(Succeed())
@@ -394,13 +394,13 @@ var _ = Describe("Health controller tests", func() {
 				Expect(testClient.Status().Update(ctx, daemonSet)).To(Succeed())
 
 				DeferCleanup(func() {
-					By("delete test resources")
+					By("Delete test resources")
 					Expect(testClient.Delete(ctx, deployment)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, statefulSet)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, daemonSet)).To(Or(Succeed(), BeNotFoundError()))
 				})
 
-				By("add resources to ManagedResource status")
+				By("Add resources to ManagedResource status")
 				patch := client.MergeFrom(managedResource.DeepCopy())
 				managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{
 					{

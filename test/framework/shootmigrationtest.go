@@ -192,12 +192,12 @@ func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
 		return err
 	}
 
-	ginkgo.By("Comparing all Machines, Nodes and persisted Secrets after the migration...")
+	ginkgo.By("Compare all Machines, Nodes and persisted Secrets after the migration")
 	if err := t.compareElementsAfterMigration(); err != nil {
 		return err
 	}
 
-	ginkgo.By("Checking for orphaned resources...")
+	ginkgo.By("Check for orphaned resources")
 	if err := t.checkForOrphanedNonNamespacedResources(ctx); err != nil {
 		return err
 	}

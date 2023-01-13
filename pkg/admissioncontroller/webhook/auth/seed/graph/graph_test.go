@@ -1107,7 +1107,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			lock         sync.Mutex
 		)
 
-		By("creating objects")
+		By("Create objects")
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -1541,7 +1541,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
 		expectPaths(graph, edges, paths)
 
-		By("deleting all objects")
+		By("Delete all objects")
 		paths = make(map[VertexType][]pathExpectation)
 		wg.Add(1)
 		go func() {

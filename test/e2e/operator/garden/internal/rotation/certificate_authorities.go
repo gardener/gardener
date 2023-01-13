@@ -56,7 +56,7 @@ const (
 
 // Before is called before the rotation is started.
 func (v *CAVerifier) Before(ctx context.Context) {
-	By("Verifying CA secrets of gardener-operator before rotation")
+	By("Verify CA secrets of gardener-operator before rotation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), managedByGardenerOperatorSecretsManager)).To(Succeed())
@@ -85,7 +85,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	Expect(v.Garden.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime).NotTo(BeNil())
 	Expect(v.Garden.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.After(v.Garden.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time)).To(BeTrue())
 
-	By("Verifying CA secrets of gardener-operator after preparation")
+	By("Verify CA secrets of gardener-operator after preparation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), managedByGardenerOperatorSecretsManager)).To(Succeed())
@@ -117,7 +117,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	Expect(caRotation.LastInitiationFinishedTime).To(BeNil())
 	Expect(caRotation.LastCompletionTriggeredTime).To(BeNil())
 
-	By("Verifying CA secrets of gardener-operator after completion")
+	By("Verify CA secrets of gardener-operator after completion")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), managedByGardenerOperatorSecretsManager)).To(Succeed())

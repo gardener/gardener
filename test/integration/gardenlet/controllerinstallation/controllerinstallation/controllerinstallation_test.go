@@ -266,7 +266,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)
 			}).Should(BeNotFoundError())
 
-			By("Verifying controller artefacts were removed")
+			By("Verify controller artefacts were removed")
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(BeNotFoundError())
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())

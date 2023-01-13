@@ -62,7 +62,7 @@ func init() {
 func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
-	By("Verifying old etcd encryption key secret")
+	By("Verify old etcd encryption key secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -72,7 +72,7 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 		v.secretsBefore = grouped
 	}).Should(Succeed())
 
-	By("Verifying old etcd encryption config secret")
+	By("Verify old etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
@@ -117,7 +117,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime).NotTo(BeNil())
 	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime.After(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time)).To(BeTrue())
 
-	By("Verifying etcd encryption key secrets")
+	By("Verify etcd encryption key secrets")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -128,7 +128,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 		v.secretsPrepared = grouped
 	}).Should(Succeed())
 
-	By("Verifying combined etcd encryption config secret")
+	By("Verify combined etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
@@ -178,7 +178,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 
-	By("Verifying new etcd encryption key secret")
+	By("Verify new etcd encryption key secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -188,7 +188,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 		g.Expect(grouped[etcdEncryptionKey]).To(ContainElement(v.secretsPrepared[etcdEncryptionKey][1]), "new etcd encryption key secret should be kept")
 	}).Should(Succeed())
 
-	By("Verifying new etcd encryption config secret")
+	By("Verify new etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())

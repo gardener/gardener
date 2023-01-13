@@ -82,7 +82,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		podExecutor := framework.NewPodExecutor(f.ShootClient)
 
 		// check if all webservers can be reached from all nodes
-		ginkgo.By("test connectivity to webservers")
+		ginkgo.By("Check connectivity to webservers")
 		var allErrs error
 		for _, from := range pods.Items {
 			for _, to := range pods.Items {
@@ -102,7 +102,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		}
 		framework.ExpectNoError(allErrs)
 	}, networkTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("cleanup network test daemonset")
+		ginkgo.By("Cleanup network test daemonset")
 		err := f.ShootClient.Client().Delete(ctx, &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {

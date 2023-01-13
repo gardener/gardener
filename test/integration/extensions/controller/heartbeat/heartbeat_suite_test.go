@@ -62,7 +62,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &envtest.Environment{}
 
 	var err error
@@ -71,16 +71,16 @@ var _ = BeforeSuite(func() {
 	Expect(restConf).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		err = testEnv.Stop()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConf, client.Options{Scheme: kubernetes.SeedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -91,11 +91,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setting up manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConf, manager.Options{
 		Scheme:             kubernetes.SeedScheme,
 		MetricsBindAddress: "0",
@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
+	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect(heartbeat.Add(mgr, heartbeat.AddArgs{
 		ControllerOptions:    controller.Options{},
@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 		Clock:                fakeClock,
 	})).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -122,7 +122,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

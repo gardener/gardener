@@ -265,7 +265,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
 
 	}, getLogsFromLokiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("Cleaning up logger app resources")
+		ginkgo.By("Cleanup logger app resources")
 		for i := 0; i < numberOfSimulatedClusters; i++ {
 			shootNamespace := getShootNamesapce(i)
 			loggerName := operatorLoggerName
@@ -290,7 +290,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), shootNamespace))
 		}
 
-		ginkgo.By("Cleaning up garden namespace")
+		ginkgo.By("Cleanup garden namespace")
 		objectsToDelete := []client.Object{
 			fluentBit,
 			fluentBitConfMap,

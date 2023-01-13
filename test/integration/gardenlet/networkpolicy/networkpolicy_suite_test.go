@@ -76,7 +76,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
@@ -90,18 +90,18 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating testClient")
+	By("Create testClient")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("creating seed")
+	By("Create seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "seed-",
@@ -130,11 +130,11 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
 	DeferCleanup(func() {
-		By("deleting seed")
+		By("Delete seed")
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating garden namespace for test")
+	By("Create garden namespace for test")
 	gardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
@@ -146,11 +146,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating istio-system namespace for test")
+	By("Create istio-system namespace for test")
 	istioSystemNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "istio-system-",
@@ -161,11 +161,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created istio-system Namespace for test", "namespaceName", istioSystemNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting istio-system namespace")
+		By("Delete istio-system namespace")
 		Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
@@ -182,7 +182,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
 		Config:               config.SeedAPIServerNetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
 		Resolver:             hostnameresolver.NewNoOpProvider(),
@@ -190,7 +190,7 @@ var _ = BeforeSuite(func() {
 		IstioSystemNamespace: istioSystemNamespace.Name,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -199,7 +199,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{
@@ -76,15 +76,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test clients")
+	By("Create test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -95,11 +95,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setting up manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
@@ -108,14 +108,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&quotacontroller.Reconciler{
 		Config: config.QuotaControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -124,7 +124,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

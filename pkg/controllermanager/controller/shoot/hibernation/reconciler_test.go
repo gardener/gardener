@@ -182,7 +182,7 @@ var _ = Describe("Shoot Hibernation", func() {
 					t.shootSettings(shoot)
 				}
 
-				By("creating shoot")
+				By("Create shoot")
 				Expect(c.Create(ctx, shoot)).To(Succeed())
 
 				By("configuring hibernation reconciler")

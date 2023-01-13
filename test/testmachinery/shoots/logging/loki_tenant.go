@@ -197,7 +197,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		framework.ExpectNoError(err)
 
 	}, tenantGetLogsFromLokiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("Cleaning up user logger app resources")
+		ginkgo.By("Cleanup user logger app resources")
 		loggerDeploymentToDelete := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: f.ShootSeedNamespace(),
@@ -207,7 +207,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		err := kubernetesutils.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Cleaning up operator logger app resources")
+		ginkgo.By("Cleanup operator logger app resources")
 		loggerDeploymentToDelete = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: f.ShootSeedNamespace(),
@@ -217,7 +217,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		err = kubernetesutils.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Cleaning up loki's MutatingWebhook and the additional label")
+		ginkgo.By("Cleanup loki's MutatingWebhook and the additional label")
 		webhookToDelete := &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "block-loki-updates",

@@ -74,7 +74,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,SeedValidator,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ManagedSeedShoot,ManagedSeed,ShootManagedSeed,ShootDNS"},
@@ -87,15 +87,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
@@ -118,12 +118,12 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("setting up field indexes")
+	By("Setup field indexes")
 	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	fakeClock = testclock.NewFakeClock(time.Now())
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&lifecycle.Reconciler{
 		Config: config.SeedControllerConfiguration{
 			MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},
@@ -134,7 +134,7 @@ var _ = BeforeSuite(func() {
 		LeaseNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -143,7 +143,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

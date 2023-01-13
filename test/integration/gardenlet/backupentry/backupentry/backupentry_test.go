@@ -112,7 +112,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			}
 		}
 
-		By("creating BackupBucket secret in garden")
+		By("Create BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-secret-",
@@ -128,11 +128,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		log.Info("Created Secret for BackupBucket in garden for test", "secret", client.ObjectKeyFromObject(gardenSecret))
 
 		DeferCleanup(func() {
-			By("deleting secret for BackupBucket in garden")
+			By("Delete secret for BackupBucket in garden")
 			Expect(testClient.Delete(ctx, gardenSecret)).To(Succeed())
 		})
 
-		By("creating BackupBucket")
+		By("Create BackupBucket")
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-",
@@ -162,11 +162,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
-			By("deleting BackupBucket")
+			By("Delete BackupBucket")
 			Expect(testClient.Delete(ctx, backupBucket)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating Shoot")
+		By("Create Shoot")
 		shootName := "shoot-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -204,17 +204,17 @@ var _ = Describe("BackupEntry controller tests", func() {
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "namespaceName", shoot.Name)
 
-		By("wait until manager has observed shoot")
+		By("Wait until manager has observed shoot")
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
-			By("deleting shoot")
+			By("Delete shoot")
 			Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating Shoot Namespace")
+		By("Create Shoot Namespace")
 		shootNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: shootTechnicalID,
@@ -225,11 +225,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		log.Info("Created Shoot Namespace for test", "namespaceName", shootNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting shoot namespace")
+			By("Delete shoot namespace")
 			Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating Cluster resource")
+		By("Create Cluster resource")
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootTechnicalID,
@@ -257,11 +257,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
-			By("deleting cluster")
+			By("Delete cluster")
 			Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating BackupEntry")
+		By("Create BackupEntry")
 		backupEntry = &gardencorev1beta1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: shootTechnicalID + "--",
@@ -284,11 +284,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		log.Info("Created BackupEntry for test", "backupEntry", client.ObjectKeyFromObject(backupEntry))
 
 		DeferCleanup(func() {
-			By("deleting BackupEntry")
+			By("Delete BackupEntry")
 			Expect(testClient.Delete(ctx, backupEntry)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating Shoot state in project namespace")
+		By("Create Shoot state in project namespace")
 		shootState = &gardencorev1alpha1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shoot.Name,
@@ -307,7 +307,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		log.Info("Created Shoot state in project namespace for test", "shootState", client.ObjectKeyFromObject(shootState))
 
 		DeferCleanup(func() {
-			By("deleting Shoot state in project namespace")
+			By("Delete Shoot state in project namespace")
 			Expect(testClient.Delete(ctx, shootState)).To(Succeed())
 		})
 
@@ -324,7 +324,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			},
 		}
 
-		By("Mimicking ready condition of BackupBucket")
+		By("Mimic ready condition of BackupBucket")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
 		patch := client.MergeFrom(backupBucket.DeepCopy())
 		backupBucket.Status = gardencorev1beta1.BackupBucketStatus{
@@ -337,13 +337,13 @@ var _ = Describe("BackupEntry controller tests", func() {
 		}
 		Expect(testClient.Status().Patch(ctx, backupBucket, patch)).To(Succeed())
 
-		By("ensuring finalizer got added")
+		By("Ensure finalizer got added")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			g.Expect(backupEntry.Finalizers).To(ConsistOf("gardener"))
 		}).Should(Succeed())
 
-		By("Ensuring extension secret and extension backupentry is created")
+		By("Ensure extension secret and extension backupentry is created")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
 			g.Expect(extensionSecret.Data).To(Equal(gardenSecret.Data))
@@ -367,10 +367,10 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 	Context("reconcile", func() {
 		It("should set the BackupEntry status as Succeeded if the extension BackupEntry is ready", func() {
-			By("Mimicking extension backupEntry condition")
+			By("Mimic extension backupEntry condition")
 			reconcileExtensionBackupEntry(true)
 
-			By("ensuring the BackupEntry status is set")
+			By("Ensure the BackupEntry status is set")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 				g.Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
@@ -382,10 +382,10 @@ var _ = Describe("BackupEntry controller tests", func() {
 		})
 
 		It("should set the BackupEntry status as Error if the extension BackupEntry is not ready", func() {
-			By("Mimicking extension backupEntry error condition")
+			By("Mimic extension backupEntry error condition")
 			reconcileExtensionBackupEntry(false)
 
-			By("ensuring the BackupEntry status is set")
+			By("Ensure the BackupEntry status is set")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 				g.Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
@@ -399,7 +399,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		var targetSeed *gardencorev1beta1.Seed
 
 		BeforeEach(func() {
-			By("creating seed")
+			By("Create seed")
 			targetSeed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "seed-",
@@ -424,16 +424,16 @@ var _ = Describe("BackupEntry controller tests", func() {
 			log.Info("Created target Seed for migration", "seed", targetSeed.Name)
 
 			DeferCleanup(func() {
-				By("deleting target seed")
+				By("Delete target seed")
 				Expect(testClient.Delete(ctx, targetSeed)).To(Or(Succeed(), BeNotFoundError()))
 			})
 		})
 
 		It("should set the BackupEntry status as Succeeded if the extension BackupEntry is migrated successfully", func() {
-			By("Mimicking extension backupEntry condition")
+			By("Mimic extension backupEntry condition")
 			reconcileExtensionBackupEntry(true)
 
-			By("ensuring the BackupEntry status is set")
+			By("Ensure the BackupEntry status is set")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 				g.Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
@@ -443,7 +443,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 				g.Expect(backupEntry.Status.ObservedGeneration).To(Equal(backupEntry.Generation))
 			}).Should(Succeed())
 
-			By("Patching the seed name to trigger migration")
+			By("Patch the seed name to trigger migration")
 			patch := client.MergeFrom(backupEntry.DeepCopy())
 			backupEntry.Spec.SeedName = &targetSeed.Name
 			Expect(testClient.Patch(ctx, backupEntry, patch)).To(Succeed())
@@ -453,7 +453,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 				g.Expect(extensionBackupEntry.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "migrate"))
 			}).Should(Succeed())
 
-			By("Patching the extension backupEntry to mimic successful migration")
+			By("Patch the extension backupEntry to mimic successful migration")
 			// These should be done by the extension controller, we are faking it here for the tests.
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			patch = client.MergeFrom(extensionBackupEntry.DeepCopy())
@@ -480,10 +480,10 @@ var _ = Describe("BackupEntry controller tests", func() {
 			annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}
 		})
 		It("should restore the BackupEntry", func() {
-			By("Mimicking extension backupEntry condition")
+			By("Mimic extension backupEntry condition")
 			reconcileExtensionBackupEntry(true)
 
-			By("ensuring the BackupEntry status is set")
+			By("Ensure the BackupEntry status is set")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 				g.Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
@@ -498,10 +498,10 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 	Context("delete", func() {
 		It("should delete the BackupEntry and cleanup the resources", func() {
-			By("Mimicking extension backupEntry condition")
+			By("Mimic extension backupEntry condition")
 			reconcileExtensionBackupEntry(true)
 
-			By("ensuring the BackupEntry status is set")
+			By("Ensure the BackupEntry status is set")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 				g.Expect(backupEntry.Status.LastError).To(BeNil())
@@ -510,28 +510,28 @@ var _ = Describe("BackupEntry controller tests", func() {
 				g.Expect(backupEntry.Status.ObservedGeneration).To(Equal(backupEntry.Generation))
 			}).Should(Succeed())
 
-			By("deleting the BackupEntry")
+			By("Delete the BackupEntry")
 			Expect(testClient.Delete(ctx, backupEntry)).To(Succeed())
 
-			By("ensuring the BackupEntry is not deleted till the grace period is passed")
+			By("Ensure the BackupEntry is not deleted till the grace period is passed")
 			Consistently(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
 			}).Should(Succeed())
 
-			By("stepping the clock to pass the grace period")
+			By("Step the clock to pass the grace period")
 			fakeClock.Step((time.Duration(deletionGracePeriodHours)*time.Hour + time.Minute))
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			patch := client.MergeFrom(backupEntry.DeepCopy())
 			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 			Expect(testClient.Patch(ctx, backupEntry, patch)).To(Succeed())
 
-			By("ensuring the extension resources are cleaned up")
+			By("Ensure the extension resources are cleaned up")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(BeNotFoundError())
 			}).Should(Succeed())
 
-			By("ensuring finalizers are removed and BackupBucket is released")
+			By("Ensure finalizers are removed and BackupBucket is released")
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
 			}).Should(BeNotFoundError())

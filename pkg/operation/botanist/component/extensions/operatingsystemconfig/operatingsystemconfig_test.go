@@ -183,7 +183,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 			sm = fakesecretsmanager.New(fakeClient, namespace)
 
-			By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet", Namespace: namespace}})).To(Succeed())
 

@@ -84,7 +84,7 @@ var _ = BeforeSuite(func() {
 	// set the RequeueAfter time in reconciler to some smaller value.
 	DeferCleanup(test.WithVar(&bastion.RequeueDurationWhenResourceDeletionStillPresent, 50*time.Millisecond))
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
@@ -104,15 +104,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
@@ -124,11 +124,11 @@ var _ = BeforeSuite(func() {
 	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating Project")
+	By("Create Project")
 	project = &gardencorev1beta1.Project{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
@@ -141,11 +141,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
 
 	DeferCleanup(func() {
-		By("deleting Project")
+		By("Delete Project")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
@@ -160,13 +160,13 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("setting up field indexes")
+	By("Setup field indexes")
 	Expect(indexer.AddBastionShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	Expect(resourcesv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 
-	By("registering controller")
+	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&bastion.Reconciler{
@@ -178,7 +178,7 @@ var _ = BeforeSuite(func() {
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -187,7 +187,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

@@ -66,7 +66,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ExtensionLabels,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS"},
@@ -79,18 +79,18 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
@@ -103,10 +103,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("setting up field indexes")
+	By("Setup field indexes")
 	Expect(indexer.AddProjectNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
-	By("registering controller")
+	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&activity.Reconciler{
 		Config: config.ProjectControllerConfiguration{
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -124,7 +124,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

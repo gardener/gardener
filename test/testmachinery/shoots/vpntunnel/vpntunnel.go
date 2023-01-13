@@ -128,7 +128,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		}
 
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("Cleaning up logging-pod resources")
+		ginkgo.By("Cleanup logging-pod resources")
 		loggerDeploymentToDelete := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
@@ -197,7 +197,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 			log.Info("Got output from 'kubectl cp' command", "output", string(output))
 		}
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("Cleaning up copy resources")
+		ginkgo.By("Cleanup copy resources")
 		deploymentToDelete := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      copyDeployment,

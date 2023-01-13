@@ -82,7 +82,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		origMinWorkers = shoot.Spec.Provider.Workers[0].Minimum
 		origMaxWorkers = shoot.Spec.Provider.Workers[0].Maximum
 
-		ginkgo.By("updating shoot spec for test")
+		ginkgo.By("Update shoot spec for test")
 		// set clusterautoscaler params to lower values so we don't have to wait too long
 		// and ensure the worker pool has maximum > minimum
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		ginkgo.By("creating pod-anti-affinity deployment")
+		ginkgo.By("Create pod-anti-affinity deployment")
 		values := podAntiAffinityValues{
 			Name:       podAntiAffinityDeploymentName,
 			Namespace:  podAntiAffinityDeploymentNamespace,
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling up pod-anti-affinity deployment")
+		ginkgo.By("Scale up pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers+1)
 		framework.ExpectNoError(err)
 
@@ -121,20 +121,20 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, int(origMinWorkers+1), &workerPoolName, scaleUpTimeout)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("pod-anti-affinity deployment should get healthy again")
+		ginkgo.By("Ensure that pod-anti-affinity deployment is healthy again")
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling down pod-anti-affinity deployment")
+		ginkgo.By("Scale down pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("one node should be removed from the worker pool")
+		ginkgo.By("Ensure that one node was removed from the worker pool")
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, int(origMinWorkers), &workerPoolName, scaleDownTimeout)
 		framework.ExpectNoError(err)
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 
-		ginkgo.By("reverting shoot spec changes by test")
+		ginkgo.By("Revert shoot spec changes by test")
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
 			s.Spec.Provider.Workers[0].Maximum = origMaxWorkers
@@ -143,7 +143,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		ginkgo.By("deleting pod-anti-affinity deployment")
+		ginkgo.By("Delete pod-anti-affinity deployment")
 		err = kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podAntiAffinityDeploymentName,
@@ -172,7 +172,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 			},
 		}
 
-		ginkgo.By("updating shoot spec for test")
+		ginkgo.By("Update shoot spec for test")
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorkerPool)
 
@@ -192,7 +192,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		nodeCount := len(nodeList.Items)
 		gomega.Expect(nodeCount).To(gomega.BeEquivalentTo(testWorkerPool.Minimum), "shoot should have minimum node count before the test")
 
-		ginkgo.By("creating pod-anti-affinity deployment")
+		ginkgo.By("Create pod-anti-affinity deployment")
 		values := podAntiAffinityValues{
 			Name:          podAntiAffinityDeploymentName,
 			Namespace:     podAntiAffinityDeploymentNamespace,
@@ -206,27 +206,27 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling up pod-anti-affinity deployment")
+		ginkgo.By("Scale up pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 1)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("one node should be added to the worker pool")
+		ginkgo.By("One node should be added to the worker pool")
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, 1, &testWorkerPoolName, scaleUpTimeout)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("pod-anti-affinity deployment should get healthy again")
+		ginkgo.By("Pod-anti-affinity deployment should get healthy again")
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling down pod-anti-affinity deployment")
+		ginkgo.By("Scale down pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 0)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("worker pool should be scaled-down to 0")
+		ginkgo.By("Worker pool should be scaled-down to 0")
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, 0, &testWorkerPoolName, scaleDownTimeout)
 		framework.ExpectNoError(err)
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("reverting shoot spec changes by test")
+		ginkgo.By("Revert shoot spec changes by test")
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
 
@@ -243,7 +243,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		ginkgo.By("deleting pod-anti-affinity deployment")
+		ginkgo.By("Delete pod-anti-affinity deployment")
 		err = kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podAntiAffinityDeploymentName,

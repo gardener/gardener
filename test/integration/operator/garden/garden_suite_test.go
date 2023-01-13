@@ -73,7 +73,7 @@ var _ = BeforeSuite(func() {
 
 	features.RegisterFeatureGates()
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
@@ -92,15 +92,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace for test")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
@@ -111,11 +111,11 @@ var _ = BeforeSuite(func() {
 	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             operatorclient.RuntimeScheme,
 		MetricsBindAddress: "0",
@@ -130,7 +130,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("registering controller")
+	By("Register controller")
 	chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
 	Expect(err).NotTo(HaveOccurred())
@@ -149,7 +149,7 @@ var _ = BeforeSuite(func() {
 		GardenNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -158,7 +158,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

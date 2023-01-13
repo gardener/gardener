@@ -40,7 +40,7 @@ import (
 // Enable the test suite again after fixing the flake.
 
 func TestRootCAPublisher(t *testing.T) {
-	t.Skipf("Temporarily skipping the test suite because of known flake...")
+	t.Skipf("Temporarily skipping the test suite because of known flake")
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test Integration ResourceManager RootCAPublisher Suite")
 }
@@ -62,7 +62,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &envtest.Environment{}
 
 	var err error
@@ -71,11 +71,11 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -84,14 +84,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).To(BeNil())
 	Expect(caCert).ToNot(BeEmpty())
 
-	By("setting up manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             resourcemanagerclient.CombinedScheme,
 		MetricsBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&rootcapublisher.Reconciler{
 		Config: config.RootCAPublisherControllerConfig{
 			ConcurrentSyncs: pointer.Int(5),
@@ -99,7 +99,7 @@ var _ = BeforeSuite(func() {
 		RootCA: string(caCert),
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -108,7 +108,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

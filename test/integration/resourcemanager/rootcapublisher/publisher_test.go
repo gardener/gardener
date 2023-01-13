@@ -40,7 +40,7 @@ var _ = Describe("RootCAPublisher tests", func() {
 		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting test namespace")
+			By("Delete test Namespace")
 			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 

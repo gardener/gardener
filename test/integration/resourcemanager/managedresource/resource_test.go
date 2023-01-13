@@ -18,15 +18,6 @@ import (
 	"encoding/json"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testclock "k8s.io/utils/clock/testing"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,9 +27,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ManagedResource controller tests", func() {
@@ -106,18 +106,18 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 	JustBeforeEach(func() {
 		if secretForManagedResource != nil {
-			By("creating Secret for test")
-			log.Info("Creating Secret for test", "secret", objectKey)
+			By("Create Secret for test")
+			log.Info("Create Secret for test", "secret", objectKey)
 			Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 		}
 
-		By("creating ManagedResource for test")
-		log.Info("Creating ManagedResource for test", "managedResource", objectKey)
+		By("Create ManagedResource for test")
+		log.Info("Create ManagedResource for test", "managedResource", objectKey)
 		Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 	})
 
 	AfterEach(func() {
-		By("deleting ManagedResource")
+		By("Delete ManagedResource")
 		Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
 		Eventually(func(g Gomega) {
@@ -126,7 +126,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		}).Should(Succeed())
 
 		if secretForManagedResource != nil {
-			By("deleting Secret")
+			By("Delete Secret")
 			Expect(testClient.Delete(ctx, secretForManagedResource)).To(Or(Succeed(), BeNotFoundError()))
 		}
 	})
@@ -389,7 +389,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
 			)
 
-			By("deleting ManagedResource")
+			By("Delete ManagedResource")
 			Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
 
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
@@ -532,7 +532,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			It("should keep the object even after deletion of ManagedResource", func() {
-				By("deleting ManagedResource")
+				By("Delete ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
 				Eventually(func() error {
@@ -599,7 +599,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			It("should keep the garbage-collectable objects even after deletion of ManagedResource", func() {
-				By("deleting ManagedResource")
+				By("Delete ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
 				Eventually(func() error {
@@ -719,7 +719,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			AfterEach(func() {
-				By("deleting ManagedResource")
+				By("Delete ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
 				// resource-manager deletes Deployments with foreground deletion, which causes API server to add the
@@ -849,7 +849,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			AfterEach(func() {
-				By("deleting ManagedResource")
+				By("Delete ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
 				// resource-manager deletes Deployments with foreground deletion, which causes API server to add the

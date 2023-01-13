@@ -75,7 +75,7 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scale down worker")
+		ginkgo.By("Scale down worker")
 
 		min = shoot.Spec.Provider.Workers[0].Minimum - 1
 		max = shoot.Spec.Provider.Workers[0].Maximum - 1
@@ -91,7 +91,7 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 	}, scaleWorkerTimeout)
 
 	f.Beta().CIt("Shoot node's operating systems should differ if the specified workers are different", func(ctx context.Context) {
-		ginkgo.By("Checking if shoot is compatible for testing")
+		ginkgo.By("Check if shoot is compatible for testing")
 
 		if len(f.Shoot.Spec.Provider.Workers) >= 1 {
 			ginkgo.Skip("the test requires at least 2 worker groups")

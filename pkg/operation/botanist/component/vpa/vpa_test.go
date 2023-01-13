@@ -170,7 +170,7 @@ var _ = Describe("VPA", func() {
 		vpa = New(c, namespace, sm, values)
 		managedResourceName = ""
 
-		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
@@ -1639,15 +1639,15 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
-				By("creating vpa-updater runtime resources")
+				By("Create vpa-updater runtime resources")
 				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
 
-				By("creating vpa-recommender runtime resources")
+				By("Create vpa-recommender runtime resources")
 				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 
-				By("creating vpa-admission-controller runtime resources")
+				By("Create vpa-admission-controller runtime resources")
 				Expect(c.Create(ctx, serviceAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, networkPolicyAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true, component.ClusterTypeShoot))).To(Succeed())

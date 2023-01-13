@@ -79,7 +79,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		}
 		objects = append(objects, crdObjects...)
 
-		By("applying CRDs")
+		By("Apply CRDs")
 		applier, err := kubernetes.NewApplierForConfig(restConfig)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crds.NewExtensionsCRD(applier).Deploy(ctx)).To(Succeed())
@@ -141,7 +141,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 
 	Context("extension resources", func() {
 		BeforeEach(func() {
-			By("creating extension test objects")
+			By("Create extension test objects")
 			_, err := test.EnsureTestResources(ctx, testClient, testNamespace.Name, "testdata")
 			Expect(err).NotTo(HaveOccurred())
 		})

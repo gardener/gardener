@@ -72,7 +72,7 @@ var _ = BeforeSuite(func() {
 
 	features.RegisterFeatureGates()
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
@@ -91,18 +91,18 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
 	scheme := kubernetes.GardenScheme
 	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace for test")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
@@ -114,11 +114,11 @@ var _ = BeforeSuite(func() {
 	seedName = "seed-" + testRunID
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
@@ -134,7 +134,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&care.Reconciler{
 		Config: config.SeedCareControllerConfiguration{
 			SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
@@ -143,7 +143,7 @@ var _ = BeforeSuite(func() {
 		SeedName:  seedName,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -152,7 +152,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

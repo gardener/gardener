@@ -253,7 +253,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 				Expect(testClient.Create(ctx, shoot)).To(Succeed())
 				log.Info("Created Shoot", "shoot", client.ObjectKeyFromObject(shoot))
 
-				By("Setting shoot constraints and conditions to status True")
+				By("Set shoot constraints and conditions to status True")
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Status = gardencorev1beta1.ShootStatus{
 					Conditions: []gardencorev1beta1.Condition{

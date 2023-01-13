@@ -88,7 +88,7 @@ var _ = BeforeSuite(func() {
 
 	features.RegisterFeatureGates()
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
@@ -103,21 +103,21 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
 	scheme := kubernetes.GardenScheme
 	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("creating seed")
+	By("Create seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "seed-",
@@ -141,11 +141,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Seed for test", "seed", seed.Name)
 
 	DeferCleanup(func() {
-		By("deleting seed")
+		By("Delete seed")
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating garden namespace for test")
+	By("Create garden namespace for test")
 	gardenNamespaceGarden = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
@@ -156,11 +156,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", gardenNamespaceGarden.Name)
 
 	DeferCleanup(func() {
-		By("deleting garden namespace")
+		By("Delete garden namespace")
 		Expect(testClient.Delete(ctx, gardenNamespaceGarden)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
@@ -181,7 +181,7 @@ var _ = BeforeSuite(func() {
 	// namespace controller.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
-	By("creating test clientset")
+	By("Create test clientset")
 	testClientSet, err = kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(mgr.GetConfig()),
 		kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
@@ -190,7 +190,7 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
+	By("Register controller")
 	chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
 	Expect(err).NotTo(HaveOccurred())
@@ -225,7 +225,7 @@ var _ = BeforeSuite(func() {
 		ShootClientMap:        shootClientMap,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -234,7 +234,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

@@ -177,7 +177,7 @@ var _ = Describe("Bastion controller tests", func() {
 		shoot.Status.TechnicalID = technicalID
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
-		By("creating seed namespace for test")
+		By("Create seed namespace for test")
 		seedNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: technicalID,
@@ -188,11 +188,11 @@ var _ = Describe("Bastion controller tests", func() {
 		log.Info("Created shoot namespace in seed for test", "namespaceName", seedNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting shoot namespace in seed")
+			By("Delete shoot namespace in seed")
 			Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("create Cluster extension resource")
+		By("Create Cluster extension resource")
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: technicalID,
@@ -255,7 +255,7 @@ var _ = Describe("Bastion controller tests", func() {
 			}).Should(BeNotFoundError())
 		})
 
-		By("ensure finalizer is added to Bastion")
+		By("Ensure finalizer is added to Bastion")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
 			g.Expect(operationsBastion.Finalizers).To(ConsistOf("gardener"))

@@ -43,7 +43,7 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 	BeforeEach(func() {
 		fakeClock.SetTime(time.Now().Round(time.Second))
 
-		By("creating BackupBucket secret in garden")
+		By("Create BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-secret-",
@@ -59,11 +59,11 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 		log.Info("Created Secret for BackupBucket in garden for test", "secret", client.ObjectKeyFromObject(gardenSecret))
 
 		DeferCleanup(func() {
-			By("deleting secret for BackupBucket in garden")
+			By("Delete secret for BackupBucket in garden")
 			Expect(testClient.Delete(ctx, gardenSecret)).To(Succeed())
 		})
 
-		By("creating BackupBucket")
+		By("Create BackupBucket")
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-",
@@ -93,11 +93,11 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
-			By("deleting BackupBucket")
+			By("Delete BackupBucket")
 			Expect(testClient.Delete(ctx, backupBucket)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating source seed")
+		By("Create source seed")
 		sourceSeed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "seed-",
@@ -127,11 +127,11 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 		log.Info("Created source Seed for migration", "seed", sourceSeed.Name)
 
 		DeferCleanup(func() {
-			By("deleting source seed")
+			By("Delete source seed")
 			Expect(testClient.Delete(ctx, sourceSeed)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("creating BackupEntry for migration")
+		By("Create BackupEntry for migration")
 		backupEntry = &gardencorev1beta1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "backupentry-",
@@ -152,7 +152,7 @@ var _ = Describe("BackupEntry migration controller tests", func() {
 		log.Info("Created BackupEntry for test", "backupEntry", client.ObjectKeyFromObject(backupEntry))
 
 		DeferCleanup(func() {
-			By("deleting BackupEntry")
+			By("Delete BackupEntry")
 			Expect(testClient.Delete(ctx, backupEntry)).To(Or(Succeed(), BeNotFoundError()))
 		})
 

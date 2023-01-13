@@ -15,15 +15,15 @@
 package shootvalidator_test
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ShootValidator tests", func() {
@@ -80,7 +80,7 @@ var _ = Describe("ShootValidator tests", func() {
 		})
 
 		It("should be able to create a shoot without .spec.seedName successfully", func() {
-			By("creating Shoot")
+			By("Create Shoot")
 			Eventually(func() error {
 				return userTestClient.Create(ctx, shoot)
 			}).Should(Succeed())
@@ -96,7 +96,7 @@ var _ = Describe("ShootValidator tests", func() {
 		})
 
 		It("should not be able to create a shoot with .spec.seedName", func() {
-			By("creating Shoot")
+			By("Create Shoot")
 			shoot.Spec.SeedName = &seed.Name
 
 			Consistently(func() error {
@@ -125,7 +125,7 @@ var _ = Describe("ShootValidator tests", func() {
 		})
 
 		It("should be able to create a shoot with .spec.seedName successfully", func() {
-			By("creating Shoot")
+			By("Create Shoot")
 			shoot.Spec.SeedName = &seed.Name
 
 			Eventually(func() error {
