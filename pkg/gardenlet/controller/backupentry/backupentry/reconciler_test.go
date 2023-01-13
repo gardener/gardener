@@ -224,7 +224,7 @@ var _ = Describe("Controller", func() {
 		Expect(extensionBackupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 	})
 
-	It("should reconcile the extension secret and extension backupentry if the secret currently doesn't have a timestamp", func() {
+	It("should reconcile the extension secret and extension BackupEntry if the secret currently doesn't have a timestamp", func() {
 		extensionSecret.Annotations = nil
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
 		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
@@ -255,7 +255,7 @@ var _ = Describe("Controller", func() {
 		Expect(extensionBackupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 	})
 
-	It("should reconcile the extension BackupEntry if the secret update timestamp is after the extension lastupdate time", func() {
+	It("should reconcile the extension BackupEntry if the secret update timestamp is after the extension last update time", func() {
 		time := fakeClock.Now().Add(time.Second).UTC().Format(time.RFC3339)
 		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, time)
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
