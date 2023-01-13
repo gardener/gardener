@@ -58,7 +58,7 @@ setup_loopback_device() {
       echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
     else
       echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
-      ip address add $address dev ${LOOPBACK_DEVICE}
+      sudo ip address add $address dev ${LOOPBACK_DEVICE}
     fi
   done
   echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
