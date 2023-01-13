@@ -163,8 +163,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	// The managedseed controller waits for namespaces to be gone, so we need to finalize them as envtest doesn't run the
-	// namespace controller.
+	// We create the seed namespace in the garden and delete it after every test, so let's ensure it gets finalized.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
 	By("setting up field indexes")
