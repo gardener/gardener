@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func Test(t *testing.T) {
+func TestMatchers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gomega Matchers Suite")
+	RunSpecs(t, "Utils Test Matchers Suite")
 }

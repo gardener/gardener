@@ -39,9 +39,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestSeedSecrets(t *testing.T) {
+func TestSecrets(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed Secrets Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Seed Secrets Suite")
 }
 
 const testID = "secrets-controller-test"

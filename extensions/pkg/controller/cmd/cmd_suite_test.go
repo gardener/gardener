@@ -23,5 +23,5 @@ import (
 
 func TestCmd(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CMD Suite")
+	RunSpecs(t, "Extensions Command Suite")
 }

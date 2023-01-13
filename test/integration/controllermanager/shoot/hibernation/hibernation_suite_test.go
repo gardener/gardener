@@ -40,9 +40,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootHibernation(t *testing.T) {
+func TestHibernation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Hibernation Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Shoot Hibernation Suite")
 }
 
 const testID = "hibernation-controller-test"

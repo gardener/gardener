@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestControlplane(t *testing.T) {
+func TestControlPlane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controlplane Webhook Suite")
+	RunSpecs(t, "Extensions Webhook ControlPlane Suite")
 }

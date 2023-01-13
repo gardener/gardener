@@ -23,5 +23,5 @@ import (
 
 func TestFlow(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Flow Suite")
+	RunSpecs(t, "Utils Flow Suite")
 }

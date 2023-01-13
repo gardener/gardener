@@ -39,7 +39,7 @@ import (
 
 func TestShootValidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ShootValidator Integration Test Suite")
+	RunSpecs(t, "Test Integration APIServer AdmissionPlugins ShootValidator Suite")
 }
 
 // testID is used for generating test namespace names and other IDs

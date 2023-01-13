@@ -44,9 +44,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestManagedResourceController(t *testing.T) {
+func TestManagedResource(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ManagedResource Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager ManagedResource Suite")
 }
 
 const testID = "resource-controller-test"

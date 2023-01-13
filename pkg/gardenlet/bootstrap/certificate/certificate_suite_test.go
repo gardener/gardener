@@ -23,5 +23,5 @@ import (
 
 func TestCertificates(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet Certificate Suite")
+	RunSpecs(t, "Gardenlet Bootstrap Certificate Suite")
 }

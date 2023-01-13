@@ -23,5 +23,5 @@ import (
 
 func TestAuditPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission AuditPolicy Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission AuditPolicy Suite")
 }

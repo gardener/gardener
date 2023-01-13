@@ -23,8 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestShoot(t *testing.T) {
+func TestSecretBinding(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry SecretBinding Suite")
+	RunSpecs(t, "Registry Core SecretBinding Suite")
 }

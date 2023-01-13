@@ -38,9 +38,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootReference(t *testing.T) {
+func TestReference(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Reference Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Shoot Reference Suite")
 }
 
 const testID = "reference-controller-test"

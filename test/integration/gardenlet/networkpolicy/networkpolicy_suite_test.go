@@ -48,7 +48,7 @@ import (
 
 func TestNetworkPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Network Policy Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet NetworkPolicy Suite")
 }
 
 const (

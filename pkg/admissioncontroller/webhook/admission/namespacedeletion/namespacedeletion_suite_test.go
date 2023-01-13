@@ -23,5 +23,5 @@ import (
 
 func TestNamespaceDeletion(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission NamespaceDeletion Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission NamespaceDeletion Suite")
 }

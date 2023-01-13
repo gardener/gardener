@@ -45,9 +45,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestSeedLease(t *testing.T) {
+func TestLease(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed Lease Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet Seed Lease Suite")
 }
 
 const testID = "seed-lease-controller-test"

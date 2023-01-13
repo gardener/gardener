@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHealth(t *testing.T) {
+func TestProgressing(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ResourceManager Controller Health Progressing Suite")
 }

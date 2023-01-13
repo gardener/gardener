@@ -21,11 +21,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
-
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -36,11 +31,15 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 )
 
 func TestNetworkPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot NetworkPolicy Suite")
+	RunSpecs(t, "Botanist Addons NetworkPolicy Suite")
 }
 
 const (

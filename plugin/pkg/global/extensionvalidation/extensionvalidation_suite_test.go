@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/apiserver/features"
 )
 
-func TestExtensionvalidation(t *testing.T) {
+func TestExtensionValidation(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ExtensionValidation Suite")
+	RunSpecs(t, "AdmissionPlugin Global ExtensionValidation Suite")
 }

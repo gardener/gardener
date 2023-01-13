@@ -52,9 +52,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestBackupBucketController(t *testing.T) {
+func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupBucket Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet BackupBucket Suite")
 }
 
 const testID = "backupbucket-controller-test"

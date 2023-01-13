@@ -43,7 +43,7 @@ import (
 
 func TestPodSchedulerName(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "PodSchedulerName Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager PodSchedulerName Suite")
 }
 
 const testID = "podschedulername-webhook-test"

@@ -26,5 +26,5 @@ import (
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "E2E Operator Test Suite")
+	RunSpecs(t, "Test E2E Operator Suite")
 }

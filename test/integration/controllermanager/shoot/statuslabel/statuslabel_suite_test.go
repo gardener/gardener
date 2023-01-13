@@ -38,9 +38,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootStatusLabel(t *testing.T) {
+func TestStatusLabel(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot StatusLabel Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Shoot StatusLabel Suite")
 }
 
 const testID = "statuslabel-controller-test"

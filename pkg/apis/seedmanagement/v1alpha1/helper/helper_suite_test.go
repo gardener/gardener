@@ -23,5 +23,5 @@ import (
 
 func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedManagement API V1Alpha1 Helper Suite")
+	RunSpecs(t, "APIs SeedManagement V1alpha1 Helper Suite")
 }

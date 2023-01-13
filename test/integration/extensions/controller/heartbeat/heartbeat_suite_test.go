@@ -53,9 +53,9 @@ var (
 	testNamespace *corev1.Namespace
 )
 
-func TestHeartbeat(t *testing.T) {
+func TestHeartBeat(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Controller Heartbeat Integration Test Suite")
+	RunSpecs(t, "Test Integration Extensions Controller HeartBeat Suite")
 }
 
 var _ = BeforeSuite(func() {

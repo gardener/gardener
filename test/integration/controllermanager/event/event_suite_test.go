@@ -40,9 +40,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestEventClassController(t *testing.T) {
+func TestEvent(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "EventClass Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Event Suite")
 }
 
 // testID is used for generating test namespace names and other IDs

@@ -23,5 +23,5 @@ import (
 
 func TestOperation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ImageVector Suite")
+	RunSpecs(t, "Utils ImageVector Suite")
 }

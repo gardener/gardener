@@ -44,9 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestSeedLifecycle(t *testing.T) {
+func TestLifecycle(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed Lifecycle Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Seed Lifecycle Suite")
 }
 
 const (

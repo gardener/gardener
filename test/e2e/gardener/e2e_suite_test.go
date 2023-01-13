@@ -39,5 +39,5 @@ func TestMain(m *testing.M) {
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "E2E Gardener Test Suite")
+	RunSpecs(t, "Test E2E Gardener Suite")
 }

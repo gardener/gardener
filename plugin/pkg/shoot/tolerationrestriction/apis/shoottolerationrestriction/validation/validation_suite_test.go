@@ -23,5 +23,5 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootTolerationRestriction API Validation Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot TolerationRestriction APIs Validation Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestProject(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Controller Project Project Suite")
+	RunSpecs(t, "ControllerManager Controller Project Main Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootDNSRewriting API Validation Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot DNSRewriting APIs Validation Suite")
 }

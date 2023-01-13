@@ -43,7 +43,7 @@ import (
 
 func TestShootConditions(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Conditions Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Shoot Conditions Suite")
 }
 
 const testID = "conditions-controller-test"

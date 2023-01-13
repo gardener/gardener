@@ -43,7 +43,7 @@ import (
 
 func TestGarbageCollector(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Garbage Collector Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager GarbageCollector Suite")
 }
 
 const testID = "garbagecollector-controller-test"

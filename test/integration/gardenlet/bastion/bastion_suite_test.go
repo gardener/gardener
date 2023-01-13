@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -32,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -53,7 +54,7 @@ import (
 
 func TestBastion(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Bastion Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet Bastion Suite")
 }
 
 const (

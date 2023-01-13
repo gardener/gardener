@@ -42,7 +42,7 @@ import (
 
 func TestHighAvailabilityConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "HighAvailabilityConfig Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager HighAvailabilityConfig Suite")
 }
 
 const testIDPrefix = "high-availability-config-webhook-test"

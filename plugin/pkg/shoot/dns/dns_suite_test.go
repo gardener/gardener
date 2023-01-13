@@ -23,5 +23,5 @@ import (
 
 func TestDNS(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootDNS Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot DNS Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestDNSRewriting(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootDNSRewriting Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot DNSRewriting Suite")
 }

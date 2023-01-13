@@ -43,9 +43,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestManagedSeedSetController(t *testing.T) {
+func TestManagedSeedSet(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ManagedSeedSet Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager ManagedSeedSet Suite")
 }
 
 const testID = "managedseedset-controller-test"

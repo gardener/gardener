@@ -43,7 +43,7 @@ import (
 
 func TestSeccompProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeccompProfile Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager SeccompProfile Suite")
 }
 
 const testID = "seccompprofile-webhook-test"

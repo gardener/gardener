@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestUtils(t *testing.T) {
+func TestSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed Operation Suite")
+	RunSpecs(t, "Operation Seed Suite")
 }

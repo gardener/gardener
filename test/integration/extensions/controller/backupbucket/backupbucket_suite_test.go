@@ -34,7 +34,7 @@ import (
 
 func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Controller BackupBucket Integration Test Suite")
+	RunSpecs(t, "Test Integration Extensions Controller BackupBucket Suite")
 }
 
 const testID = "extensions-backupbucket-test"

@@ -52,9 +52,9 @@ import (
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
-func TestShootCare(t *testing.T) {
+func TestCare(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Care Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet Shoot Care Suite")
 }
 
 const testID = "shoot-care-controller-test"

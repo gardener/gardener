@@ -43,9 +43,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestControllerDeploymentController(t *testing.T) {
+func TestControllerDeployment(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerDeployment Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager ControllerDeployment Suite")
 }
 
 const (

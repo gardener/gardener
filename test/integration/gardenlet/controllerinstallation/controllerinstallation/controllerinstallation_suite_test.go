@@ -49,9 +49,9 @@ import (
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
-func TestControllerInstallationController(t *testing.T) {
+func TestControllerInstallation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerInstallation Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet ControllerInstallation Main Suite")
 }
 
 const (

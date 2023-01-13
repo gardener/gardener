@@ -23,5 +23,5 @@ import (
 
 func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardener Admission Controller API Helper Suite")
+	RunSpecs(t, "AdmissionController APIs Config Helper Suite")
 }

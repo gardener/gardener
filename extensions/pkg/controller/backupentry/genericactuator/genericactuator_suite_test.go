@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGenericactuator(t *testing.T) {
+func TestGenericActuator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupEntry Genericactuator Suite")
+	RunSpecs(t, "Extensions Controller BackupEntry GenericActuator Suite")
 }

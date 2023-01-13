@@ -23,5 +23,5 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedManagement API Validation Suite")
+	RunSpecs(t, "APIs SeedManagement Validation Suite")
 }

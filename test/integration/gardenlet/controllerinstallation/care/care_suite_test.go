@@ -47,7 +47,7 @@ import (
 
 func TestControllerInstallationCare(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerInstallationCare Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet ControllerInstallation Care Suite")
 }
 
 const testID = "controllerinstallation-care-controller-test"

@@ -23,5 +23,5 @@ import (
 
 func TestCmd(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook Cmd Suite")
+	RunSpecs(t, "Extensions Webhook Command Suite")
 }

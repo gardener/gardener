@@ -44,9 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestSeedExtensionsCheck(t *testing.T) {
+func TestExtensionsCheck(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed ExtensionsCheck Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Seed ExtensionsCheck Suite")
 }
 
 const (

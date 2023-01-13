@@ -23,5 +23,5 @@ import (
 
 func TestExposureClass(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ExposureClass Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot ExposureClass Suite")
 }

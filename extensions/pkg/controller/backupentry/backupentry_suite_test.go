@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestBackupentry(t *testing.T) {
+func TestBackupEntry(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Backupentry Suite")
+	RunSpecs(t, "Extensions Controller BackupEntry Suite")
 }

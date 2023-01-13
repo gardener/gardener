@@ -42,9 +42,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func TestShootStateExtensionsController(t *testing.T) {
+func TestExtensions(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ShootState Extensions Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet ShootState Extensions Suite")
 }
 
 const testID = "shootstate-extensions-controller-test"

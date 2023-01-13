@@ -58,7 +58,7 @@ import (
 
 func TestManagedSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ManagedSeed Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet ManagedSeed Suite")
 }
 
 const testID = "managedseed-controller-test"

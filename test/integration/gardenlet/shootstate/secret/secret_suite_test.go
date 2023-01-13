@@ -47,9 +47,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootSecret(t *testing.T) {
+func TestSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ShootSecret Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet ShootState Secret Suite")
 }
 
 const testID = "shoot-secret-controller-test"

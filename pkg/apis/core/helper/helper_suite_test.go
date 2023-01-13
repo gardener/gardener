@@ -23,5 +23,5 @@ import (
 
 func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Core API Helper Suite")
+	RunSpecs(t, "APIs Core Helper Suite")
 }

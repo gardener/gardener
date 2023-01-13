@@ -45,9 +45,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestKubeletCSRApproverController(t *testing.T) {
+func TestCSRApprover(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Kubelet Server CertificateSigningRequest Approver Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager CSRApprover Suite")
 }
 
 // testID is used for generating test namespace names and other IDs

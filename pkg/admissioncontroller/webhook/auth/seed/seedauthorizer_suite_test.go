@@ -23,5 +23,5 @@ import (
 
 func TestSeedAuthorizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Auth SeedAuthorizer Suite")
+	RunSpecs(t, "AdmissionController Webhook Auth SeedAuthorizer Suite")
 }

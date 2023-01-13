@@ -38,10 +38,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestShootScheduler(t *testing.T) {
+func TestShoot(t *testing.T) {
 	schedulerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Scheduler Integration Test Suite")
+	RunSpecs(t, "Test Integration Scheduler Shoot Suite")
 }
 
 const (

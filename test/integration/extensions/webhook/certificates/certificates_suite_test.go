@@ -33,9 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestWebhookCertificates(t *testing.T) {
+func TestCertificates(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Webhook Certificates Integration Test Suite")
+	RunSpecs(t, "Test Integration Extensions Webhook Certificates Suite")
 }
 
 const testID = "extensions-webhook-certificates-test"

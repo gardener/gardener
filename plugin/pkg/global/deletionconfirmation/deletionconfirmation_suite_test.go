@@ -23,5 +23,5 @@ import (
 
 func TestDeletionConfirmation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission DeletionConfirmation Suite")
+	RunSpecs(t, "AdmissionPlugin Global DeletionConfirmation Suite")
 }

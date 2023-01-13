@@ -39,9 +39,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootRetry(t *testing.T) {
+func TestRetry(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Retry Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Shoot Retry Suite")
 }
 
 const testID = "retry-controller-test"

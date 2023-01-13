@@ -23,5 +23,5 @@ import (
 
 func TestCustomVerbAuthorizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission CustomVerbAuthorizer Suite")
+	RunSpecs(t, "AdmissionPlugin Global CustomVerbAuthorizer Suite")
 }

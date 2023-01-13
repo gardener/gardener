@@ -23,5 +23,5 @@ import (
 
 func TestUnstructured(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Unstructured Suite")
+	RunSpecs(t, "Utils Kubernetes Unstructured Suite")
 }

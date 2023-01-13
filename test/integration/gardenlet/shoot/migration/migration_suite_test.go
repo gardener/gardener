@@ -50,9 +50,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestShootMigrationController(t *testing.T) {
+func TestMigration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Migration Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet Shoot Migration Suite")
 }
 
 const testID = "shoot-migration-controller-test"

@@ -39,9 +39,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestTokenInvalidator(t *testing.T) {
+func TestTokenRequestor(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "TokenInvalidator Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager TokenRequestor Suite")
 }
 
 const testID = "tokeninvalidator-controller-test"

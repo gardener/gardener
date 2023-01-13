@@ -38,9 +38,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestSecretBindingController(t *testing.T) {
+func TestSecretBinding(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SecretBinding Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager SecretBinding Suite")
 }
 
 // testID is used for generating test namespace names and other IDs

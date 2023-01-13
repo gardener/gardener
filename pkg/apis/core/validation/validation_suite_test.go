@@ -26,5 +26,5 @@ import (
 func TestValidation(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Core API Validation Suite")
+	RunSpecs(t, "APIs Core Validation Suite")
 }

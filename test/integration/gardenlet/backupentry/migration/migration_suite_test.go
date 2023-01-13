@@ -48,9 +48,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestBackupEntryMigrationController(t *testing.T) {
+func TestBackupEntryMigration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupEntry Migration Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet BackupEntry Migration Suite")
 }
 
 const testID = "backupentry-migration-controller-test"

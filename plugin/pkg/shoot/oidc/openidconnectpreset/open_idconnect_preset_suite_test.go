@@ -23,5 +23,5 @@ import (
 
 func TestOpenIDConnectPreset(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission OpenIDConnectPreset Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot OIDC OpenIDConnectPreset Suite")
 }

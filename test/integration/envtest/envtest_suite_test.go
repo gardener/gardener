@@ -39,7 +39,7 @@ import (
 
 func TestEnvTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardener Envtest Integration Test Suite")
+	RunSpecs(t, "Test Integration EnvTest Suite")
 }
 
 const testID = "envtest-test"

@@ -42,9 +42,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestHealthController(t *testing.T) {
+func TestHealth(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Health Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager Health Suite")
 }
 
 const testID = "health-controller-test"

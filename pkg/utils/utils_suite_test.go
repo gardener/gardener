@@ -22,5 +22,5 @@ import (
 
 func TestUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Utility Suite")
+	RunSpecs(t, "Utils Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestFeatures(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "FeatureGate Validation Suite")
+	RunSpecs(t, "Utils Validation Features Suite")
 }

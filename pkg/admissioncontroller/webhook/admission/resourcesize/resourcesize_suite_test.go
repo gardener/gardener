@@ -23,5 +23,5 @@ import (
 
 func TestResourceSize(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission ResourceSize Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission ResourceSize Suite")
 }

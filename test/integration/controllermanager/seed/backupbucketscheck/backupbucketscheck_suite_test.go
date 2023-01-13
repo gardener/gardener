@@ -44,9 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestSeedBackupBucketsCheck(t *testing.T) {
+func TestBackupBucketsCheck(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed BackupBucketsCheck Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Seed BackupBucketsCheck Suite")
 }
 
 const testID = "backupbucketscheck-controller-test"

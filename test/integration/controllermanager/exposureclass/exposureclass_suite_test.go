@@ -44,9 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestExposureClassController(t *testing.T) {
+func TestExposureClass(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ExposureClass Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager ExposureClass Suite")
 }
 
 // testID is used for generating test namespace names and other IDs

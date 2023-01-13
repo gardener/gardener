@@ -23,5 +23,5 @@ import (
 
 func TestFake(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Utils Secrets Manager Fake Suite")
+	RunSpecs(t, "Utils SecretsManager Fake Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestTerraformer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Terraformer Suite")
+	RunSpecs(t, "Extensions Terraformer Suite")
 }

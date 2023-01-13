@@ -42,7 +42,7 @@ import (
 func TestRootCAPublisher(t *testing.T) {
 	t.Skipf("Temporarily skipping the test suite because of known flake...")
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Root CA Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager RootCAPublisher Suite")
 }
 
 const testID = "rootcapublisher-controller-test"

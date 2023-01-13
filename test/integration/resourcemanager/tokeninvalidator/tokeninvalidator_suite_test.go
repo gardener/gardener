@@ -48,7 +48,7 @@ import (
 
 func TestTokenInvalidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "TokenInvalidator Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager TokenInvalidator Suite")
 }
 
 const testID = "tokeninvalidator-controller-test"

@@ -46,7 +46,7 @@ import (
 
 func TestProjectStale(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Project Stale Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Project Stale Suite")
 }
 
 const (

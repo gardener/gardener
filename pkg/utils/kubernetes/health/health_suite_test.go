@@ -23,5 +23,5 @@ import (
 
 func TestHealth(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Health Suite")
+	RunSpecs(t, "Utils Kubernetes Health Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestNodeLocalDNS(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootNodeLocalDNSEnabledByDefault Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot NodeLocalDNS Suite")
 }

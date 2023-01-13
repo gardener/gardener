@@ -23,5 +23,5 @@ import (
 
 func TestSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Seed Suite")
+	RunSpecs(t, "Registry Core Seed Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestWorker(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller HealthCheck Worker Suite")
+	RunSpecs(t, "Extensions Controller HealthCheck Worker Suite")
 }

@@ -31,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	testclock "k8s.io/utils/clock/testing"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
@@ -38,13 +40,12 @@ import (
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testclock "k8s.io/utils/clock/testing"
 )
 
-func TestShootMaintenance(t *testing.T) {
+func TestMaintenance(t *testing.T) {
 	controllermanagerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Maintenance Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Shoot Maintenance Suite")
 }
 
 const testID = "maintenance-controller-test"

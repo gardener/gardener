@@ -23,5 +23,5 @@ import (
 
 func TestManagedSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ManagedSeedShoot Suite")
+	RunSpecs(t, "AdmissionPlugin ManagedSeed Shoot Suite")
 }

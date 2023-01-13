@@ -23,5 +23,5 @@ import (
 
 func TestDNSRecord(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Provider-Local Controller DNSRecord Suite")
+	RunSpecs(t, "Provider-Local Controller DNSRecord Suite")
 }

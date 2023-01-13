@@ -23,5 +23,5 @@ import (
 
 func TestFake(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Client Kubernetes ClientSet Fake Suite")
+	RunSpecs(t, "Client Kubernetes Fake Suite")
 }

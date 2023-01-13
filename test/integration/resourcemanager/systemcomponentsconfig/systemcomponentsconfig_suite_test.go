@@ -43,9 +43,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestPodNodeHandler(t *testing.T) {
+func TestSystemComponentsConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SystemComponentsConfig Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager SystemComponentsConfig Suite")
 }
 
 const testIDPrefix = "systemcomponentsconfig-webhook-test"

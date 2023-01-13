@@ -23,5 +23,5 @@ import (
 
 func TestEncoding(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedManagement API Encoding Suite")
+	RunSpecs(t, "APIs SeedManagement Encoding Suite")
 }

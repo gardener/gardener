@@ -38,9 +38,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestQuotaController(t *testing.T) {
+func TestQuota(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Quota Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Quota Suite")
 }
 
 const testID = "quota-controller-test"

@@ -41,9 +41,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestExtensionCRDs(t *testing.T) {
+func TestCRDDeletionProtection(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceManager ExtensionCRDs Webhook Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager CRDDeletionProtection Suite")
 }
 
 const testID = "crddeletionprotection-webhook-test"

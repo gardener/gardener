@@ -23,5 +23,5 @@ import (
 
 func TestAdmission(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission Suite")
 }

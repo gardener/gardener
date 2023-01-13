@@ -23,5 +23,5 @@ import (
 
 func TestControllerutils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller Utils Suite")
+	RunSpecs(t, "ControllerUtils Suite")
 }

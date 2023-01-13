@@ -40,9 +40,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestSecretController(t *testing.T) {
+func TestSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Secret Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager Secret Suite")
 }
 
 const testID = "secret-controller-test"

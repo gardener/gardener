@@ -42,9 +42,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestCloudProfileController(t *testing.T) {
+func TestCloudProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CloudProfile Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager CloudProfile Suite")
 }
 
 const testID = "cloudprofile-controller-test"

@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestResourcereferencemanager(t *testing.T) {
+func TestResourceReferenceManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ResourceReferenceManager Suite")
+	RunSpecs(t, "AdmissionPlugin Global ResourceReferenceManager Suite")
 }

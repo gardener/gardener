@@ -44,9 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestWebhookCloudProvider(t *testing.T) {
+func TestCloudProvider(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Webhook CloudProvider Integration Test Suite")
+	RunSpecs(t, "Test Integration Extensions Webhook CloudProvider Suite")
 }
 
 const (

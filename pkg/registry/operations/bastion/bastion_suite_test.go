@@ -23,5 +23,5 @@ import (
 
 func TestBastion(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Bastion Suite")
+	RunSpecs(t, "Registry Operations Bastion Suite")
 }

@@ -47,9 +47,9 @@ import (
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
-func TestProjectController(t *testing.T) {
+func TestProject(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Project Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Project Main Suite")
 }
 
 const testID = "project-controller-test"

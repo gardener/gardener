@@ -44,7 +44,7 @@ import (
 
 func TestProjectActivity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Project Activity Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager Project Activity Suite")
 }
 
 const testID = "project-activity-controller-test"

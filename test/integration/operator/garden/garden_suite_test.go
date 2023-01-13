@@ -49,7 +49,7 @@ import (
 
 func TestGarden(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Garden Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Operator Garden Suite")
 }
 
 const testID = "garden-controller-test"
