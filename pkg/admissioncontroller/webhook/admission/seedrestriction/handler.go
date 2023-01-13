@@ -251,7 +251,7 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("can only bindings referring to the bootstrapper role"))
 		}
 
-		managedSeedNamespace, managedSeedName := gardenletbootstraputil.MetadataFromClusterRoleBindingName(request.Name)
+		managedSeedNamespace, managedSeedName := gardenletbootstraputil.ManagedSeedInfoFromClusterRoleBindingName(request.Name)
 		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, managedSeedNamespace, managedSeedName)
 	}
 

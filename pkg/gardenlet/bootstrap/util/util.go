@@ -26,6 +26,19 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	authenticationv1 "k8s.io/api/authentication/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -34,17 +47,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
-
-	certificatesv1 "k8s.io/api/certificates/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetSeedName returns the seed name from the SeedConfig or the default Seed name
@@ -255,31 +257,33 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 // ComputeGardenletKubeconfigWithServiceAccountToken creates a kubeconfig containing the token of a service account
 // Creates the required service account in the Garden cluster and puts the associated token into a Kubeconfig
 // tailored to the Gardenlet
-func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gardenClient client.Client, gardenClientRestConfig *rest.Config, serviceAccountName, serviceAccountNamespace string) ([]byte, error) {
+func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gardenClient client.Client, coreV1Client corev1clientset.CoreV1Interface, gardenClientRestConfig *rest.Config, serviceAccountName, serviceAccountNamespace string) ([]byte, error) {
 	// Create a temporary service account
-	sa := &corev1.ServiceAccount{
+	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
 			Namespace: serviceAccountNamespace,
 		},
 	}
-	if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, gardenClient, sa, func() error { return nil }); err != nil {
+	if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, gardenClient, serviceAccount, func() error { return nil }); err != nil {
 		return nil, err
 	}
 
-	// Get the service account secret
-	if len(sa.Secrets) == 0 {
-		return nil, fmt.Errorf("service account token controller has not yet created a secret for the service account")
+	// Get a token for this service account
+	tokenRequest := &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{
+			ExpirationSeconds: pointer.Int64(600),
+		},
 	}
-	saSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, kubernetesutils.Key(sa.Namespace, sa.Secrets[0].Name), saSecret); err != nil {
-		return nil, err
+	result, err := coreV1Client.ServiceAccounts(serviceAccount.Namespace).CreateToken(ctx, serviceAccount.Name, tokenRequest, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed creating a token for ServiceAccount %q: %w", client.ObjectKeyFromObject(serviceAccount), err)
 	}
 
 	// Create a ClusterRoleBinding
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ClusterRoleBindingName(sa.Namespace, sa.Name),
+			Name: ClusterRoleBindingName(serviceAccount.Namespace, serviceAccount.Name),
 		},
 	}
 	if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, gardenClient, clusterRoleBinding, func() error {
@@ -291,17 +295,17 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 		clusterRoleBinding.Subjects = []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
 			},
 		}
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed creating a ClusterRoleBinding for ServiceAccount %q: %w", client.ObjectKeyFromObject(serviceAccount), err)
 	}
 
 	// Get bootstrap kubeconfig from service account secret
-	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, string(saSecret.Data[corev1.ServiceAccountTokenKey]))
+	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, result.Status.Token)
 }
 
 // TokenID returns the token id based on the given metadata.
@@ -315,28 +319,25 @@ func TokenID(meta metav1.ObjectMeta) string {
 }
 
 // ClusterRoleBindingName concatenates the gardener seed bootstrapper group with the given name, separated by a colon.
-func ClusterRoleBindingName(namespace, name string) string {
-	suffix := name
-	if namespace != "" {
-		suffix = namespace + clusterRoleBindingNameDelimiter + name
-	}
-	return ClusterRoleBindingNamePrefix + suffix
+func ClusterRoleBindingName(managedSeedNamespace, serviceAccountName string) string {
+	return ClusterRoleBindingNamePrefix + managedSeedNamespace + clusterRoleBindingNameDelimiter + serviceAccountName
 }
 
-// MetadataFromClusterRoleBindingName returns the namespace and name for a given cluster role binding name.
-func MetadataFromClusterRoleBindingName(clusterRoleBindingName string) (namespace, name string) {
+// ManagedSeedInfoFromClusterRoleBindingName returns the namespace and name of the related ManagedSeed for a given
+// cluster role binding name.
+func ManagedSeedInfoFromClusterRoleBindingName(clusterRoleBindingName string) (managedSeedNamespace, managedSeedName string) {
 	var (
 		metadata = strings.TrimPrefix(clusterRoleBindingName, ClusterRoleBindingNamePrefix)
 		split    = strings.Split(metadata, clusterRoleBindingNameDelimiter)
 	)
 
+	managedSeedName = split[0]
 	if len(split) > 1 {
-		namespace = split[0]
-		name = split[1]
-		return
+		managedSeedNamespace = split[0]
+		managedSeedName = split[1]
 	}
 
-	name = split[0]
+	managedSeedName = strings.TrimPrefix(managedSeedName, ServiceAccountNamePrefix)
 	return
 }
 
@@ -346,8 +347,6 @@ func ServiceAccountName(name string) string {
 }
 
 const (
-	// KindSeed is a constant for the "seed" kind.
-	KindSeed = "seed"
 	// KindManagedSeed is a constant for the "managed seed" kind.
 	KindManagedSeed = "managed seed"
 	// ServiceAccountNamePrefix is the prefix used for service account names.

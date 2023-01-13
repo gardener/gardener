@@ -205,7 +205,7 @@ func (a *authorizer) authorizeClusterRoleBinding(log logr.Logger, seedName strin
 	if attrs.GetVerb() == "delete" &&
 		strings.HasPrefix(attrs.GetName(), gardenletbootstraputil.ClusterRoleBindingNamePrefix) {
 
-		managedSeedNamespace, managedSeedName := gardenletbootstraputil.MetadataFromClusterRoleBindingName(attrs.GetName())
+		managedSeedNamespace, managedSeedName := gardenletbootstraputil.ManagedSeedInfoFromClusterRoleBindingName(attrs.GetName())
 		if managedSeedNamespace == v1beta1constants.GardenNamespace && managedSeedName == seedName {
 			return auth.DecisionAllow, "", nil
 		}
