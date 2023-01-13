@@ -104,7 +104,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 		otherConfig = SecretConfigWithOptions{
 			Config: &secretsutils.BasicAuthSecretConfig{
 				Name:           "some-secret",
-				Format:         secretsutils.BasicAuthFormatCSV,
+				Format:         secretsutils.BasicAuthFormatNormal,
 				Username:       "admin",
 				PasswordLength: 32,
 			},
@@ -253,7 +253,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				expectSecrets(fakeClient,
 					"my-extension-ca-013c464d", "my-extension-ca-bundle-d563c0b7",
 					"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-086fe2a7",
-					"some-server-7388feb3", "some-secret-2583adfe")
+					"some-server-7388feb3", "some-secret-4b8f9d51")
 			})
 		})
 
@@ -277,7 +277,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					expectSecrets(fakeClient,
 						"my-extension-ca-013c464d", "my-extension-ca-bundle-7c9e4d64",
 						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-97af5249",
-						"some-server-70ec0461", "some-secret-2583adfe")
+						"some-server-70ec0461", "some-secret-4b8f9d51")
 				})
 			})
 
@@ -302,7 +302,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					expectSecrets(fakeClient,
 						"my-extension-ca-013c464d", "my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-e595315e",
 						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-fb324296",
-						"some-server-70ec0461", "some-secret-2583adfe")
+						"some-server-70ec0461", "some-secret-4b8f9d51")
 				})
 			})
 
@@ -327,7 +327,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					expectSecrets(fakeClient,
 						"my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-0efe4bf3",
 						"my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-11a56f33",
-						"some-server-bbe4c0f9", "some-secret-2583adfe")
+						"some-server-bbe4c0f9", "some-secret-4b8f9d51")
 				})
 			})
 		})

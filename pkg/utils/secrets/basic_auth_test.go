@@ -28,7 +28,6 @@ var _ = Describe("Basic Auth Secrets", func() {
 			Expect(ok).To(BeTrue())
 
 			Expect(basicAuth.Name).To(Equal(expected.Name))
-			Expect(basicAuth.Format).To(Equal(expected.Format))
 			Expect(basicAuth.Username).To(Equal(expected.Username))
 
 			if comparePasswords {
@@ -46,14 +45,13 @@ var _ = Describe("Basic Auth Secrets", func() {
 		BeforeEach(func() {
 			basicAuthConfiguration = &BasicAuthSecretConfig{
 				Name:           "basic-auth",
-				Format:         BasicAuthFormatCSV,
+				Format:         BasicAuthFormatNormal,
 				Username:       "admin",
 				PasswordLength: 32,
 			}
 
 			expectedBasicAuthObject = &BasicAuth{
 				Name:     "basic-auth",
-				Format:   BasicAuthFormatCSV,
 				Username: "admin",
 				Password: "foo",
 			}
@@ -72,37 +70,25 @@ var _ = Describe("Basic Auth Secrets", func() {
 		var (
 			basicAuth                *BasicAuth
 			expectedNormalFormatData map[string][]byte
-			expectedCSVFormatData    map[string][]byte
 		)
 		BeforeEach(func() {
 			basicAuth = &BasicAuth{
 				Name:     "basicauth",
 				Username: "admin",
 				Password: "foo",
-				Format:   BasicAuthFormatCSV,
 			}
 
 			expectedNormalFormatData = map[string][]byte{
 				DataKeyUserName: []byte("admin"),
 				DataKeyPassword: []byte("foo"),
-				DataKeyCSV:      []byte("foo,admin,admin,system:masters"),
 				DataKeySHA1Auth: []byte("admin:{SHA}C+7Hteo/D9vJXQ3UfzxbwnXaijM="),
-			}
-
-			expectedCSVFormatData = map[string][]byte{
-				DataKeyCSV: []byte("foo,admin,admin,system:masters"),
 			}
 		})
 
 		Describe("#SecretData", func() {
 			It("should properly return secret data if format is BasicAuthFormatNormal", func() {
-				basicAuth.Format = BasicAuthFormatNormal
 				data := basicAuth.SecretData()
 				Expect(data).To(Equal(expectedNormalFormatData))
-			})
-			It("should properly return secret data if format is CSV", func() {
-				data := basicAuth.SecretData()
-				Expect(data).To(Equal(expectedCSVFormatData))
 			})
 		})
 	})

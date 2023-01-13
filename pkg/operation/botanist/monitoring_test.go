@@ -234,7 +234,7 @@ var _ = Describe("Monitoring", func() {
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), secret)).To(Succeed())
 			Expect(secret.Annotations).To(HaveKeyWithValue("url", "https://gu-foo--bar."))
 			Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "monitoring"))
-			Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth"), HaveKey("basic_auth.csv")))
+			Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
 		})
 
 		It("should cleanup the secrets when shoot purpose is changed", func() {
