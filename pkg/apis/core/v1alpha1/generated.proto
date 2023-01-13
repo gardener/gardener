@@ -1610,6 +1610,11 @@ message Networking {
   // Services is the CIDR of the service network. This field is immutable.
   // +optional
   optional string services = 5;
+
+  // IPFamilies specifies the IP families to use for shoot networking. This field is immutable.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+  // +optional
+  repeated string ipFamilies = 6;
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.

@@ -19,3 +19,13 @@ const (
 	// status using Lease resources for each Seed
 	GardenerSeedLeaseNamespace = "gardener-system-seed-lease"
 )
+
+// IPFamily is a type for specifying IP families to use in Gardener clusters.
+type IPFamily string
+
+const (
+	// IPFamilyIPv4 is the IPv4 IP family.
+	IPFamilyIPv4 IPFamily = "IPv4"
+	// IPFamilyIPv6 is the IPv6 IP family.
+	IPFamilyIPv6 IPFamily = "IPv6"
+)

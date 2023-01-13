@@ -2735,6 +2735,11 @@ func (in *Networking) DeepCopyInto(out *Networking) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.IPFamilies != nil {
+		in, out := &in.IPFamilies, &out.IPFamilies
+		*out = make([]IPFamily, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

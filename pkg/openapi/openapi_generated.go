@@ -4896,6 +4896,21 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"ipFamilies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPFamilies specifies the IP families to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"type"},
 			},
@@ -12279,6 +12294,21 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 							Description: "Services is the CIDR of the service network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"ipFamilies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPFamilies specifies the IP families to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},

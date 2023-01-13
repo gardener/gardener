@@ -3865,6 +3865,7 @@ func autoConvert_v1beta1_Networking_To_core_Networking(in *Networking, out *core
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
+	out.IPFamilies = *(*[]core.IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 
@@ -3879,6 +3880,7 @@ func autoConvert_core_Networking_To_v1beta1_Networking(in *core.Networking, out 
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
+	out.IPFamilies = *(*[]IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 

@@ -4185,6 +4185,15 @@ float64
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.IPFamily">IPFamily
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>)
+</p>
+<p>
+<p>IPFamily is a type for specifying IP families to use in Gardener clusters.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
 </h3>
 <p>
@@ -6786,6 +6795,21 @@ string
 <td>
 <em>(Optional)</em>
 <p>Services is the CIDR of the service network. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP families to use for shoot networking. This field is immutable.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a></p>
 </td>
 </tr>
 </tbody>
