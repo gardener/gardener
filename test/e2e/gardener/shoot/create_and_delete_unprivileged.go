@@ -36,7 +36,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	f.Shoot = e2e.DefaultShoot("e2e-unpriv")
 	// This version is pinned here, because we have removed support for this field for shoots with k8s v1.25+
-	f.Shoot.Spec.Kubernetes.Version = "1.24.9"
+	f.Shoot.Spec.Kubernetes.Version = "1.24.8"
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 	f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 		{
