@@ -120,11 +120,16 @@ var _ = Describe("Constraints", func() {
 					namespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
 				}),
+				Entry("namespaceSelector matching name label", webhookTestCase{
+					namespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}},
+				}),
 				Entry("namespaceSelector matching all gardener labels", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"shoot.gardener.cloud/no-cleanup": "true",
 							"gardener.cloud/purpose":          "kube-system",
+							"kubernetes.io/metadata.name":     "kube-system",
 						}},
 				}),
 			}
