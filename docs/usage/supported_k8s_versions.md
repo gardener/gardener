@@ -38,6 +38,7 @@ Beginning with 2023, a new policy has been introduced:
 | 1.23               | 2023-02-28  | v1.39.0         | 1.27 is supported (> 2023-04) |
 | 1.24               | 2023-07-28  | v1.48.0         | 1.28 is supported (> 2023-08) |
 | 1.25               | 2023-10-28  | v1.56.0         | 1.29 is supported (> 2023-12) |
+| 1.26               | 2024-02-28  | v1.63.0         | 1.30 is supported (> 2024-04) |
 
 The three versions 1.20, 1.21, 1.22 (which all are officially out of maintenance already) are handled specially to allow users to adapt to this new policy.
 Beginning with 1.23, the support of the oldest version is dropped after the support of a new version was introduced.
