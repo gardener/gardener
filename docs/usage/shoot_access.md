@@ -25,7 +25,7 @@ When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec
 - for Shoot clusters using Kubernetes version < 1.26 the field is defaulted to `true`.
 - for Shoot clusters using Kubernetes version >= 1.26 the field is defaulted to `false`.
 
-> Note: Starting Kubernetes 1.27 the `enableStaticTokenKubeconfig` field will be locked to `false`. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
+> Note: Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
 
 ## `shoots/adminkubeconfig` subresource
 

@@ -637,7 +637,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds).To(PointTo(Equal(int64(300))))
 		})
 
-		It("should not default the defaultNotReadyTolerationSeconds field", func() {
+		It("should not overwrite the defaultNotReadyTolerationSeconds field if it is already set", func() {
 			var tolerationSeconds int64 = 120
 			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: pointer.Int64(tolerationSeconds)}
 
@@ -650,7 +650,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds).To(PointTo(Equal(int64(300))))
 		})
 
-		It("should not default the defaultUnreachableTolerationSeconds field", func() {
+		It("should not overwrite the defaultUnreachableTolerationSeconds field if it is already set", func() {
 			var tolerationSeconds int64 = 120
 			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: pointer.Int64(tolerationSeconds)}
 
@@ -817,6 +817,20 @@ var _ = Describe("Defaults", func() {
 					SetDefaults_Shoot(obj)
 
 					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
+				})
+			})
+		})
+
+		Context("k8s version >= 1.25", func() {
+			BeforeEach(func() {
+				obj.Spec.Kubernetes.Version = "1.25.0"
+			})
+
+			Context("allowPrivilegedContainers field is not set", func() {
+				It("should not set the field", func() {
+					SetDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
 				})
 			})
 		})
