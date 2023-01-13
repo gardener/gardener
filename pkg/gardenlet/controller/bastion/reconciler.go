@@ -122,7 +122,6 @@ func (r *Reconciler) reconcileBastion(
 
 	var (
 		mustReconcileExtensionBastion = false
-		reconciliationSuccessful      = true
 		lastObservedError             error
 		extensionBastionSpec          = extensionsv1alpha1.BastionSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -143,7 +142,7 @@ func (r *Reconciler) reconcileBastion(
 		// if the extensionBastionSpec has changed, reconcile it
 		mustReconcileExtensionBastion = true
 	} else if extensionBastion.Status.LastOperation == nil {
-		reconciliationSuccessful = false
+		// if the extension did not record a lastOperation yet, record it as error in the bastion status
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
 		lastOperationState := extensionBastion.Status.LastOperation.State
@@ -153,7 +152,6 @@ func (r *Reconciler) reconcileBastion(
 			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
 				mustReconcileExtensionBastion = true
 			}
-			reconciliationSuccessful = false
 
 			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBastion.Status.LastError != nil {
@@ -188,7 +186,7 @@ func (r *Reconciler) reconcileBastion(
 		return nil
 	}
 
-	if reconciliationSuccessful && extensionBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+	if extensionBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		// copy over the extension's status to the operation bastion and set the condition
 		patch := client.MergeFrom(bastion.DeepCopy())
 		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
