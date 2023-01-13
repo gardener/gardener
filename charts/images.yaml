@@ -204,34 +204,112 @@ images:
   sourceRepository: github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
   tag: "1.9.7"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'low'
+      availability_requirement: 'low'
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
   tag: "v0.47.0"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'none'
+      integrity_requirement: 'none'
+      availability_requirement: 'none'
+      comment: no data is stored or processed by the installer
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
   tag: "2.2.1"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
+      availability_requirement: 'low'
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
   tag: "v0.47.0"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'none'
+      integrity_requirement: 'high'
+      availability_requirement: 'low'
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
   tag: v0.14.0
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'public'
+      authentication_enforced: true
+      user_interaction: 'end-user'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
+      availability_requirement: 'low'
+      comment: kube-rbac-proxy is an authentication proxy working with credentials
 - name: promtail
   sourceRepository: github.com/grafana/loki
   repository: "docker.io/grafana/promtail"
   tag: "2.2.1"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'public'
+      authentication_enforced: false
+      user_interaction: 'end-user'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
+      availability_requirement: 'low'
+      comment: network exposure is public due to the outbound connectivity, there is no exposed endpoint requiring auth.
 - name: telegraf
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
   tag: "v0.47.0"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'none'
+      integrity_requirement: 'none'
+      availability_requirement: 'none'
+      comment: >
+        telegraf is not accessible from outside the seed cluster and does not
+        interact with confidential data
 - name: event-logger
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/event-logger
   tag: "v0.47.0"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
+      availability_requirement: 'low'
 
 # VPA
 - name: vpa-admission-controller
