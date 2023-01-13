@@ -270,13 +270,13 @@ func (b *HealthChecker) checkManagedResourceConditions(
 		return &c
 	}
 
-	var conditionProgressing, conditionHealthy bool
+	var conditionProgressingForMoreThanThreshold, conditionHealthy bool
 	for _, cond := range mr.Status.Conditions {
 		if cond.Type == resourcesv1alpha1.ResourcesProgressing &&
 			cond.Status == gardencorev1beta1.ConditionTrue &&
 			b.managedResourceProgressingThreshold != nil &&
-			time.Since(cond.LastTransitionTime.Time) >= b.managedResourceProgressingThreshold.Duration {
-			conditionProgressing = true
+			b.clock.Since(cond.LastTransitionTime.Time) >= b.managedResourceProgressingThreshold.Duration {
+			conditionProgressingForMoreThanThreshold = true
 		}
 		if cond.Type == resourcesv1alpha1.ResourcesHealthy && cond.Status == gardencorev1beta1.ConditionTrue {
 			conditionHealthy = true
@@ -301,8 +301,8 @@ func (b *HealthChecker) checkManagedResourceConditions(
 		return &c
 	}
 
-	if conditionProgressing && conditionHealthy {
-		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceStuckInProgressingError, fmt.Sprintf("ManagedResource %s progressing state is true for more than %v", mr.Name, b.managedResourceProgressingThreshold.Duration))
+	if conditionProgressingForMoreThanThreshold && conditionHealthy {
+		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceStuckInProgressingError, fmt.Sprintf("ManagedResource %s is progressing for more than %v", mr.Name, b.managedResourceProgressingThreshold.Duration))
 		return &c
 	}
 

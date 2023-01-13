@@ -159,7 +159,7 @@ var _ = Describe("health check", func() {
 	var (
 		ctx        = context.TODO()
 		fakeClient client.Client
-		fakeClock  *testclock.FakeClock
+		fakeClock  = testclock.NewFakeClock(time.Now())
 
 		condition                gardencorev1beta1.Condition
 		shoot                    = &gardencorev1beta1.Shoot{}
@@ -376,14 +376,18 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckManagedResource",
-		func(conditions []gardencorev1beta1.Condition, upToDate bool, conditionMatcher types.GomegaMatcher) {
+		func(conditions []gardencorev1beta1.Condition, upToDate bool, stepTime bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				mr      = new(resourcesv1alpha1.ManagedResource)
-				checker = care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, &metav1.Duration{Duration: 1 * time.Minute}, nil, kubernetesVersion, gardenerVersion)
+				checker = care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, &metav1.Duration{Duration: 5 * time.Minute}, nil, kubernetesVersion, gardenerVersion)
 			)
 
 			if !upToDate {
 				mr.Generation++
+			}
+
+			if stepTime {
+				fakeClock.Step(5 * time.Minute)
 			}
 
 			mr.Status.Conditions = conditions
@@ -394,6 +398,7 @@ var _ = Describe("health check", func() {
 		Entry("no conditions",
 			nil,
 			true,
+			false,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, ""))),
 		Entry("one true condition, one missing",
 			[]gardencorev1beta1.Condition{
@@ -403,6 +408,7 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
+			false,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, string(resourcesv1alpha1.ResourcesHealthy)))),
 		Entry("multiple true conditions",
 			[]gardencorev1beta1.Condition{
@@ -419,12 +425,14 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
+			false,
 			BeNil()),
-		Entry("both progressing and healthy conditions are true for more than ManagedResourceProgressingThreshold",
+		Entry("both progressing and healthy conditions are true for less than ManagedResourceProgressingThreshold",
 			[]gardencorev1beta1.Condition{
 				{
-					Type:   resourcesv1alpha1.ResourcesProgressing,
-					Status: gardencorev1beta1.ConditionTrue,
+					Type:               resourcesv1alpha1.ResourcesProgressing,
+					Status:             gardencorev1beta1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
 				},
 				{
 					Type:   resourcesv1alpha1.ResourcesHealthy,
@@ -436,7 +444,27 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
-			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceStuckInProgressingError, "ManagedResource  progressing state is true for more than 1m0s"))),
+			false,
+			BeNil()),
+		Entry("both progressing and healthy conditions are true for more than ManagedResourceProgressingThreshold",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:               resourcesv1alpha1.ResourcesProgressing,
+					Status:             gardencorev1beta1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesApplied,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+			},
+			true,
+			true,
+			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceStuckInProgressingError, "ManagedResource  is progressing for more than 5m0s"))),
 		Entry("one false condition ResourcesApplied",
 			[]gardencorev1beta1.Condition{
 				{
@@ -449,6 +477,7 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
+			false,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("one false condition ResourcesHealthy",
 			[]gardencorev1beta1.Condition{
@@ -462,6 +491,7 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
+			false,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("multiple false conditions with reason & message",
 			[]gardencorev1beta1.Condition{
@@ -479,6 +509,7 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
+			false,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "fooFailed", "foo is unhealthy"))),
 		Entry("outdated managed resource",
 			[]gardencorev1beta1.Condition{
@@ -496,6 +527,7 @@ var _ = Describe("health check", func() {
 				},
 			},
 			false,
+			false,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.OutdatedStatusError, "outdated"))),
 		Entry("unknown condition status with reason and message",
 			[]gardencorev1beta1.Condition{
@@ -511,6 +543,7 @@ var _ = Describe("health check", func() {
 				},
 			},
 			true,
+			false,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "Unknown", "bar is unknown"))),
 	)
 

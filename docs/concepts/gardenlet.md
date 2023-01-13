@@ -409,6 +409,8 @@ It maintains four conditions and performs the following checks:
 - `EveryNodyReady`: The conditions of the worker nodes are checked (e.g., `Ready`, `MemoryPressure`, etc.). Also, it's checked whether the Kubernetes version of the installed `kubelet` matches the desired version specified in the `Shoot` resource.
 - `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g. `ResourcesApplied`, etc.). Also, it is verified whether the VPN tunnel connection is established (which is required for the `kube-apiserver` to communicate with the worker nodes).
 
+Sometimes there can be case where ManagedReosurce get stuck with both `Healthy` and `Progressing` condition set to `true`. To prevent it one can set `GardenletConfiguration.controllers.shootCare.managedResourceProgressingThreshold`. So if ManagedReosurce `Progressing` condition is `true` for more than `managedResourceProgressingThreshold`, `SystemComponentsHealthy` condition is marked `Progressing` or `False` accordingly.
+
 Each condition can optionally also have error `codes` in order to indicate which type of issue was detected (see [Shoot Status](../usage/shoot_status.md) for more details).
 
 Apart from the above, extension controllers can also contribute to the `status` or error `codes` of these conditions (see [Contributing to Shoot Health Status Conditions](../extensions/shoot-health-status-conditions.md) for more details).
