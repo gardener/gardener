@@ -1430,6 +1430,12 @@ func schema_pkg_apis_core_v1alpha1_CARotation(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
@@ -1438,13 +1444,7 @@ func schema_pkg_apis_core_v1alpha1_CARotation(ref common.ReferenceCallback) comm
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -7134,6 +7134,12 @@ func schema_pkg_apis_core_v1alpha1_ShootETCDEncryptionKeyRotation(ref common.Ref
 							Format:      "",
 						},
 					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
@@ -7142,13 +7148,7 @@ func schema_pkg_apis_core_v1alpha1_ShootETCDEncryptionKeyRotation(ref common.Ref
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -7378,6 +7378,12 @@ func schema_pkg_apis_core_v1alpha1_ShootServiceAccountKeyRotation(ref common.Ref
 							Format:      "",
 						},
 					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
@@ -7386,13 +7392,7 @@ func schema_pkg_apis_core_v1alpha1_ShootServiceAccountKeyRotation(ref common.Ref
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -9057,6 +9057,12 @@ func schema_pkg_apis_core_v1beta1_CARotation(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
@@ -9065,13 +9071,7 @@ func schema_pkg_apis_core_v1beta1_CARotation(ref common.ReferenceCallback) commo
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -14518,6 +14518,12 @@ func schema_pkg_apis_core_v1beta1_ShootETCDEncryptionKeyRotation(ref common.Refe
 							Format:      "",
 						},
 					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
@@ -14526,13 +14532,7 @@ func schema_pkg_apis_core_v1beta1_ShootETCDEncryptionKeyRotation(ref common.Refe
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -14762,6 +14762,12 @@ func schema_pkg_apis_core_v1beta1_ShootServiceAccountKeyRotation(ref common.Refe
 							Format:      "",
 						},
 					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
@@ -14770,13 +14776,7 @@ func schema_pkg_apis_core_v1beta1_ShootServiceAccountKeyRotation(ref common.Refe
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},

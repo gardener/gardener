@@ -304,7 +304,7 @@ spec:
                           lastInitiationFinishedTime:
                             description: LastInitiationFinishedTime is the recent
                               time when the certificate authority credential rotation
-                              initiated was completed.
+                              initiation was completed.
                             format: date-time
                             type: string
                           lastInitiationTime:

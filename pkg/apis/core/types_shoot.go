@@ -198,7 +198,7 @@ type CARotation struct {
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
 	LastInitiationTime *metav1.Time
-	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
 	// completed.
 	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
@@ -239,7 +239,7 @@ type ShootServiceAccountKeyRotation struct {
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
-	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
 	// completed.
 	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
@@ -256,7 +256,7 @@ type ShootETCDEncryptionKeyRotation struct {
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
-	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiated was
+	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
 	// completed.
 	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
