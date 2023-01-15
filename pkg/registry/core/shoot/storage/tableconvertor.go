@@ -139,6 +139,11 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		} else {
 			cells = append(cells, "<unknown>")
 		}
+		if cond := helper.GetCondition(shoot.Status.Conditions, core.ShootObservabilityComponentsHealthy); cond != nil {
+			cells = append(cells, cond.Status)
+		} else {
+			cells = append(cells, "<unknown>")
+		}
 		if cond := helper.GetCondition(shoot.Status.Conditions, core.ShootEveryNodeReady); cond != nil {
 			cells = append(cells, cond.Status)
 		} else {
