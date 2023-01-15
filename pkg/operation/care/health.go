@@ -265,13 +265,15 @@ func (h *Health) healthChecks(
 		return shootHibernatedConditions(h.clock, conditions)
 	}
 
-	var apiserverAvailability, controlPlane, nodes, systemComponents gardencorev1beta1.Condition
+	var apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents gardencorev1beta1.Condition
 	for _, cond := range conditions {
 		switch cond.Type {
 		case gardencorev1beta1.ShootAPIServerAvailable:
 			apiserverAvailability = cond
 		case gardencorev1beta1.ShootControlPlaneHealthy:
 			controlPlane = cond
+		case gardencorev1beta1.ShootObservabilityComponentsHealthy:
+			observabilityComponents = cond
 		case gardencorev1beta1.ShootEveryNodeReady:
 			nodes = cond
 		case gardencorev1beta1.ShootSystemComponentsHealthy:
@@ -301,7 +303,11 @@ func (h *Health) healthChecks(
 
 		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
 		controlPlane = NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
-		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, nodes, systemComponents}
+
+		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
+		observabilityComponents = NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+
+		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents}
 	}
 
 	h.shootClient = shootClient
@@ -314,6 +320,10 @@ func (h *Health) healthChecks(
 		controlPlane = NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 		return nil
 	}, func(ctx context.Context) error {
+		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
+		observabilityComponents = NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+		return nil
+	}, func(ctx context.Context) error {
 		newNodes, err := h.checkClusterNodes(ctx, h.shootClient.Client(), checker, nodes, extensionConditionsEveryNodeReady)
 		nodes = NewConditionOrError(h.clock, nodes, newNodes, err)
 		return nil
@@ -323,7 +333,7 @@ func (h *Health) healthChecks(
 		return nil
 	})(ctx)
 
-	return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, nodes, systemComponents}
+	return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents}
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
@@ -333,7 +343,7 @@ func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *Health
 	})
 }
 
-// checkControlPlane checks whether the control plane of the Shoot cluster is healthy.
+// checkControlPlane checks whether the core components of the Shoot controlplane (ETCD, KAPI, KCM..) are healthy.
 func (h *Health) checkControlPlane(
 	ctx context.Context,
 	checker *HealthChecker,
@@ -344,6 +354,20 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
+	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
+	return &c, nil
+}
+
+// checkControlPlane checks whether the  observability components of the Shoot control plane (Prometheus, Loki, Grafana..) are healthy.
+func (h *Health) checkObservabilityComponents(
+	ctx context.Context,
+	checker *HealthChecker,
+	condition gardencorev1beta1.Condition,
+) (*gardencorev1beta1.Condition, error) {
 	wantsAlertmanager := h.shoot.WantsAlertmanager
 	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
 	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
@@ -359,11 +383,8 @@ func (h *Health) checkControlPlane(
 			return exitCondition, err
 		}
 	}
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
-		return exitCondition, nil
-	}
 
-	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy.")
 	return &c, nil
 }
 
