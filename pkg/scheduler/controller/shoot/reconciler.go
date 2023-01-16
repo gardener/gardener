@@ -31,6 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -46,6 +47,9 @@ type Reconciler struct {
 // Reconcile schedules shoots to seeds.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {

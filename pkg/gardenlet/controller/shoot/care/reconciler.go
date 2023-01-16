@@ -72,6 +72,11 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	// Timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
+	// themselves run into timeouts, so that we will still update the status with that timeout error.
+	ctx, cancel := context.WithTimeout(ctx, 2*r.Config.Controllers.ShootCare.SyncPeriod.Duration)
+	defer cancel()
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.GardenClient.Get(ctx, req.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {

@@ -28,6 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -41,6 +42,9 @@ type Reconciler struct {
 // Reconcile reacts to updates on Bastion resources and cleans up expired Bastions.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
 
 	bastion := &operationsv1alpha1.Bastion{}
 	if err := r.Client.Get(ctx, request.NamespacedName, bastion); err != nil {

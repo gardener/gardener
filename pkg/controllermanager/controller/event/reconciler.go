@@ -28,6 +28,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles Event.
@@ -40,6 +41,9 @@ type Reconciler struct {
 // Reconcile performs the main reconciliation logic.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
 
 	event := &corev1.Event{}
 	if err := r.Client.Get(ctx, req.NamespacedName, event); err != nil {

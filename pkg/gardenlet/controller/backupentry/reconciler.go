@@ -80,6 +80,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	ctx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
+
 	backupEntry := &gardencorev1beta1.BackupEntry{}
 	if err := r.GardenClient.Get(ctx, request.NamespacedName, backupEntry); err != nil {
 		if apierrors.IsNotFound(err) {

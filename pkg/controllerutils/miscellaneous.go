@@ -27,6 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+// DefaultReconciliationTimeout is the default timeout for the context of reconciliation functions.
+const DefaultReconciliationTimeout = 1 * time.Minute
+
 const separator = ","
 
 // GetTasks returns the list of tasks in the ShootTasks annotation.

@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -38,6 +39,9 @@ type Reconciler struct {
 // Reconcile reconciles Shoots registered as Seeds and copies the Seed conditions to the Shoot object.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {

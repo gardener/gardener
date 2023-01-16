@@ -51,6 +51,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	ctx, cancel := context.WithTimeout(ctx, r.Config.SyncPeriod.Duration)
+	defer cancel()
+
 	seed := &gardencorev1beta1.Seed{}
 	if err := r.Client.Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {

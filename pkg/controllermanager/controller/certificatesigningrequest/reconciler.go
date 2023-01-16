@@ -36,6 +36,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -56,6 +57,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		finalState     string
 		extra          = make(map[string]authorizationv1.ExtraValue)
 	)
+
+	ctx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
 
 	csr := &certificatesv1.CertificateSigningRequest{}
 	if err := r.Client.Get(ctx, request.NamespacedName, csr); err != nil {
