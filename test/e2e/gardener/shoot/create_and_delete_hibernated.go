@@ -57,5 +57,5 @@ func verifyNoPodsRunning(ctx context.Context, f *framework.ShootCreationFramewor
 	podList := &metav1.PartialObjectMetadataList{}
 	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
 	ExpectWithOffset(1, f.ShootFramework.SeedClient.Client().List(ctx, podList, client.InNamespace(f.Shoot.Status.TechnicalID))).To(Succeed())
-	ExpectWithOffset(1, podList.Items).To(HaveLen(0))
+	ExpectWithOffset(1, podList.Items).To(BeEmpty())
 }
