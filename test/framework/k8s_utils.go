@@ -321,10 +321,11 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 	}
 
 	shootConditions := map[gardencorev1beta1.ConditionType]struct{}{
-		gardencorev1beta1.ShootAPIServerAvailable:      {},
-		gardencorev1beta1.ShootControlPlaneHealthy:     {},
-		gardencorev1beta1.ShootEveryNodeReady:          {},
-		gardencorev1beta1.ShootSystemComponentsHealthy: {},
+		gardencorev1beta1.ShootAPIServerAvailable:             {},
+		gardencorev1beta1.ShootControlPlaneHealthy:            {},
+		gardencorev1beta1.ShootObservabilityComponentsHealthy: {},
+		gardencorev1beta1.ShootEveryNodeReady:                 {},
+		gardencorev1beta1.ShootSystemComponentsHealthy:        {},
 	}
 
 	for _, condition := range shoot.Status.Conditions {
