@@ -1,0 +1,14 @@
+groups:
+- name: node.rules
+  rules:
+  - alert: K8SNodeNotReady
+    expr: ALERTS{alertname="K8SNodeNotReady", alertstate="firing"} > 0
+    labels:
+      severity: warning
+      service: logging
+      type: seed
+      visibility: operator
+    annotations:
+      summary: Node is in not in a ready state
+      description: One or many node have not been ready for more than 10 minutes 
+      
