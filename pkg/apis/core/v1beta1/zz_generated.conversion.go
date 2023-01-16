@@ -3865,6 +3865,7 @@ func autoConvert_v1beta1_Networking_To_core_Networking(in *Networking, out *core
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
+	out.IPFamilies = *(*[]core.IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 
@@ -3879,6 +3880,7 @@ func autoConvert_core_Networking_To_v1beta1_Networking(in *core.Networking, out 
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
+	out.IPFamilies = *(*[]IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 
@@ -4592,6 +4594,7 @@ func autoConvert_v1beta1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, out
 	out.Services = in.Services
 	out.ShootDefaults = (*core.ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	out.BlockCIDRs = *(*[]string)(unsafe.Pointer(&in.BlockCIDRs))
+	out.IPFamilies = *(*[]core.IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 
@@ -4606,6 +4609,7 @@ func autoConvert_core_SeedNetworks_To_v1beta1_SeedNetworks(in *core.SeedNetworks
 	out.Services = in.Services
 	out.ShootDefaults = (*ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	out.BlockCIDRs = *(*[]string)(unsafe.Pointer(&in.BlockCIDRs))
+	out.IPFamilies = *(*[]IPFamily)(unsafe.Pointer(&in.IPFamilies))
 	return nil
 }
 

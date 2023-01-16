@@ -75,6 +75,10 @@ type NetworkSpec struct {
 	PodCIDR string `json:"podCIDR"`
 	// ServiceCIDR defines the CIDR that will be used for services. This field is immutable.
 	ServiceCIDR string `json:"serviceCIDR"`
+	// IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+	// +optional
+	IPFamilies []IPFamily `json:"ipFamilies,omitempty"`
 }
 
 // NetworkStatus is the status for an Network resource.

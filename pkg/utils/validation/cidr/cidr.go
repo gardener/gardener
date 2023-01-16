@@ -18,7 +18,15 @@ import (
 	"fmt"
 	"net"
 
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+)
+
+const (
+	// IPFamilyIPv4 is the IPv4 IP family.
+	IPFamilyIPv4 string = "IPv4"
+	// IPFamilyIPv6 is the IPv6 IP family.
+	IPFamilyIPv6 string = "IPv6"
 )
 
 // CIDR contains CIDR and Path information
@@ -35,6 +43,8 @@ type CIDR interface {
 	ValidateNotOverlap(subsets ...CIDR) field.ErrorList
 	// ValidateParse returns errors CIDR can't be parsed.
 	ValidateParse() field.ErrorList
+	// ValidateIPFamily returns error if IPFamily does not match CIDR.
+	ValidateIPFamily(ipFamily string) field.ErrorList
 	// ValidateSubset returns errors if subsets is not a subset.
 	ValidateSubset(subsets ...CIDR) field.ErrorList
 	// LastIPInRange returns the last IP in the CIDR range.
@@ -118,6 +128,24 @@ func (c *cidrPath) ValidateParse() field.ErrorList {
 
 	if c.ParseError != nil {
 		allErrs = append(allErrs, field.Invalid(c.fieldPath, c.cidr, c.ParseError.Error()))
+	}
+
+	return allErrs
+}
+
+// ValidateIPFamily returns error if IPFamily does not match CIDR.
+func (c *cidrPath) ValidateIPFamily(ipFamily string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if c.ParseError != nil {
+		return allErrs
+	}
+
+	switch ipFamily {
+	case IPFamilyIPv4:
+		allErrs = append(allErrs, validation.IsValidIPv4Address(c.fieldPath, c.net.IP.String())...)
+	case IPFamilyIPv6:
+		allErrs = append(allErrs, validation.IsValidIPv6Address(c.fieldPath, c.net.IP.String())...)
 	}
 
 	return allErrs

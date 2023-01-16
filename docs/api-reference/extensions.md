@@ -1288,6 +1288,21 @@ string
 <p>ServiceCIDR defines the CIDR that will be used for services. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a></p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3134,6 +3149,15 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.IPFamily">IPFamily
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec</a>)
+</p>
+<p>
+<p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec
 </h3>
 <p>
@@ -3402,6 +3426,21 @@ string
 </td>
 <td>
 <p>ServiceCIDR defines the CIDR that will be used for services. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a></p>
 </td>
 </tr>
 </tbody>

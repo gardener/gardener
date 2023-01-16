@@ -26,5 +26,6 @@ func RegisterFeatureGates() {
 	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(features.GetFeatures(
 		features.HAControlPlanes,
 		features.SeedChange,
+		features.IPv6SingleStack,
 	)))
 }

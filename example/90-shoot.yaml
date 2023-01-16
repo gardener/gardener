@@ -316,6 +316,8 @@ spec:
   # disabled: true # only relevant for extensions that were marked as 'globally enabled' by Gardener administrators
   networking:
     type: <some-network-extension-name> # {calico,cilium}
+    ipFamilies:
+    - IPv4
     pods: 100.96.0.0/11
     nodes: 10.250.0.0/16
     services: 100.64.0.0/13

@@ -2736,6 +2736,11 @@ func (in *Networking) DeepCopyInto(out *Networking) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.IPFamilies != nil {
+		in, out := &in.IPFamilies, &out.IPFamilies
+		*out = make([]IPFamily, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -3559,6 +3564,11 @@ func (in *SeedNetworks) DeepCopyInto(out *SeedNetworks) {
 	if in.BlockCIDRs != nil {
 		in, out := &in.BlockCIDRs, &out.BlockCIDRs
 		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.IPFamilies != nil {
+		in, out := &in.IPFamilies, &out.IPFamilies
+		*out = make([]IPFamily, len(*in))
 		copy(*out, *in)
 	}
 	return

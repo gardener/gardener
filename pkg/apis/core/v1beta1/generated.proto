@@ -1535,6 +1535,12 @@ message Networking {
   // Services is the CIDR of the service network. This field is immutable.
   // +optional
   optional string services = 5;
+
+  // IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+  // Defaults to ["IPv4"].
+  // +optional
+  repeated string ipFamilies = 6;
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
@@ -1985,6 +1991,12 @@ message SeedNetworks {
   // in the seed cluster.
   // +optional
   repeated string blockCIDRs = 5;
+
+  // IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+  // Defaults to ["IPv4"].
+  // +optional
+  repeated string ipFamilies = 6;
 }
 
 // SeedProvider defines the provider-specific information of this Seed cluster.

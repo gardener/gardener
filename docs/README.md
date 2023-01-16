@@ -40,6 +40,7 @@
 * [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [Hibernate a Cluster](usage/shoot_hibernate.md)
+* [IPv6 in Gardener Clusters](usage/ipv6.md)
 * [`ManagedIstio` feature](usage/istio.md)
 * [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)

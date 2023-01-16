@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -27,6 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
@@ -151,4 +154,44 @@ func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
 	}
 
 	return false, fmt.Sprintf("last operation was %s, not Reconcile", shoot.Status.LastOperation.Type)
+}
+
+var availableIPFamilies = sets.NewString(
+	string(core.IPFamilyIPv4),
+	string(core.IPFamilyIPv6),
+)
+
+// ValidateIPFamilies validates the given list of IP families for valid values and combinations.
+func ValidateIPFamilies(ipFamilies []core.IPFamily, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	ipFamiliesSeen := sets.NewString()
+	for i, ipFamily := range ipFamilies {
+		// validate: only supported IP families
+		if !availableIPFamilies.Has(string(ipFamily)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), ipFamily, availableIPFamilies.List()))
+		}
+
+		// validate: no duplicate IP families
+		if ipFamiliesSeen.Has(string(ipFamily)) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i), ipFamily))
+		} else {
+			ipFamiliesSeen.Insert(string(ipFamily))
+		}
+	}
+
+	if len(allErrs) > 0 {
+		// further validation doesn't make any sense, because there are unsupported or duplicate IP families
+		return allErrs
+	}
+
+	// validate: only supported single-stack/dual-stack combinations
+	if len(ipFamilies) > 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "dual-stack networking is not supported"))
+	}
+	if len(ipFamilies) > 0 && ipFamilies[0] == core.IPFamilyIPv6 && !utilfeature.DefaultFeatureGate.Enabled(features.IPv6SingleStack) {
+		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "IPv6 single-stack networking is not supported"))
+	}
+
+	return allErrs
 }

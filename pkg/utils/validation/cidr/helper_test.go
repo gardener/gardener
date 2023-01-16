@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,92 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 )
+
+var _ = Describe("#ValidateCIDRIPFamily", func() {
+	var (
+		ipV4CIDRs, ipV6CIDRs []CIDR
+	)
+
+	BeforeEach(func() {
+		path := field.NewPath("cidrs")
+
+		ipV4CIDRs = []CIDR{
+			NewCIDR("10.0.1.0/24", path.Index(0)),
+			NewCIDR("101.2.0.0/16", path.Index(1)),
+		}
+		ipV6CIDRs = []CIDR{
+			NewCIDR("2001:db8:1::/48", path.Index(2)),
+			NewCIDR("2001:db8:2:3::/64", path.Index(3)),
+		}
+	})
+
+	It("should not return errors if all CIDRs match the ipFamily", func() {
+		Expect(ValidateCIDRIPFamily(ipV4CIDRs, "IPv4")).To(BeEmpty())
+		Expect(ValidateCIDRIPFamily(ipV6CIDRs, "IPv6")).To(BeEmpty())
+	})
+
+	It("should skip nil values in CIDRs", func() {
+		Expect(ValidateCIDRIPFamily(append(append([]CIDR{nil}, ipV4CIDRs...), nil), "IPv4")).To(BeEmpty())
+		Expect(ValidateCIDRIPFamily(append(append([]CIDR{nil}, ipV6CIDRs...), nil), "IPv6")).To(BeEmpty())
+	})
+
+	It("should return errors if all CIDRs don't match ipFamily", func() {
+		Expect(ValidateCIDRIPFamily(ipV6CIDRs, "IPv4")).To(ConsistOfFields(
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[2]"),
+				"Detail": Equal("must be a valid IPv4 address"),
+			},
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[3]"),
+				"Detail": Equal("must be a valid IPv4 address"),
+			},
+		))
+
+		Expect(ValidateCIDRIPFamily(ipV4CIDRs, "IPv6")).To(ConsistOfFields(
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[0]"),
+				"Detail": Equal("must be a valid IPv6 address"),
+			},
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[1]"),
+				"Detail": Equal("must be a valid IPv6 address"),
+			},
+		))
+	})
+
+	It("should return errors if some CIDRs don't match ipFamily", func() {
+		mixedCIDRs := append(ipV4CIDRs, ipV6CIDRs...)
+		Expect(ValidateCIDRIPFamily(mixedCIDRs, "IPv4")).To(ConsistOfFields(
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[2]"),
+				"Detail": Equal("must be a valid IPv4 address"),
+			},
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[3]"),
+				"Detail": Equal("must be a valid IPv4 address"),
+			},
+		))
+
+		Expect(ValidateCIDRIPFamily(mixedCIDRs, "IPv6")).To(ConsistOfFields(
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[0]"),
+				"Detail": Equal("must be a valid IPv6 address"),
+			},
+			Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("cidrs[1]"),
+				"Detail": Equal("must be a valid IPv6 address"),
+			},
+		))
+	})
+})
 
 var _ = Describe("cidr", func() {
 	Context("IPv4", func() {

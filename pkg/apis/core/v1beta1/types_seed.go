@@ -198,6 +198,11 @@ type SeedNetworks struct {
 	// in the seed cluster.
 	// +optional
 	BlockCIDRs []string `json:"blockCIDRs,omitempty" protobuf:"bytes,5,rep,name=blockCIDRs"`
+	// IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+	// Defaults to ["IPv4"].
+	// +optional
+	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,6,rep,name=ipFamilies,casttype=IPFamily"`
 }
 
 // ShootNetworks contains the default networks CIDRs for shoots.

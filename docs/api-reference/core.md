@@ -4185,6 +4185,16 @@ float64
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.IPFamily">IPFamily
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedNetworks">SeedNetworks</a>)
+</p>
+<p>
+<p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
 </h3>
 <p>
@@ -6788,6 +6798,22 @@ string
 <p>Services is the CIDR of the service network. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+Defaults to [&ldquo;IPv4&rdquo;].</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.NginxIngress">NginxIngress
@@ -8054,6 +8080,22 @@ ShootNetworks
 <em>(Optional)</em>
 <p>BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
 in the seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
 </tr>
 </tbody>
