@@ -215,8 +215,9 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddBackupEntryBucketName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
-	fakeClock = testclock.NewFakeClock(time.Now())
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+
 	Expect((&backupbucketcontroller.Reconciler{
 		Clock: fakeClock,
 		Config: config.BackupBucketControllerConfiguration{

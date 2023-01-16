@@ -215,8 +215,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
+
 	Expect((&backupentry.Reconciler{
 		Clock: fakeClock,
 		Config: config.BackupEntryControllerConfiguration{

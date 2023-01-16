@@ -117,9 +117,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	fakeClock = testclock.NewFakeClock(time.Now())
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
 	filter = predicate.NewClassFilter(resourcemanagerv1alpha1.DefaultResourceClass)
+
 	Expect((&managedresource.Reconciler{
 		Config: config.ManagedResourceControllerConfig{
 			ConcurrentSyncs:     pointer.Int(5),

@@ -165,8 +165,9 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
+
 	Expect((&migration.Reconciler{
 		Clock: fakeClock,
 		Config: config.ShootMigrationControllerConfiguration{

@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -49,8 +48,6 @@ var _ = Describe("ManagedResource controller tests", func() {
 	)
 
 	var (
-		fakeClock *testclock.FakeClock
-
 		// resourceName is used as a base name for all resources in the current test case
 		resourceName string
 		objectKey    client.ObjectKey
@@ -102,7 +99,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			},
 		}
 
-		fakeClock = testclock.NewFakeClock(time.Now())
+		fakeClock.SetTime(time.Now())
 	})
 
 	JustBeforeEach(func() {

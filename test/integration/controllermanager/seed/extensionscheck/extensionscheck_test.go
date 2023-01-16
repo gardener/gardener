@@ -15,6 +15,8 @@
 package extensionscheck_test
 
 import (
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -34,6 +36,8 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now())
+
 		By("Create Seed")
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{

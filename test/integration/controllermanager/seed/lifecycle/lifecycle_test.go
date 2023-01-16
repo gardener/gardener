@@ -40,6 +40,8 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now())
+
 		lease = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",

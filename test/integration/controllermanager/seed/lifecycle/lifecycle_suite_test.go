@@ -120,9 +120,9 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
+	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 
-	By("Register controller")
 	Expect((&lifecycle.Reconciler{
 		Config: config.SeedControllerConfiguration{
 			MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},

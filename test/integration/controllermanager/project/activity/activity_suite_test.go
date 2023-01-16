@@ -108,6 +108,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
+
 	Expect((&activity.Reconciler{
 		Config: config.ProjectControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
