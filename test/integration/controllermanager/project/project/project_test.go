@@ -98,7 +98,7 @@ var _ = Describe("Project controller tests", func() {
 
 	JustBeforeEach(func() {
 		if projectNamespace != nil {
-			By("Create project namespace")
+			By("Create project Namespace")
 			Expect(testClient.Create(ctx, projectNamespace)).To(Succeed())
 			log.Info("Created project namespace", "projectNamespace", projectNamespace)
 

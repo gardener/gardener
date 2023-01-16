@@ -125,7 +125,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created test Namespace for test", "namespaceName", testNamespace.Name)
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
 		By("Delete test Namespace")
