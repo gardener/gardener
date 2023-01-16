@@ -21,6 +21,12 @@ It is **not** the recommended method to access the shoot cluster as the static t
 - The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
 - The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin` irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
 
+When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
+- for Shoot clusters using Kubernetes version < 1.26 the field is defaulted to `true`.
+- for Shoot clusters using Kubernetes version >= 1.26 the field is defaulted to `false`.
+
+> Note: Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
+
 ## `shoots/adminkubeconfig` subresource
 
 The [`shoots/adminkubeconfig`](../proposals/16-adminkubeconfig-subresource.md) subresource allows users to dynamically generate temporary `kubeconfig`s that can be used to access shoot cluster with `cluster-admin` privileges. The credentials associated with this `kubeconfig` are client certificates which have a very short validity and must be renewed before they expire (by calling the subresource endpoint again).
@@ -53,7 +59,7 @@ Here, the `kubeconfig-request.json` has the following content:
 
 ## OpenID Connect
 
-The `kube-apiserver` of shoot clusters can be provided with [OpenID Connect configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) via the `ShootSpec`:
+The `kube-apiserver` of shoot clusters can be provided with [OpenID Connect configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) via the Shoot spec:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1

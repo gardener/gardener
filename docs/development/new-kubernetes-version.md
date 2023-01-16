@@ -43,11 +43,11 @@ While reading the change log, add the tasks (along with the respective PR in `ku
 
 The following paragraphs describe recurring tasks that need to be performed for each new release.
 
-### Releasing A New `hyperkube` Image
+### Make Sure A New `hyperkube` Image Is Released
 
 The [`gardener/hyperkube`](https://github.com/gardener/hyperkube) repository is used to release container images consisting of the `kubectl` and `kubelet` binaries.
 
-Run the [`.ci/check-and-release`](https://github.com/gardener/hyperkube/blob/master/.ci/check-and-release) script to automatically build the image (make sure Docker is running!), push the images to the GCR (make sure `gcloud` is configured properly!) and publish the release on GitHub (make sure `git` is configured properly!).
+There is a CI/CD job that runs periodically and releases a new `hyperkube` image when there is a new Kubernetes release. Before proceeding with the next steps, make sure that a new `hyperkube` image is released for the corresponding new Kubernetes minor version. Make sure that container image is present in GCR.
 
 ### Adapting Gardener
 

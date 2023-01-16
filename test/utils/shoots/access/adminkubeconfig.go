@@ -19,6 +19,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -28,6 +29,20 @@ import (
 
 // CreateShootClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client.
 func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
+	kubeconfig, err := RequestAdminKubeconfigForShoot(ctx, gardenClient, shoot, pointer.Int64(7200))
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewClientFromBytes(
+		kubeconfig,
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
+		kubernetes.WithDisabledCachedClient(),
+	)
+}
+
+// RequestAdminKubeconfigForShoot requests an admin kubeconfig for the given shoot.
+func RequestAdminKubeconfigForShoot(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, expirationSeconds *int64) ([]byte, error) {
 	versionedClient, err := gardencoreversionedclientset.NewForConfig(gardenClient.RESTConfig())
 	if err != nil {
 		return nil, err
@@ -35,7 +50,7 @@ func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kube
 
 	adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
 		Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
-			ExpirationSeconds: pointer.Int64(3600),
+			ExpirationSeconds: expirationSeconds,
 		},
 	}
 	adminKubeconfig, err := versionedClient.CoreV1beta1().Shoots(shoot.GetNamespace()).CreateAdminKubeconfigRequest(ctx, shoot.GetName(), adminKubeconfigRequest, metav1.CreateOptions{})
@@ -43,5 +58,5 @@ func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kube
 		return nil, err
 	}
 
-	return kubernetes.NewClientFromBytes(adminKubeconfig.Status.Kubeconfig, kubernetes.WithDisabledCachedClient())
+	return adminKubeconfig.Status.Kubeconfig, nil
 }

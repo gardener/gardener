@@ -527,8 +527,9 @@ type Kubernetes struct {
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	// +optional
 	VerticalPodAutoscaler *VerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,9,opt,name=verticalPodAutoscaler"`
-	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
-	// (default: true).
+	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
+	// Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
+	// Starting Kubernetes 1.27 the field will be locked to false.
 	// +optional
 	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
 }
@@ -703,6 +704,18 @@ type KubeAPIServerConfig struct {
 	// Logging contains configuration for the log level and HTTP access logs.
 	// +optional
 	Logging *KubeAPIServerLogging `json:"logging,omitempty" protobuf:"bytes,13,opt,name=logging"`
+	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
+	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
+	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
+	// Defaults to 300.
+	// +optional
+	DefaultNotReadyTolerationSeconds *int64 `json:"defaultNotReadyTolerationSeconds,omitempty" protobuf:"varint,14,opt,name=defaultNotReadyTolerationSeconds"`
+	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
+	// that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).
+	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
+	// Defaults to 300.
+	// +optional
+	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty" protobuf:"varint,15,opt,name=defaultUnreachableTolerationSeconds"`
 }
 
 // KubeAPIServerLogging contains configuration for the logs level and http access logs
@@ -869,6 +882,13 @@ type KubeControllerManagerConfig struct {
 	// +optional
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty" protobuf:"varint,3,opt,name=nodeCIDRMaskSize"`
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
+	//
+	// Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
+	// in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
+	// The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint
+	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
+	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
+	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.
 	// +optional
 	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.

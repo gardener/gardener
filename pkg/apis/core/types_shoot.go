@@ -438,7 +438,9 @@ type Kubernetes struct {
 	Version string
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	VerticalPodAutoscaler *VerticalPodAutoscaler
-	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for shoot (default: true).
+	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
+	// Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
+	// Starting Kubernetes 1.27 the field will be locked to false.
 	EnableStaticTokenKubeconfig *bool
 }
 
@@ -559,6 +561,14 @@ type KubeAPIServerConfig struct {
 	EventTTL *metav1.Duration
 	// Logging contains configuration settings for the log verbosity and access logging
 	Logging *KubeAPIServerLogging
+	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
+	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
+	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
+	DefaultNotReadyTolerationSeconds *int64
+	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
+	// that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).
+	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
+	DefaultUnreachableTolerationSeconds *int64
 }
 
 // KubeAPIServerLogging contains configuration for the logs level and http access logs
@@ -691,6 +701,13 @@ type KubeControllerManagerConfig struct {
 	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.
 	NodeCIDRMaskSize *int32
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes.
+	//
+	// Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
+	// in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
+	// The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint
+	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
+	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
+	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.
 	PodEvictionTimeout *metav1.Duration
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	NodeMonitorGracePeriod *metav1.Duration

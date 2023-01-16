@@ -197,7 +197,9 @@ spec:
   #     maxTokenExpiration: 45d
   #   logging:
   #     verbosity: 2
-  #     httpAccessLogs: 3   
+  #     httpAccessLogs: 3
+  #   defaultNotReadyTolerationSeconds: 300
+  #   defaultUnreachableTolerationSeconds: 300
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s

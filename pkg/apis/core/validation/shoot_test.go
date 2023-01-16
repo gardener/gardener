@@ -1734,7 +1734,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("service account config", func() {
-			It("should not allow too specify a negative max token duration", func() {
+			It("should not allow to specify a negative max token duration", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 					MaxTokenExpiration: &metav1.Duration{Duration: -1},
 				}
@@ -1784,7 +1784,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should not allow too specify multiple issuers if kubernetes is lower than 1.22", func() {
+			It("should not allow to specify multiple issuers if kubernetes is lower than 1.22", func() {
 				shoot.Spec.Kubernetes.Version = "1.21.9"
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 					Issuer:          pointer.String("issuer"),
@@ -1800,7 +1800,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		It("should not allow too specify a negative event ttl duration", func() {
+		It("should not allow to specify a negative event ttl duration", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: -1}
 
 			errorList := ValidateShoot(shoot)
@@ -1811,7 +1811,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
-		It("should not allow too specify an event ttl duration longer than 7d", func() {
+		It("should not allow to specify an event ttl duration longer than 7d", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 8}
 
 			errorList := ValidateShoot(shoot)
@@ -1820,6 +1820,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
 			}))))
+		})
+
+		It("should not allow to specify a negative defaultNotReadyTolerationSeconds", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(-1)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds"),
+			}))))
+		})
+
+		It("should allow to specify a valid defaultNotReadyTolerationSeconds", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(120)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not allow to specify a negative defaultUnreachableTolerationSeconds", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(-1)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds"),
+			}))))
+		})
+
+		It("should allow to specify a valid defaultUnreachableTolerationSeconds", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(120)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
 		Context("kubernetes.allowPrivilegedContainers field validation", func() {

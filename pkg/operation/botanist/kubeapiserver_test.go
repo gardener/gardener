@@ -941,6 +941,29 @@ usernames: ["admin"]
 			)
 		})
 
+		Describe("DefaultNotReadyTolerationSeconds and DefaultUnreachableTolerationSeconds", func() {
+			It("should not set the fields", func() {
+				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().DefaultNotReadyTolerationSeconds).To(BeNil())
+				Expect(kubeAPIServer.GetValues().DefaultUnreachableTolerationSeconds).To(BeNil())
+			})
+
+			It("should set the fields to the configured values", func() {
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+					DefaultNotReadyTolerationSeconds:    pointer.Int64(120),
+					DefaultUnreachableTolerationSeconds: pointer.Int64(130),
+				}
+				botanist.Shoot.SetInfo(shootCopy)
+
+				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().DefaultNotReadyTolerationSeconds).To(PointTo(Equal(int64(120))))
+				Expect(kubeAPIServer.GetValues().DefaultUnreachableTolerationSeconds).To(PointTo(Equal(int64(130))))
+			})
+		})
+
 		Describe("EventTTL", func() {
 			It("should not set the event ttl field", func() {
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)

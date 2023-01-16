@@ -396,15 +396,25 @@ func GetObjectFromSecret(ctx context.Context, k8sClient kubernetes.Interface, na
 	return "", fmt.Errorf("secret %s/%s did not contain object key %q", namespace, secretName, objectKey)
 }
 
-// NewClientFromServiceAccount returns a kubernetes client for a service account.
-func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, account *corev1.ServiceAccount) (kubernetes.Interface, error) {
+// CreateTokenForServiceAccount requests a service account token.
+func CreateTokenForServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, serviceAccount *corev1.ServiceAccount, expirationSeconds *int64) (string, error) {
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			ExpirationSeconds: pointer.Int64(3600),
+			ExpirationSeconds: expirationSeconds,
 		},
 	}
 
-	token, err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(account.Namespace).CreateToken(ctx, account.Name, tokenRequest, metav1.CreateOptions{})
+	result, err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(serviceAccount.Namespace).CreateToken(ctx, serviceAccount.Name, tokenRequest, metav1.CreateOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	return result.Status.Token, nil
+}
+
+// NewClientFromServiceAccount returns a kubernetes client for a service account.
+func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, serviceAccount *corev1.ServiceAccount) (kubernetes.Interface, error) {
+	token, err := CreateTokenForServiceAccount(ctx, k8sClient, serviceAccount, pointer.Int64(3600))
 	if err != nil {
 		return nil, err
 	}
@@ -415,7 +425,7 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 			Insecure: false,
 			CAData:   k8sClient.RESTConfig().CAData,
 		},
-		BearerToken: token.Status.Token,
+		BearerToken: token,
 	}
 
 	return kubernetes.NewWithConfig(

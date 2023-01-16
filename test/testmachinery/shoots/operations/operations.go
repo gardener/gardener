@@ -65,6 +65,7 @@ import (
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -119,6 +120,10 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 	}, reconcileTimeout)
 
 	f.Beta().Disruptive().CIt("should rotate the kubeconfig for a shoot cluster", func(ctx context.Context) {
+		if !pointer.BoolDeref(f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+			ginkgo.Skip("The static token kubeconfig is not enabled for this shoot")
+		}
+
 		ginkgo.By("rotate kubeconfig")
 		var (
 			secretName = f.Shoot.Name + ".kubeconfig"
