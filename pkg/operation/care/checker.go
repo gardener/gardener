@@ -264,19 +264,20 @@ func resourcesNotProgressingCheck() func(status gardencorev1beta1.ConditionStatu
 func (b *HealthChecker) checkManagedResourceConditions(
 	condition gardencorev1beta1.Condition,
 	mr *resourcesv1alpha1.ManagedResource,
-	conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool) *gardencorev1beta1.Condition {
+	conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool,
+) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 		return &c
 	}
 
-	var conditionProgressingForMoreThanThreshold, conditionHealthy bool
+	var conditionProgressingTooLong, conditionHealthy bool
 	for _, cond := range mr.Status.Conditions {
 		if cond.Type == resourcesv1alpha1.ResourcesProgressing &&
 			cond.Status == gardencorev1beta1.ConditionTrue &&
 			b.managedResourceProgressingThreshold != nil &&
 			b.clock.Since(cond.LastTransitionTime.Time) >= b.managedResourceProgressingThreshold.Duration {
-			conditionProgressingForMoreThanThreshold = true
+			conditionProgressingTooLong = true
 		}
 		if cond.Type == resourcesv1alpha1.ResourcesHealthy && cond.Status == gardencorev1beta1.ConditionTrue {
 			conditionHealthy = true
@@ -301,8 +302,8 @@ func (b *HealthChecker) checkManagedResourceConditions(
 		return &c
 	}
 
-	if conditionProgressingForMoreThanThreshold && conditionHealthy {
-		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceStuckInProgressingError, fmt.Sprintf("ManagedResource %s is progressing for more than %v", mr.Name, b.managedResourceProgressingThreshold.Duration))
+	if conditionProgressingTooLong && conditionHealthy {
+		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, b.managedResourceProgressingThreshold.Duration))
 		return &c
 	}
 

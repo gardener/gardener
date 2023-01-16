@@ -69,7 +69,7 @@ const (
 	// OutdatedStatusError is a constant for a reason in a condition that indicates
 	// that the observed generation in a status is outdated.
 	OutdatedStatusError = "OutdatedStatus"
-	// ManagedResourceStuckInProgressingError is a constant for a reason in a condition that indicates
+	// ManagedResourceProgressingRolloutStuck is a constant for a reason in a condition that indicates
 	// managed resource progressing condition is stuck in the true state for more than the threshold time.
-	ManagedResourceStuckInProgressingError = "ProgressingRolloutStuck"
+	ManagedResourceProgressingRolloutStuck = "ProgressingRolloutStuck"
 )

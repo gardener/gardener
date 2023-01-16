@@ -464,7 +464,7 @@ var _ = Describe("health check", func() {
 			},
 			true,
 			true,
-			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceStuckInProgressingError, "ManagedResource  is progressing for more than 5m0s"))),
+			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, "ManagedResource  is progressing for more than 5m0s"))),
 		Entry("one false condition ResourcesApplied",
 			[]gardencorev1beta1.Condition{
 				{
