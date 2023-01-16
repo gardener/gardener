@@ -122,16 +122,14 @@ var availableIPFamilies = sets.NewString(
 func ValidateIPFamilies(ipFamilies []extensionsv1alpha1.IPFamily, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// validate: only supported IP families
+	ipFamiliesSeen := sets.NewString()
 	for i, ipFamily := range ipFamilies {
+		// validate: only supported IP families
 		if !availableIPFamilies.Has(string(ipFamily)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), ipFamily, availableIPFamilies.List()))
 		}
-	}
 
-	// validate: no duplicate IP families
-	ipFamiliesSeen := sets.NewString()
-	for i, ipFamily := range ipFamilies {
+		// validate: no duplicate IP families
 		if ipFamiliesSeen.Has(string(ipFamily)) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i), ipFamily))
 		} else {
