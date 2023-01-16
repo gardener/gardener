@@ -4193,7 +4193,7 @@ float64
 <a href="#core.gardener.cloud/v1beta1.SeedNetworks">SeedNetworks</a>)
 </p>
 <p>
-<p>IPFamily is a type for specifying IP families to use in Gardener clusters.</p>
+<p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
 </h3>
@@ -6809,7 +6809,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPFamilies specifies the IP families to use for shoot networking. This field is immutable.
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
 Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
@@ -8093,7 +8093,7 @@ in the seed cluster.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPFamilies specifies the IP families to use for seed networking. This field is immutable.
+<p>IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
 Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>

@@ -82,7 +82,7 @@ type Object interface {
 // what you do.
 const ShootAlphaCSIMigrationKubernetesVersion = "alpha.csimigration.shoot.extensions.gardener.cloud/kubernetes-version"
 
-// IPFamily is a type for specifying IP families to use in Gardener clusters.
+// IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.
 type IPFamily string
 
 const (

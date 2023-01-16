@@ -29,7 +29,7 @@ type Object interface {
 	GetProviderType() string
 }
 
-// IPFamily is a type for specifying IP families to use in Gardener clusters.
+// IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.
 type IPFamily string
 
 const (

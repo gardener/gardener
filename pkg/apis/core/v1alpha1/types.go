@@ -20,7 +20,7 @@ const (
 	GardenerSeedLeaseNamespace = "gardener-system-seed-lease"
 )
 
-// IPFamily is a type for specifying IP families to use in Gardener clusters.
+// IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.
 type IPFamily string
 
 const (
