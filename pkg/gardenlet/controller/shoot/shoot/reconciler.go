@@ -425,6 +425,9 @@ func (r *Reconciler) finalizeShootDeletion(ctx context.Context, log logr.Logger,
 
 // deleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	if shoot.Status.TechnicalID == "" {
+		return nil
+	}
 	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: shoot.Status.TechnicalID}}
 	return client.IgnoreNotFound(r.SeedClientSet.Client().Delete(ctx, cluster))
 }
