@@ -113,12 +113,12 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 		return nil
 	}
 
-	ginkgo.By("Creating test Secret and Service Account")
+	ginkgo.By("Create test Secret and Service Account")
 	if err := t.CreateSecretAndServiceAccount(ctx); err != nil {
 		return err
 	}
 
-	ginkgo.By("Deploying Guest Book Application")
+	ginkgo.By("Verify Guest Book Application")
 	initializedApp, err := initGuestBookTest(ctx, t)
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 		return cleanUp(ctx, t, guestBookApp)
 	}
 
-	ginkgo.By("Verifying migration...")
+	ginkgo.By("Verifying migration")
 	if err := t.VerifyMigration(ctx); err != nil {
 		return err
 	}
@@ -145,15 +145,15 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 		return nil
 	}
 
-	ginkgo.By("Checking if the test Secret and Service Account are migrated ...")
+	ginkgo.By("Check if the test Secret and Service Account are migrated")
 	if err := t.CheckSecretAndServiceAccount(ctx); err != nil {
 		return err
 	}
 
-	ginkgo.By("Testing the Guest Book Application ...")
+	ginkgo.By("Test the Guest Book Application")
 	guestBookApp.Test(ctx)
 
-	ginkgo.By("Checking timestamps of all resources...")
+	ginkgo.By("Check timestamps of all resources")
 	if err := t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ","), strings.Split(*resourcesWithGeneratedName, ",")); err != nil {
 		return err
 	}
@@ -162,11 +162,11 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 }
 
 func cleanUp(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest) error {
-	ginkgo.By("Cleaning up the test Secret and Service Account")
+	ginkgo.By("Cleanup the test Secret and Service Account")
 	if err := t.CleanUpSecretAndServiceAccount(ctx); err != nil {
 		return err
 	}
-	ginkgo.By("Cleaning up the Guest Book Application ...")
+	ginkgo.By("Cleanup the Guest Book Application")
 	guestBookApp.Cleanup(ctx)
 
 	return nil

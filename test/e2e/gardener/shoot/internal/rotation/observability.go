@@ -41,7 +41,7 @@ type ObservabilityVerifier struct {
 
 // Before is called before the rotation is started.
 func (v *ObservabilityVerifier) Before(ctx context.Context) {
-	By("Verifying old observability secret")
+	By("Verify old observability secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
@@ -54,7 +54,7 @@ func (v *ObservabilityVerifier) Before(ctx context.Context) {
 		v.oldKeypairData = secret.Data
 	}).Should(Succeed(), "old observability secret should be present")
 
-	By("Using old credentials to access observability endpoint")
+	By("Use old credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
 		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
 		g.Expect(err).NotTo(HaveOccurred())
@@ -72,14 +72,14 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 	observabilityRotation := v.Shoot.Status.Credentials.Rotation.Observability
 	Expect(observabilityRotation.LastCompletionTime.Time.UTC().After(observabilityRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
-	By("Using old credentials to access observability endpoint")
+	By("Use old credentials to access observability endpoint")
 	Consistently(func(g Gomega) {
 		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusUnauthorized))
 	}).Should(Succeed())
 
-	By("Verifying new observability secret")
+	By("Verify new observability secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
@@ -89,7 +89,7 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 		))
 	}).Should(Succeed(), "observability secret should have been rotated")
 
-	By("Using new credentials to access observability endpoint")
+	By("Use new credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
 		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, secret.Data["username"], secret.Data["password"])
 		g.Expect(err).NotTo(HaveOccurred())

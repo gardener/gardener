@@ -67,7 +67,7 @@ func RunTest(
 	newControlPlaneKubernetesVersion *string,
 	newWorkerPoolKubernetesVersion *string,
 ) {
-	By("creating shoot client")
+	By("Create shoot client")
 	var (
 		job *batchv1.Job
 		err error
@@ -81,7 +81,7 @@ func RunTest(
 		Expect(err).NotTo(HaveOccurred())
 		shootSeedNamespace := f.Shoot.Status.TechnicalID
 
-		By("deploying zero-downtime validator job")
+		By("Deploy zero-downtime validator job")
 		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx,
 			f.SeedClient.Client(), "update", shootSeedNamespace, GetKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
 		Expect(err).NotTo(HaveOccurred())
@@ -125,14 +125,14 @@ func RunTest(
 		}
 	}
 
-	By("verifying the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
+	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
 	Expect(verifyKubernetesVersions(ctx, shootClient, f.Shoot)).To(Succeed())
 
-	By("reading CloudProfile")
+	By("Read CloudProfile")
 	cloudProfile, err := f.GetCloudProfile(ctx)
 	Expect(err).NotTo(HaveOccurred())
 
-	By("computing new Kubernetes version for control plane and worker pools")
+	By("Compute new Kubernetes version for control plane and worker pools")
 	controlPlaneVersion, poolNameToKubernetesVersion, err := computeNewKubernetesVersions(cloudProfile, f.Shoot, newControlPlaneKubernetesVersion, newWorkerPoolKubernetesVersion)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -140,12 +140,12 @@ func RunTest(
 		Skip("shoot already has the desired kubernetes versions")
 	}
 
-	By("updating shoot")
+	By("Update shoot")
 	if controlPlaneVersion != "" {
-		By("updating .spec.kubernetes.version to " + controlPlaneVersion)
+		By("Update .spec.kubernetes.version to " + controlPlaneVersion)
 	}
 	for poolName, kubernetesVersion := range poolNameToKubernetesVersion {
-		By("updating .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
+		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
 	}
 
 	Expect(f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
@@ -162,15 +162,15 @@ func RunTest(
 		return nil
 	})).To(Succeed())
 
-	By("re-creating shoot client")
+	By("Re-creating shoot client")
 	shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	Expect(err).NotTo(HaveOccurred())
 
-	By("verifying the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [after update]")
+	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [after update]")
 	Expect(verifyKubernetesVersions(ctx, shootClient, f.Shoot)).To(Succeed())
 
 	if v1beta1helper.IsHAControlPlaneConfigured(f.Shoot) {
-		By("ensuring there was no downtime while upgrading shoot")
+		By("Ensure there was no downtime while upgrading shoot")
 		Expect(f.SeedClient.Client().Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
 		Expect(job.Status.Failed).Should(BeZero())
 		Expect(client.IgnoreNotFound(

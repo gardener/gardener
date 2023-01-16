@@ -183,7 +183,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 			sm = fakesecretsmanager.New(fakeClient, namespace)
 
-			By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet", Namespace: namespace}})).To(Succeed())
 
@@ -548,11 +548,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-				By("deploy")
+				By("Deploy")
 				// Deploy should fill internal state with the added timestamp annotation
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				By("patch object")
+				By("Patch object")
 				for i := range expected {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add old timestamp annotation
@@ -588,7 +588,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Create(ctx, ccSecret)).To(Succeed())
 				}
 
-				By("wait")
+				By("Wait")
 				Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "operatingsystemconfig indicates error")
 			})
 
@@ -600,11 +600,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-				By("deploy")
+				By("Deploy")
 				// Deploy should fill internal state with the added timestamp annotation
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				By("patch object")
+				By("Patch object")
 				for i := range expected {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add up-to-date timestamp annotation
@@ -640,7 +640,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Create(ctx, ccSecret)).To(Succeed())
 				}
 
-				By("wait")
+				By("Wait")
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "operatingsystemconfig is ready")
 			})
 		})

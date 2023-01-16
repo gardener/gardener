@@ -23,5 +23,5 @@ import (
 
 func TestInternalDomainSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission InternalDomainSecret Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission InternalDomainSecret Suite")
 }

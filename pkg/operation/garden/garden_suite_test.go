@@ -23,5 +23,5 @@ import (
 
 func TestGarden(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Garden Suite")
+	RunSpecs(t, "Operation Garden Suite")
 }

@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestKubeLogging(t *testing.T) {
+func TestEventLogger(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component Logging EventLogger Suite")
 }

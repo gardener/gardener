@@ -34,7 +34,7 @@ import (
 // polling intervals and timeouts. This allows to easily make integration tests more robust in CI environments.
 // see https://onsi.github.io/gomega/#modifying-default-intervals
 func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
-	By("waiting for shoot to be maintained")
+	By("Wait for shoot to be maintained")
 	EventuallyWithOffset(1, func(g Gomega) bool {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 		return shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationMaintain

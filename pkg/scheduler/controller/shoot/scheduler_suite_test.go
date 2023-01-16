@@ -23,8 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestScheduler(t *testing.T) {
+func TestShoot(t *testing.T) {
 	schedulerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Scheduler Test Suite")
+	RunSpecs(t, "Scheduler Controller Shoot Suite")
 }

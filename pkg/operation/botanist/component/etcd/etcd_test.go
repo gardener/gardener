@@ -617,7 +617,7 @@ var _ = Describe("Etcd", func() {
 		sm = fakesecretsmanager.New(fakeClient, testNamespace)
 		log = logr.Discard()
 
-		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
 		etcd = New(log, c, testNamespace, sm, Values{
 			Role:                    testRole,

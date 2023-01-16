@@ -23,5 +23,5 @@ import (
 
 func TestHealth(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceManager Controller Health Suite")
+	RunSpecs(t, "ResourceManager Controller Health Main Suite")
 }

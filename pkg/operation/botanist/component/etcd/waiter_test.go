@@ -79,7 +79,7 @@ var _ = Describe("#Wait", func() {
 		sm = fakesecretsmanager.New(c, testNamespace)
 		log = logr.Discard()
 
-		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
 
 		waiter = &retryfake.Ops{MaxAttempts: 1}
@@ -145,11 +145,11 @@ var _ = Describe("#Wait", func() {
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-		By("deploy")
+		By("Deploy")
 		// Deploy should fill internal state with the added timestamp annotation
 		Expect(etcd.Deploy(ctx)).To(Succeed())
 
-		By("patch object")
+		By("Patch object")
 		patch := client.MergeFrom(expected.DeepCopy())
 		expected.Status.LastError = nil
 		// remove operation annotation, add old timestamp annotation
@@ -159,7 +159,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.Ready = pointer.Bool(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
-		By("wait")
+		By("Wait")
 		Expect(etcd.Wait(ctx)).NotTo(Succeed(), "etcd indicates error")
 	})
 
@@ -169,11 +169,11 @@ var _ = Describe("#Wait", func() {
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-		By("deploy")
+		By("Deploy")
 		// Deploy should fill internal state with the added timestamp annotation
 		Expect(etcd.Deploy(ctx)).To(Succeed())
 
-		By("patch object")
+		By("Patch object")
 		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
 		patch := client.MergeFrom(expected.DeepCopy())
 		expected.Status.ObservedGeneration = pointer.Int64(0)
@@ -185,7 +185,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.Ready = pointer.Bool(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
-		By("wait")
+		By("Wait")
 		Expect(etcd.Wait(ctx)).To(Succeed(), "etcd is ready")
 	})
 })

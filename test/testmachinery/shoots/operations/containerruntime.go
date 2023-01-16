@@ -62,10 +62,10 @@ var _ = Describe("Shoot container runtime testing", func() {
 
 		shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *containerdWorker)
 
-		By("adding containerd worker pool")
+		By("Add containerd worker pool")
 
 		defer func(ctx context.Context, workerPoolName string) {
-			By("removing containerd worker pool after test execution")
+			By("Remove containerd worker pool after test execution")
 			err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 				var workers []gardencorev1beta1.Worker
 				for _, current := range s.Spec.Provider.Workers {

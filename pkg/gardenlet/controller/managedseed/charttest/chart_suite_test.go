@@ -27,5 +27,5 @@ const (
 
 func TestApplier(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet Chart Suite")
+	RunSpecs(t, "Gardenlet Controller ManagedSeed ChartTest Suite")
 }

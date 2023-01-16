@@ -68,7 +68,7 @@ var _ = Describe("Shoot retry controller tests", func() {
 	})
 
 	It("should successfully retry a failed Shoot with rate limits exceeded error", func() {
-		By("mark the Shoot as failed with rate limits exceeded error code")
+		By("Mark the Shoot as failed with rate limits exceeded error code")
 		shootCopy := shoot.DeepCopy()
 		shoot.Status = gardencorev1beta1.ShootStatus{
 			LastOperation: &gardencorev1beta1.LastOperation{
@@ -84,7 +84,7 @@ var _ = Describe("Shoot retry controller tests", func() {
 		}
 		Expect(testClient.Status().Patch(ctx, shoot, client.MergeFrom(shootCopy))).To(Succeed())
 
-		By("verify shoot is retried")
+		By("Verify shoot is retried")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Generation).To(Equal(int64(2)))

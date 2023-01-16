@@ -44,7 +44,7 @@ func (f *CommonFramework) RenderAndDeployChart(ctx context.Context, k8sClient ku
 		return err
 	}
 
-	ginkgo.By("Downloading chart artifacts")
+	ginkgo.By("Download chart artifacts")
 	err = f.DownloadChartArtifacts(ctx, helmRepo, f.ChartDir, c.Name, c.Version)
 	if err != nil {
 		return fmt.Errorf("unable to download chart artifacts for chart %s with version %s: %w", c.Name, c.Version, err)

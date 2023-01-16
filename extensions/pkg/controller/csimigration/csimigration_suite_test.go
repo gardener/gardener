@@ -23,5 +23,5 @@ import (
 
 func TestCSIMigration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CSIMigration Controller Suite")
+	RunSpecs(t, "Extensions Controller CSIMigration Suite")
 }

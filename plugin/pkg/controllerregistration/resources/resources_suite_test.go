@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestDeletionConfirmation(t *testing.T) {
+func TestResources(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ControllerRegistration Resources Suite")
+	RunSpecs(t, "AdmissionPlugin ControllerRegistration Resources Suite")
 }

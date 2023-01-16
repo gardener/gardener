@@ -23,5 +23,5 @@ import (
 
 func TestKubeconfigSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission KubeconfigSecret Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission KubeconfigSecret Suite")
 }

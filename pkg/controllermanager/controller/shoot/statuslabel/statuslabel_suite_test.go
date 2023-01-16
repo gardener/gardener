@@ -23,5 +23,5 @@ import (
 
 func TestStatusLabel(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Controller Shoot Status Label Suite")
+	RunSpecs(t, "ControllerManager Controller Shoot StatusLabel Suite")
 }

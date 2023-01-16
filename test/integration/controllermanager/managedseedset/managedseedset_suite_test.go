@@ -43,9 +43,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestManagedSeedSetController(t *testing.T) {
+func TestManagedSeedSet(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ManagedSeedSet Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ControllerManager ManagedSeedSet Suite")
 }
 
 const testID = "managedseedset-controller-test"
@@ -67,7 +67,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{
@@ -82,15 +82,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating garden namespace")
+	By("Create garden namespace")
 	gardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "garden",
@@ -102,7 +102,7 @@ var _ = BeforeSuite(func() {
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("setting up manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&managedseedsetcontroller.Reconciler{
 		Config: config.ManagedSeedSetControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
@@ -123,7 +123,7 @@ var _ = BeforeSuite(func() {
 		},
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -132,7 +132,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

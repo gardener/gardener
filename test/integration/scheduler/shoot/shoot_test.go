@@ -233,7 +233,7 @@ var _ = Describe("Scheduler tests", func() {
 })
 
 func createAndStartManager(config *config.ShootSchedulerConfiguration) {
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
@@ -241,13 +241,13 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&shootcontroller.Reconciler{
 		Config:                  config,
 		VersionedGardenerClient: versionedTestClient,
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -256,13 +256,13 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 }
 
 func createSeed(providerType, region string, zones []string) *gardencorev1beta1.Seed {
-	By("creating Seed")
+	By("Create Seed")
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: testID + "-",
@@ -290,7 +290,7 @@ func createSeed(providerType, region string, zones []string) *gardencorev1beta1.
 	log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
 
 	DeferCleanup(func() {
-		By("deleting Seed")
+		By("Delete Seed")
 		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
 	})
 
@@ -314,7 +314,7 @@ func createSeed(providerType, region string, zones []string) *gardencorev1beta1.
 }
 
 func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudProfile {
-	By("creating CloudProfile")
+	By("Create CloudProfile")
 	cloudProfile := &gardencorev1beta1.CloudProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: testID + "-",
@@ -343,7 +343,7 @@ func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudPro
 	log.Info("Created CloudProfile for test", "cloudProfile", client.ObjectKeyFromObject(cloudProfile))
 
 	DeferCleanup(func() {
-		By("deleting CloudProfile")
+		By("Delete CloudProfile")
 		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, cloudProfile))).To(Succeed())
 	})
 
@@ -351,7 +351,7 @@ func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudPro
 }
 
 func createShoot(providerType, cloudProfile, region string, dnsDomain *string, controlPlane *gardencorev1beta1.ControlPlane) *gardencorev1beta1.Shoot {
-	By("creating Shoot")
+	By("Create Shoot")
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
@@ -391,7 +391,7 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string, c
 	log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 	DeferCleanup(func() {
-		By("deleting Shoot")
+		By("Delete Shoot")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)

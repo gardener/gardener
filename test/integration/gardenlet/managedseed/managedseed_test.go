@@ -185,7 +185,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 	})
 
 	JustBeforeEach(func() {
-		By("Creating cloud provider Secret for shoot")
+		By("Create cloud provider Secret for shoot")
 		shootCloudProviderSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -200,7 +200,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		log.Info("Created cloud provider Secret for shoot", "secret", client.ObjectKeyFromObject(shootCloudProviderSecret))
 
 		DeferCleanup(func() {
-			By("Deleting cloud provider Secret")
+			By("Delete cloud provider Secret")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootCloudProviderSecret))).To(Succeed())
 
 			By("Wait for cloud provider Secret to be gone")
@@ -209,7 +209,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			}).Should(BeNotFoundError())
 		})
 
-		By("Creating SecretBinding for shoot")
+		By("Create SecretBinding for shoot")
 		shootSecretBinding = &gardencorev1beta1.SecretBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -228,7 +228,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		log.Info("Created SecretBinding for shoot", "secretbinding", client.ObjectKeyFromObject(shootSecretBinding))
 
 		DeferCleanup(func() {
-			By("Deleting shoot SecretBinding")
+			By("Delete shoot SecretBinding")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootSecretBinding))).To(Succeed())
 
 			By("Wait for shoot SecretBinding to be gone")
@@ -237,7 +237,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			}).Should(BeNotFoundError())
 		})
 
-		By("Creating kubeconfig Secret for shoot")
+		By("Create kubeconfig Secret for shoot")
 		shootKubeconfigSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shoot.Name + ".kubeconfig",
@@ -296,7 +296,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			}).Should(BeNotFoundError())
 		})
 
-		By("ensure finalizer is added")
+		By("Ensure finalizer is added")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
 			g.Expect(managedSeed.Finalizers).To(ConsistOf("gardener"))
@@ -329,10 +329,10 @@ var _ = Describe("ManagedSeed controller test", func() {
 				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
 			}).Should(Succeed())
 
-			By("check if seed secrets are created")
+			By("Verify if seed secrets are created")
 			checkIfSeedSecretsCreated()
 
-			By("check if gardenlet is deployed")
+			By("Verify if gardenlet is deployed")
 			checkIfGardenletWasDeployed()
 		})
 	})

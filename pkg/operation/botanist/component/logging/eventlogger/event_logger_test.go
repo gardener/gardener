@@ -218,7 +218,7 @@ var _ = Describe("EventLogger", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		By("creating secrets managed outside of this package for which secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 	})
 

@@ -69,7 +69,7 @@ var _ = ginkgo.Describe("Operating system testing", func() {
 			err = f.WaitUntilDeploymentIsReady(ctx, deploymentName, f.Namespace, f.ShootClient)
 			framework.ExpectNoError(err)
 
-			ginkgo.By("wait 10 seconds for the deployment to generate load")
+			ginkgo.By("Wait 10 seconds for the deployment to generate load")
 			time.Sleep(10 * time.Second)
 
 			// deploy root pod on the node with the load

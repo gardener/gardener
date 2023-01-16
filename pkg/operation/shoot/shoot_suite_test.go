@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestCommon(t *testing.T) {
+func TestShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Suite")
+	RunSpecs(t, "Operation Shoot Suite")
 }

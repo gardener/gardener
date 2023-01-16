@@ -45,13 +45,13 @@ var _ = Describe("CloudProvider tests", func() {
 		}
 
 		DeferCleanup(func() {
-			By("deleting Secret")
+			By("Delete Secret")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
 		})
 	})
 
 	JustBeforeEach(func() {
-		By("create Secret")
+		By("Create Secret")
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 	})
 
@@ -61,7 +61,7 @@ var _ = Describe("CloudProvider tests", func() {
 		})
 
 		It("should not mutate the secret", func() {
-			By("patch Secret to invoke webhook")
+			By("Patch Secret to invoke webhook")
 			Consistently(func(g Gomega) map[string][]byte {
 				g.Expect(testClient.Patch(ctx, secret, client.RawPatch(types.MergePatchType, []byte("{}")))).To(Succeed())
 				return secret.Data
@@ -71,7 +71,7 @@ var _ = Describe("CloudProvider tests", func() {
 
 	Context("secret name is cloudprovider", func() {
 		It("should not mutate the secret because matching labels are not present", func() {
-			By("patch Secret to invoke webhook")
+			By("Patch Secret to invoke webhook")
 			Consistently(func(g Gomega) map[string][]byte {
 				g.Expect(testClient.Patch(ctx, secret, client.RawPatch(types.MergePatchType, []byte("{}")))).To(Succeed())
 				return secret.Data
@@ -86,7 +86,7 @@ var _ = Describe("CloudProvider tests", func() {
 			})
 
 			It("should mutate the secret because matching labels are present", func() {
-				By("patch Secret to invoke webhook")
+				By("Patch Secret to invoke webhook")
 				Consistently(func(g Gomega) map[string][]byte {
 					g.Expect(testClient.Patch(ctx, secret, client.RawPatch(types.MergePatchType, []byte("{}")))).To(Succeed())
 					return secret.Data

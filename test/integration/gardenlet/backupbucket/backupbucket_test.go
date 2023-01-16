@@ -66,7 +66,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 				g.Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 			}).Should(Succeed())
 
-			By("creating generated secret in seed")
+			By("Create generated secret in seed")
 			seedGeneratedSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      generateGeneratedBackupBucketSecretName(resourceName),
@@ -114,7 +114,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		resourceName = "bucket-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:12]
 
-		By("creating BackupBucket secret in garden")
+		By("Create BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-secret-",
@@ -130,11 +130,11 @@ var _ = Describe("BackupBucket controller tests", func() {
 		log.Info("Created Secret for BackupBucket in garden for test", "secret", client.ObjectKeyFromObject(gardenSecret))
 
 		DeferCleanup(func() {
-			By("deleting secret for BackupBucket in garden")
+			By("Delete secret for BackupBucket in garden")
 			Expect(testClient.Delete(ctx, gardenSecret)).To(Succeed())
 		})
 
-		By("creating BackupBucket")
+		By("Create BackupBucket")
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        resourceName,
@@ -159,10 +159,10 @@ var _ = Describe("BackupBucket controller tests", func() {
 		log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))
 
 		DeferCleanup(func() {
-			By("deleting BackupBucket")
+			By("Delete BackupBucket")
 			Expect(testClient.Delete(ctx, backupBucket)).To(Or(Succeed(), BeNotFoundError()))
 
-			By("ensuring BackupBucket is gone")
+			By("Ensure BackupBucket is gone")
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
 			}).Should(BeNotFoundError())
@@ -203,7 +203,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 	Context("reconcile", func() {
 		JustBeforeEach(func() {
-			By("ensuring finalizer got added and operation annotation is removed")
+			By("Ensure finalizer got added and operation annotation is removed")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
 				g.Expect(backupBucket.Finalizers).To(ConsistOf("gardener"))
@@ -216,10 +216,10 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		Context("when extensions BackupBucket has been reconciled", func() {
 			It("should set the BackupBucket status as Succeeded if the extension BackupBucket is ready", func() {
-				By("Mimicking extension controller and setting extensions BackupBucket to be successfully reconciled")
+				By("Mimic extension controller and setting extensions BackupBucket to be successfully reconciled")
 				reconcileExtensionBackupBucket(true)
 
-				By("ensuring the generated secret is copied to garden")
+				By("Ensure the generated secret is copied to garden")
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenGeneratedSecret), gardenGeneratedSecret)).To(Succeed())
 					expectedOwnerRef := *metav1.NewControllerRef(backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
@@ -227,7 +227,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 					g.Expect(gardenGeneratedSecret.Finalizers).To(ContainElement("core.gardener.cloud/backupbucket"))
 				}).Should(Succeed())
 
-				By("ensuring the BackupBucket status is set")
+				By("Ensure the BackupBucket status is set")
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
 					gardenGeneratedSecretRef := &corev1.SecretReference{
@@ -244,10 +244,10 @@ var _ = Describe("BackupBucket controller tests", func() {
 			})
 
 			It("should set the BackupBucket status as Error if the extension BackupBucket is not ready", func() {
-				By("Mimicking extension controller and making extensions BackupBucket to be reconciled with error")
+				By("Mimic extension controller and making extensions BackupBucket to be reconciled with error")
 				reconcileExtensionBackupBucket(false)
 
-				By("ensuring the BackupBucket status is set")
+				By("Ensure the BackupBucket status is set")
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
 					g.Expect(backupBucket.Status.LastError).NotTo(BeNil())
@@ -261,19 +261,19 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 	Context("delete", func() {
 		It("should remove the finalizer and cleanup the resources when the BackupBucket is deleted", func() {
-			By("Mimicking extension controller and make extensions BackupBucket look successfully reconciled")
+			By("Mimic extension controller and make extensions BackupBucket look successfully reconciled")
 			reconcileExtensionBackupBucket(true)
 
 			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
 
-			By("ensuring the extension resources are cleaned up")
+			By("Ensure the extension resources are cleaned up")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenGeneratedSecret), gardenGeneratedSecret)).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(BeNotFoundError())
 			}).Should(Succeed())
 
-			By("ensuring finalizers are removed and BackupBucket is released")
+			By("Ensure finalizers are removed and BackupBucket is released")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenSecret), gardenSecret)).To(Succeed())
 				g.Expect(gardenSecret.Finalizers).NotTo(ContainElement("gardener.cloud/gardener"))

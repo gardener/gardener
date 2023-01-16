@@ -42,9 +42,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestHealthController(t *testing.T) {
+func TestHealth(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Health Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager Health Suite")
 }
 
 const testID = "health-controller-test"
@@ -64,7 +64,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
@@ -78,15 +78,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -97,11 +97,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setting up manager")
+	By("Setup manager")
 
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             resourcemanagerclient.CombinedScheme,
@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controllers")
+	By("Register controllers")
 	cfg := config.HealthControllerConfig{
 		ConcurrentSyncs: pointer.Int(5),
 		SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
@@ -126,7 +126,7 @@ var _ = BeforeSuite(func() {
 		ClassFilter: classFilter,
 	}).AddToManager(mgr, mgr, mgr, false, "")).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -135,7 +135,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

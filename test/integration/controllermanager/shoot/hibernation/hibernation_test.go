@@ -70,12 +70,12 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 	})
 
 	It("should successfully hibernate then wake up the shoot based on schedule", func() {
-		By("set clock time to be 1 second before hibernation trigger time")
+		By("Set clock time to be 1 second before hibernation trigger time")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 		nextHour := roundToNextHour(shoot.CreationTimestamp.Time)
 		fakeClock.SetTime(nextHour.Add(59 * time.Second))
 
-		By("patch shoot with hibernation schedules")
+		By("Patch shoot with hibernation schedules")
 		patch := client.MergeFrom(shoot.DeepCopy())
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Schedules: []gardencorev1beta1.HibernationSchedule{
@@ -87,7 +87,7 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 		}
 		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-		By("increase clock time by 1 minute and check that shoot gets hibernated")
+		By("Step clock by 1 minute and check that shoot gets hibernated")
 		fakeClock.Step(time.Minute)
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -95,7 +95,7 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 			g.Expect(shoot.Status.LastHibernationTriggerTime).To(PointTo(Equal(metav1.Time{Time: fakeClock.Now()})))
 		}).Should(Succeed())
 
-		By("increase clock time by 1 minute and check that shoot gets woken up")
+		By("Step clock by 1 minute and check that shoot gets woken up")
 		fakeClock.Step(time.Minute)
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())

@@ -47,9 +47,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootSecret(t *testing.T) {
+func TestSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ShootSecret Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet ShootState Secret Suite")
 }
 
 const testID = "shoot-secret-controller-test"
@@ -71,7 +71,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
@@ -90,21 +90,21 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
 	testScheme := kubernetes.GardenScheme
 	Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("creating project namespace")
+	By("Create project namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -119,11 +119,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting project namespace")
+		By("Delete project namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
@@ -136,14 +136,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("registering controller")
+	By("Register controller")
 	Expect((&shootstatesecretcontroller.Reconciler{
 		Config: config.ShootSecretControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -152,7 +152,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -2296,7 +2296,7 @@ spec:
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(41))
 
-			By("checking istio-istiod resources")
+			By("Verify istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_service.yaml"])).To(Equal(istiodService))
@@ -2312,7 +2312,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_autoscale.yaml"])).To(Equal(istiodAutoscale))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"])).To(Equal(istiodValidationWebhook))
 
-			By("checking istio-ingress resources")
+			By("Verify istio-ingress resources")
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
@@ -2324,7 +2324,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment))
 
-			By("checking istio-ingress network policies")
+			By("Verify istio-ingress network policies")
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-dns.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__deny-all-egress.yaml"])).To(Equal(istioIngressNetworkPolicyDenyAllEgress))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-istiod.yaml"])).To(Equal(istioIngressNetworkPolicyToIstioD))
@@ -2332,7 +2332,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-shoot-apiserver.yaml"])).To(Equal(istioIngressNetworkPolicyToShootApiServer))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-shoot-vpn-seed-server.yaml"])).To(Equal(istioIngressNetworkPolicyToShootVpnSeedServer))
 
-			By("checking istio-system network policies")
+			By("Verify istio-system network policies")
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-aggregate-prometheus.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromAggregatePrometheus))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-istio-ingress.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromIstioIngress))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-shoot-vpn.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromShootVpn))
@@ -2340,7 +2340,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-istiod-webhook-server-port.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToIstiodWebhookServerPort))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__deny-all.yaml"])).To(Equal(istioSystemNetworkPolicyDenyAll))
 
-			By("checking istio-proxy-protocol resources")
+			By("Verify istio-proxy-protocol resources")
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_gateway_test-ingress.yaml"])).To(Equal(istioProxyProtocolGateway))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_virtualservice_test-ingress.yaml"])).To(Equal(istioProxyProtocolVirtualService))

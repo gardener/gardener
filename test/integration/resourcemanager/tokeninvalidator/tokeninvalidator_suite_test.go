@@ -48,7 +48,7 @@ import (
 
 func TestTokenInvalidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "TokenInvalidator Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager TokenInvalidator Suite")
 }
 
 const testID = "tokeninvalidator-controller-test"
@@ -71,7 +71,7 @@ var _ = BeforeSuite(func() {
 	// determine a unique namespace name to add a corresponding namespaceSelector to the webhook config
 	testNamespaceName := testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			MutatingWebhooks: getMutatingWebhookConfigurations(testNamespaceName),
@@ -84,15 +84,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -103,11 +103,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setting up manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
@@ -117,7 +117,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controllers and webhooks")
+	By("Register controllers and webhooks")
 	Expect((&tokeninvalidatorcontroller.Reconciler{
 		Config: config.TokenInvalidatorControllerConfig{
 			ConcurrentSyncs: pointer.Int(5),
@@ -130,7 +130,7 @@ var _ = BeforeSuite(func() {
 		Logger: log,
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -145,7 +145,7 @@ var _ = BeforeSuite(func() {
 	}).Should(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

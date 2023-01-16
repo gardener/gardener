@@ -23,5 +23,5 @@ import (
 
 func TestV1alpha1(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager API Config V1alpha1 Suite")
+	RunSpecs(t, "ControllerManager APIs Config V1alpha1 Suite")
 }

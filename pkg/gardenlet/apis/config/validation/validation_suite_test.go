@@ -23,5 +23,5 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet Config API Validation Suite")
+	RunSpecs(t, "Gardenlet APIs Config Validation Suite")
 }

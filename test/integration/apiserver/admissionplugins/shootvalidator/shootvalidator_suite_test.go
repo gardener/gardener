@@ -39,7 +39,7 @@ import (
 
 func TestShootValidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ShootValidator Integration Test Suite")
+	RunSpecs(t, "Test Integration APIServer AdmissionPlugins ShootValidator Suite")
 }
 
 // testID is used for generating test namespace names and other IDs
@@ -69,7 +69,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{
@@ -84,15 +84,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test clients")
+	By("Create test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -103,11 +103,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating Project")
+	By("Create Project")
 	project := &gardencorev1beta1.Project{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
@@ -120,11 +120,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
 
 	DeferCleanup(func() {
-		By("deleting Project")
+		By("Delete Project")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
-	By("creating member Role and Rolebinding")
+	By("Create member role and RoleBinding")
 	roleMember = &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "project-member",
@@ -166,12 +166,12 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, roleBindingMember)).To(Succeed())
 
 	DeferCleanup(func() {
-		By("Delete member role and rolebinding")
+		By("Delete member role and RoleBinding")
 		Expect(testClient.Delete(ctx, roleMember)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(testClient.Delete(ctx, roleBindingMember)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating admin Role and Rolebinding")
+	By("Create admin role and RoleBinding")
 	roleAdmin = &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "project-admin",
@@ -222,12 +222,12 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, roleBindingAdmin)).To(Succeed())
 
 	DeferCleanup(func() {
-		By("Delete admin role and rolebinding")
+		By("Delete admin role and RoleBinding")
 		Expect(testClient.Delete(ctx, roleAdmin)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(testClient.Delete(ctx, roleBindingAdmin)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating Cloudprofile")
+	By("Create CloudProfile")
 	cloudProfile = &gardencorev1beta1.CloudProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: testID + "-",
@@ -256,11 +256,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created CloudProfile for test", "cloudProfile", client.ObjectKeyFromObject(cloudProfile))
 
 	DeferCleanup(func() {
-		By("deleting CloudProfile")
+		By("Delete CloudProfile")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, cloudProfile))).To(Succeed())
 	})
 
-	By("creating SecretBinding")
+	By("Create SecretBinding")
 	testSecret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
@@ -271,7 +271,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(testSecret))
 
 	DeferCleanup(func() {
-		By("deleting Secret")
+		By("Delete Secret")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecret))).To(Succeed())
 	})
 
@@ -292,11 +292,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created SecretBinding for test", "secretBinding", client.ObjectKeyFromObject(testSecretBinding))
 
 	DeferCleanup(func() {
-		By("deleting SecretBinding")
+		By("Delete SecretBinding")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecretBinding))).To(Succeed())
 	})
 
-	By("creating Seed")
+	By("Create Seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: testID + "-",
@@ -327,7 +327,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
 
 	DeferCleanup(func() {
-		By("deleting Seed")
+		By("Delete Seed")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
 	})
 })

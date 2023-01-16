@@ -26,5 +26,5 @@ import (
 func TestShoot(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Shoot Suite")
+	RunSpecs(t, "Registry Core Shoot Suite")
 }

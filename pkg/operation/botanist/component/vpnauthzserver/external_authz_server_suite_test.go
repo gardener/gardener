@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestVpnAuthzServer(t *testing.T) {
+func TestVPNAuthzServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component VpnAuthzServer Suite")
+	RunSpecs(t, "Botanist Component VPNAuthzServer Suite")
 }

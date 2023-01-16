@@ -23,5 +23,5 @@ import (
 
 func TestAPIServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardener API Server Suite")
+	RunSpecs(t, "APIServer Suite")
 }

@@ -38,10 +38,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestShootScheduler(t *testing.T) {
+func TestShoot(t *testing.T) {
 	schedulerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Scheduler Integration Test Suite")
+	RunSpecs(t, "Test Integration Scheduler Shoot Suite")
 }
 
 const (
@@ -66,7 +66,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{
@@ -81,11 +81,11 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test clients")
+	By("Create test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(testClient).NotTo(BeNil())
@@ -94,7 +94,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(versionedTestClient).NotTo(BeNil())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
@@ -118,16 +118,16 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	By("creating Project")
+	By("Create Project")
 	Expect(testClient.Create(ctx, project)).To(Succeed())
 	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
 
 	DeferCleanup(func() {
-		By("deleting Project")
+		By("Delete Project")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
-	By("creating SecretBinding")
+	By("Create SecretBinding")
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
@@ -138,7 +138,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret))
 
 	DeferCleanup(func() {
-		By("deleting Secret")
+		By("Delete Secret")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
 	})
 
@@ -159,7 +159,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created SecretBinding for test", "secretBinding", client.ObjectKeyFromObject(testSecretBinding))
 
 	DeferCleanup(func() {
-		By("deleting SecretBinding")
+		By("Delete SecretBinding")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecretBinding))).To(Succeed())
 	})
 })

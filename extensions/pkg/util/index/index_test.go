@@ -28,7 +28,7 @@ import (
 
 func TestIndex(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Index suite")
+	RunSpecs(t, "Extensions Util Index Suite")
 }
 
 var _ = Describe("Index", func() {

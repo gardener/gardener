@@ -23,5 +23,5 @@ import (
 
 func TestQuotaValidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootQuotaValidator Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot QuotaValidator Suite")
 }

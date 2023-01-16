@@ -212,13 +212,13 @@ var _ = Describe("#Interface", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			values.AnnotateOperation = true
 			deployWaiter.SetSSHPublicKey(sshPublicKey)
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(expected.DeepCopy())
 			expected.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
@@ -230,7 +230,7 @@ var _ = Describe("#Interface", func() {
 			}
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(deployWaiter.Wait(ctx)).NotTo(Succeed(), "infrastructure indicates error")
 		})
 
@@ -240,13 +240,13 @@ var _ = Describe("#Interface", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			values.AnnotateOperation = true
 			deployWaiter.SetSSHPublicKey(sshPublicKey)
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(expected.DeepCopy())
 			expected.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
@@ -260,10 +260,10 @@ var _ = Describe("#Interface", func() {
 			expected.Status.ProviderStatus = providerStatus
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(deployWaiter.Wait(ctx)).To(Succeed(), "infrastructure is ready")
 
-			By("verify status")
+			By("Verify status")
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
 		})

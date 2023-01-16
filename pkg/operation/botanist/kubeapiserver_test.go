@@ -104,7 +104,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		sm = fakesecretsmanager.New(seedClient, seedNamespace)
 
-		By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this function for whose secretsmanager.Get() will be called")
 		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
 		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "user-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
 

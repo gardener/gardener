@@ -24,9 +24,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestVpnSeedServer(t *testing.T) {
+func TestVPNSeedServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component VpnSeedServer Suite")
+	RunSpecs(t, "Botanist Component VPNSeedServer Suite")
 }
 
 var _ = BeforeSuite(func() {

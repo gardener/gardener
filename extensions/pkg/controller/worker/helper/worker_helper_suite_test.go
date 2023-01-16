@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestWorkerHelper(t *testing.T) {
+func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Controller Worker Helper Test Suite")
+	RunSpecs(t, "Extensions Controller Worker Helper Suite")
 }

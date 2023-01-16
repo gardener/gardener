@@ -127,7 +127,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		ginkgo.Fail("The test requires .spec.addons.nginxIngress.enabled to be true")
 	}
 
-	ginkgo.By("Applying redis chart")
+	ginkgo.By("Apply redis chart")
 	masterValues := map[string]interface{}{
 		"command": "redis-server",
 	}
@@ -238,7 +238,7 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 	t.dump(ctx)
 
 	// Clean up shoot
-	ginkgo.By("Cleaning up guestbook app resources")
+	ginkgo.By("Clean up guestbook app resources")
 	deleteResource := func(ctx context.Context, resource client.Object) error {
 		err := t.framework.ShootClient.Client().Delete(ctx, resource)
 		if apierrors.IsNotFound(err) {
@@ -306,5 +306,5 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 	cleanupGuestbook()
 	cleanupRedis()
 
-	ginkgo.By("redis and the guestbook app have been cleaned up!")
+	ginkgo.By("Redis and the guestbook app have been cleaned up!")
 }

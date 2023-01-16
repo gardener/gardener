@@ -173,7 +173,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 			})
 
 			JustBeforeEach(func() {
-				By("creating old CA secrets")
+				By("Create old CA secrets")
 				createOldCASecrets(fakeClient, cluster, caConfigs)
 			})
 
@@ -199,7 +199,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 			})
 
 			JustBeforeEach(func() {
-				By("creating old CA secrets")
+				By("Create old CA secrets")
 				createOldCASecrets(fakeClient, cluster, caConfigs)
 			})
 
@@ -259,7 +259,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 		Context("CA secrets already exist", func() {
 			JustBeforeEach(func() {
-				By("creating old CA secrets")
+				By("Create old CA secrets")
 				createOldCASecrets(fakeClient, cluster, caConfigs)
 			})
 

@@ -34,7 +34,7 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Authentication API Validation Suite")
+	RunSpecs(t, "APIs Authentication Validation Suite")
 }
 
 var _ = Describe("ValidateAdminKubeconfigRequest", func() {

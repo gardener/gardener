@@ -31,7 +31,7 @@ import (
 
 func TestHostnameResolver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "HostnameResolver Suite")
+	RunSpecs(t, "Gardenlet Controller NetworkPolicy HostnameResolver Suite")
 }
 
 type fakeLookup struct {

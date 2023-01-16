@@ -191,11 +191,11 @@ var _ = Describe("#ContainerRuntime", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			for i := range expected {
 				patch := client.MergeFrom(expected[i].DeepCopy())
 				// remove operation annotation, add old timestamp annotation
@@ -209,7 +209,7 @@ var _ = Describe("#ContainerRuntime", func() {
 				Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching containerruntime succeeds")
 			}
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "containerruntime indicates error")
 		})
 
@@ -219,11 +219,11 @@ var _ = Describe("#ContainerRuntime", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			for i := range expected {
 				patch := client.MergeFrom(expected[i].DeepCopy())
 				// remove operation annotation, add up-to-date timestamp annotation
@@ -237,7 +237,7 @@ var _ = Describe("#ContainerRuntime", func() {
 				Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching containerruntime succeeds")
 			}
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "containerruntime is ready, should not return an error")
 		})
 	})

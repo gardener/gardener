@@ -44,9 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestWebhookCloudProvider(t *testing.T) {
+func TestCloudProvider(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Webhook CloudProvider Integration Test Suite")
+	RunSpecs(t, "Test Integration Extensions Webhook CloudProvider Suite")
 }
 
 const (
@@ -70,7 +70,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
@@ -86,15 +86,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -108,11 +108,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
@@ -123,10 +123,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering webhook")
+	By("Register webhook")
 	Expect(addTestWebhookToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -135,7 +135,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 
@@ -155,7 +155,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
 
 	DeferCleanup(func() {
-		By("deleting Cluster")
+		By("Delete Cluster")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
 	})
 })

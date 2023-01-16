@@ -94,7 +94,7 @@ var _ = Describe("Certificates tests", func() {
 	)
 
 	BeforeEach(func() {
-		By("creating test namespaces")
+		By("Create test Namespaces")
 		extensionNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "webhook-certs-test-",
@@ -104,7 +104,7 @@ var _ = Describe("Certificates tests", func() {
 		log.Info("Created extension Namespace for test", "namespaceName", extensionNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting extension namespace")
+			By("Delete extension namespace")
 			Expect(testClient.Delete(ctx, extensionNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
@@ -120,7 +120,7 @@ var _ = Describe("Certificates tests", func() {
 		log.Info("Created shoot Namespace for test", "namespaceName", shootNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting shoot namespace")
+			By("Delete shoot namespace")
 			Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
@@ -170,14 +170,14 @@ var _ = Describe("Certificates tests", func() {
 
 	Context("run without seed webhook", func() {
 		JustBeforeEach(func() {
-			By("setting up manager")
+			By("Setup manager")
 			mgr, err = manager.New(restConfig, manager.Options{
 				Scheme:             kubernetes.SeedScheme,
 				MetricsBindAddress: "0",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			By("registering webhooks")
+			By("Register webhooks")
 			var (
 				serverOptions = &extensionscmdwebhook.ServerOptions{
 					Mode:        extensionswebhook.ModeService,
@@ -196,7 +196,7 @@ var _ = Describe("Certificates tests", func() {
 			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("verifying certificates exist on disk")
+			By("Verify certificates exist on disk")
 			Eventually(func(g Gomega) {
 				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
 				g.Expect(err).NotTo(HaveOccurred())
@@ -207,7 +207,7 @@ var _ = Describe("Certificates tests", func() {
 				g.Expect(serverKey).NotTo(BeEmpty())
 			}).Should(Succeed())
 
-			By("starting manager")
+			By("Start manager")
 			mgrContext, mgrCancel := context.WithCancel(ctx)
 
 			go func() {
@@ -222,11 +222,11 @@ var _ = Describe("Certificates tests", func() {
 			}).Should(BeNil())
 
 			DeferCleanup(func() {
-				By("stopping manager")
+				By("Stop manager")
 				mgrCancel()
 			})
 
-			By("verifying CA bundle was written in atomic shoot webhook config")
+			By("Verify CA bundle was written in atomic shoot webhook config")
 			Eventually(func() []byte {
 				val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
 				if !ok {
@@ -238,7 +238,7 @@ var _ = Describe("Certificates tests", func() {
 
 		Context("certificate rotation", func() {
 			BeforeEach(func() {
-				By("preparing existing shoot webhook resources")
+				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
 				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
@@ -258,14 +258,14 @@ var _ = Describe("Certificates tests", func() {
 			It("should rotate the certificates and update the webhook configs", func() {
 				var serverCert1 []byte
 
-				By("retrieving CA bundle (before first reconciliation)")
+				By("Retrieve CA bundle (before first reconciliation)")
 
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
 				}).Should(Not(BeEmpty()))
 
-				By("reading generated server certificate from disk")
+				By("Read generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
 					serverCert1, err = os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
@@ -278,7 +278,7 @@ var _ = Describe("Certificates tests", func() {
 					return serverKey1
 				}).Should(Not(BeEmpty()))
 
-				By("retrieving CA bundle again (after validity has expired)")
+				By("Retrieve CA bundle again (after validity has expired)")
 				fakeClock.Step(30 * 24 * time.Hour)
 
 				Eventually(func(g Gomega) []byte {
@@ -286,7 +286,7 @@ var _ = Describe("Certificates tests", func() {
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
 				}).Should(Not(BeEmpty()))
 
-				By("reading re-generated server certificate from disk")
+				By("Read re-generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
 					serverCert2, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
@@ -336,14 +336,14 @@ var _ = Describe("Certificates tests", func() {
 		})
 
 		JustBeforeEach(func() {
-			By("setting up manager")
+			By("Setup manager")
 			mgr, err = manager.New(restConfig, manager.Options{
 				Scheme:             kubernetes.SeedScheme,
 				MetricsBindAddress: "0",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			By("registering webhooks")
+			By("Register webhooks")
 			var (
 				serverOptions = &extensionscmdwebhook.ServerOptions{
 					Mode:        extensionswebhook.ModeService,
@@ -363,7 +363,7 @@ var _ = Describe("Certificates tests", func() {
 			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("verifying certificates exist on disk")
+			By("Verify certificates exist on disk")
 			Eventually(func(g Gomega) {
 				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
 				g.Expect(err).NotTo(HaveOccurred())
@@ -374,7 +374,7 @@ var _ = Describe("Certificates tests", func() {
 				g.Expect(serverKey).NotTo(BeEmpty())
 			}).Should(Succeed())
 
-			By("starting manager")
+			By("Start manager")
 			mgrContext, mgrCancel := context.WithCancel(ctx)
 
 			go func() {
@@ -389,11 +389,11 @@ var _ = Describe("Certificates tests", func() {
 			}).Should(BeNil())
 
 			DeferCleanup(func() {
-				By("stopping manager")
+				By("Stop manager")
 				mgrCancel()
 			})
 
-			By("verifying CA bundle was written in atomic shoot webhook config")
+			By("Verify CA bundle was written in atomic shoot webhook config")
 			Eventually(func() []byte {
 				val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
 				if !ok {
@@ -404,7 +404,7 @@ var _ = Describe("Certificates tests", func() {
 		})
 
 		AfterEach(func() {
-			By("deleting webhook config")
+			By("Delete webhook config")
 			Expect(testClient.Delete(ctx, seedWebhookConfig)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
@@ -425,7 +425,7 @@ var _ = Describe("Certificates tests", func() {
 
 		Context("certificate rotation", func() {
 			BeforeEach(func() {
-				By("preparing existing shoot webhook resources")
+				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
 				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
@@ -445,7 +445,7 @@ var _ = Describe("Certificates tests", func() {
 			It("should rotate the certificates and update the webhook configs", func() {
 				var caBundle1, caBundle2, caBundle3, serverCert1 []byte
 
-				By("retrieving CA bundle (before first reconciliation)")
+				By("Retrieve CA bundle (before first reconciliation)")
 				Eventually(func(g Gomega) []byte {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
 					caBundle1 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
@@ -457,7 +457,7 @@ var _ = Describe("Certificates tests", func() {
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
 				}).Should(Equal(caBundle1))
 
-				By("reading generated server certificate from disk")
+				By("Read generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
 					serverCert1, err = os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
@@ -470,7 +470,7 @@ var _ = Describe("Certificates tests", func() {
 					return serverKey1
 				}).Should(Not(BeEmpty()))
 
-				By("retrieving CA bundle again (after validity has expired)")
+				By("Retrieve CA bundle again (after validity has expired)")
 				fakeClock.Step(30 * 24 * time.Hour)
 
 				Eventually(func(g Gomega) string {
@@ -490,7 +490,7 @@ var _ = Describe("Certificates tests", func() {
 
 				caCert2 := strings.TrimPrefix(string(caBundle2), string(caBundle1))
 
-				By("reading re-generated server certificate from disk")
+				By("Read re-generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
 					serverCert2, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
@@ -503,7 +503,7 @@ var _ = Describe("Certificates tests", func() {
 				// we don't assert that the server key changed since we have overwritten the 'GenerateKey' function with
 				// a fake implementation above (hence, it cannot change)
 
-				By("retrieving CA bundle again (after old secrets are ignored)")
+				By("Retrieve CA bundle again (after old secrets are ignored)")
 				fakeClock.Step(24 * time.Hour)
 
 				Eventually(func(g Gomega) string {

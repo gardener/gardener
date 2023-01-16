@@ -41,7 +41,7 @@ type SSHKeypairVerifier struct {
 
 // Before is called before the rotation is started.
 func (v *SSHKeypairVerifier) Before(ctx context.Context) {
-	By("Verifying old ssh-keypair secret")
+	By("Verify old ssh-keypair secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
@@ -66,7 +66,7 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 		v.old2KeypairData = secret.Data
 	}).Should(Succeed(), "old ssh-keypair secret should not be present or different from current")
 
-	By("Verifying that old SSH key(s) are accepted")
+	By("Verify that old SSH key(s) are accepted")
 	Eventually(func(g Gomega) {
 		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 		Expect(err).NotTo(HaveOccurred())
@@ -88,7 +88,7 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 	sshKeypairRotation := v.Shoot.Status.Credentials.Rotation.SSHKeypair
 	Expect(sshKeypairRotation.LastCompletionTime.Time.UTC().After(sshKeypairRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
-	By("Verifying new ssh-keypair secret")
+	By("Verify new ssh-keypair secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
@@ -101,7 +101,7 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 		g.Expect(secret.Data).To(Equal(v.oldKeypairData))
 	}).Should(Succeed(), "ssh-keypair secret should have been rotated")
 
-	By("Verifying that new SSH keys are accepted")
+	By("Verify that new SSH keys are accepted")
 	Eventually(func(g Gomega) {
 		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 		Expect(err).NotTo(HaveOccurred())

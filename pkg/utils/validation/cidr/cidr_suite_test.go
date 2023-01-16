@@ -23,5 +23,5 @@ import (
 
 func TestCIDR(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CIDR Suite")
+	RunSpecs(t, "Utils Validation CIDR Suite")
 }

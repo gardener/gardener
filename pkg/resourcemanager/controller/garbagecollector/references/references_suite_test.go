@@ -23,5 +23,5 @@ import (
 
 func TestReferences(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller GarbageCollector References Suite")
+	RunSpecs(t, "ResourceManager Controller GarbageCollector References Suite")
 }

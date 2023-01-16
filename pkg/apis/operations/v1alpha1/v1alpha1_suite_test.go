@@ -23,5 +23,5 @@ import (
 
 func TestV1alpha1(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "API Operations V1Alpha1 Suite")
+	RunSpecs(t, "APIs Operations V1alpha1 Suite")
 }

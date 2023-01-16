@@ -28,7 +28,7 @@ import (
 
 func TestSecrets(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Utility Secrets Suite")
+	RunSpecs(t, "Utils Secrets Suite")
 }
 
 var _ = BeforeSuite(func() {

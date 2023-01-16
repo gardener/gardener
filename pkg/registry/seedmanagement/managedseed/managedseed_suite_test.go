@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestShoot(t *testing.T) {
+func TestManagedSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry ManagedSeed Suite")
+	RunSpecs(t, "Registry SeedManagement ManagedSeed Suite")
 }

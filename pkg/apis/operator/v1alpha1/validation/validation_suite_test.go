@@ -23,5 +23,5 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator API Validation Suite")
+	RunSpecs(t, "APIs Operator V1alpha1 Validation Suite")
 }

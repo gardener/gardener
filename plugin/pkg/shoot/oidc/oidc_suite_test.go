@@ -23,5 +23,5 @@ import (
 
 func TestOidc(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission OIDC Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot OIDC Suite")
 }

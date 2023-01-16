@@ -23,5 +23,5 @@ import (
 
 func TestValidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission SeedValidator Suite")
+	RunSpecs(t, "AdmissionPlugin Seed Validator Suite")
 }

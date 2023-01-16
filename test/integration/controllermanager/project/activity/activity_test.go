@@ -35,7 +35,7 @@ var _ = Describe("Project Activity controller tests", func() {
 	var testNamespace *corev1.Namespace
 
 	BeforeEach(func() {
-		By("creating test namespace")
+		By("Create test Namespace")
 		testNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -47,7 +47,7 @@ var _ = Describe("Project Activity controller tests", func() {
 		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting test namespace")
+			By("Delete test Namespace")
 			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 

@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCustomVerbAuthorizer(t *testing.T) {
+func TestVPA(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootVPAEnabledByDefault Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot VPA Suite")
 }

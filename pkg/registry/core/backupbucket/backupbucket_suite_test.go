@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestBackupbucket(t *testing.T) {
+func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry BackupBucket Suite")
+	RunSpecs(t, "Registry Core BackupBucket Suite")
 }

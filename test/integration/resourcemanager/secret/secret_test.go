@@ -58,11 +58,11 @@ var _ = Describe("Secret controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		By("creating secret for test")
+		By("Create secret for test")
 		Expect(testClient.Create(ctx, secretFoo)).To(Succeed())
 		log.Info("Created Secret for test", "secretName", secretFoo.Name)
 		Expect(testClient.Create(ctx, secretBar)).To(Succeed())
-		By("creating ManagedResource for test")
+		By("Create ManagedResource for test")
 		log.Info("Created Secret for test", "secretName", secretBar.Name)
 
 		managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
@@ -104,7 +104,7 @@ var _ = Describe("Secret controller tests", func() {
 		})
 
 		It("should remove finalizer from secrets which are no longer referenced by any ManagedResource", func() {
-			By("update ManagedResource to reference some other secret")
+			By("Update ManagedResource to reference some other secret")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Spec.SecretRefs[0].Name = "test"
 			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())

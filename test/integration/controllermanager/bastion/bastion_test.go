@@ -211,7 +211,7 @@ var _ = Describe("Bastion controller tests", func() {
 			})
 
 			It("should delete Bastion if its expiration timestamp has passed", func() {
-				By("stepping the clock to pass expirationTimeStamp")
+				By("Step the clock to pass expirationTimeStamp")
 				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(time.Second))
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
@@ -229,12 +229,12 @@ var _ = Describe("Bastion controller tests", func() {
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 				Expect(testClient.Patch(ctx, bastion, patch)).To(Succeed())
 
-				By("Ensuring Bastion is not gone yet")
+				By("Ensure Bastion is not gone yet")
 				Consistently(func() error {
 					return testClient.Get(ctx, objectKey, bastion)
 				}).Should(Succeed())
 
-				By("Ensuring Bastion is deleted")
+				By("Ensure Bastion is deleted")
 				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(time.Second))
 				Eventually(logBuffer).Should(gbytes.Say("Deleting expired bastion"))
 
@@ -246,7 +246,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 		Describe("maxLifetime", func() {
 			It("should delete Bastion if it's older than maxLifetime", func() {
-				By("stepping the clock to pass maxLifeTime")
+				By("Step the clock to pass maxLifeTime")
 				fakeClock.Step(maxLifeTime + 2*time.Second)
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
@@ -264,12 +264,12 @@ var _ = Describe("Bastion controller tests", func() {
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 				Expect(testClient.Patch(ctx, bastion, patch)).To(Succeed())
 
-				By("Ensuring Bastion is not gone yet")
+				By("Ensure Bastion is not gone yet")
 				Consistently(func() error {
 					return testClient.Get(ctx, objectKey, bastion)
 				}).Should(Succeed())
 
-				By("Ensuring Bastion is deleted")
+				By("Ensure Bastion is deleted")
 				// we just need to pass the maxLifeTime
 				fakeClock.Step(4 * time.Second)
 				Eventually(logBuffer).Should(gbytes.Say("Deleting bastion because it reached its maximum lifetime"))

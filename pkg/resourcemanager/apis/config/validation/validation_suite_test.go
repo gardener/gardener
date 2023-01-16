@@ -23,5 +23,5 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceManager API Config Validation Suite")
+	RunSpecs(t, "ResourceManager APIs Config Validation Suite")
 }

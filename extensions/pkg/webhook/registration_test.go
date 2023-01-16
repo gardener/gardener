@@ -400,7 +400,7 @@ var _ = Describe("Registration", func() {
 		caBundle := []byte("ca-bundle")
 
 		It("admissionregistrationv1.MutatingWebhookConfiguration", func() {
-			By("return the CA bundle for the first webhook")
+			By("Return the CA bundle for the first webhook")
 			result, err := GetCABundleFromWebhookConfig(&admissionregistrationv1.MutatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1.MutatingWebhook{
 					{ClientConfig: admissionregistrationv1.WebhookClientConfig{CABundle: caBundle}},
@@ -410,7 +410,7 @@ var _ = Describe("Registration", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(caBundle))
 
-			By("return nil since there is no CA bundle")
+			By("Return nil since there is no CA bundle")
 			result, err = GetCABundleFromWebhookConfig(&admissionregistrationv1.MutatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1.MutatingWebhook{{}},
 			})
@@ -419,7 +419,7 @@ var _ = Describe("Registration", func() {
 		})
 
 		It("admissionregistrationv1beta1.MutatingWebhookConfiguration", func() {
-			By("return the CA bundle for the first webhook")
+			By("Return the CA bundle for the first webhook")
 			result, err := GetCABundleFromWebhookConfig(&admissionregistrationv1beta1.MutatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1beta1.MutatingWebhook{
 					{ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{CABundle: caBundle}},
@@ -429,7 +429,7 @@ var _ = Describe("Registration", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(caBundle))
 
-			By("return nil since there is no CA bundle")
+			By("Return nil since there is no CA bundle")
 			result, err = GetCABundleFromWebhookConfig(&admissionregistrationv1beta1.MutatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{}},
 			})
@@ -438,7 +438,7 @@ var _ = Describe("Registration", func() {
 		})
 
 		It("admissionregistrationv1.ValidatingWebhookConfiguration", func() {
-			By("return the CA bundle for the first webhook")
+			By("Return the CA bundle for the first webhook")
 			result, err := GetCABundleFromWebhookConfig(&admissionregistrationv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1.ValidatingWebhook{
 					{ClientConfig: admissionregistrationv1.WebhookClientConfig{CABundle: caBundle}},
@@ -448,7 +448,7 @@ var _ = Describe("Registration", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(caBundle))
 
-			By("return nil since there is no CA bundle")
+			By("Return nil since there is no CA bundle")
 			result, err = GetCABundleFromWebhookConfig(&admissionregistrationv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1.ValidatingWebhook{{}},
 			})
@@ -457,7 +457,7 @@ var _ = Describe("Registration", func() {
 		})
 
 		It("admissionregistrationv1beta1.ValidatingWebhookConfiguration", func() {
-			By("return the CA bundle for the first webhook")
+			By("Return the CA bundle for the first webhook")
 			result, err := GetCABundleFromWebhookConfig(&admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1beta1.ValidatingWebhook{
 					{ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{CABundle: caBundle}},
@@ -467,7 +467,7 @@ var _ = Describe("Registration", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(caBundle))
 
-			By("return nil since there is no CA bundle")
+			By("Return nil since there is no CA bundle")
 			result, err = GetCABundleFromWebhookConfig(&admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionregistrationv1beta1.ValidatingWebhook{{}},
 			})

@@ -23,5 +23,5 @@ import (
 
 func TestTolerationRestriction(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission TolerationRestriction Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot TolerationRestriction Suite")
 }

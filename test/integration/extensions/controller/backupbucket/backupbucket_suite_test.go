@@ -34,7 +34,7 @@ import (
 
 func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Controller BackupBucket Integration Test Suite")
+	RunSpecs(t, "Test Integration Extensions Controller BackupBucket Suite")
 }
 
 const testID = "extensions-backupbucket-test"
@@ -52,7 +52,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	extensionsCRDs := filepath.Join("..", "..", "..", "..", "..", "pkg", "operation", "botanist", "component", "extensions", "crds", "assets")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
@@ -70,11 +70,11 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
 	Expect(err).NotTo(HaveOccurred())
 })

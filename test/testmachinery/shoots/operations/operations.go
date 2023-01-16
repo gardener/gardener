@@ -92,11 +92,11 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		err = f.HibernateShoot(ctx)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("wake up shoot")
+		ginkgo.By("Wake up shoot")
 		err = f.WakeUpShoot(ctx)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("test guestbook")
+		ginkgo.By("Test guestbook")
 		guestBookTest.WaitUntilRedisIsReady(ctx)
 		guestBookTest.WaitUntilGuestbookDeploymentIsReady(ctx)
 		guestBookTest.Test(ctx)
@@ -104,14 +104,14 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 	}, hibernationTestTimeout)
 
 	f.Default().Serial().CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
-		ginkgo.By("maintain shoot")
+		ginkgo.By("Maintain shoot")
 		err := f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationMaintain
 			return nil
 		})
 		framework.ExpectNoError(err)
 
-		ginkgo.By("reconcile shoot")
+		ginkgo.By("Reconcile shoot")
 		err = f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
 			return nil
@@ -124,7 +124,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 			ginkgo.Skip("The static token kubeconfig is not enabled for this shoot")
 		}
 
-		ginkgo.By("rotate kubeconfig")
+		ginkgo.By("Rotate kubeconfig")
 		var (
 			secretName = f.Shoot.Name + ".kubeconfig"
 		)

@@ -52,9 +52,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestBackupBucketController(t *testing.T) {
+func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupBucket Controller Integration Test Suite")
+	RunSpecs(t, "Test Integration Gardenlet BackupBucket Suite")
 }
 
 const testID = "backupbucket-controller-test"
@@ -80,7 +80,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
@@ -99,11 +99,11 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testScheme := kubernetes.GardenScheme
 	Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
 	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
@@ -112,7 +112,7 @@ var _ = BeforeSuite(func() {
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("creating project namespace")
+	By("Create project namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -123,11 +123,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting project namespace")
+		By("Delete project namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating garden namespace")
+	By("Create garden namespace")
 	gardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -139,13 +139,13 @@ var _ = BeforeSuite(func() {
 	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
 
 	DeferCleanup(func() {
-		By("deleting garden namespace")
+		By("Delete garden namespace")
 		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	// Both the garden and seed cluster are same in this environment.
 	// So we create this to differentiate between the two garden namespaces.
-	By("creating seed garden namespace")
+	By("Create seed garden namespace")
 	seedGardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "seed-garden-",
@@ -156,11 +156,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created namespace for test", "namespaceName", seedGardenNamespace)
 
 	DeferCleanup(func() {
-		By("deleting seed garden namespace")
+		By("Delete seed garden namespace")
 		Expect(testClient.Delete(ctx, seedGardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating seed")
+	By("Create seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "seed-",
@@ -185,11 +185,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Seed for test", "seed", seed.Name)
 
 	DeferCleanup(func() {
-		By("deleting seed")
+		By("Delete seed")
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setup manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
@@ -212,11 +212,11 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("setting up field indexes")
+	By("Setup field indexes")
 	Expect(indexer.AddBackupEntryBucketName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	fakeClock = testclock.NewFakeClock(time.Now())
-	By("registering controller")
+	By("Register controller")
 	Expect((&backupbucketcontroller.Reconciler{
 		Clock: fakeClock,
 		Config: config.BackupBucketControllerConfiguration{
@@ -228,7 +228,7 @@ var _ = BeforeSuite(func() {
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -237,7 +237,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

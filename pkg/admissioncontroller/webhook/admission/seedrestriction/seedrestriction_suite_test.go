@@ -23,5 +23,5 @@ import (
 
 func TestSeedRestriction(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission SeedRestriction Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission SeedRestriction Suite")
 }

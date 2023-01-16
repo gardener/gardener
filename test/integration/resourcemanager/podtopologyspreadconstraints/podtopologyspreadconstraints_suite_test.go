@@ -44,7 +44,7 @@ import (
 
 func TestPodTopologySpreadConstraints(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "PodTopologySpreadConstraints Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager PodTopologySpreadConstraints Suite")
 }
 
 const testName = "podtopologyspreadconstraints-webhook-test"
@@ -67,7 +67,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	By("starting test environment")
+	By("Start test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			MutatingWebhooks: getMutatingWebhookConfigurations(testID),
@@ -80,15 +80,15 @@ var _ = BeforeSuite(func() {
 	Expect(restConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping test environment")
+		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -99,11 +99,11 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setting up manager")
+	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
@@ -113,12 +113,12 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering webhook")
+	By("Register webhook")
 	Expect((&podtopologyspreadconstraints.Handler{
 		Logger: log,
 	}).AddToManager(mgr)).To(Succeed())
 
-	By("starting manager")
+	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
@@ -133,7 +133,7 @@ var _ = BeforeSuite(func() {
 	}).Should(BeNil())
 
 	DeferCleanup(func() {
-		By("stopping manager")
+		By("Stop manager")
 		mgrCancel()
 	})
 })

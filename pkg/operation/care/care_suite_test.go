@@ -23,8 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestValidator(t *testing.T) {
+func TestCare(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Care Suite")
+	RunSpecs(t, "Operation Care Suite")
 }

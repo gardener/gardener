@@ -23,5 +23,5 @@ import (
 
 func TestAdmissionPlugins(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionPlugin Validation Suite")
+	RunSpecs(t, "Utils Validation AdmissionPlugins Suite")
 }

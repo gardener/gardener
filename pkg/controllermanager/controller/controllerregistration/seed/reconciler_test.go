@@ -22,7 +22,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -773,15 +772,15 @@ var _ = Describe("Reconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.ControllerDeploymentHash: "d37bba62f222c81b",
-					common.RegistrationSpecHash:     "61ca93a1782c5fa3",
-					common.SeedSpecHash:             "8e09957b7d0d3c19",
+					ControllerDeploymentHash: "d37bba62f222c81b",
+					RegistrationSpecHash:     "61ca93a1782c5fa3",
+					SeedSpecHash:             "8e09957b7d0d3c19",
 				}
 
 				installation3 := controllerInstallation3.DeepCopy()
 				installation3.Labels = map[string]string{
-					common.RegistrationSpecHash: "61ca93a1782c5fa3",
-					common.SeedSpecHash:         "8e09957b7d0d3c19",
+					RegistrationSpecHash: "61ca93a1782c5fa3",
+					SeedSpecHash:         "8e09957b7d0d3c19",
 				}
 
 				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
@@ -814,9 +813,9 @@ var _ = Describe("Reconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.ControllerDeploymentHash: "d37bba62f222c81b",
-					common.RegistrationSpecHash:     "61ca93a1782c5fa3",
-					common.SeedSpecHash:             "8e09957b7d0d3c19",
+					ControllerDeploymentHash: "d37bba62f222c81b",
+					RegistrationSpecHash:     "61ca93a1782c5fa3",
+					SeedSpecHash:             "8e09957b7d0d3c19",
 				}
 
 				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
