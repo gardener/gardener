@@ -112,5 +112,5 @@ var _ = BeforeSuite(func() {
 
 	By("Ensure that garden namespace exists")
 	Expect(testClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).
-		To(Or(Succeed(), BeAlreadyExistsError()))
+		To(Succeed())
 })

@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -92,7 +91,7 @@ var _ = BeforeSuite(func() {
 			Name: "garden",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name
 

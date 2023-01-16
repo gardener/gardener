@@ -134,7 +134,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
 
 	DeferCleanup(func() {

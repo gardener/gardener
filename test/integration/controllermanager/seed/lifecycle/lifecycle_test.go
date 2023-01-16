@@ -221,7 +221,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		Context("rebootstrapping of ManagedSeed", func() {
 			JustBeforeEach(func() {
 				By("Create garden Namespace")
-				Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+				Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 				log.Info("Created garden Namespace", "namespace", client.ObjectKeyFromObject(gardenNamespace))
 
 				By("Create ManagedSeed")
