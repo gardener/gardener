@@ -1320,7 +1320,7 @@ var _ = Describe("VPA", func() {
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(23))
 
-				By("checking vpa-updater resources")
+				By("Verify vpa-updater resources")
 				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
 				clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
 				clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
@@ -1334,7 +1334,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(deploymentUpdater)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(vpaUpdater)))
 
-				By("checking vpa-recommender resources")
+				By("Verify vpa-recommender resources")
 				clusterRoleRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleRecommenderMetricsReader.Name)
 				clusterRoleBindingRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.Name)
 				clusterRoleBindingRecommenderMetricsReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.RoleRef.Name)
@@ -1353,7 +1353,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
 				Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
 
-				By("checking vpa-admission-controller resources")
+				By("Verify vpa-admission-controller resources")
 				clusterRoleAdmissionController.Name = replaceTargetSubstrings(clusterRoleAdmissionController.Name)
 				clusterRoleBindingAdmissionController.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.Name)
 				clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
@@ -1369,7 +1369,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetAdmissionController)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(vpaAdmissionController)))
 
-				By("checking general resources")
+				By("Verify general resources")
 				clusterRoleGeneralActor.Name = replaceTargetSubstrings(clusterRoleGeneralActor.Name)
 				clusterRoleGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleGeneralTargetReader.Name)
 				clusterRoleBindingGeneralActor.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.Name)
@@ -1506,13 +1506,13 @@ var _ = Describe("VPA", func() {
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(15))
 
-				By("checking vpa-updater application resources")
+				By("Verify vpa-updater application resources")
 				clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleUpdater)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingUpdater)))
 
-				By("checking vpa-updater runtime resources")
+				By("Verify vpa-updater runtime resources")
 				secret := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretUpdater), secret)).To(Succeed())
 				shootAccessSecretUpdater.ResourceVersion = "1"
@@ -1529,7 +1529,7 @@ var _ = Describe("VPA", func() {
 				vpaUpdater.ResourceVersion = "1"
 				Expect(vpa).To(Equal(vpaUpdater))
 
-				By("checking vpa-recommender application resources")
+				By("Verify vpa-recommender application resources")
 				clusterRoleBindingRecommenderMetricsReader.Subjects[0].Namespace = "kube-system"
 				clusterRoleBindingRecommenderCheckpointActor.Subjects[0].Namespace = "kube-system"
 
@@ -1538,7 +1538,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderCheckpointActor)))
 
-				By("checking vpa-recommender runtime resources")
+				By("Verify vpa-recommender runtime resources")
 				secret = &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretRecommender), secret)).To(Succeed())
 				shootAccessSecretRecommender.ResourceVersion = "1"
@@ -1555,13 +1555,13 @@ var _ = Describe("VPA", func() {
 				vpaRecommender.ResourceVersion = "1"
 				Expect(vpa).To(Equal(vpaRecommender))
 
-				By("checking vpa-admission-controller application resources")
+				By("Verify vpa-admission-controller application resources")
 				clusterRoleBindingAdmissionController.Subjects[0].Namespace = "kube-system"
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAdmissionController)))
 
-				By("checking vpa-admission-controller runtime resources")
+				By("Verify vpa-admission-controller runtime resources")
 				secret = &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretAdmissionController), secret)).To(Succeed())
 				shootAccessSecretAdmissionController.ResourceVersion = "1"
@@ -1593,7 +1593,7 @@ var _ = Describe("VPA", func() {
 				vpaAdmissionController.ResourceVersion = "1"
 				Expect(vpa).To(Equal(vpaAdmissionController))
 
-				By("checking general application resources")
+				By("Verify general application resources")
 				clusterRoleBindingGeneralActor.Subjects[0].Namespace = "kube-system"
 				clusterRoleBindingGeneralActor.Subjects[1].Namespace = "kube-system"
 				clusterRoleBindingGeneralTargetReader.Subjects[0].Namespace = "kube-system"
@@ -1659,15 +1659,15 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-				By("checking vpa-updater runtime resources")
+				By("Verify vpa-updater runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
-				By("checking vpa-recommender runtime resources")
+				By("Verify vpa-recommender runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
-				By("checking vpa-admission-controller runtime resources")
+				By("Verify vpa-admission-controller runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), &networkingv1.NetworkPolicy{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())

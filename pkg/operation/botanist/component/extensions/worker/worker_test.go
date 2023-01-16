@@ -492,11 +492,11 @@ var _ = Describe("Worker", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(w.DeepCopy())
 			w.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
@@ -508,7 +508,7 @@ var _ = Describe("Worker", func() {
 			}
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "worker indicates error")
 		})
 
@@ -518,11 +518,11 @@ var _ = Describe("Worker", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(w.DeepCopy())
 			w.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
@@ -534,7 +534,7 @@ var _ = Describe("Worker", func() {
 			}
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "worker is ready")
 		})
 	})

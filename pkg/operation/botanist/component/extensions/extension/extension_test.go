@@ -237,11 +237,11 @@ var _ = Describe("Extension", func() {
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			now := time.Now()
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(b.Shoot.Components.Extensions.Extension.DeployBeforeKubeAPIServer(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
 			patch := client.MergeFrom(beforeExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
@@ -254,7 +254,7 @@ var _ = Describe("Extension", func() {
 			}
 			Expect(b.SeedClientSet.Client().Patch(ctx, beforeExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer(ctx)).NotTo(Succeed())
 		})
 	})
@@ -287,11 +287,11 @@ var _ = Describe("Extension", func() {
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			now := time.Now()
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(b.Shoot.Components.Extensions.Extension.DeployAfterKubeAPIServer(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
 			patch := client.MergeFrom(defaultExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
@@ -304,7 +304,7 @@ var _ = Describe("Extension", func() {
 			}
 			Expect(b.SeedClientSet.Client().Patch(ctx, defaultExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(b.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer(ctx)).NotTo(Succeed())
 		})
 	})

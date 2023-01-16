@@ -166,11 +166,11 @@ var _ = Describe("#BackupEntry", func() {
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(expected.DeepCopy())
 			expected.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
@@ -182,16 +182,16 @@ var _ = Describe("#BackupEntry", func() {
 			}
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching backupentry succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "backupentry indicates error")
 		})
 
 		It("should return no error when it's ready", func() {
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(expected.DeepCopy())
 			expected.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
@@ -203,7 +203,7 @@ var _ = Describe("#BackupEntry", func() {
 			}
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching backupentry succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "backupentry is ready")
 		})
 	})

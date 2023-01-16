@@ -117,7 +117,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers+1)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("one node should be added to the worker pool")
+		ginkgo.By("Ensure one node should be added to the worker pool")
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, int(origMinWorkers+1), &workerPoolName, scaleUpTimeout)
 		framework.ExpectNoError(err)
 

@@ -203,11 +203,11 @@ var _ = Describe("ControlPlane", func() {
 			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
@@ -218,7 +218,7 @@ var _ = Describe("ControlPlane", func() {
 			}
 			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "controlplane indicates error")
 		})
 
@@ -226,11 +226,11 @@ var _ = Describe("ControlPlane", func() {
 			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
@@ -241,7 +241,7 @@ var _ = Describe("ControlPlane", func() {
 			}
 			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "controlplane is ready")
 		})
 
@@ -253,11 +253,11 @@ var _ = Describe("ControlPlane", func() {
 			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			cp.Name += "-exposure"
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
@@ -268,7 +268,7 @@ var _ = Describe("ControlPlane", func() {
 			}
 			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "controlplane indicates error")
 		})
 
@@ -280,11 +280,11 @@ var _ = Describe("ControlPlane", func() {
 			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			cp.Name += "-exposure"
 
-			By("deploy")
+			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("patch object")
+			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
@@ -295,7 +295,7 @@ var _ = Describe("ControlPlane", func() {
 			}
 			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 
-			By("wait")
+			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "controlplane is ready")
 		})
 	})

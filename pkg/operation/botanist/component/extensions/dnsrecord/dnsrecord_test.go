@@ -201,18 +201,18 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should deploy the DNSRecord with operation annotation if it exists with desired spec and AnnotateOperation==true", func() {
-			By("create existing DNSRecord")
+			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
 			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
 			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
 
-			By("deploy DNSRecord again")
+			By("Deploy DNSRecord again")
 			values.AnnotateOperation = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
-			By("verifying DNSRecord")
+			By("Verify DNSRecord")
 			deployedDNS := &extensionsv1alpha1.DNSRecord{}
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
@@ -235,12 +235,12 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should deploy the DNSRecord with operation annotation if it doesn't exist yet", func() {
-			By("deploy DNSRecord")
+			By("Deploy DNSRecord")
 			values.AnnotateOperation = false
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
-			By("verifying DNSRecord")
+			By("Verify DNSRecord")
 			deployedDNS := &extensionsv1alpha1.DNSRecord{}
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
@@ -280,18 +280,18 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should deploy the DNSRecord without operation annotation if it exists with desired spec", func() {
-			By("create existing DNSRecord")
+			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
 			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
 			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
 
-			By("deploy DNSRecord again")
+			By("Deploy DNSRecord again")
 			values.AnnotateOperation = false
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
-			By("verifying DNSRecord")
+			By("Verify DNSRecord")
 			deployedDNS := &extensionsv1alpha1.DNSRecord{}
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
@@ -314,18 +314,18 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should deploy the DNSRecord with operation annotation if spec changed", func() {
-			By("create existing DNSRecord")
+			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
 			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
 			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
 
-			By("deploy DNSRecord again with changed values")
+			By("Deploy DNSRecord again with changed values")
 			values.AnnotateOperation = false
 			values.Values = []string{address, "8.8.8.8", "1.1.1.1"}
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
-			By("verifying DNSRecord")
+			By("Verify DNSRecord")
 			deployedDNS := &extensionsv1alpha1.DNSRecord{}
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())

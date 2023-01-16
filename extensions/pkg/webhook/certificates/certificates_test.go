@@ -42,7 +42,7 @@ var _ = Describe("Certificates", func() {
 
 		DescribeTable("should generate the expected certificate",
 			func(mode, url string, assertServerCertFn func(*x509.Certificate)) {
-				By("validating generated CA certificate")
+				By("Validate generated CA certificate")
 				caCertPEM, err := GenerateUnmanagedCertificates(providerName, certDir, mode, url)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -51,7 +51,7 @@ var _ = Describe("Certificates", func() {
 				Expect(caCert.Subject.CommonName).To(Equal(providerName))
 				Expect(time.Until(caCert.NotAfter)).To(And(BeNumerically(">", 9*365*24*time.Hour)))
 
-				By("validating generated server certificate")
+				By("Validate generated server certificate")
 				serverCertPEM, err := os.ReadFile(filepath.Join(certDir, "tls.crt"))
 				Expect(err).NotTo(HaveOccurred())
 				serverCert, err := utils.DecodeCertificate(serverCertPEM)
@@ -59,7 +59,7 @@ var _ = Describe("Certificates", func() {
 				Expect(serverCert.Subject.CommonName).To(Equal(providerName))
 				assertServerCertFn(serverCert)
 
-				By("validating generated server key")
+				By("Validate generated server key")
 				serverKeyPEM, err := os.ReadFile(filepath.Join(certDir, "tls.key"))
 				Expect(err).NotTo(HaveOccurred())
 				_, err = utils.DecodePrivateKey(serverKeyPEM)

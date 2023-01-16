@@ -76,12 +76,12 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new secret", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(secret))
@@ -90,15 +90,15 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/o validity)", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					Not(HaveKey("valid-until-time")),
@@ -106,64 +106,64 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/ validity)", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				validity := time.Hour
 				secret, err := m.Generate(ctx, config, Validity(validity))
 				Expect(err).NotTo(HaveOccurred())
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
 
 				issuedAtTime := fakeClock.Now()
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(issuedAtTime.Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(issuedAtTime.Add(validity).Unix(), 10)),
 				))
 
-				By("fast-forward time")
+				By("Step the clock")
 				fakeClock.Step(30 * time.Minute)
 
-				By("generating the same secret again w/ same validity")
+				By("Generate the same secret again w/ same validity")
 				secret2, err := m.Generate(ctx, config, Validity(validity))
 				Expect(err).NotTo(HaveOccurred())
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret2 := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret2), foundSecret2)).To(Succeed())
 
-				By("verifying labels (validity should not have been changed)")
+				By("Verify labels (validity should not have been changed)")
 				Expect(foundSecret2.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", secret.Labels["issued-at-time"]),
 					HaveKeyWithValue("valid-until-time", secret.Labels["valid-until-time"]),
 				))
 
-				By("generating the same secret again w/ new validity")
+				By("Generate the same secret again w/ new validity")
 				validity = 2 * time.Hour
 				secret3, err := m.Generate(ctx, config, Validity(validity))
 				Expect(err).NotTo(HaveOccurred())
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret3 := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret3), foundSecret3)).To(Succeed())
 
-				By("verifying labels (validity should have been recomputed)")
+				By("Verify labels (validity should have been recomputed)")
 				Expect(foundSecret3.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", secret.Labels["issued-at-time"]),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(issuedAtTime.Add(validity).Unix(), 10)),
 				))
 
-				By("generating the same secret again w/o validity option this time")
+				By("Generate the same secret again w/o validity option this time")
 				secret4, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret4 := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret4), foundSecret4)).To(Succeed())
 
-				By("verifying labels (validity should have been recomputed)")
+				By("Verify labels (validity should have been recomputed)")
 				Expect(foundSecret4.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", secret.Labels["issued-at-time"]),
 					Not(HaveKey("valid-until-time")),
@@ -171,18 +171,18 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new secret when the config changes", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("changing secret config and generate again")
+				By("Change secret config and generate again")
 				config.PasswordLength = 4
 				newSecret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
@@ -191,12 +191,12 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new secret when the last rotation initiation time changes", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("changing last rotation initiation time and generate again")
+				By("Change last rotation initiation time and generate again")
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{name: time.Now()}})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
@@ -205,7 +205,7 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
@@ -214,18 +214,18 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should store the old secret if rotation strategy is KeepOld", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("changing secret config and generate again with KeepOld strategy")
+				By("Change secret config and generate again with KeepOld strategy")
 				config.PasswordLength = 4
 				newSecret, err := m.Generate(ctx, config, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
@@ -234,18 +234,18 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should not store the old secret even if rotation strategy is KeepOld when old secrets shall be ignored", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("changing secret config and generate again with KeepOld strategy and ignore old secrets option")
+				By("Change secret config and generate again with KeepOld strategy and ignore old secrets option")
 				config.PasswordLength = 4
 				newSecret, err := m.Generate(ctx, config, Rotate(KeepOld), IgnoreOldSecrets())
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
@@ -254,12 +254,12 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should drop the old secret if rotation strategy is KeepOld after IgnoreOldSecretsAfter has passed", func() {
-				By("generating secret")
+				By("Generate secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("changing secret config and generating again")
+				By("Change secret config and generating again")
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
@@ -269,14 +269,14 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
-				By("verifying internal store contains both old and new secret")
+				By("Verify internal store contains both old and new secret")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
 				Expect(secretInfos.old.obj).To(Equal(withoutTypeMeta(secret)))
 				Expect(secretInfos.bundle).To(BeNil())
 
-				By("generating secret again after given duration")
+				By("Generate secret again after given duration")
 				fakeClock.Step(time.Minute)
 				mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
 				Expect(err).NotTo(HaveOccurred())
@@ -286,7 +286,7 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
-				By("verifying internal store contains only new secret")
+				By("Verify internal store contains only new secret")
 				secretInfos, found = m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
@@ -295,23 +295,23 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should reconcile the secret", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("marking secret as mutable")
+				By("Mark secret as mutable")
 				patch := client.MergeFrom(secret.DeepCopy())
 				secret.Immutable = nil
 				// ensure that label with empty value is added by another call to Generate
 				delete(secret.Labels, "last-rotation-initiation-time")
 				Expect(fakeClient.Patch(ctx, secret, patch)).To(Succeed())
 
-				By("changing options and generate again")
+				By("Change options and generate again")
 				secret, err = m.Generate(ctx, config, Persist())
 				Expect(err).NotTo(HaveOccurred())
 
-				By("verifying labels got reconciled")
+				By("Verify labels got reconciled")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
 				Expect(foundSecret.Labels).To(And(
@@ -338,13 +338,13 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new CA secret and a corresponding bundle", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(secret.Name).To(Equal(name + "-54620669"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("finding created bundle secret")
+				By("Find created bundle secret")
 				secretList := &corev1.SecretList{}
 				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 					"managed-by":       "secrets-manager",
@@ -353,7 +353,7 @@ var _ = Describe("Generate", func() {
 				})).To(Succeed())
 				Expect(secretList.Items).To(HaveLen(1))
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(secret))
@@ -364,15 +364,15 @@ var _ = Describe("Generate", func() {
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
 				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
@@ -382,15 +382,15 @@ var _ = Describe("Generate", func() {
 			It("should maintain the lifetime labels (w/ custom validity which is ignored for certificates)", func() {
 				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config, Validity(time.Hour))
 				Expect(err).NotTo(HaveOccurred())
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
@@ -398,7 +398,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new CA secret and use the secret name as common name", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
@@ -409,7 +409,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new CA secret and ignore the config checksum for its name", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config, IgnoreConfigChecksumForCASecretName())
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
@@ -417,7 +417,7 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should rotate a CA secret and add old and new to the corresponding bundle", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
@@ -427,7 +427,7 @@ var _ = Describe("Generate", func() {
 				Expect(found).To(BeTrue())
 				oldBundleSecret := secretInfos.bundle.obj
 
-				By("changing secret config and generate again")
+				By("Change secret config and generate again")
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{name: time.Now()}})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
@@ -436,7 +436,7 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
-				By("finding created bundle secret")
+				By("Find created bundle secret")
 				secretList := &corev1.SecretList{}
 				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 					"managed-by":       "secrets-manager",
@@ -445,7 +445,7 @@ var _ = Describe("Generate", func() {
 				})).To(Succeed())
 				Expect(secretList.Items).To(HaveLen(2))
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found = m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
@@ -483,21 +483,21 @@ var _ = Describe("Generate", func() {
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
 				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new server secret")
+				By("Generate new server secret")
 				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serverSecret), foundSecret)).To(Succeed())
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
@@ -507,21 +507,21 @@ var _ = Describe("Generate", func() {
 			It("should maintain the lifetime labels (w/ custom validity which is ignored for certificates)", func() {
 				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new server secret")
+				By("Generate new server secret")
 				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName), Validity(time.Hour))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
-				By("reading created secret from system")
+				By("Read created secret from system")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serverSecret), foundSecret)).To(Succeed())
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
@@ -529,17 +529,17 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should keep the same server cert even when the CA rotates", func() {
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new server secret")
+				By("Generate new server secret")
 				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
-				By("rotating CA")
+				By("Rotate CA")
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{name: time.Now()}})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
@@ -548,27 +548,27 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
 
-				By("get or generate server secret")
+				By("Get or generate server secret")
 				newServerSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newServerSecret)
 
-				By("verifying server secret is still the same")
+				By("Verify server secret is still the same")
 				Expect(newServerSecret).To(Equal(withTypeMeta(serverSecret)))
 			})
 
 			It("should regenerate the server cert when the CA rotates and the 'UseCurrentCA' option is set", func() {
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new server secret")
+				By("Generate new server secret")
 				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, UseCurrentCA))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
-				By("rotating CA")
+				By("Rotate CA")
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{caName: time.Now()}})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
@@ -577,27 +577,27 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
 
-				By("get or generate server secret")
+				By("Get or generate server secret")
 				newServerSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, UseCurrentCA))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newServerSecret)
 
-				By("verifying server secret is changed")
+				By("Verify server secret is changed")
 				Expect(newServerSecret).NotTo(Equal(serverSecret))
 			})
 
 			It("should not regenerate the client cert when the CA rotates and the 'UseOldCA' option is set", func() {
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new client secret")
+				By("Generate new client secret")
 				clientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName, UseOldCA))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
-				By("rotating CA")
+				By("Rotate CA")
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{caName: time.Now()}})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
@@ -606,27 +606,27 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
 
-				By("get or generate client secret")
+				By("Get or generate client secret")
 				newClientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName, UseOldCA))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newClientSecret)
 
-				By("verifying client secret is not changed")
+				By("Verify client secret is not changed")
 				Expect(newClientSecret).To(Equal(clientSecret))
 			})
 
 			It("should regenerate the client cert when the CA rotates", func() {
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new client secret")
+				By("Generate new client secret")
 				clientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
-				By("rotating CA")
+				By("Rotate CA")
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{caName: time.Now()}})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
@@ -635,24 +635,24 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
 
-				By("get or generate client secret")
+				By("Get or generate client secret")
 				newClientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newClientSecret)
 
-				By("verifying client secret is changed")
+				By("Verify client secret is changed")
 				Expect(newClientSecret).NotTo(Equal(clientSecret))
 			})
 
 			It("should also accept ControlPlaneSecretConfigs", func() {
 				DeferCleanup(test.WithVar(&secretsutils.Clock, fakeClock))
 
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new control plane secret")
+				By("Generate new control plane secret")
 				serverConfig.Validity = pointer.Duration(1337 * time.Minute)
 				controlPlaneSecretConfig := &secretsutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",
@@ -667,7 +667,7 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(serverSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().Add(*serverConfig.Validity).Unix(), 10)),
@@ -675,12 +675,12 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should correctly maintain lifetime labels for ControlPlaneSecretConfigs w/o certificate secret configs", func() {
-				By("generating new control plane secret")
+				By("Generate new control plane secret")
 				cpSecret, err := m.Generate(ctx, &secretsutils.ControlPlaneSecretConfig{Name: "control-plane-secret"})
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, cpSecret)
 
-				By("verifying labels")
+				By("Verify labels")
 				Expect(cpSecret.Labels).To(And(
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					Not(HaveKey("valid-until-time")),
@@ -688,27 +688,27 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new server and client secret and keep the common name", func() {
-				By("generating new CA secret")
+				By("Generate new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
-				By("generating new server secret")
+				By("Generate new server secret")
 				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
-				By("verifying server certificate common name")
+				By("Verify server certificate common name")
 				serverCert, err := secretsutils.LoadCertificate("", serverSecret.Data["tls.key"], serverSecret.Data["tls.crt"])
 				Expect(err).NotTo(HaveOccurred())
 				Expect(serverCert.Certificate.Subject.CommonName).To(Equal(serverConfig.CommonName))
 
-				By("generating new client secret")
+				By("Generate new client secret")
 				clientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
-				By("verifying client certificate common name")
+				By("Verify client certificate common name")
 				clientCert, err := secretsutils.LoadCertificate("", clientSecret.Data["tls.key"], clientSecret.Data["tls.crt"])
 				Expect(err).NotTo(HaveOccurred())
 				Expect(clientCert.Certificate.Subject.CommonName).To(Equal(clientConfig.CommonName))
@@ -726,13 +726,13 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new RSA private key secret and a corresponding bundle", func() {
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(secret.Name).To(Equal(name + "-16163da7"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("finding created bundle secret")
+				By("Find created bundle secret")
 				secretList := &corev1.SecretList{}
 				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 					"managed-by":       "secrets-manager",
@@ -741,7 +741,7 @@ var _ = Describe("Generate", func() {
 				})).To(Succeed())
 				Expect(secretList.Items).To(HaveLen(1))
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(secret))
@@ -752,13 +752,13 @@ var _ = Describe("Generate", func() {
 			It("should generate a new RSA private key secret but no bundle since it's used for SSH", func() {
 				config.UsedForSSH = true
 
-				By("generating new secret")
+				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(secret.Name).To(Equal(name + "-fc4f9932"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("verifying internal store reflects changes")
+				By("Verify internal store reflects changes")
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(secret))
@@ -781,11 +781,11 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should generate a new data if no existing secrets indicates keeping the old data", func() {
-				By("generating secret")
+				By("Generate secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 
-				By("verifying new data was generated")
+				By("Verify new data was generated")
 				Expect(secret.Data).NotTo(Equal(oldData))
 			})
 
@@ -802,11 +802,11 @@ var _ = Describe("Generate", func() {
 				}
 				Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-				By("generating secret")
+				By("Generate secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 
-				By("verifying old data was kept")
+				By("Verify old data was kept")
 				Expect(secret.Data).To(Equal(oldData))
 			})
 
@@ -823,7 +823,7 @@ var _ = Describe("Generate", func() {
 					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed(), "for secret "+existingSecret.Name)
 				}
 
-				By("generating secret")
+				By("Generate secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).To(MatchError(ContainSubstring(`found more than one existing secret with "secrets-manager-use-data-for-name" label for config "foo"`)))
 				Expect(secret).To(BeNil())
@@ -846,11 +846,11 @@ var _ = Describe("Generate", func() {
 				})
 
 				It("should generate a new encryption key secret if old secret does not exist", func() {
-					By("generating secret")
+					By("Generate secret")
 					secret, err := m.Generate(ctx, config)
 					Expect(err).NotTo(HaveOccurred())
 
-					By("verifying new key and secret were generated")
+					By("Verify new key and secret were generated")
 					Expect(secret.Data["key"]).NotTo(Equal(oldKey))
 					Expect(secret.Data["secret"]).NotTo(Equal(oldSecret))
 				})
@@ -880,11 +880,11 @@ resources:
 					}
 					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-					By("generating secret")
+					By("Generate secret")
 					secret, err := m.Generate(ctx, config)
 					Expect(err).NotTo(HaveOccurred())
 
-					By("verifying old key and secret were kept")
+					By("Verify old key and secret were kept")
 					Expect(secret.Data["key"]).To(Equal(oldKey))
 					Expect(secret.Data["secret"]).To(Equal(oldSecret))
 				})
@@ -904,11 +904,11 @@ resources:
 				})
 
 				It("should generate a new key if old secret does not exist", func() {
-					By("generating secret")
+					By("Generate secret")
 					secret, err := m.Generate(ctx, config)
 					Expect(err).NotTo(HaveOccurred())
 
-					By("verifying new key was generated")
+					By("Verify new key was generated")
 					Expect(secret.Data).NotTo(Equal(oldData))
 				})
 
@@ -924,11 +924,11 @@ resources:
 					}
 					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-					By("generating secret")
+					By("Generate secret")
 					secret, err := m.Generate(ctx, config)
 					Expect(err).NotTo(HaveOccurred())
 
-					By("verifying old password was kept")
+					By("Verify old password was kept")
 					Expect(secret.Data).To(Equal(oldData))
 				})
 			})

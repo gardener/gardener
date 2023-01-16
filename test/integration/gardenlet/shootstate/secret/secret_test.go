@@ -76,7 +76,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), &corev1.Namespace{})
 		}).Should(Succeed())
 
-		By("build shoot object")
+		By("Build shoot object")
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resourceName,

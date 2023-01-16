@@ -31,7 +31,7 @@ import (
 
 func TestSecretUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Secret utils suite")
+	RunSpecs(t, "Extensions Util Secret Suite")
 }
 
 var _ = Describe("Secret", func() {

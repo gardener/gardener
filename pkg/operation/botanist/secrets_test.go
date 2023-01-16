@@ -243,32 +243,32 @@ var _ = Describe("Secrets", func() {
 
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
-				By("verifying existing CA secrets got restored")
+				By("Verify existing CA secrets got restored")
 				for _, name := range caSecretNames[:1] {
 					secret := &corev1.Secret{}
 					Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 				}
 
-				By("verifying missing CA secrets got generated")
+				By("Verify missing CA secrets got generated")
 				for _, name := range caSecretNames[2:] {
 					secret := &corev1.Secret{}
 					Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))
 				}
 
-				By("verifying non-CA secrets got restored")
+				By("Verify non-CA secrets got restored")
 				secret := &corev1.Secret{}
 				Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, "non-ca-secret"), secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
-				By("verifying external secrets got restored")
+				By("Verify external secrets got restored")
 				Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, "extension-foo-secret"), secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
-				By("verifying unrelated data not to be restored")
+				By("Verify unrelated data not to be restored")
 				Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, "secret-without-labels"), &corev1.Secret{})).To(BeNotFoundError())
 				Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, "some-other-data"), &corev1.Secret{})).To(BeNotFoundError())
 			})

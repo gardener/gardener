@@ -70,9 +70,9 @@ const (
 	namespace = "test"
 )
 
-func TestControlplane(t *testing.T) {
+func TestControlPlane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controlplane Webhook Generic Mutator Suite")
+	RunSpecs(t, "Extensions Webhook ControlPlane GenericMutator Suite")
 }
 
 var _ = Describe("Mutator", func() {

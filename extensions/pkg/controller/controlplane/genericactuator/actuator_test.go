@@ -88,7 +88,7 @@ var (
 
 func TestControlPlane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControlPlane Generic Actuator Suite")
+	RunSpecs(t, "Extensions Controller ControlPlane GenericActuator Suite")
 }
 
 var _ = BeforeSuite(func() {

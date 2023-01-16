@@ -31,9 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func TestCloudprovider(t *testing.T) {
+func TestCloudProvider(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Cloudprovider Suite")
+	RunSpecs(t, "Extensions Webhook CloudProvider Suite")
 }
 
 var _ = Describe("Mutator", func() {
