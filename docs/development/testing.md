@@ -336,7 +336,7 @@ $ stress -ignore "unable to grab random port" -p 16 ./test/integration/controlle
     - this allows running a test in parallel against the same existing cluster for deflaking and stress testing, even if it works with cluster-scoped resources that are visible to all parallel test runs: [example PR](https://github.com/gardener/gardener/pull/6527)
   - use dedicated test resources for each test case
     - use `GenerateName`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/health/health_test.go#L38-L48)
-    - alternatively, use a checksum of `CurrentSpecReport().LeafNodeLocation.String()`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_test.go#L61-L67)
+    - alternatively, use a checksum of a random UUID using `uuid.NewUUID()` function: [example test](https://github.com/gardener/gardener/blob/3840acaaf57955fd65330c83b2b2d5bdaad56179/test/integration/resourcemanager/tokeninvalidator/tokeninvalidator_suite_test.go#L71-L72)
     - logging the created object names is generally a good idea to support debugging failing or flaky tests: [example test](https://github.com/gardener/gardener/blob/50f92c5dc35160fe05da9002a79e7ce4a9cf3509/test/integration/controllermanager/cloudprofile/cloudprofile_test.go#L94-L96)
     - always delete all resources after the test case (e.g., via `DeferCleanup`) that were created for the test case 
     - this avoids conflicts between test cases and cascading failures which distract from the actual root failures

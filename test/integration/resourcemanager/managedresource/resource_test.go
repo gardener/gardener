@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,7 +68,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		// test all cases in a clean environment to make sure we don't have any unintended dependencies between test code.
 		// We could also use GenerateName for this purpose, but then we would need an extra call to update the name of the
 		// marshalled ConfigMap in the already created Secret.
-		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		objectKey = client.ObjectKey{Namespace: testNamespace.Name, Name: resourceName}
 
 		configMap = &corev1.ConfigMap{
