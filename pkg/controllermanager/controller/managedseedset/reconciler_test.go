@@ -93,7 +93,7 @@ var _ = Describe("reconciler", func() {
 
 	var (
 		expectGetManagedSeedSet = func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, mss *seedmanagementv1alpha1.ManagedSeedSet, _ ...client.GetOption) error {
 					*mss = *managedSeedSet
 					return nil
@@ -101,7 +101,7 @@ var _ = Describe("reconciler", func() {
 			)
 		}
 		expectPatchManagedSeedSet = func(expect func(*seedmanagementv1alpha1.ManagedSeedSet)) {
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{}), gomock.Any()).DoAndReturn(
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, mss *seedmanagementv1alpha1.ManagedSeedSet, _ client.Patch, _ ...client.PatchOption) error {
 					expect(mss)
 					*managedSeedSet = *mss
@@ -110,7 +110,7 @@ var _ = Describe("reconciler", func() {
 			)
 		}
 		expectPatchManagedSeedSetStatus = func(expect func(*seedmanagementv1alpha1.ManagedSeedSet)) {
-			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{}), gomock.Any()).DoAndReturn(
+			sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, mss *seedmanagementv1alpha1.ManagedSeedSet, _ client.Patch, _ ...client.PatchOption) error {
 					expect(mss)
 					*managedSeedSet = *mss
@@ -127,7 +127,7 @@ var _ = Describe("reconciler", func() {
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
 				})
-				actuator.EXPECT().Reconcile(ctx, gomock.Any(), managedSeedSet).Return(status, false, nil)
+				actuator.EXPECT().Reconcile(gomock.Any(), gomock.Any(), managedSeedSet).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -140,7 +140,7 @@ var _ = Describe("reconciler", func() {
 			It("should reconcile the ManagedSeedSet creation or update, and update the status", func() {
 				expectGetManagedSeedSet()
 				managedSeedSet.Finalizers = []string{gardencorev1beta1.GardenerName}
-				actuator.EXPECT().Reconcile(ctx, gomock.Any(), managedSeedSet).Return(status, false, nil)
+				actuator.EXPECT().Reconcile(gomock.Any(), gomock.Any(), managedSeedSet).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -160,7 +160,7 @@ var _ = Describe("reconciler", func() {
 
 			It("should reconcile the ManagedSeedSet deletion and update the status", func() {
 				expectGetManagedSeedSet()
-				actuator.EXPECT().Reconcile(ctx, gomock.Any(), managedSeedSet).Return(status, false, nil)
+				actuator.EXPECT().Reconcile(gomock.Any(), gomock.Any(), managedSeedSet).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -172,7 +172,7 @@ var _ = Describe("reconciler", func() {
 
 			It("should reconcile the ManagedSeedSet deletion, remove the finalizer, and not update the status", func() {
 				expectGetManagedSeedSet()
-				actuator.EXPECT().Reconcile(ctx, gomock.Any(), managedSeedSet).Return(status, true, nil)
+				actuator.EXPECT().Reconcile(gomock.Any(), gomock.Any(), managedSeedSet).Return(status, true, nil)
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(BeEmpty())
 				})

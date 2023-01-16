@@ -87,7 +87,7 @@ var _ = Describe("Project Activity", func() {
 			}
 
 			k8sGardenRuntimeClient.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}),
 			).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
@@ -100,7 +100,7 @@ var _ = Describe("Project Activity", func() {
 
 			k8sGardenRuntimeClient.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
 
-			mockStatusWriter.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}), gomock.Any()).DoAndReturn(
+			mockStatusWriter.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, prj *gardencorev1beta1.Project, _ client.Patch, _ ...client.PatchOption) error {
 					*project = *prj
 					return nil

@@ -74,7 +74,7 @@ var _ = Describe("ControllerRegistration", func() {
 		})
 
 		It("should return nil because object not found", func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -82,7 +82,7 @@ var _ = Describe("ControllerRegistration", func() {
 		})
 
 		It("should return err because object reading failed", func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(fakeErr)
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(fakeErr)
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -91,7 +91,7 @@ var _ = Describe("ControllerRegistration", func() {
 
 		Context("deletion timestamp not set", func() {
 			BeforeEach(func() {
-				c.EXPECT().Get(ctx, kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration, _ ...client.GetOption) error {
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration, _ ...client.GetOption) error {
 					*obj = *controllerRegistration
 					return nil
 				})
@@ -100,7 +100,7 @@ var _ = Describe("ControllerRegistration", func() {
 			It("should ensure the finalizer (error)", func() {
 				errToReturn := apierrors.NewNotFound(schema.GroupResource{}, controllerRegistrationName)
 
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
 					return errToReturn
 				})
@@ -111,7 +111,7 @@ var _ = Describe("ControllerRegistration", func() {
 			})
 
 			It("should ensure the finalizer (no error)", func() {
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
 					return nil
 				})
@@ -128,7 +128,7 @@ var _ = Describe("ControllerRegistration", func() {
 				controllerRegistration.DeletionTimestamp = &now
 				controllerRegistration.Finalizers = []string{FinalizerName}
 
-				c.EXPECT().Get(ctx, kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration, _ ...client.GetOption) error {
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration, _ ...client.GetOption) error {
 					*obj = *controllerRegistration
 					return nil
 				})
@@ -143,7 +143,7 @@ var _ = Describe("ControllerRegistration", func() {
 			})
 
 			It("should return an error because installation list failed", func() {
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).Return(fakeErr)
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).Return(fakeErr)
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -151,7 +151,7 @@ var _ = Describe("ControllerRegistration", func() {
 			})
 
 			It("should return an error because installation referencing controllerRegistration exists", func() {
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
 					(&gardencorev1beta1.ControllerInstallationList{Items: []gardencorev1beta1.ControllerInstallation{
 						{
 							Spec: gardencorev1beta1.ControllerInstallationSpec{
@@ -170,12 +170,12 @@ var _ = Describe("ControllerRegistration", func() {
 			})
 
 			It("should remove the finalizer (error)", func() {
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
 					(&gardencorev1beta1.ControllerInstallationList{}).DeepCopyInto(obj)
 					return nil
 				})
 
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
 					return fakeErr
 				})
@@ -186,12 +186,12 @@ var _ = Describe("ControllerRegistration", func() {
 			})
 
 			It("should remove the finalizer (no error)", func() {
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
 					(&gardencorev1beta1.ControllerInstallationList{}).DeepCopyInto(obj)
 					return nil
 				})
 
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
 					return nil
 				})
