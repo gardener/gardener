@@ -542,14 +542,15 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 			// the list have been created before the credentials rotation completion has been triggered. We only delete
 			// those and keep the rest of the list untouched to not interfere with the user's operations.
 			for _, secretReference := range serviceAccount.Secrets {
-				secret := &corev1.Secret{}
-				if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKey{Name: secretReference.Name, Namespace: serviceAccount.Namespace}, secret); err != nil {
+				secretMeta := &metav1.PartialObjectMetadata{}
+				secretMeta.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
+				if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKey{Name: secretReference.Name, Namespace: serviceAccount.Namespace}, secretMeta); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return err
 					}
 					// We don't care about secrets in the list which do not exist actually - it is the responsibility of the user to clean this up.
-				} else if secret.CreationTimestamp.UTC().Before(b.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time.UTC()) {
-					secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace}})
+				} else if secretMeta.CreationTimestamp.UTC().Before(b.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time.UTC()) {
+					secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretMeta.Name, Namespace: secretMeta.Namespace}})
 					continue
 				}
 
