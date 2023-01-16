@@ -144,10 +144,10 @@ func (h *SeedHealth) checkSeedSystemComponents(
 }
 
 func checkManagedResourceForSeed(checker *HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
-	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool{
+	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
 		resourcesv1alpha1.ResourcesApplied:     defaultSuccessfulCheck(),
 		resourcesv1alpha1.ResourcesHealthy:     defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(),
+		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(checker.clock, nil),
 	}
 
 	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck)

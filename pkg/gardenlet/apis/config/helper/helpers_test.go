@@ -327,15 +327,16 @@ var _ = Describe("helper", func() {
 		})
 
 		It("should return non nil value when ManagedResourceProgressingThreshold value is set", func() {
+			threshold := &metav1.Duration{Duration: time.Minute}
 			gardenletConfig := &config.GardenletConfiguration{
 				Controllers: &config.GardenletControllerConfiguration{
 					ShootCare: &config.ShootCareControllerConfiguration{
-						ManagedResourceProgressingThreshold: &metav1.Duration{},
+						ManagedResourceProgressingThreshold: threshold,
 					},
 				},
 			}
 
-			Expect(GetManagedResourceProgressingThreshold(gardenletConfig)).To(Not(BeNil()))
+			Expect(GetManagedResourceProgressingThreshold(gardenletConfig)).To(Equal(threshold))
 		})
 	})
 })

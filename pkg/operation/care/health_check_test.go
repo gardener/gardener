@@ -423,6 +423,10 @@ var _ = Describe("health check", func() {
 					Type:   resourcesv1alpha1.ResourcesApplied,
 					Status: gardencorev1beta1.ConditionTrue,
 				},
+				{
+					Type:   resourcesv1alpha1.ResourcesProgressing,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
 			},
 			true,
 			false,
