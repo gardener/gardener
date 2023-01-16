@@ -215,6 +215,11 @@ func SeedSettingSchedulingVisible(settings *core.SeedSettings) bool {
 	return settings == nil || settings.Scheduling == nil || settings.Scheduling.Visible
 }
 
+// SeedSettingShootDNSEnabled returns true if the 'shoot dns' setting is enabled.
+func SeedSettingShootDNSEnabled(settings *core.SeedSettings) bool {
+	return settings == nil || settings.ShootDNS == nil || settings.ShootDNS.Enabled
+}
+
 // SeedSettingOwnerChecksEnabled returns true if the 'ownerChecks' setting is enabled.
 func SeedSettingOwnerChecksEnabled(settings *core.SeedSettings) bool {
 	return settings == nil || settings.OwnerChecks == nil || settings.OwnerChecks.Enabled
