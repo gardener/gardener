@@ -123,6 +123,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
+        - VERSION
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
       main: ./cmd/gardener-resource-manager
@@ -221,6 +222,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
+        - VERSION
 deploy:
   helm:
     releases:

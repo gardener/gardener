@@ -207,6 +207,7 @@ build:
         - plugin/pkg/shoot/vpa
         - plugin/pkg/utils
         - vendor
+        - VERSION
   - image: eu.gcr.io/gardener-project/gardener/controller-manager
     ko:
       main: ./cmd/gardener-controller-manager
@@ -381,6 +382,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
+        - VERSION
   - image: eu.gcr.io/gardener-project/gardener/scheduler
     ko:
       main: ./cmd/gardener-scheduler
@@ -449,6 +451,7 @@ build:
         - pkg/utils/validation/cidr
         - pkg/utils/version
         - vendor
+        - VERSION
   - image: eu.gcr.io/gardener-project/gardener/admission-controller
     ko:
       main: ./cmd/gardener-admission-controller
@@ -524,6 +527,7 @@ build:
         - third_party/apiserver/pkg/apis/audit/v1alpha1
         - third_party/apiserver/pkg/apis/audit/v1beta1
         - vendor
+        - VERSION
 deploy:
   helm:
     releases:
@@ -728,6 +732,7 @@ build:
         - pkg/utils/timewindow
         - pkg/utils/version
         - vendor
+        - VERSION
 deploy:
   helm:
     flags:
@@ -1016,6 +1021,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
+        - VERSION
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
       main: ./cmd/gardener-resource-manager
@@ -1114,6 +1120,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
+        - VERSION
 deploy:
   helm:
     hooks:
