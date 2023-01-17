@@ -226,6 +226,7 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(validatingWebhookConfiguration.Webhooks[0].NamespaceSelector.MatchExpressions).To(ConsistOf(
 						metav1.LabelSelectorRequirement{Key: "shoot.gardener.cloud/no-cleanup", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
 						metav1.LabelSelectorRequirement{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+						metav1.LabelSelectorRequirement{Key: "kubernetes.io/metadata.name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
 					))
 				})
 
@@ -393,6 +394,7 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(mutatingWebhookConfiguration.Webhooks[0].NamespaceSelector.MatchExpressions).To(ConsistOf(
 						metav1.LabelSelectorRequirement{Key: "shoot.gardener.cloud/no-cleanup", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
 						metav1.LabelSelectorRequirement{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+						metav1.LabelSelectorRequirement{Key: "kubernetes.io/metadata.name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
 					))
 				})
 
