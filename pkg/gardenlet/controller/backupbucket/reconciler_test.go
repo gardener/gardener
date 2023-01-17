@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupentry_test
+package backupbucket_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,19 +32,17 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 )
 
 const (
 	seedName            = "seed"
 	gardenNamespaceName = "garden"
-	testNamespaceName   = "test"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -55,16 +52,14 @@ var _ = Describe("Reconciler", func() {
 		seedClient   client.Client
 		reconciler   reconcile.Reconciler
 
-		fakeClock                *testclock.FakeClock
-		deletionGracePeriodHours = 24
+		fakeClock *testclock.FakeClock
 
-		gardenSecret         *corev1.Secret
-		backupBucket         *gardencorev1beta1.BackupBucket
-		backupEntry          *gardencorev1beta1.BackupEntry
-		extensionBackupEntry *extensionsv1alpha1.BackupEntry
-		extensionSecret      *corev1.Secret
-		providerConfig       = &runtime.RawExtension{Raw: []byte(`{"dash":"baz"}`)}
-		providerStatus       = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
+		gardenSecret          *corev1.Secret
+		backupBucket          *gardencorev1beta1.BackupBucket
+		extensionBackupBucket *extensionsv1alpha1.BackupBucket
+		extensionSecret       *corev1.Secret
+		providerConfig        = &runtime.RawExtension{Raw: []byte(`{"dash":"baz"}`)}
+		providerStatus        = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
 
 		request reconcile.Request
 	)
@@ -82,10 +77,8 @@ var _ = Describe("Reconciler", func() {
 			GardenClient: gardenClient,
 			SeedClient:   seedClient,
 			Recorder:     &record.FakeRecorder{},
-			Config: config.BackupEntryControllerConfiguration{
-				ConcurrentSyncs:                  pointer.Int(5),
-				DeletionGracePeriodHours:         pointer.Int(deletionGracePeriodHours),
-				DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
+			Config: config.BackupBucketControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(5),
 			},
 			Clock:           fakeClock,
 			GardenNamespace: gardenNamespaceName,
@@ -131,22 +124,9 @@ var _ = Describe("Reconciler", func() {
 		}
 		Expect(gardenClient.Create(ctx, backupBucket)).To(Succeed())
 
-		backupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: testNamespaceName,
-			},
-			Spec: gardencorev1beta1.BackupEntrySpec{
-				BucketName: backupBucket.Name,
-				SeedName:   pointer.String(seedName),
-			},
-		}
-
-		Expect(gardenClient.Create(ctx, backupEntry)).To(Succeed())
-
 		extensionSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "entry-" + backupEntry.Name,
+				Name:      generateBackupBucketSecretName(backupBucket.Name),
 				Namespace: gardenNamespaceName,
 				Annotations: map[string]string{
 					v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339),
@@ -155,11 +135,11 @@ var _ = Describe("Reconciler", func() {
 			Data: gardenSecret.Data,
 		}
 
-		extensionBackupEntry = &extensionsv1alpha1.BackupEntry{
+		extensionBackupBucket = &extensionsv1alpha1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: backupEntry.Name,
+				Name: backupBucket.Name,
 			},
-			Spec: extensionsv1alpha1.BackupEntrySpec{
+			Spec: extensionsv1alpha1.BackupBucketSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
 					Type:           backupBucket.Spec.Provider.Type,
 					ProviderConfig: backupBucket.Spec.ProviderConfig,
@@ -169,10 +149,8 @@ var _ = Describe("Reconciler", func() {
 					Name:      extensionSecret.Name,
 					Namespace: extensionSecret.Namespace,
 				},
-				BucketName:                 backupEntry.Spec.BucketName,
-				BackupBucketProviderStatus: backupBucket.Status.ProviderStatus,
 			},
-			Status: extensionsv1alpha1.BackupEntryStatus{
+			Status: extensionsv1alpha1.BackupBucketStatus{
 				DefaultStatus: extensionsv1alpha1.DefaultStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
 						State:          gardencorev1beta1.LastOperationStateSucceeded,
@@ -184,13 +162,13 @@ var _ = Describe("Reconciler", func() {
 
 		request = reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      backupEntry.Name,
-				Namespace: backupEntry.Namespace,
+				Name:      backupBucket.Name,
+				Namespace: backupBucket.Namespace,
 			},
 		}
 	})
 
-	It("should create the extension secret and extension BackupEntry if it doesn't exist yet", func() {
+	It("should create the extension secret and extension BackupBucket if it doesn't exist yet", func() {
 		result, err := reconciler.Reconcile(ctx, request)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -198,37 +176,36 @@ var _ = Describe("Reconciler", func() {
 		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
 		Expect(extensionSecret.Data).To(Equal(gardenSecret.Data))
 
-		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
-		Expect(extensionBackupEntry.Spec).To(MatchFields(IgnoreExtras, Fields{
-			"DefaultSpec": MatchFields(IgnoreExtras, Fields{
-				"Type":           Equal(backupBucket.Spec.Provider.Type),
-				"ProviderConfig": Equal(backupBucket.Spec.ProviderConfig),
-			}),
-			"Region":                     Equal(backupBucket.Spec.Provider.Region),
-			"BackupBucketProviderStatus": Equal(backupBucket.Status.ProviderStatus),
-			"SecretRef": MatchFields(IgnoreExtras, Fields{
-				"Name":      Equal(extensionSecret.Name),
-				"Namespace": Equal(extensionSecret.Namespace),
-			}),
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+		Expect(extensionBackupBucket.Spec).To(Equal(extensionsv1alpha1.BackupBucketSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type:           backupBucket.Spec.Provider.Type,
+				ProviderConfig: backupBucket.Spec.ProviderConfig,
+			},
+			Region: backupBucket.Spec.Provider.Region,
+			SecretRef: corev1.SecretReference{
+				Name:      extensionSecret.Name,
+				Namespace: extensionSecret.Namespace,
+			},
 		}))
 	})
 
-	It("should not reconcile the extension BackupEntry if the secret data or extension spec hasn't changed", func() {
+	It("should not reconcile the extension BackupBucket if the secret data or extension spec hasn't changed", func() {
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
-		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+		Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
 
 		result, err := reconciler.Reconcile(ctx, request)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(reconcile.Result{}))
 
-		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
-		Expect(extensionBackupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+		Expect(extensionBackupBucket.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 	})
 
-	It("should reconcile the extension secret and extension BackupEntry if the secret currently doesn't have a timestamp", func() {
+	It("should reconcile the extension secret and extension BackupBucket if the secret currently doesn't have a timestamp", func() {
 		extensionSecret.Annotations = nil
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
-		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+		Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
 
 		// step the clock so that the updated timestamp of the secret is greater than the extensionSecret lastUpdate time.
 		fakeClock.Step(time.Minute)
@@ -239,63 +216,38 @@ var _ = Describe("Reconciler", func() {
 
 		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
 		Expect(extensionSecret.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339)))
-		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
-		Expect(extensionBackupEntry.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+		Expect(extensionBackupBucket.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
 	})
 
-	It("should reconcile the extension BackupEntry if the secret data has changed", func() {
+	It("should reconcile the extension BackupBucket if the secret data has changed", func() {
 		extensionSecret.Data = map[string][]byte{"dash": []byte("bash")}
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
-		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+		Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
 
 		result, err := reconciler.Reconcile(ctx, request)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(reconcile.Result{}))
 
-		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
-		Expect(extensionBackupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+		Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 	})
 
-	It("should reconcile the extension BackupEntry if the secret update timestamp is after the extension last update time", func() {
+	It("should reconcile the extension BackupBucket if the secret update timestamp is after the extension last update time", func() {
 		time := fakeClock.Now().Add(time.Second).UTC().Format(time.RFC3339)
 		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, time)
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
-		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+		Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
 
 		result, err := reconciler.Reconcile(ctx, request)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(reconcile.Result{}))
 
-		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
-		Expect(extensionBackupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+		Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 	})
 })
 
-var _ = Describe("#IsBackupEntryManagedByThisGardenlet", func() {
-	const (
-		name      = "test"
-		namespace = "garden"
-		seedName  = "test-seed"
-		otherSeed = "new-test-seed"
-	)
-
-	var backupEntry *gardencorev1beta1.BackupEntry
-
-	BeforeEach(func() {
-		backupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-		}
-	})
-
-	DescribeTable("check BackupEntry by seedName",
-		func(backupEntrySeedName string, match gomegatypes.GomegaMatcher) {
-			backupEntry.Spec.SeedName = pointer.String(backupEntrySeedName)
-			Expect(IsBackupEntryManagedByThisGardenlet(backupEntry, seedName)).To(match)
-		},
-		Entry("BackupEntry is not managed by this seed", otherSeed, BeFalse()),
-		Entry("BackupEntry is managed by this seed", seedName, BeTrue()),
-	)
-})
+func generateBackupBucketSecretName(backupBucketName string) string {
+	return fmt.Sprintf("bucket-%s", backupBucketName)
+}
