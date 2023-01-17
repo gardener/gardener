@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -128,10 +128,13 @@ func (r *Reconciler) reconcileBackupEntry(
 
 	var (
 		mustReconcileExtensionBackupEntry = false
-		reconciliationSuccessful          = true
+		// we should reconcile the secret only when the data has changed, since now we depend on
+		// the timestamp in the secret to reconcile the extension.
+		mustReconcileExtensionSecret = false
 
-		extensionSecret = r.emptyExtensionSecret(backupEntry)
-		component       = r.newExtensionComponent(log, backupEntry)
+		lastObservedError error
+		extensionSecret   = r.emptyExtensionSecret(backupEntry)
+		component         = r.newExtensionComponent(log, backupEntry)
 
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
@@ -158,15 +161,24 @@ func (r *Reconciler) reconcileBackupEntry(
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
+		// if the extension secret doesn't exist yet, create it
+		mustReconcileExtensionSecret = true
 	} else {
-		// if the backupBucket secret data has changed, reconcile extension backupEntry
+		// if the backupBucket secret data has changed, reconcile extension backupEntry and extension secret
 		if !reflect.DeepEqual(extensionSecret.Data, gardenSecret.Data) {
 			mustReconcileExtensionBackupEntry = true
+			mustReconcileExtensionSecret = true
+		}
+		// if the timestamp is not present yet (needed for existing secrets), reconcile the secret
+		if _, timestampPresent := extensionSecret.Annotations[v1beta1constants.GardenerTimestamp]; !timestampPresent {
+			mustReconcileExtensionSecret = true
 		}
 	}
 
-	if err := r.reconcileBackupEntryExtensionSecret(ctx, backupBucket, backupEntry, gardenSecret); err != nil {
-		return reconcile.Result{}, err
+	if mustReconcileExtensionSecret {
+		if err := r.reconcileBackupEntryExtensionSecret(ctx, extensionSecret, gardenSecret); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	extensionBackupEntrySpec := extensionsv1alpha1.BackupEntrySpec{
@@ -183,18 +195,24 @@ func (r *Reconciler) reconcileBackupEntry(
 		BackupBucketProviderStatus: backupBucket.Status.ProviderStatus,
 	}
 
+	secretLastUpdateTime, err := time.Parse(time.RFC3339, extensionSecret.Annotations[v1beta1constants.GardenerTimestamp])
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
 		// if the extension BackupEntry doesn't exist yet, create it
 		mustReconcileExtensionBackupEntry = true
-	} else if !reflect.DeepEqual(extensionBackupEntry.Spec, extensionBackupEntrySpec) {
-		// if the extensionBackupEntry spec has changed, reconcile it
+	} else if !reflect.DeepEqual(extensionBackupEntry.Spec, extensionBackupEntrySpec) ||
+		(extensionBackupEntry.Status.LastOperation != nil && extensionBackupEntry.Status.LastOperation.LastUpdateTime.Time.UTC().Before(secretLastUpdateTime)) {
+		// if the spec of the extensionBackupEntry has changed or it has not been reconciled after the last updation of secret, reconcile it
 		mustReconcileExtensionBackupEntry = true
 	} else if extensionBackupEntry.Status.LastOperation == nil {
-		// if the extension did not record a lastOperation yet, don't update the status
-		reconciliationSuccessful = false
+		// if the extension did not record a lastOperation yet, record it as error in the backupentry status
+		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
 	} else {
 		// check for errors, and if none are present, reconciliation has succeeded
 		lastOperationState := extensionBackupEntry.Status.LastOperation.State
@@ -204,28 +222,25 @@ func (r *Reconciler) reconcileBackupEntry(
 			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
 				mustReconcileExtensionBackupEntry = true
 			}
-			reconciliationSuccessful = false
 
-			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
+			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupEntry.Status.LastError != nil {
-				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
+				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
 			}
+		}
+	}
 
-			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
-			reconcileErr := &gardencorev1beta1.LastError{
-				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
-				Description: lastObservedError.Error(),
-			}
+	if lastObservedError != nil {
+		lastObservedError := v1beta1helper.NewErrorWithCodes(lastObservedError, v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+		reconcileErr := &gardencorev1beta1.LastError{
+			Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
+			Description: lastObservedError.Error(),
+		}
 
-			r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+		r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
 
-			description := reconcileErr.Description
-			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
-				description += ". Operation will be retried."
-			}
-			if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, operationType, description, reconcileErr); updateErr != nil {
-				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
-			}
+		if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, operationType, reconcileErr.Description, reconcileErr); updateErr != nil {
+			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
 		}
 	}
 
@@ -237,7 +252,7 @@ func (r *Reconciler) reconcileBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if reconciliationSuccessful {
+	if extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}
@@ -248,7 +263,6 @@ func (r *Reconciler) reconcileBackupEntry(
 			}
 		}
 	}
-
 	return reconcile.Result{}, nil
 }
 
@@ -289,7 +303,7 @@ func (r *Reconciler) deleteBackupEntry(
 			return reconcile.Result{}, err
 		}
 
-		if err := r.reconcileBackupEntryExtensionSecret(ctx, backupBucket, backupEntry, gardenSecret); err != nil {
+		if err := r.reconcileBackupEntryExtensionSecret(ctx, extensionSecret, gardenSecret); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -605,10 +619,9 @@ func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardenco
 	return gardenSecret, nil
 }
 
-func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, backupEntry *gardencorev1beta1.BackupEntry, gardenSecret *corev1.Secret) error {
-	// create secret for extension BackupEntry in seed
-	extensionSecret := r.emptyExtensionSecret(backupEntry)
+func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
+		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339))
 		extensionSecret.Data = gardenSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
