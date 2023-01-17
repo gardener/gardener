@@ -396,46 +396,6 @@ func SetDefaults_NginxIngress(obj *NginxIngress) {
 	}
 }
 
-// SetDefaults_ControllerResource sets default values for ControllerResource objects.
-func SetDefaults_ControllerResource(obj *ControllerResource) {
-	if obj.Primary == nil {
-		obj.Primary = pointer.Bool(true)
-	}
-	if obj.Kind == "Extension" {
-		if obj.GloballyEnabled == nil {
-			obj.GloballyEnabled = pointer.Bool(false)
-		}
-
-		if obj.ReconcileTimeout == nil {
-			obj.ReconcileTimeout = &metav1.Duration{Duration: time.Minute * 3}
-		}
-
-		if obj.Lifecycle == nil {
-			obj.Lifecycle = &ControllerResourceLifecycle{}
-		}
-		if obj.Lifecycle.Reconcile == nil {
-			afterKubeAPIServer := AfterKubeAPIServer
-			obj.Lifecycle.Reconcile = &afterKubeAPIServer
-		}
-		if obj.Lifecycle.Delete == nil {
-			beforeKubeAPIServer := BeforeKubeAPIServer
-			obj.Lifecycle.Delete = &beforeKubeAPIServer
-		}
-		if obj.Lifecycle.Migrate == nil {
-			beforeKubeAPIServer := BeforeKubeAPIServer
-			obj.Lifecycle.Migrate = &beforeKubeAPIServer
-		}
-	}
-}
-
-// SetDefaults_ControllerRegistrationDeployment sets default values for ControllerRegistrationDeployment objects.
-func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDeployment) {
-	p := ControllerDeploymentPolicyOnDemand
-	if obj.Policy == nil {
-		obj.Policy = &p
-	}
-}
-
 // Helper functions
 
 func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
