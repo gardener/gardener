@@ -459,9 +459,9 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 	}
 
 	// calculate maximum number of total nodes
-	totalNodes := big.NewInt(0)
+	totalNodes := int64(0)
 	for _, worker := range shoot.Spec.Provider.Workers {
-		totalNodes = totalNodes.Add(totalNodes, big.NewInt(int64(worker.Maximum)))
+		totalNodes += int64(worker.Maximum)
 	}
 
 	podNetworkCIDR := core.DefaultPodNetworkCIDR
@@ -487,7 +487,7 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 	bitLen.Sub(big.NewInt(nodeCIDRMaskSize), big.NewInt(int64(podCIDRMaskSize)))
 	maxNodeCount.Exp(big.NewInt(2), bitLen, nil)
 
-	if maxNodeCount.Cmp(totalNodes) < 0 {
+	if maxNodeCount.Cmp(big.NewInt(totalNodes)) < 0 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("provider").Child("workers"), totalNodes, fmt.Sprintf("worker configuration incorrect. The podCIDRs in `spec.networking.pod` can only support a maximum of %d nodes. The total number of worker pool nodes should be less than %d ", maxNodeCount, maxNodeCount)))
 	}
 

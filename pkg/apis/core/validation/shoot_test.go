@@ -979,9 +979,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.provider.workers"),
-							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 8 nodes"),
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.provider.workers"),
+							"BadValue": BeEquivalentTo(32),
+							"Detail":   ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 8 nodes"),
 						}))))
 					})
 
@@ -999,9 +1000,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.provider.workers"),
-							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 256 nodes"),
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.provider.workers"),
+							"BadValue": BeEquivalentTo(257),
+							"Detail":   ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 256 nodes"),
 						}))))
 					})
 				})
@@ -1057,9 +1059,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.provider.workers"),
-							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 8 nodes"),
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.provider.workers"),
+							"BadValue": BeEquivalentTo(32),
+							"Detail":   ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 8 nodes"),
 						}))))
 					})
 
@@ -1077,9 +1080,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.provider.workers"),
-							"Detail": ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 256 nodes"),
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.provider.workers"),
+							"BadValue": BeEquivalentTo(257),
+							"Detail":   ContainSubstring("The podCIDRs in `spec.networking.pod` can only support a maximum of 256 nodes"),
 						}))))
 					})
 				})
