@@ -26,6 +26,7 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 	if obj.Primary == nil {
 		obj.Primary = pointer.Bool(true)
 	}
+
 	if obj.Kind == "Extension" {
 		if obj.GloballyEnabled == nil {
 			obj.GloballyEnabled = pointer.Bool(false)
@@ -38,18 +39,22 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 		if obj.Lifecycle == nil {
 			obj.Lifecycle = &ControllerResourceLifecycle{}
 		}
-		if obj.Lifecycle.Reconcile == nil {
-			afterKubeAPIServer := AfterKubeAPIServer
-			obj.Lifecycle.Reconcile = &afterKubeAPIServer
-		}
-		if obj.Lifecycle.Delete == nil {
-			beforeKubeAPIServer := BeforeKubeAPIServer
-			obj.Lifecycle.Delete = &beforeKubeAPIServer
-		}
-		if obj.Lifecycle.Migrate == nil {
-			beforeKubeAPIServer := BeforeKubeAPIServer
-			obj.Lifecycle.Migrate = &beforeKubeAPIServer
-		}
+	}
+}
+
+// SetDefaults_ControllerResourceLifecycle sets default values for ControllerResourceLifecycle objects.
+func SetDefaults_ControllerResourceLifecycle(obj *ControllerResourceLifecycle) {
+	if obj.Reconcile == nil {
+		afterKubeAPIServer := AfterKubeAPIServer
+		obj.Reconcile = &afterKubeAPIServer
+	}
+	if obj.Delete == nil {
+		beforeKubeAPIServer := BeforeKubeAPIServer
+		obj.Delete = &beforeKubeAPIServer
+	}
+	if obj.Migrate == nil {
+		beforeKubeAPIServer := BeforeKubeAPIServer
+		obj.Migrate = &beforeKubeAPIServer
 	}
 }
 
