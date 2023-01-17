@@ -23,7 +23,6 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,40 +42,6 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 	for i, quota := range obj.Quotas {
 		if len(quota.Namespace) == 0 {
 			obj.Quotas[i].Namespace = obj.Namespace
-		}
-	}
-}
-
-// SetDefaults_Project sets default values for Project objects.
-func SetDefaults_Project(obj *Project) {
-	defaultSubject(obj.Spec.Owner)
-
-	for i, member := range obj.Spec.Members {
-		defaultSubject(&obj.Spec.Members[i].Subject)
-
-		if len(member.Role) == 0 && len(member.Roles) == 0 {
-			obj.Spec.Members[i].Role = ProjectMemberViewer
-		}
-	}
-
-	if obj.Spec.Namespace != nil && *obj.Spec.Namespace == v1beta1constants.GardenNamespace {
-		if obj.Spec.Tolerations == nil {
-			obj.Spec.Tolerations = &ProjectTolerations{}
-		}
-		addTolerations(&obj.Spec.Tolerations.Whitelist, Toleration{Key: SeedTaintProtected})
-		addTolerations(&obj.Spec.Tolerations.Defaults, Toleration{Key: SeedTaintProtected})
-	}
-}
-
-func defaultSubject(obj *rbacv1.Subject) {
-	if obj != nil && len(obj.APIGroup) == 0 {
-		switch obj.Kind {
-		case rbacv1.ServiceAccountKind:
-			obj.APIGroup = ""
-		case rbacv1.UserKind:
-			obj.APIGroup = rbacv1.GroupName
-		case rbacv1.GroupKind:
-			obj.APIGroup = rbacv1.GroupName
 		}
 	}
 }

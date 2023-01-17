@@ -88,6 +88,10 @@ func SetObjectDefaults_ControllerRegistrationList(in *ControllerRegistrationList
 
 func SetObjectDefaults_Project(in *Project) {
 	SetDefaults_Project(in)
+	for i := range in.Spec.Members {
+		a := &in.Spec.Members[i]
+		SetDefaults_ProjectMember(a)
+	}
 }
 
 func SetObjectDefaults_ProjectList(in *ProjectList) {
