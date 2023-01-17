@@ -39,6 +39,9 @@ var _ = Describe("CloudProfile defaulting", func() {
 				MachineTypes: []MachineType{{
 					Name: "large",
 				}},
+				VolumeTypes: []VolumeType{{
+					Name: "fast",
+				}},
 			},
 		}
 	})
@@ -64,6 +67,15 @@ var _ = Describe("CloudProfile defaulting", func() {
 			machineType := obj.Spec.MachineTypes[0]
 			Expect(machineType.Architecture).To(PointTo(Equal("amd64")))
 			Expect(machineType.Usable).To(PointTo(BeTrue()))
+		})
+	})
+
+	Describe("VolumeType defaulting", func() {
+		It("should correctly default VolumeType", func() {
+			SetObjectDefaults_CloudProfile(obj)
+
+			volumeType := obj.Spec.VolumeTypes[0]
+			Expect(volumeType.Usable).To(PointTo(BeTrue()))
 		})
 	})
 })

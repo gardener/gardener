@@ -49,7 +49,6 @@ func SetDefaults_MachineType(obj *MachineType) {
 // SetDefaults_VolumeType sets default values for VolumeType objects.
 func SetDefaults_VolumeType(obj *VolumeType) {
 	if obj.Usable == nil {
-		trueVar := true
-		obj.Usable = &trueVar
+		obj.Usable = pointer.Bool(true)
 	}
 }
