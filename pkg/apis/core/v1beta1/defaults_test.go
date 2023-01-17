@@ -306,6 +306,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
 		})
@@ -323,6 +324,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
 			Expect(obj.Spec.Taints).To(HaveLen(3))
@@ -335,6 +337,7 @@ var _ = Describe("Defaults", func() {
 				dwdProbeEnabled           = false
 				excessCapacityReservation = false
 				scheduling                = true
+				shootDNS                  = false
 				vpaEnabled                = false
 				ownerChecks               = false
 			)
@@ -346,6 +349,7 @@ var _ = Describe("Defaults", func() {
 				},
 				ExcessCapacityReservation: &SeedSettingExcessCapacityReservation{Enabled: excessCapacityReservation},
 				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
+				ShootDNS:                  &SeedSettingShootDNS{Enabled: shootDNS},
 				VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: vpaEnabled},
 				OwnerChecks:               &SeedSettingOwnerChecks{Enabled: ownerChecks},
 			}
@@ -356,6 +360,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(Equal(dwdProbeEnabled))
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(Equal(shootDNS))
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(Equal(ownerChecks))
 		})
