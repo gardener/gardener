@@ -214,12 +214,7 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 		"pspDisabled": b.Shoot.PSPDisabled,
 	}
 
-	kubernetesDashboardEnabled := v1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons)
-	nginxIngressAddonEnabled := v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
-
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
-		"global":               global,
-		"kubernetes-dashboard": common.GenerateAddonConfig(nil, kubernetesDashboardEnabled),
-		"nginx-ingress":        common.GenerateAddonConfig(nil, nginxIngressAddonEnabled),
+		"global": global,
 	})
 }

@@ -626,11 +626,34 @@ status: {}
 				values.KubernetesVersion = semver.MustParse("v1.22.12")
 			})
 
-			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(11))
+			Context("w/ VPA and PSP enabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = true
+					values.PSPDisabled = false
+				})
 
-				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
-				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(13))
+
+					Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
+				})
+			})
+
+			Context("w/o VPA and PSP enabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = false
+					values.PSPDisabled = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(11))
+
+					Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+				})
 			})
 		})
 
@@ -639,30 +662,32 @@ status: {}
 				values.KubernetesVersion = semver.MustParse("1.20")
 			})
 
-			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(10))
+			Context("w/ VPA and PSP enabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = true
+					values.PSPDisabled = false
+				})
 
-				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
-			})
-		})
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
-		Context("VPA is enabled", func() {
-			BeforeEach(func() {
-				values.VPAEnabled = true
-			})
-
-			It("should successfully deploy VPA resource", func() {
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
-			})
-		})
-
-		Context("PSP is enabled", func() {
-			BeforeEach(func() {
-				values.PSPDisabled = false
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
+				})
 			})
 
-			It("should successfully deploy PSP RoleBinding resource", func() {
-				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
+			Context("w/o VPA and PSP enabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = false
+					values.PSPDisabled = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(10))
+
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
+				})
 			})
 		})
 	})
