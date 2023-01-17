@@ -116,8 +116,9 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
-	fakeClock = testclock.NewFakeClock(time.Now())
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+
 	Expect((&extensionscheck.Reconciler{
 		Config: config.SeedExtensionsCheckControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),

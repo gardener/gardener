@@ -105,6 +105,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
+
 	Expect(heartbeat.Add(mgr, heartbeat.AddArgs{
 		ControllerOptions:    controller.Options{},
 		ExtensionName:        testID,

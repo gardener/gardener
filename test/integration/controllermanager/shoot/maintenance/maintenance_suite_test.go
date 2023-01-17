@@ -116,6 +116,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
+
 	Expect((&maintenance.Reconciler{
 		Config: config.ShootMaintenanceControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),

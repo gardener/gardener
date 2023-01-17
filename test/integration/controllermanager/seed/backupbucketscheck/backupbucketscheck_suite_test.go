@@ -111,9 +111,9 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddBackupBucketSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
+	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 
-	By("Register controller")
 	Expect((&backupbucketscheck.Reconciler{
 		Config: config.SeedBackupBucketsCheckControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),

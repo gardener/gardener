@@ -46,7 +46,7 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 				GenerateName: "garden-",
 			},
 		}
-		Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+		Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 		DeferCleanup(func() {

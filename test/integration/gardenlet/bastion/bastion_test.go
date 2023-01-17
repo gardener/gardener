@@ -16,6 +16,7 @@ package bastion_test
 
 import (
 	"fmt"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -75,6 +76,8 @@ var _ = Describe("Bastion controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now())
+
 		providerType := "foo-provider"
 
 		seed = &gardencorev1beta1.Seed{

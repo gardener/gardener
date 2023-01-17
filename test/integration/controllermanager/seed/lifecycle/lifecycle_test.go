@@ -40,6 +40,8 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now())
+
 		lease = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -221,7 +223,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		Context("rebootstrapping of ManagedSeed", func() {
 			JustBeforeEach(func() {
 				By("Create garden Namespace")
-				Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+				Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 				log.Info("Created garden Namespace", "namespace", client.ObjectKeyFromObject(gardenNamespace))
 
 				By("Create ManagedSeed")

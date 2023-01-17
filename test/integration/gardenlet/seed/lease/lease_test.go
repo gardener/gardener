@@ -37,6 +37,8 @@ var _ = Describe("Seed lease controller tests", func() {
 	var lease *coordinationv1.Lease
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now())
+
 		lease = &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: testNamespace.Name}}
 	})
 
