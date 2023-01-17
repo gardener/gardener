@@ -27,122 +27,135 @@ import (
 )
 
 var _ = Describe("ControllerRegistration defaulting", func() {
-	Describe("#SetDefaults_ControllerResource", func() {
-		It("should default the primary field", func() {
-			resource := ControllerResource{}
+	var obj *ControllerRegistration
 
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.Primary).To(PointTo(BeTrue()))
-		})
-
-		It("should not default the primary field", func() {
-			resource := ControllerResource{Primary: pointer.Bool(false)}
-			resourceCopy := resource.DeepCopy()
-
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.Primary).To(Equal(resourceCopy.Primary))
-		})
-
-		const kindExtension = "Extension"
-		It("should default the globallyEnabled field when kind is Extension", func() {
-			resource := ControllerResource{Kind: kindExtension}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.GloballyEnabled).To(Equal(pointer.Bool(false)))
-		})
-
-		It("should not default the globallyEnabled field when kind is Extension and globallyEnabled is already set", func() {
-			resource := ControllerResource{Kind: kindExtension, GloballyEnabled: pointer.Bool(true)}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.GloballyEnabled).To(Equal(pointer.Bool(true)))
-		})
-
-		It("should not default the globallyEnabled field when kind is not Extension", func() {
-			resource := ControllerResource{Kind: "not extension"}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.GloballyEnabled).To(BeNil())
-		})
-
-		It("should default the reconcile timeout when kind is Extension", func() {
-			resource := ControllerResource{Kind: kindExtension}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.ReconcileTimeout).To(Equal(&metav1.Duration{Duration: time.Minute * 3}))
-		})
-
-		It("should not default the reconcile timeout when kind is Extension and timeout is already set", func() {
-			resource := ControllerResource{Kind: kindExtension, ReconcileTimeout: &metav1.Duration{Duration: time.Second * 62}}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.ReconcileTimeout).To(Equal(&metav1.Duration{Duration: time.Second * 62}))
-		})
-
-		It("should not default the reconcile timeout when kind is not Extension", func() {
-			resource := ControllerResource{Kind: "not extension"}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.ReconcileTimeout).To(BeNil())
-		})
-
-		It("should default the lifecycle strategy field when kind is Extension", func() {
-			resource := ControllerResource{Kind: kindExtension}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.Lifecycle).ToNot(BeNil())
-			Expect(*resource.Lifecycle.Reconcile).To(Equal(AfterKubeAPIServer))
-			Expect(*resource.Lifecycle.Delete).To(Equal(BeforeKubeAPIServer))
-			Expect(*resource.Lifecycle.Migrate).To(Equal(BeforeKubeAPIServer))
-		})
-
-		It("should default the lifecycle strategy field when kind is not Extension", func() {
-			resource := ControllerResource{Kind: "not an extension"}
-			SetDefaults_ControllerResource(&resource)
-
-			Expect(resource.Lifecycle).To(BeNil())
-		})
-
-		It("should default only the missing lifecycle strategy fields when kind is Extension", func() {
-			before := BeforeKubeAPIServer
-			resource := ControllerResource{
-				Kind: kindExtension,
-				Lifecycle: &ControllerResourceLifecycle{
-					Reconcile: &before,
+	BeforeEach(func() {
+		obj = &ControllerRegistration{
+			Spec: ControllerRegistrationSpec{
+				Resources: []ControllerResource{
+					{
+						Kind: "Infrastructure",
+						Type: "provider-foo",
+					},
+					{
+						Kind: "Extension",
+						Type: "extension-foo",
+					},
 				},
-			}
-			SetDefaults_ControllerResource(&resource)
+				Deployment: &ControllerRegistrationDeployment{
+					DeploymentRefs: []DeploymentRef{{
+						Name: "foo",
+					}},
+				},
+			},
+		}
+	})
 
-			Expect(resource.Lifecycle).ToNot(BeNil())
-			Expect(*resource.Lifecycle.Reconcile).To(Equal(BeforeKubeAPIServer))
-			Expect(*resource.Lifecycle.Delete).To(Equal(BeforeKubeAPIServer))
-			Expect(*resource.Lifecycle.Migrate).To(Equal(BeforeKubeAPIServer))
+	Describe("ControllerResource defaulting", func() {
+		It("should default the primary field", func() {
+			SetObjectDefaults_ControllerRegistration(obj)
+
+			Expect(obj.Spec.Resources[0].Primary).To(PointTo(BeTrue()))
+			Expect(obj.Spec.Resources[1].Primary).To(PointTo(BeTrue()))
+		})
+
+		It("should not overwrite the primary field", func() {
+			obj.Spec.Resources[0].Primary = pointer.Bool(false)
+			obj.Spec.Resources[1].Primary = pointer.Bool(false)
+
+			SetObjectDefaults_ControllerRegistration(obj)
+
+			Expect(obj.Spec.Resources[0].Primary).To(PointTo(BeFalse()))
+			Expect(obj.Spec.Resources[1].Primary).To(PointTo(BeFalse()))
+		})
+
+		Context("kind != Extension", func() {
+			It("should not default the globallyEnabled field", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[0].GloballyEnabled).To(BeNil())
+			})
+
+			It("should not default the reconcileTimeout field", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[0].ReconcileTimeout).To(BeNil())
+			})
+
+			It("should default the lifecycle field", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[0].Lifecycle).To(BeNil())
+			})
+		})
+
+		Context("kind == Extension", func() {
+			It("should default the globallyEnabled field", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(pointer.Bool(false)))
+			})
+
+			It("should not overwrite the globallyEnabled field", func() {
+				obj.Spec.Resources[1].GloballyEnabled = pointer.Bool(true)
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(pointer.Bool(true)))
+			})
+
+			It("should default the reconcileTimeout field", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].ReconcileTimeout).To(Equal(&metav1.Duration{Duration: time.Minute * 3}))
+			})
+
+			It("should not overwrite the reconcileTimeout field", func() {
+				obj.Spec.Resources[1].ReconcileTimeout = &metav1.Duration{Duration: time.Second * 62}
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].ReconcileTimeout).To(Equal(&metav1.Duration{Duration: time.Second * 62}))
+			})
+
+			It("should default the lifecycle field", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].Lifecycle).NotTo(BeNil())
+				Expect(obj.Spec.Resources[1].Lifecycle.Reconcile).To(PointTo(BeEquivalentTo("AfterKubeAPIServer")))
+				Expect(obj.Spec.Resources[1].Lifecycle.Delete).To(PointTo(BeEquivalentTo("BeforeKubeAPIServer")))
+				Expect(obj.Spec.Resources[1].Lifecycle.Migrate).To(PointTo(BeEquivalentTo("BeforeKubeAPIServer")))
+			})
+
+			It("should only default the missing lifecycle fields", func() {
+				before := ControllerResourceLifecycleStrategy("BeforeKubeAPIServer")
+				obj.Spec.Resources[1].Lifecycle = &ControllerResourceLifecycle{}
+				obj.Spec.Resources[1].Lifecycle.Reconcile = &before
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].Lifecycle).NotTo(BeNil())
+				Expect(obj.Spec.Resources[1].Lifecycle.Reconcile).To(PointTo(BeEquivalentTo("BeforeKubeAPIServer")))
+				Expect(obj.Spec.Resources[1].Lifecycle.Delete).To(PointTo(BeEquivalentTo("BeforeKubeAPIServer")))
+				Expect(obj.Spec.Resources[1].Lifecycle.Migrate).To(PointTo(BeEquivalentTo("BeforeKubeAPIServer")))
+			})
 		})
 	})
 
-	Describe("#SetDefaults_ControllerRegistrationDeployment", func() {
-		var (
-			ondemand = ControllerDeploymentPolicyOnDemand
-			always   = ControllerDeploymentPolicyAlways
-		)
-
+	Describe("ControllerRegistrationDeployment defaulting", func() {
 		It("should default the policy field", func() {
-			deployment := ControllerRegistrationDeployment{}
+			SetObjectDefaults_ControllerRegistration(obj)
 
-			SetDefaults_ControllerRegistrationDeployment(&deployment)
-
-			Expect(deployment.Policy).To(PointTo(Equal(ondemand)))
+			Expect(obj.Spec.Deployment.Policy).To(PointTo(BeEquivalentTo("OnDemand")))
 		})
 
-		It("should not default the policy field", func() {
-			deployment := ControllerRegistrationDeployment{Policy: &always}
-			deploymentCopy := deployment.DeepCopy()
+		It("should not overwrite the policy field", func() {
+			always := ControllerDeploymentPolicy("Always")
+			obj.Spec.Deployment.Policy = &always
 
-			SetDefaults_ControllerRegistrationDeployment(&deployment)
+			SetObjectDefaults_ControllerRegistration(obj)
 
-			Expect(deployment.Policy).To(Equal(deploymentCopy.Policy))
+			Expect(obj.Spec.Deployment.Policy).To(PointTo(BeEquivalentTo("Always")))
 		})
 	})
 })
