@@ -15,14 +15,14 @@
 package statuslabel_test
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/statuslabel"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/statuslabel"
 )
 
 var _ = Describe("Add", func() {

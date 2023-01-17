@@ -17,11 +17,11 @@ package podschedulername_test
 import (
 	"context"
 
-	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+
+	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 )
 
 var _ = Describe("Handler", func() {

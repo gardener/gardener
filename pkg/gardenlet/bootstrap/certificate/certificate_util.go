@@ -25,10 +25,10 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
 
 // nextRotationDeadline returns a value for the threshold at which the

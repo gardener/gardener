@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,6 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("LeaderElection", func() {

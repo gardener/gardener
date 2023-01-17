@@ -20,6 +20,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
@@ -47,9 +50,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/garden"
-
-	"github.com/Masterminds/semver"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // Builder is an object that builds Shoot objects.

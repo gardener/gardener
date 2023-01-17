@@ -17,17 +17,17 @@ package openidconnectpreset_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
-	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 )
 
 var _ = Describe("OpenID Connect Preset", func() {

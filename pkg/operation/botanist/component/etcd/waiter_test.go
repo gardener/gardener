@@ -18,16 +18,6 @@ import (
 	"context"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -42,6 +32,16 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("#Wait", func() {

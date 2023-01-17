@@ -18,10 +18,10 @@ import (
 	"context"
 	_ "embed"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 //go:embed templates/crd.tpl.yaml

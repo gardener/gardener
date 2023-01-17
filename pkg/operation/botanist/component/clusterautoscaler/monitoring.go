@@ -19,9 +19,9 @@ import (
 	"strings"
 	"text/template"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 const (

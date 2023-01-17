@@ -18,6 +18,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+	componentbaseconfig "k8s.io/component-base/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
@@ -26,10 +30,6 @@ import (
 	oscommoncmd "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	"github.com/gardener/gardener/extensions/pkg/util"
-
-	"github.com/spf13/cobra"
-	componentbaseconfig "k8s.io/component-base/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // NewControllerCommand creates a new command for running an OS controller.

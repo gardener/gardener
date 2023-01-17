@@ -15,13 +15,14 @@
 package test_test
 
 import (
-	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("gomock Matchers", func() {

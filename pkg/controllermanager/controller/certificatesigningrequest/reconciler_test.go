@@ -20,10 +20,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509/pkix"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,6 +33,10 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("Reconciler", func() {

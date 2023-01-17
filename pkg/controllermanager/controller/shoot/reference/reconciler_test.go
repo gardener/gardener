@@ -19,11 +19,6 @@ import (
 	"errors"
 	"sync"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,6 +30,11 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Shoot References", func() {

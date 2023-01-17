@@ -17,10 +17,10 @@ package operatingsystemconfig
 import (
 	_ "embed"
 
+	"k8s.io/apimachinery/pkg/util/runtime"
+
 	ostemplate "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/template"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (

@@ -15,9 +15,10 @@
 package validation
 
 import (
-	"github.com/gardener/gardener/pkg/apis/settings"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/settings"
 )
 
 // ValidateOpenIDConnectPreset validates a OpenIDConnectPreset object.

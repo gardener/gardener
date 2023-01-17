@@ -15,11 +15,11 @@
 package install
 
 import (
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
 
 var (

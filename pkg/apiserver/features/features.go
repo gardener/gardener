@@ -15,10 +15,10 @@
 package features
 
 import (
-	"github.com/gardener/gardener/pkg/features"
-
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // RegisterFeatureGates registers the feature gates of the gardener-apiserver.

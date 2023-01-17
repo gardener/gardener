@@ -18,10 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,6 +26,10 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 type controllerInstallationStrategy struct {

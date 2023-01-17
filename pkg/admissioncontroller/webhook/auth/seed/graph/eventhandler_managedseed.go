@@ -18,18 +18,18 @@ import (
 	"context"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	toolscache "k8s.io/client-go/tools/cache"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	toolscache "k8s.io/client-go/tools/cache"
-	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
 
 func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Informer) {

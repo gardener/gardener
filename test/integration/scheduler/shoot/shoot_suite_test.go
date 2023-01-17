@@ -19,15 +19,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/logger"
-	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +27,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
+	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestShoot(t *testing.T) {

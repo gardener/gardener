@@ -17,13 +17,6 @@ package shoot_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	. "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +24,13 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
 )
 
 const (

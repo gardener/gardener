@@ -15,16 +15,16 @@
 package validation_test
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 var _ = Describe("validation", func() {

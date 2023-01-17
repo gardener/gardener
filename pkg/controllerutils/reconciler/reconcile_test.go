@@ -18,10 +18,11 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	. "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 )
 
 var _ = Describe("Reconcile", func() {

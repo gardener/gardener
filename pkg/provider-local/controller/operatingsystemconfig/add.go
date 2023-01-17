@@ -15,10 +15,10 @@
 package operatingsystemconfig
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManager adds a controller with the default Options.

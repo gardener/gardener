@@ -15,9 +15,10 @@
 package validation
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 // ValidateBackupBucket validates a BackupBucket object.

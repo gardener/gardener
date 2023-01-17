@@ -20,10 +20,10 @@ import (
 	"strconv"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (

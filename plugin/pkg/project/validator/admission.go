@@ -20,12 +20,12 @@ import (
 	"io"
 	"strings"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apiserver/pkg/admission"
+
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apiserver/pkg/admission"
 )
 
 const (

@@ -17,13 +17,6 @@ package healthcheck
 import (
 	"fmt"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-	"github.com/gardener/gardener/pkg/api/extensions"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	"github.com/gardener/gardener/pkg/utils"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -33,6 +26,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	"github.com/gardener/gardener/pkg/api/extensions"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (

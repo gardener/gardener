@@ -18,11 +18,11 @@ import (
 	"crypto/x509"
 	"errors"
 
-	. "github.com/gardener/gardener/pkg/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+
+	. "github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Encoding", func() {

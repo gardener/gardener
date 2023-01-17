@@ -15,12 +15,12 @@
 package kubeproxy
 
 import (
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeproxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
+
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ConfigCodec", func() {

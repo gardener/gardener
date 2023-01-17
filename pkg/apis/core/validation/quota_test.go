@@ -15,9 +15,6 @@
 package validation_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/validation"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -26,6 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 var _ = Describe("Quota Validation Tests ", func() {

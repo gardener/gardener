@@ -15,10 +15,10 @@
 package kubernetes_test
 
 import (
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("service", func() {

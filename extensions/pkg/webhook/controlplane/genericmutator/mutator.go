@@ -19,16 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -39,6 +29,16 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Ensurer ensures that various standard Kubernets controlplane objects conform to the provider requirements.

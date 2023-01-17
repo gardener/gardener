@@ -18,11 +18,11 @@ import (
 	"bytes"
 	"text/template"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-
 	"github.com/Masterminds/sprig"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
 const (

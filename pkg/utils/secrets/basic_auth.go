@@ -17,9 +17,9 @@ package secrets
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils"
-
 	"k8s.io/apiserver/pkg/authentication/user"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 type formatType string

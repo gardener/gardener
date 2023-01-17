@@ -17,10 +17,11 @@ package component
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Class is a type alias for describing the class of a resource.

@@ -17,11 +17,6 @@ package bootstrappers_test
 import (
 	"context"
 
-	. "github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -29,6 +24,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	. "github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
+	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
 
 var _ = Describe("SeedConfigChecker", func() {

@@ -18,17 +18,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	. "github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	. "github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 )
 
 var _ = Describe("ExtensionValidator", func() {

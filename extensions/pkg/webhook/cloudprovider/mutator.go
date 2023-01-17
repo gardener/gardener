@@ -18,15 +18,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook"
-	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	"github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // Ensurer ensures that the cloudprovider secret conforms to the provider requirements.

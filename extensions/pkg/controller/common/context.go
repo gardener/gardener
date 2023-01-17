@@ -18,12 +18,12 @@
 package common
 
 import (
-	"github.com/gardener/gardener/pkg/chartrenderer"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 // ClientContext bundles the feature of providing injected scheme and client for

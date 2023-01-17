@@ -29,12 +29,12 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
-
-	. "github.com/onsi/ginkgo/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var gardenerVersion = flag.String("version", "", "current gardener version")

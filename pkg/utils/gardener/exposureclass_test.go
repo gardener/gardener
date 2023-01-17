@@ -15,10 +15,10 @@
 package gardener_test
 
 import (
-	. "github.com/gardener/gardener/pkg/utils/gardener"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("ExposureClass", func() {

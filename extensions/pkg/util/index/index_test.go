@@ -17,13 +17,12 @@ package index_test
 import (
 	"testing"
 
-	"github.com/gardener/gardener/extensions/pkg/util/index"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/gardener/gardener/extensions/pkg/util/index"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 func TestIndex(t *testing.T) {

@@ -19,11 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,6 +32,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 const testID = "extensions-heartbeat-test"

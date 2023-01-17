@@ -15,11 +15,11 @@
 package install
 
 import (
-	"github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/provider-local/apis/local"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 )
 
 var (

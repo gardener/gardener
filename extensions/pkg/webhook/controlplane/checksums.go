@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // EnsureSecretChecksumAnnotation ensures that the given pod template has an annotation containing the checksum of the

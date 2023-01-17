@@ -17,6 +17,9 @@ package controller
 import (
 	"fmt"
 
+	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
@@ -31,9 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-
-	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManager adds all controller-manager controllers to the given manager.

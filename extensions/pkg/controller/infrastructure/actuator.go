@@ -17,10 +17,10 @@ package infrastructure
 import (
 	"context"
 
+	"github.com/go-logr/logr"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
-	"github.com/go-logr/logr"
 )
 
 // Actuator acts upon Infrastructure resources.

@@ -15,10 +15,10 @@
 package etcd
 
 import (
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // DependencyWatchdogEndpointConfiguration returns the configuration for the dependency watchdog ensuring that its dependant

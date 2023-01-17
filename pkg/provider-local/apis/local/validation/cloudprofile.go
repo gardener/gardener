@@ -17,9 +17,9 @@ package validation
 import (
 	"fmt"
 
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 )
 
 // ValidateCloudProfileConfig validates a CloudProfileConfig object.

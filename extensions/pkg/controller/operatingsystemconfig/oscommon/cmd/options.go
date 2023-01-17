@@ -15,13 +15,13 @@
 package cmd
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionsheartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // SwitchOptions are the cmd.SwitchOptions for the provider controllers.

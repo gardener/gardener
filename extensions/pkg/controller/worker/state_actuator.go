@@ -20,14 +20,14 @@ import (
 	"fmt"
 	"sort"
 
-	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type genericStateActuator struct {

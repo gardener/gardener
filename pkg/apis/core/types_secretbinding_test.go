@@ -15,10 +15,10 @@
 package core_test
 
 import (
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 )
 
 var _ = Describe("SecretBinding", func() {

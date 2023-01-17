@@ -17,12 +17,12 @@ package builder
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-
 	"github.com/go-logr/logr"
 	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 )
 
 // ShootClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing

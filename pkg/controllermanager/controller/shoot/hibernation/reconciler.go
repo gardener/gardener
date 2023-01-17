@@ -20,10 +20,6 @@ import (
 	"sort"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +30,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (

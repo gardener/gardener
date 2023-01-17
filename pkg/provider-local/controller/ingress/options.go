@@ -15,9 +15,9 @@
 package ingress
 
 import (
-	"github.com/gardener/gardener/extensions/pkg/controller/cmd"
-
 	"github.com/spf13/pflag"
+
+	"github.com/gardener/gardener/extensions/pkg/controller/cmd"
 )
 
 // ControllerOptions are command line options that can be set for controller.Options.

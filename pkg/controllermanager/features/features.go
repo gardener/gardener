@@ -15,10 +15,10 @@
 package features
 
 import (
-	"github.com/gardener/gardener/pkg/features"
-
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/featuregate"
+
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // FeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.

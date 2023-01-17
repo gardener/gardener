@@ -17,11 +17,11 @@ package seed_test
 import (
 	"fmt"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	authorizationv1 "k8s.io/api/authorization/v1"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
 )
 
 var _ = Describe("Response", func() {

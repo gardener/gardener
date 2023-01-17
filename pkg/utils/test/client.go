@@ -18,12 +18,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // NewClientWithFieldSelectorSupport takes a fake client and a function that returns selectable fields for the type T

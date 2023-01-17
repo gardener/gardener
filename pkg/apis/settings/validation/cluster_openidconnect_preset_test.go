@@ -15,14 +15,14 @@
 package validation_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/settings"
-	settingsvalidation "github.com/gardener/gardener/pkg/apis/settings/validation"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/settings"
+	settingsvalidation "github.com/gardener/gardener/pkg/apis/settings/validation"
 )
 
 type clusterOpenIDConnectPresetProvider struct {

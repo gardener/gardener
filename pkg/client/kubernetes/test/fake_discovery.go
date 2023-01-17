@@ -18,14 +18,14 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // FakeDiscovery is used to tests, more specifically - chart applier.

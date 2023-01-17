@@ -15,11 +15,11 @@
 package secrets
 
 import (
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DataKeyKubeconfig is the key in a secret data holding the kubeconfig.

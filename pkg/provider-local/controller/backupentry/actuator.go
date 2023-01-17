@@ -19,12 +19,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	etcddruidutils "github.com/gardener/etcd-druid/pkg/utils"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type actuator struct {

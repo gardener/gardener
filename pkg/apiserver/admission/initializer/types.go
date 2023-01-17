@@ -15,6 +15,13 @@
 package initializer
 
 import (
+	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
+	quotav1 "k8s.io/apiserver/pkg/quota/v1"
+	"k8s.io/client-go/dynamic"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -22,13 +29,6 @@ import (
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
-
-	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apiserver/pkg/authorization/authorizer"
-	quotav1 "k8s.io/apiserver/pkg/quota/v1"
-	"k8s.io/client-go/dynamic"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 )
 
 // WantsInternalCoreInformerFactory defines a function which sets InformerFactory for admission plugins that need it.

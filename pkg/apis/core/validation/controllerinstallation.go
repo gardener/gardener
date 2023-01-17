@@ -15,11 +15,11 @@
 package validation
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 // ValidateControllerInstallation validates a ControllerInstallation object.

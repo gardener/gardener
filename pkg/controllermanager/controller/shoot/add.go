@@ -17,6 +17,8 @@ package shoot
 import (
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
@@ -25,8 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/retry"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/statuslabel"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManager adds all Shoot controllers to the given manager.

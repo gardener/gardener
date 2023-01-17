@@ -17,15 +17,15 @@ package v1alpha1_test
 import (
 	"time"
 
-	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 var _ = Describe("Defaults", func() {

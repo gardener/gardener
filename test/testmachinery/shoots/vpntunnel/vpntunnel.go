@@ -21,13 +21,6 @@ import (
 	"io"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/framework/resources/templates"
-	"github.com/gardener/gardener/test/utils/shoots/access"
-
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -37,6 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
+	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
 const (

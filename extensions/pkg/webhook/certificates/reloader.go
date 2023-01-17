@@ -20,10 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/controllerutils"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +27,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const certificateReloaderName = "webhook-certificate-reloader"

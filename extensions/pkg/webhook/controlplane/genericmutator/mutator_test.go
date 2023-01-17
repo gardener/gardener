@@ -19,18 +19,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
-	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
-	extensionsmockgenericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator/mock"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockkubelet "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet/mock"
-	mockutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils/mock"
-
 	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -46,6 +34,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	extensionsmockgenericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator/mock"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockkubelet "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet/mock"
+	mockutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils/mock"
 )
 
 const (

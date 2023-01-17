@@ -23,21 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-
 	"github.com/Masterminds/semver"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,6 +39,21 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 const (

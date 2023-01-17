@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"os"
 
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+
 	"github.com/gardener/gardener/cmd/gardener-admission-controller/app"
 	"github.com/gardener/gardener/cmd/utils"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {

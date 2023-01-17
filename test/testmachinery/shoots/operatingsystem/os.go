@@ -28,13 +28,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/framework/resources/templates"
-
 	"github.com/onsi/ginkgo/v2"
 	g "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
 )
 
 var _ = ginkgo.Describe("Operating system testing", func() {

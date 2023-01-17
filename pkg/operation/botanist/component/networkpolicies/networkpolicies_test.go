@@ -18,12 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,6 +25,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Networkpolicies", func() {

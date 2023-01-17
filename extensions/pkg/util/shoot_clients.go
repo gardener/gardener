@@ -19,13 +19,6 @@ import (
 	"fmt"
 	"os"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/version"
@@ -34,6 +27,13 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // ShootClients bundles together several clients for the shoot cluster.

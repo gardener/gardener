@@ -21,8 +21,6 @@ import (
 	"io"
 	"strings"
 
-	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 )
 
 // defaultApplier applies objects by retrieving their current state and then either creating / updating them

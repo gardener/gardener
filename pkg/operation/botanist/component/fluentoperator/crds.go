@@ -18,11 +18,11 @@ import (
 	"context"
 	_ "embed"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (

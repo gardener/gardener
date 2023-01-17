@@ -15,9 +15,6 @@
 package validation_test
 
 import (
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	. "github.com/gardener/gardener/pkg/apis/extensions/validation"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -27,6 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	. "github.com/gardener/gardener/pkg/apis/extensions/validation"
 )
 
 var _ = Describe("Worker validation tests", func() {
