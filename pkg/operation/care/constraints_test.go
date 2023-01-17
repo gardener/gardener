@@ -139,6 +139,17 @@ var _ = Describe("Constraints", func() {
 					namespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"foo": "bar"}},
 				}),
+				Entry("namespaceSelector excluding name label", webhookTestCase{
+					namespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "kubernetes.io/metadata.name",
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"kube-system"},
+							},
+						},
+					},
+				}),
 			}
 
 			commonTests = func(gvr schema.GroupVersionResource, problematic, notProblematic []TableEntry) {
