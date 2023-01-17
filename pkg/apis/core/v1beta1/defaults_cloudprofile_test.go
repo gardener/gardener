@@ -17,39 +17,53 @@ package v1beta1_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("CloudProfile defaulting", func() {
-	Describe("#SetDefaults_MachineImageVersion", func() {
-		var obj *MachineImageVersion
+	var obj *CloudProfile
 
-		BeforeEach(func() {
-			obj = &MachineImageVersion{}
-		})
+	BeforeEach(func() {
+		obj = &CloudProfile{
+			Spec: CloudProfileSpec{
+				MachineImages: []MachineImage{{
+					Name: "test",
+					Versions: []MachineImageVersion{{
+						ExpirableVersion: ExpirableVersion{
+							Version: "v1.0.0",
+						},
+					}},
+				}},
+				MachineTypes: []MachineType{{
+					Name: "large",
+				}},
+			},
+		}
+	})
 
-		It("should correctly set the default MachineImageVersion", func() {
-			SetDefaults_MachineImageVersion(obj)
+	Describe("MachineImageVersion defaulting", func() {
+		It("should correctly default MachineImageVersion", func() {
+			SetObjectDefaults_CloudProfile(obj)
 
-			Expect(len(obj.CRI)).To(Equal(1))
-			Expect(obj.CRI[0].Name).To(Equal(CRINameDocker))
-			Expect(obj.Architectures).To(Equal([]string{"amd64"}))
+			machineImageVersion := obj.Spec.MachineImages[0].Versions[0]
+			Expect(machineImageVersion.CRI).To(ConsistOf(
+				CRI{Name: "docker"},
+			))
+			Expect(machineImageVersion.Architectures).To(ConsistOf(
+				"amd64",
+			))
 		})
 	})
 
-	Describe("#SetDefaults_MachineType", func() {
-		var obj *MachineType
+	Describe("MachineType defaulting", func() {
+		It("should correctly default MachineType", func() {
+			SetObjectDefaults_CloudProfile(obj)
 
-		BeforeEach(func() {
-			obj = &MachineType{}
-		})
-
-		It("should correctly set the default MachineType", func() {
-			SetDefaults_MachineType(obj)
-
-			Expect(*obj.Architecture).To(Equal("amd64"))
-			Expect(*obj.Usable).To(BeTrue())
+			machineType := obj.Spec.MachineTypes[0]
+			Expect(machineType.Architecture).To(PointTo(Equal("amd64")))
+			Expect(machineType.Usable).To(PointTo(BeTrue()))
 		})
 	})
 })
