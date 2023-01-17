@@ -238,7 +238,7 @@ generate-sequential: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS
 	$(MAKE) format
 
 .PHONY: format
-format: $(GOIMPORTS)
+format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./hack
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
