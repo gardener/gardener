@@ -106,6 +106,15 @@ data:
         {{- if .Values.global.config.controllers.managedResources.managedByLabelValue }}
         managedByLabelValue: {{ .Values.global.config.controllers.managedResources.managedByLabelValue }}
         {{- end }}
+      networkPolicy:
+        enabled: {{ .Values.global.config.controllers.networkPolicy.enabled }}
+        {{- if .Values.global.config.controllers.networkPolicy.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.networkPolicy.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.networkPolicy.namespaceSelectors }}
+        namespaceSelectors:
+{{ toYaml .Values.global.config.controllers.networkPolicy.namespaceSelectors | indent 8 }}
+        {{- end }}
       secret:
         {{- if .Values.global.config.controllers.secret.concurrentSyncs }}
         concurrentSyncs: {{ .Values.global.config.controllers.secret.concurrentSyncs }}

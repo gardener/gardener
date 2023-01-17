@@ -130,6 +130,8 @@ type ResourceManagerControllerConfiguration struct {
 	Health HealthControllerConfig `json:"health"`
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig `json:"managedResource"`
+	// NetworkPolicy is the configuration for the networkpolicy controller.
+	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig `json:"secret"`
 	// TokenInvalidator is the configuration for the token-invalidator controller.
@@ -183,6 +185,19 @@ type ManagedResourceControllerConfig struct {
 	// Default: gardener
 	// +optional
 	ManagedByLabelValue *string `json:"managedByLabelValue,omitempty"`
+}
+
+// NetworkPolicyControllerConfig is the configuration for the networkpolicy controller.
+type NetworkPolicyControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool `json:"enabled"`
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// NamespaceSelectors is a list of label selectors for namespaces in which the controller shall reconcile Service
+	// objects. An empty list means all namespaces.
+	// +optional
+	NamespaceSelectors []metav1.LabelSelector `json:"namespaceSelectors,omitempty"`
 }
 
 // SecretControllerConfig is the configuration for the secret controller.

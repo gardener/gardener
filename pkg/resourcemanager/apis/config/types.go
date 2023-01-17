@@ -118,6 +118,8 @@ type ResourceManagerControllerConfiguration struct {
 	Health HealthControllerConfig
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig
+	// NetworkPolicy is the configuration for the networkpolicy controller.
+	NetworkPolicy NetworkPolicyControllerConfig
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig
 	// TokenInvalidator is the configuration for the token-invalidator controller.
@@ -163,6 +165,17 @@ type ManagedResourceControllerConfig struct {
 	// will have key `resources.gardener.cloud/managed-by`.
 	// Default: gardener
 	ManagedByLabelValue *string
+}
+
+// NetworkPolicyControllerConfig is the configuration for the networkpolicy controller.
+type NetworkPolicyControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	ConcurrentSyncs *int
+	// NamespaceSelectors is a list of label selectors for namespaces in which the controller shall reconcile Service
+	// objects. An empty list means all namespaces.
+	NamespaceSelectors []metav1.LabelSelector
 }
 
 // SecretControllerConfig is the configuration for the secret controller.

@@ -54,6 +54,12 @@ controllers:
     syncPeriod: 1m
     alwaysUpdate: false
     managedByLabelValue: gardener
+  networkPolicy:
+    enabled: true
+    concurrentSyncs: 5
+  # namespaceSelectors:
+  # - matchLabels:
+  #     kubernetes.io/metadata.name: default
   secret:
     concurrentSyncs: 5
   tokenInvalidator:
