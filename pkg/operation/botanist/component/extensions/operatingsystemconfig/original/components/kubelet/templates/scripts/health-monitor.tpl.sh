@@ -13,7 +13,7 @@ function kubelet_monitoring {
   }
 
   function restart_kubelet {
-    pkill -f "kubelet"
+    pkill -x "kubelet"
   }
 
   function patch_internal_ip {
