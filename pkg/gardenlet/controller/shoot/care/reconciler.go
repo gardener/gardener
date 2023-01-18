@@ -101,6 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	conditionTypes := []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
+		gardencorev1beta1.ShootObservabilityComponentsHealthy,
 		gardencorev1beta1.ShootEveryNodeReady,
 		gardencorev1beta1.ShootSystemComponentsHealthy,
 	}

@@ -639,6 +639,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 			switch cond.Type {
 			case gardencorev1beta1.ShootAPIServerAvailable,
 				gardencorev1beta1.ShootControlPlaneHealthy,
+				gardencorev1beta1.ShootObservabilityComponentsHealthy,
 				gardencorev1beta1.ShootEveryNodeReady,
 				gardencorev1beta1.ShootSystemComponentsHealthy:
 				if cond.Status != gardencorev1beta1.ConditionFalse {

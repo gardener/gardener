@@ -321,6 +321,11 @@ var _ = Describe("Shoot Care Control", func() {
 							Reason: "bar",
 						},
 						{
+							Type:   gardencorev1beta1.ShootObservabilityComponentsHealthy,
+							Status: gardencorev1beta1.ConditionFalse,
+							Reason: "dash",
+						},
+						{
 							Type:   gardencorev1beta1.ShootEveryNodeReady,
 							Status: gardencorev1beta1.ConditionProgressing,
 						},
