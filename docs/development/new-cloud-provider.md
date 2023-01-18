@@ -19,22 +19,22 @@ This distinction becomes important when preparing the integration to a new cloud
 
 Gardener and its related components integrate with cloud providers at the following key lifecycle elements:
 
-* Create/destroy/get/list machines for the Shoot
+* Create/destroy/get/list machines for the Shoot.
 * Create/destroy/get/list infrastructure components for the Shoot, e.g. VPCs, subnets, routes, etc.
-* Backup/restore etcd for the Seed via writing files to and reading them from object storage
+* Backup/restore etcd for the Seed via writing files to and reading them from object storage.
 
 Thus, the integrations you need for your cloud provider depend on whether you want to deploy Shoot clusters to the provider, Seed or both.
 
-* Shoot Only: machine lifecycle management, infrastructure.
+* Shoot Only: machine lifecycle management, infrastructure
 * Seed: etcd backup/restore
 
 ## Gardener API
 
-In addition to the requirements to integrate with the cloud provider, you also need to enable the core Gardener app to receive, validate and process requests to use that cloud provider.
+In addition to the requirements to integrate with the cloud provider, you also need to enable the core Gardener app to receive, validate, and process requests to use that cloud provider.
 
-* Expose the cloud provider to the consumers of the Gardener API, so it can be told to use that cloud provider as an option
-* Validate that API as requests come in
-* Write cloud provider specific implementation (called "provider extension")
+* Expose the cloud provider to the consumers of the Gardener API, so it can be told to use that cloud provider as an option.
+* Validate that API as requests come in.
+* Write cloud provider specific implementation (called "provider extension").
 
 ## Cloud Provider API Requirements
 

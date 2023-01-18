@@ -5,15 +5,15 @@ In order to add a new package dependency to the project, you can perform `go get
 
 ## Updating Dependencies
 
-The `Makefile` contains a rule called `revendor` which performs `go mod tidy` and `go mod vendor`.
-`go mod tidy` makes sure go.mod matches the source code in the module. It adds any missing modules necessary to build the current module's packages and dependencies, and it removes unused modules that don't provide any relevant packages.
-`go mod vendor` resets the main module's vendor directory to include all packages needed to build and test all the main module's packages. It does not include test code for vendored packages.
+The `Makefile` contains a rule called `revendor` which performs `go mod tidy` and `go mod vendor`:
+- `go mod tidy` makes sure `go.mod` matches the source code in the module. It adds any missing modules necessary to build the current module's packages and dependencies, and it removes unused modules that don't provide any relevant packages.
+- `go mod vendor` resets the main module's vendor directory to include all packages needed to build and test all the main module's packages. It does not include test code for vendored packages.
 
 ```bash
 make revendor
 ```
 
-The dependencies are installed into the `vendor` folder which **should be added** to the VCS.
+The dependencies are installed into the `vendor` folder, which **should be added** to the VCS.
 
 :warning: Make sure that you test the code after you have updated the dependencies!
 
@@ -26,7 +26,7 @@ For example:
 - Library for building Gardener extensions: `extensions`
 - Gardener's Test Framework: `test/framework`
 
-There are a few more folders in this repository (non-Go sources) that are reused across projects in the gardener organization:
+There are a few more folders in this repository (non-Go sources) that are reused across projects in the Gardener organization:
 
 - GitHub templates: `.github`
 - Concourse / cc-utils related helpers: `hack/.ci`
@@ -44,7 +44,7 @@ Currently, we don't have a mechanism yet for selectively syncing out these expor
 
 ## Import Restrictions
 
-We want to make sure, that other projects can depend on this repository's "exported" packages without pulling in the entire repository (including "non-exported" packages) or a high number of other unwanted dependencies.
+We want to make sure that other projects can depend on this repository's "exported" packages without pulling in the entire repository (including "non-exported" packages) or a high number of other unwanted dependencies.
 Hence, we have to be careful when adding new imports or references between our packages.
 
 > ℹ️ General rule of thumb: the mentioned "exported" packages should be as self-contained as possible and depend on as few other packages in the repository and other projects as possible.
@@ -52,8 +52,9 @@ Hence, we have to be careful when adding new imports or references between our p
 In order to support that rule and automatically check compliance with that goal, we leverage [import-boss](https://github.com/kubernetes/code-generator/tree/master/cmd/import-boss).
 The tool checks all imports of the given packages (including transitive imports) against rules defined in `.import-restrictions` files in each directory.
 An import is allowed if it matches at least one allowed prefix and does not match any forbidden prefixes.
-Note: `''` (the empty string) is a prefix of everything.
-For more details, see: https://github.com/kubernetes/code-generator/tree/master/cmd/import-boss
+
+> Note: `''` (the empty string) is a prefix of everything.
+For more details, see the [import-boss](https://github.com/kubernetes/code-generator/tree/master/cmd/import-boss/README.md) topic.
 
 `import-boss` is executed on every pull request and blocks the PR if it doesn't comply with the defined import restrictions.
 You can also run it locally using `make check`.
