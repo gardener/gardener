@@ -28,7 +28,7 @@ In each Seed cluster there is a Prometheus in the `garden` namespace responsible
 
 The alerts for all Shoot clusters hosted on a Seed are routed to a central Alertmanger running in the `garden` namespace of the Seed. The purpose of this central alertmanager is to forward all important alerts to the operators of the Gardener setup.
 
-The Alertmanager in the Shoot namespace on the Seed is only responsible for forwarding alerts from its Shoot cluster to a cluster owner/cluster alert receiver via email. The Alertmanager is optional and the conditions for a deployment are already described [here](../monitoring/alerting.md).
+The Alertmanager in the Shoot namespace on the Seed is only responsible for forwarding alerts from its Shoot cluster to a cluster owner/cluster alert receiver via email. The Alertmanager is optional and the conditions for a deployment are already described in [Alerting](../monitoring/alerting.md).
 
 ## Adding New Monitoring Targets
 
@@ -39,7 +39,7 @@ New scrape jobs can be added in the section `scrape_configs`. Detailed informati
 
 The `job_name` of a scrape job should be the name of the component e.g. `kube-apiserver` or `vpn`. The collection interval should be the default of `30s`. You do not need to specify this in the configuration.
 
-Please do not ingest all metrics which are provided by a component. Rather collect only those metrics which are needed to define the alerts and dashboards (i.e. whitelist). This can be achieved by adding the following `metric_relabel_configs` statement to your scrape jobs (replace `exampleComponent` with component name).
+Please do not ingest all metrics which are provided by a component. Rather, collect only those metrics which are needed to define the alerts and dashboards (i.e. whitelist). This can be achieved by adding the following `metric_relabel_configs` statement to your scrape jobs (replace `exampleComponent` with component name).
 
 ```yaml
     - job_name: example-component
@@ -65,7 +65,7 @@ The alert definitons are located in `charts/seed-monitoring/charts/prometheus/ru
 
 1. Adding additional alerts for a component which already has a set of alerts. In this case you have to extend the existing rule file for the component.
 1. Adding alerts for a new component. In this case a new rule file with name scheme `example-component.rules.yaml` needs to be added.
-1. Add the new alert to `alertInhibitionGraph.dot`, add any required inhibition flows and render the new graph. To render the graph run:
+1. Add the new alert to `alertInhibitionGraph.dot`, add any required inhibition flows and render the new graph. To render the graph, run:
 ```bash
 dot -Tpng ./content/alertInhibitionGraph.dot -o ./content/alertInhibitionGraph.png
 ```
@@ -94,9 +94,9 @@ If the deployment of component is optional then the alert definitions needs to b
 
 Basic instruction how to define alert rules can be found in the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules).
 
-### Routing tree
+### Routing Tree
 
-The Alertmanager is grouping incoming alerts based on labels into buckets. Each bucket has its own configuration like alert receivers, initial delaying duration or resending frequency etc. You can find more information about Alertmanager routing in the [Prometheus/Alertmanager documentation](https://prometheus.io/docs/alerting/configuration/#route). The routing trees for the Alertmanagers deployed by Gardener are depicted below.
+The Alertmanager is grouping incoming alerts based on labels into buckets. Each bucket has its own configuration like alert receivers, initial delaying duration or resending frequency, etc. You can find more information about Alertmanager routing in the [Prometheus/Alertmanager documentation](https://prometheus.io/docs/alerting/configuration/#route). The routing trees for the Alertmanagers deployed by Gardener are depicted below.
 
 Central Seed Alertmanager
 
@@ -121,7 +121,7 @@ Shoot Alertmanager
 
 ### Alert Inhibition
 
-All alerts related to components running on the Shoot workers are inhibited in case of an issue with the vpn connection, because those components can't be scraped anymore and Prometheus will fire alerts in consequence. The components running on the workers are probably healthy and the alerts are presumably false positives. The inhibition flow is shown in the figure below. If you add a new alert make sure to add it to the diagram.
+All alerts related to components running on the Shoot workers are inhibited in case of an issue with the vpn connection, because those components can't be scraped anymore and Prometheus will fire alerts in consequence. The components running on the workers are probably healthy and the alerts are presumably false positives. The inhibition flow is shown in the figure below. If you add a new alert, make sure to add it to the diagram.
 
 ![alertDiagram](content/alertInhibitionGraph.png)
 
@@ -132,7 +132,7 @@ Each alert rule definition has to contain the following annotations:
 * **summary**: A short description of the issue.
 * **description**: A detailed explanation of the issue with hints to the possible root causes and the impact assessment of the issue.
 
-In addtion each alert must contain the following labels:
+In addtion, each alert must contain the following labels:
 
 * **type**
   * `shoot`: Components running on the Shoot worker nodes in the `kube-system` namespace.
@@ -140,8 +140,8 @@ In addtion each alert must contain the following labels:
 * **service**
   * Name of the component (in lowercase) e.g. `kube-apiserver`, `alertmanager` or `vpn`.
 * **severity**
-  * `blocker`: All issues which make the cluster entirely unusable e.g. `KubeAPIServerDown` or `KubeSchedulerDown`
-  * `critical`: All issues which affect single functionalities/components but not affect the cluster in its core functionality e.g. `VPNDown` or `KubeletDown`.
+  * `blocker`: All issues which make the cluster entirely unusable, e.g. `KubeAPIServerDown` or `KubeSchedulerDown`
+  * `critical`: All issues which affect single functionalities/components but do not affect the cluster in its core functionality e.g. `VPNDown` or `KubeletDown`.
   * `info`: All issues that do not affect the cluster or its core functionality, but if this component is down we cannot determine if a blocker alert is firing. (i.e. A component with an info level severity is a dependency for a component with a blocker severity)
   * `warning`: No current existing issue, rather a hint for situations which could lead to real issue in the close future e.g. `HighLatencyApiServerToWorkers` or `ApiServerResponseSlow`.
 
@@ -192,7 +192,7 @@ For each new component, its corresponding dashboard should contain the following
 1. Pod/containers memorty consumption
 1. Pod/containers network i/o
 
-These information is provided by the cAdvisor metrics. These metrics are already integrated. Please check the other dashboards for detailed information on how to query.
+That information is provided by the cAdvisor metrics. These metrics are already integrated. Please check the other dashboards for detailed information on how to query.
 
 ##### Chart Requirements
 
@@ -208,7 +208,7 @@ Each chart needs to contain:
 
 The following parameters should be added to all dashboards to ensure a homogeneous experience across all dashboards.
 
-Dashboards have to ...
+Dashboards have to:
 
 * contain a title which refers to the component name(s)
 * contain a timezone statement which should be the browser time
@@ -216,7 +216,7 @@ Dashboards have to ...
 * contain a version statement with a value of 1
 * be immutable
 
-Example dashboard configuration
+Example dashboard configuration:
 
 ```json
 {
@@ -231,7 +231,7 @@ Example dashboard configuration
 }
 ```
 
-Furthermore all dashboards should contain the following time options:
+Furthermore, all dashboards should contain the following time options:
 
 ```json
 {

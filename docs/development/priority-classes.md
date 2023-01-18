@@ -1,7 +1,7 @@
 # `PriorityClass`es in Gardener Clusters
 
-Gardener makes use of [`PriorityClass`es](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) to improve overall robustness of the system.
-In order to benefit from the full potential of `PriorityClass`es, gardenlet manages a set of well-known `PriorityClass`es with fine-granular priority values.
+Gardener makes use of [`PriorityClass`es](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) to improve the overall robustness of the system.
+In order to benefit from the full potential of `PriorityClass`es, the gardenlet manages a set of well-known `PriorityClass`es with fine-granular priority values.
 
 All components of the system should use these well-known `PriorityClass`es instead of creating and using separate ones with arbitrary values, which would compromise the overall goal of using `PriorityClass`es in the first place.
 Gardenlet manages the well-known `PriorityClass`es listed in this document, so that third parties (e.g., Gardener extensions) can rely on them to be present when deploying components to Seed and Shoot clusters.
