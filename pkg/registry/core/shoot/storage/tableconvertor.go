@@ -53,6 +53,7 @@ func newTableConvertor() rest.TableConvertor {
 			{Name: "Gardener Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["gardenerVersion"], Priority: 1},
 			{Name: "APIServer", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["apiserver"], Priority: 1},
 			{Name: "Control", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["control"], Priority: 1},
+			{Name: "Observability", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["observability"], Priority: 1},
 			{Name: "Nodes", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["nodes"], Priority: 1},
 			{Name: "System", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["system"], Priority: 1},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
