@@ -2115,6 +2115,71 @@ rules:
 				}))
 			})
 
+			It("should have the watchdog container when the kubernetes is version 1.24", func() {
+				var (
+					version = semver.MustParse("1.24.7")
+					images  = Images{Watchdog: "some-image:latest"}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version})
+				deployAndRead()
+
+				expectedHealthCheckToken, err := secretsutils.FakeGenerateRandomString(128)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(deployment.Spec.Template.Spec.ShareProcessNamespace).To(PointTo(BeTrue()))
+				Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
+					Name:  "watchdog",
+					Image: images.Watchdog,
+					Command: []string{
+						"/bin/sh",
+						"/var/watchdog/bin/watchdog.sh",
+						expectedHealthCheckToken,
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"SYS_PTRACE"},
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      "watchdog",
+						MountPath: "/var/watchdog/bin",
+					}},
+				}))
+				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
+					Name: "watchdog",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "kube-apiserver-watchdog",
+							},
+							DefaultMode: pointer.Int32(500),
+						},
+					},
+				}))
+			})
+
+			Context("resources", func() {
+				It("should deploy the watchdog configmap if the kubernetes version is 1.24", func() {
+					var (
+						version = semver.MustParse("1.24.7")
+						images  = Images{Watchdog: "some-image:latest"}
+
+						expectedConfigMap = &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "kube-apiserver-watchdog",
+								Namespace: namespace,
+							},
+						}
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version})
+					deployAndRead()
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedConfigMap), expectedConfigMap)).To(Succeed())
+				})
+			})
+
 			Context("kube-apiserver container", func() {
 				var (
 					acceptedIssuers    = []string{"issuer1", "issuer2"}
