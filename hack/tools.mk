@@ -56,7 +56,7 @@ YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
 
 # default tool versions
-DOCFORGE_VERSION ?= v0.32.0
+DOCFORGE_VERSION ?= v0.33.0
 GOLANGCI_LINT_VERSION ?= v1.50.1
 GO_APIDIFF_VERSION ?= v0.5.0
 GOIMPORTSREVISER_VERSION ?= v3.3.0
