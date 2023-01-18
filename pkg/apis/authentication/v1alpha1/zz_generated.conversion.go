@@ -24,10 +24,11 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
-	authentication "github.com/gardener/gardener/pkg/apis/authentication"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	authentication "github.com/gardener/gardener/pkg/apis/authentication"
 )
 
 func init() {

@@ -15,11 +15,11 @@
 package utils_test
 
 import (
-	. "github.com/gardener/gardener/pkg/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/utils"
 )
 
 type object struct {

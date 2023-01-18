@@ -17,12 +17,12 @@ package controllerregistration
 import (
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seed"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seedfinalizer"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManager adds all ControllerRegistration controllers to the given manager.

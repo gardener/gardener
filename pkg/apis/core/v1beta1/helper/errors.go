@@ -20,11 +20,11 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 )
 
 // ErrorWithCodes contains the error and Gardener error codes.

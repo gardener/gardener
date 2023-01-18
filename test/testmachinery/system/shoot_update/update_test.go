@@ -31,10 +31,10 @@ import (
 	"flag"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+
 	"github.com/gardener/gardener/test/framework"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
-
-	. "github.com/onsi/ginkgo/v2"
 )
 
 var (

@@ -21,10 +21,11 @@ package internalinterfaces
 import (
 	time "time"
 
-	internalversion "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"
+
+	internalversion "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 )
 
 // NewInformerFunc takes internalversion.Interface and time.Duration to return a SharedIndexInformer.

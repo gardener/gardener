@@ -17,12 +17,12 @@ package config_test
 import (
 	"flag"
 	"os"
+	"testing"
 
-	"github.com/gardener/gardener/test/framework/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"testing"
+	"github.com/gardener/gardener/test/framework/config"
 )
 
 func TestConfig(t *testing.T) {

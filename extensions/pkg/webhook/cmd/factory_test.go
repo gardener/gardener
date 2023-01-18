@@ -15,12 +15,11 @@
 package cmd
 
 import (
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-
-	. "github.com/onsi/ginkgo/v2"
 )
 
 var _ = Describe("FactoryAggregator", func() {

@@ -15,13 +15,12 @@
 package cidr_test
 
 import (
-	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
-
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
 
 var _ = Describe("utils", func() {

@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	// imported test specs
 	_ "github.com/gardener/gardener/test/e2e/operator/garden"
 )
 

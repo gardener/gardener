@@ -18,12 +18,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 )
 
 var _ = Describe("identity", func() {

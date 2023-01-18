@@ -15,10 +15,11 @@
 package validation
 
 import (
-	"github.com/gardener/gardener/pkg/apis/settings"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/settings"
 )
 
 // ValidateClusterOpenIDConnectPreset validates a ClusterOpenIDConnectPreset object.

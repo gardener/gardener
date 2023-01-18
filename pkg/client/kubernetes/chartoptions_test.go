@@ -15,12 +15,12 @@
 package kubernetes_test
 
 import (
-	. "github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("chart options", func() {

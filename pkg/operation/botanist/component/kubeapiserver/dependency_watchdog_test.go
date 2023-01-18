@@ -15,8 +15,6 @@
 package kubeapiserver_test
 
 import (
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	. "github.com/onsi/ginkgo/v2"
@@ -24,6 +22,8 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 )
 
 var _ = Describe("DependencyWatchdog", func() {

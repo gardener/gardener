@@ -20,9 +20,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +28,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 )
 
 const (

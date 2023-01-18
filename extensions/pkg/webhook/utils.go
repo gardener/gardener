@@ -20,9 +20,10 @@ import (
 	"strings"
 
 	"github.com/coreos/go-systemd/v22/unit"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // LogMutation provides a log message.

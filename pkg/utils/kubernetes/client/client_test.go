@@ -19,16 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
-	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
-	"github.com/gardener/gardener/pkg/utils/test"
-	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
-
 	"github.com/golang/mock/gomock"
 	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
@@ -41,6 +31,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
+	"github.com/gardener/gardener/pkg/utils/test"
+	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 )
 
 func TestClient(t *testing.T) {

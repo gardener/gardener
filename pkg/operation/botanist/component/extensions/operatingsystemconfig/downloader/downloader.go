@@ -20,6 +20,13 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/Masterminds/sprig"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	"k8s.io/utils/pointer"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -28,13 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-
-	"github.com/Masterminds/sprig"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/authentication/user"
-	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	"k8s.io/utils/pointer"
 )
 
 var (

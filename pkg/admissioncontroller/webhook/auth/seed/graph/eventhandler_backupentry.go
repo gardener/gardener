@@ -18,12 +18,12 @@ import (
 	"context"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer) {

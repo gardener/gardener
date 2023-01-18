@@ -17,13 +17,13 @@ package seed
 import (
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManager adds all Seed controllers to the given manager.

@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 )
 
 const (

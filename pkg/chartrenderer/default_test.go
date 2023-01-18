@@ -18,11 +18,11 @@ import (
 	"embed"
 	"path/filepath"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/version"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 const alpinePod = `apiVersion: v1

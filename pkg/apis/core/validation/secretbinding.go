@@ -15,11 +15,11 @@
 package validation
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 // ValidateSecretBinding validates a SecretBinding object.

@@ -15,9 +15,9 @@
 package main
 
 import (
-	"github.com/gardener/gardener/hack/tools/gomegacheck/pkg/gomegacheck"
-
 	"golang.org/x/tools/go/analysis"
+
+	"github.com/gardener/gardener/hack/tools/gomegacheck/pkg/gomegacheck"
 )
 
 // AnalyzerPlugin is the golangci-lint plugin.

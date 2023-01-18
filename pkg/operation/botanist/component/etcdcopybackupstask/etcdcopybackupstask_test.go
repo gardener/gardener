@@ -18,9 +18,6 @@ import (
 	"context"
 	"time"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -31,6 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
 )
 
 var _ = Describe("EtcdCopyBackupsTask", func() {

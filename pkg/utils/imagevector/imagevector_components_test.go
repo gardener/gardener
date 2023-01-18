@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/gardener/gardener/pkg/utils/imagevector"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("imagevector", func() {

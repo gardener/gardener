@@ -15,11 +15,11 @@
 package heartbeat
 
 import (
-	"github.com/gardener/gardener/pkg/controllerutils"
-
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of the controller.

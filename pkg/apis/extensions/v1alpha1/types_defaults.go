@@ -15,8 +15,9 @@
 package v1alpha1
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // DefaultSpec contains common status fields for every extension resource.

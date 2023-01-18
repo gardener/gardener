@@ -15,13 +15,13 @@
 package validation
 
 import (
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
-
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 // ValidateAdmissionControllerConfiguration validates the given `AdmissionControllerConfiguration`.

@@ -17,13 +17,13 @@ package cloudprovider
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
-	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 )
 
 // NewEnsurer creates cloudprovider ensurer.

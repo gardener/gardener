@@ -17,10 +17,6 @@ package customverbauthorizer_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	mockauthorizer "github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer"
-	. "github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,6 +26,10 @@ import (
 	servieaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	mockauthorizer "github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer"
+	. "github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 )
 
 var _ = Describe("customverbauthorizer", func() {

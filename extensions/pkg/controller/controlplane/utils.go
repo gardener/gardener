@@ -15,9 +15,9 @@
 package controlplane
 
 import (
-	"github.com/gardener/gardener/pkg/utils"
-
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // MergeSecretMaps merges the 2 given secret maps.

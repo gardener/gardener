@@ -36,14 +36,12 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/gardener/gardener/test/framework"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	"github.com/onsi/ginkgo/v2"
 	g "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/test/framework"
 )
 
 const (

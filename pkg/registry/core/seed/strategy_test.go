@@ -17,12 +17,12 @@ package seed_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/registry/core/seed"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/registry/core/seed"
 )
 
 var _ = Describe("Strategy", func() {

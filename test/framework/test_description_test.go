@@ -15,9 +15,10 @@
 package framework_test
 
 import (
-	"github.com/gardener/gardener/test/framework"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Test Descriptions tests", func() {

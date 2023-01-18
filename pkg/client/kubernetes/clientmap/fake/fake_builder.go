@@ -15,11 +15,11 @@
 package fake
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ClientMapBuilder can build a fake ClientMap which can be used to fake ClientMaps in unit tests.

@@ -21,9 +21,10 @@ package v1beta1
 import (
 	"net/http"
 
+	rest "k8s.io/client-go/rest"
+
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
-	rest "k8s.io/client-go/rest"
 )
 
 type CoreV1beta1Interface interface {

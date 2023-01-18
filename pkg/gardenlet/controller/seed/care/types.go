@@ -18,12 +18,12 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/care"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-	"k8s.io/utils/clock"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var defaultNewSeedObjectFunc = func(ctx context.Context, seed *gardencorev1beta1.Seed) (*seedpkg.Seed, error) {

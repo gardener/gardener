@@ -17,10 +17,10 @@ package test_test
 import (
 	"testing"
 
-	. "github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestUtil(t *testing.T) {

@@ -19,10 +19,10 @@ import (
 	"embed"
 	"path/filepath"
 
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (

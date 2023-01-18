@@ -21,15 +21,15 @@ import (
 	"net/url"
 	"text/template"
 
+	"github.com/Masterminds/sprig"
+	"k8s.io/utils/pointer"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/kuberbacproxy"
-
-	"github.com/Masterminds/sprig"
 	"github.com/gardener/gardener/pkg/utils"
-	"k8s.io/utils/pointer"
 )
 
 var (

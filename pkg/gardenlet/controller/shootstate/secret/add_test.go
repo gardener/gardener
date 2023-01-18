@@ -15,15 +15,15 @@
 package secret_test
 
 import (
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/shootstate/secret"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/shootstate/secret"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 var _ = Describe("Add", func() {

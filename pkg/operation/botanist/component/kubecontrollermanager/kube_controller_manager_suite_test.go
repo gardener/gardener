@@ -17,11 +17,11 @@ package kubecontrollermanager_test
 import (
 	"testing"
 
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestKubeControllerManager(t *testing.T) {

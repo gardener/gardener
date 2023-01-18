@@ -24,17 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
-	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
-	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
-
 	"github.com/Masterminds/semver"
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
@@ -49,6 +38,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (

@@ -17,9 +17,9 @@ package cmd
 import (
 	"sort"
 
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 )
 
 // FactoryAggregator aggregates various Factory functions.

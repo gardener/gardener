@@ -15,11 +15,11 @@
 package gardener_test
 
 import (
-	. "github.com/gardener/gardener/pkg/utils/gardener"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+
+	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("Dns", func() {

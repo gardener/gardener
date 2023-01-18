@@ -18,15 +18,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/util/sets"
+	genericapiserver "k8s.io/apiserver/pkg/server"
+
 	"github.com/gardener/gardener/pkg/logger"
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
 	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"
 	seedmanagementrest "github.com/gardener/gardener/pkg/registry/seedmanagement/rest"
 	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
-
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/util/sets"
-	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
 // ExtraConfig contains non-generic Gardener API server configuration.

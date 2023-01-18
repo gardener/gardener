@@ -18,11 +18,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/secrets"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("RSA Private Key Secrets", func() {

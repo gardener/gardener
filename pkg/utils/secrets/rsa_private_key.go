@@ -19,9 +19,9 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 
-	"github.com/gardener/gardener/pkg/utils"
-
 	"golang.org/x/crypto/ssh"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (

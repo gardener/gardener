@@ -18,11 +18,11 @@ import (
 	"errors"
 	"fmt"
 
-	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 )
 
 var _ = Describe("Unwrap", func() {

@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"net"
 
+	"k8s.io/utils/pointer"
+
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/common"
-
-	"k8s.io/utils/pointer"
 )
 
 // NewNetworkPoliciesDeployer is an alias for networkpolicies.New. Exposed for testing.

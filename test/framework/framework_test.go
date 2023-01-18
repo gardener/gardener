@@ -20,12 +20,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/test/framework"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/test/framework"
 )
 
 func TestFramework(t *testing.T) {

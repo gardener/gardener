@@ -15,9 +15,9 @@
 package graph
 
 import (
-	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
-
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
 )
 
 const seedAuthorizerSubsystem = "seed_authorizer"

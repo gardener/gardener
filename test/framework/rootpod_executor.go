@@ -20,12 +20,12 @@ import (
 	"io"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // RootPodExecutor enables the execution of command on the operating system of a node.

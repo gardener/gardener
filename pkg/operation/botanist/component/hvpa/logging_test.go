@@ -15,10 +15,10 @@
 package hvpa_test
 
 import (
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 )
 
 var _ = Describe("Logging", func() {

@@ -18,12 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
-	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,6 +25,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 )
 
 var _ = Describe("quotavalidator", func() {

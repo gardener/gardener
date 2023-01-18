@@ -15,8 +15,6 @@
 package secret
 
 import (
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -25,6 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // ControllerName is the name of this controller.

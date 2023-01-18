@@ -12,6 +12,7 @@ run:
   - ".*\\.pb\\.go$"
   - "zz_generated\\..*\\.go$"
   - "openapi_generated\\.go$"
+  - pkg/operation/botanist/component/fluentoperator/doc.go # This file blank import, which should be only in a main or test package
 
 linters:
   disable:

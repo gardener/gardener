@@ -18,13 +18,13 @@ import (
 	"fmt"
 	"testing"
 
-	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-	errorsmock "github.com/gardener/gardener/pkg/utils/errors/mock"
-
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
+	errorsmock "github.com/gardener/gardener/pkg/utils/errors/mock"
 )
 
 func TestErrors(t *testing.T) {

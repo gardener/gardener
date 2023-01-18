@@ -17,10 +17,10 @@ package shoot
 import (
 	"context"
 
+	. "github.com/onsi/ginkgo/v2"
+
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
-
-	. "github.com/onsi/ginkgo/v2"
 )
 
 var (

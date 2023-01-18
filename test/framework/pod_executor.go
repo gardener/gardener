@@ -22,8 +22,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/client-go/tools/remotecommand"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // NewPodExecutor returns a podExecutor

@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {

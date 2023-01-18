@@ -17,9 +17,9 @@ package manager
 import (
 	"context"
 
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-
 	corev1 "k8s.io/api/core/v1"
+
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // Reader is part of the SecretsManager interface and allows retrieving secrets from a SecretsManager.

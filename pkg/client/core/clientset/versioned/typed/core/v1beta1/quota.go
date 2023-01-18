@@ -22,12 +22,13 @@ import (
 	"context"
 	"time"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 )
 
 // QuotasGetter has a method to return a QuotaInterface.

@@ -26,8 +26,6 @@ import (
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/config"
 	"github.com/gardener/gardener/test/framework/reporter"
-
-	// imported test specs
 	_ "github.com/gardener/gardener/test/testmachinery/shoots/applications"
 	_ "github.com/gardener/gardener/test/testmachinery/shoots/care"
 	_ "github.com/gardener/gardener/test/testmachinery/shoots/logging"

@@ -15,12 +15,12 @@
 package core_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-
-	. "github.com/gardener/gardener/pkg/api/core"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+
+	. "github.com/gardener/gardener/pkg/api/core"
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 var _ = Describe("Accessor", func() {

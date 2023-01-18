@@ -17,11 +17,11 @@ package networkpolicies_test
 import (
 	"net"
 
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	networkingv1 "k8s.io/api/networking/v1"
+
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 )
 
 var _ = Describe("networkpolicies", func() {

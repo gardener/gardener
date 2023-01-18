@@ -19,14 +19,14 @@ import (
 	"errors"
 	"sync"
 
-	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-	"github.com/gardener/gardener/pkg/utils/flow"
-	mockflow "github.com/gardener/gardener/pkg/utils/flow/mock"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
+
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	mockflow "github.com/gardener/gardener/pkg/utils/flow/mock"
 )
 
 type AtomicStringList struct {

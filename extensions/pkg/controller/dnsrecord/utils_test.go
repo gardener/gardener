@@ -15,10 +15,10 @@
 package dnsrecord_test
 
 import (
-	. "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 )
 
 var _ = Describe("Utils", func() {

@@ -18,10 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/provider-local/local"
-
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
 type mutator struct{}

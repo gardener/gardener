@@ -17,14 +17,14 @@ package helper_test
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 )
 
 var _ = Describe("helper", func() {

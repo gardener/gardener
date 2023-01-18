@@ -20,9 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Marshal transform RawState to []byte representation. It encodes the raw state data

@@ -17,6 +17,11 @@ package rest
 import (
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/registry/rest"
+	genericapiserver "k8s.io/apiserver/pkg/server"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -34,11 +39,6 @@ import (
 	seedstore "github.com/gardener/gardener/pkg/registry/core/seed/storage"
 	shootstore "github.com/gardener/gardener/pkg/registry/core/shoot/storage"
 	shootstatestore "github.com/gardener/gardener/pkg/registry/core/shootstate/storage"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/registry/generic"
-	"k8s.io/apiserver/pkg/registry/rest"
-	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
 // StorageProvider contains configurations related to the core resources.

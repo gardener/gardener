@@ -18,14 +18,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	backupentryregistry "github.com/gardener/gardener/pkg/registry/core/backupentry"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	backupentryregistry "github.com/gardener/gardener/pkg/registry/core/backupentry"
 )
 
 var _ = Describe("PrepareForUpdate", func() {

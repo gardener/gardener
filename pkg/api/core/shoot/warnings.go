@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // GetWarnings returns warnings for the provided shoot.

@@ -18,10 +18,6 @@ import (
 	"errors"
 	"fmt"
 
-	extensionsmockcmd "github.com/gardener/gardener/extensions/pkg/controller/cmd/mock"
-	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,6 +26,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	extensionsmockcmd "github.com/gardener/gardener/extensions/pkg/controller/cmd/mock"
+	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Options", func() {

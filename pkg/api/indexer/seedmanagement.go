@@ -18,10 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AddManagedSeedShootName adds an index for seedmanagement.ManagedSeedShootName to the given indexer.
