@@ -33,6 +33,7 @@ build:
         - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
+        - pkg/apis/extensions/v1alpha1/helper
         - pkg/apis/extensions/validation
         - pkg/apis/operations
         - pkg/apis/operations/install
@@ -122,6 +123,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
+        - VERSION
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
       main: ./cmd/gardener-resource-manager
@@ -144,6 +146,7 @@ build:
         - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
+        - pkg/apis/extensions/v1alpha1/helper
         - pkg/apis/extensions/validation
         - pkg/apis/operations
         - pkg/apis/operations/install
@@ -169,6 +172,7 @@ build:
         - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
         - pkg/extensions
+        - pkg/features
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
@@ -218,6 +222,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/version
         - vendor
+        - VERSION
 deploy:
   helm:
     releases:

@@ -17,14 +17,14 @@ package networkpolicies
 import (
 	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 )
 
 // GlobalValues contains deployment parameters for the global network policies.

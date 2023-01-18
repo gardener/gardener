@@ -19,15 +19,15 @@ import (
 	"crypto/rsa"
 	"crypto/x509/pkix"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("CSR autoapprove controller tests", func() {

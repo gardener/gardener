@@ -15,18 +15,18 @@
 package api
 
 import (
-	authenticationinstall "github.com/gardener/gardener/pkg/apis/authentication/install"
-	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
-	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
-	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
-	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
-
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	authenticationinstall "github.com/gardener/gardener/pkg/apis/authentication/install"
+	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
+	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
+	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 )
 
 var (

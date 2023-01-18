@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
+
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 )
 
 const (

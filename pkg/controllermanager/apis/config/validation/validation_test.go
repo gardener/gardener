@@ -15,15 +15,15 @@
 package validation_test
 
 import (
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
 )
 
 var _ = Describe("#ValidateControllerManagerConfiguration", func() {

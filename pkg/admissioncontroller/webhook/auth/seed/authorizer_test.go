@@ -18,17 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
-	graphpkg "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
-	mockgraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph/mock"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/logger"
-
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -42,6 +31,17 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
+	graphpkg "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
+	mockgraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph/mock"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 var _ = Describe("Seed", func() {

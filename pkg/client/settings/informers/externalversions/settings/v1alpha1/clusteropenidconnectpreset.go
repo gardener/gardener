@@ -22,14 +22,15 @@ import (
 	"context"
 	time "time"
 
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	versioned "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
-	internalinterfaces "github.com/gardener/gardener/pkg/client/settings/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	versioned "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
+	internalinterfaces "github.com/gardener/gardener/pkg/client/settings/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 )
 
 // ClusterOpenIDConnectPresetInformer provides access to a shared informer and lister for

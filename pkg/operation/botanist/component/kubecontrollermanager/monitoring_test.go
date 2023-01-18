@@ -17,13 +17,13 @@ package kubecontrollermanager_test
 import (
 	"path/filepath"
 
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
-
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 )
 
 var _ = Describe("Monitoring", func() {

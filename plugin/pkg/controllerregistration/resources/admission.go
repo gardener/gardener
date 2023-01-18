@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 )
 
 const (

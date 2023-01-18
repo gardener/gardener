@@ -33,7 +33,11 @@ It must be ensured that the API is always backwards-compatible.
 
 ### Removing a Field
 
-If fields shall be removed permanently from the API, then a proper deprecation period must be adhered to so that end-users have enough time adapt their clients. The followed process for removing a field is:
+If fields shall be removed permanently from the API, then a proper deprecation period must be adhered to so that end-users have enough time to adapt their clients.
+
+Once the deprecation period is over, the field should be dropped from the API in a two-step process, i.e., in two release cycles. In the first step, all the usages in the code base should be dropped. In the second step, the field should be dropped from API. We need to follow this two-step process cause there can be the case where `gardener-apiserver` is upgraded to a new version in which the field has been removed but other controllers are still on the old version of Gardener. This can lead to `nil` pointer exceptions or other unexpected behaviour.
+
+The steps for removing a field from the code base is:
 1. The field in the external version(s) has to be commented out with appropriate doc string that the protobuf number of the corresponding field is reserved. Example:
 
    ```diff

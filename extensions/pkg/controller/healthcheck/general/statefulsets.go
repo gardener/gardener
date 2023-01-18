@@ -18,16 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // StatefulSetHealthChecker contains all the information for the StatefulSet HealthCheck

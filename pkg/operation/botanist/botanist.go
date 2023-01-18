@@ -21,6 +21,9 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -32,9 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/kuberbacproxy"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
-	"k8s.io/utils/clock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultInterval is the default interval for retry operations.

@@ -21,9 +21,10 @@ package internalversion
 import (
 	"fmt"
 
-	core "github.com/gardener/gardener/pkg/apis/core"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
+
+	core "github.com/gardener/gardener/pkg/apis/core"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other

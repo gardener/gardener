@@ -20,12 +20,6 @@ import (
 	"crypto/x509/pkix"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -35,6 +29,12 @@ import (
 	csrutil "k8s.io/client-go/util/certificate/csr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // labelsE2ETestCSRAccess is the set of labels added to all CSRs and ClusterRoleBindings for easy cleanup.

@@ -15,9 +15,9 @@
 package shoottolerationrestriction
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

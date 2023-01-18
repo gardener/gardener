@@ -20,9 +20,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
 // ScrapeConfigs is a utility test function for MonitoringComponents in order to test the scape configurations.

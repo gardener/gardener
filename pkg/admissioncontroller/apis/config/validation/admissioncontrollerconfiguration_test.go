@@ -15,9 +15,6 @@
 package validation_test
 
 import (
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -25,6 +22,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 )
 
 var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {

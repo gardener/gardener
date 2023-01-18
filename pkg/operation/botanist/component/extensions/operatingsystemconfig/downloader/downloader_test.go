@@ -15,13 +15,13 @@
 package downloader_test
 
 import (
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Downloader", func() {

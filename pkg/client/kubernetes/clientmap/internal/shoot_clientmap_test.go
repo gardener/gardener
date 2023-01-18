@@ -18,16 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -41,6 +31,16 @@ import (
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("ShootClientMap", func() {

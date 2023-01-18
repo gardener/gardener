@@ -22,8 +22,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/authentication"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/authentication"
 )
 
 // ValidateAdminKubeconfigRequest validates a AdminKubeconfigRequest.

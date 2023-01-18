@@ -18,10 +18,10 @@ package v1alpha1
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/operations"
-
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/operations"
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {

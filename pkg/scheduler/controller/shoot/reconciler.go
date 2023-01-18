@@ -19,13 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
 
 // Reconciler schedules shoots to seeds.

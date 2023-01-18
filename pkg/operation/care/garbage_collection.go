@@ -20,15 +20,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/shoot"
-
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 // GarbageCollection contains required information for shoot and seed garbage collection.

@@ -18,9 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/gardener/gardener/pkg/controllerutils"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,6 +25,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/gardener/gardener/pkg/controllerutils"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 const resourceVersion = "42"

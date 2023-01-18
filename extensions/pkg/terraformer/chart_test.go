@@ -17,11 +17,11 @@ package terraformer
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/helm/pkg/manifest"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 func mkManifest(name string, content string) manifest.Manifest {

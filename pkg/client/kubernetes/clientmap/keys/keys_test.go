@@ -15,13 +15,13 @@
 package keys_test
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 )
 
 var _ = Describe("Keys", func() {

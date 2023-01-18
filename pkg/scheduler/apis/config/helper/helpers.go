@@ -17,10 +17,11 @@ package helper
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	"github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 var scheme *runtime.Scheme

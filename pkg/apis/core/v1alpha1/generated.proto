@@ -1610,6 +1610,12 @@ message Networking {
   // Services is the CIDR of the service network. This field is immutable.
   // +optional
   optional string services = 5;
+
+  // IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+  // Defaults to ["IPv4"].
+  // +optional
+  repeated string ipFamilies = 6;
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
@@ -2063,6 +2069,12 @@ message SeedNetworks {
   // ShootDefaults contains the default networks CIDRs for shoots.
   // +optional
   optional ShootNetworks shootDefaults = 4;
+
+  // IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+  // Defaults to ["IPv4"].
+  // +optional
+  repeated string ipFamilies = 5;
 }
 
 // SeedProvider defines the provider-specific information of this Seed cluster.
@@ -2176,6 +2188,14 @@ message SeedSettingScheduling {
   optional bool visible = 1;
 }
 
+// SeedSettingShootDNS controls the shoot DNS settings for the seed.
+message SeedSettingShootDNS {
+  // Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the
+  // seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here.
+  // This is useful for environments where DNS is not required.
+  optional bool enabled = 1;
+}
+
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
 // seed.
 message SeedSettingVerticalPodAutoscaler {
@@ -2194,6 +2214,11 @@ message SeedSettings {
   // Scheduling controls settings for scheduling decisions for the seed.
   // +optional
   optional SeedSettingScheduling scheduling = 2;
+
+  // ShootDNS controls the shoot DNS settings for the seed.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
+  // +optional
+  optional SeedSettingShootDNS shootDNS = 3;
 
   // LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
   // +optional

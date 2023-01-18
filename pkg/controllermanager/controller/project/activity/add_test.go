@@ -18,12 +18,6 @@ import (
 	"context"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/project/activity"
-	projectregistry "github.com/gardener/gardener/pkg/registry/core/project"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,6 +31,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/project/activity"
+	projectregistry "github.com/gardener/gardener/pkg/registry/core/project"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Add", func() {

@@ -22,13 +22,6 @@ import (
 	"os"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -39,6 +32,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // WaitUntilDaemonSetIsRunning waits until the daemon set with <daemonSetName> is running
@@ -321,10 +321,11 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 	}
 
 	shootConditions := map[gardencorev1beta1.ConditionType]struct{}{
-		gardencorev1beta1.ShootAPIServerAvailable:      {},
-		gardencorev1beta1.ShootControlPlaneHealthy:     {},
-		gardencorev1beta1.ShootEveryNodeReady:          {},
-		gardencorev1beta1.ShootSystemComponentsHealthy: {},
+		gardencorev1beta1.ShootAPIServerAvailable:             {},
+		gardencorev1beta1.ShootControlPlaneHealthy:            {},
+		gardencorev1beta1.ShootObservabilityComponentsHealthy: {},
+		gardencorev1beta1.ShootEveryNodeReady:                 {},
+		gardencorev1beta1.ShootSystemComponentsHealthy:        {},
 	}
 
 	for _, condition := range shoot.Status.Conditions {

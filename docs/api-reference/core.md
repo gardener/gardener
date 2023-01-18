@@ -4185,6 +4185,16 @@ float64
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.IPFamily">IPFamily
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedNetworks">SeedNetworks</a>)
+</p>
+<p>
+<p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
 </h3>
 <p>
@@ -6788,6 +6798,22 @@ string
 <p>Services is the CIDR of the service network. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+Defaults to [&ldquo;IPv4&rdquo;].</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.NginxIngress">NginxIngress
@@ -8056,6 +8082,22 @@ ShootNetworks
 in the seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+Defaults to [&ldquo;IPv4&rdquo;].</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedProvider">SeedProvider
@@ -8499,6 +8541,38 @@ are not considered by the scheduler.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingShootDNS">SeedSettingShootDNS
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingShootDNS controls the shoot DNS settings for the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the
+seed won&rsquo;t get any DNS providers, DNS records, and no DNS extension controller is required to be installed here.
+This is useful for environments where DNS is not required.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingVerticalPodAutoscaler">SeedSettingVerticalPodAutoscaler
 </h3>
 <p>
@@ -8575,6 +8649,21 @@ SeedSettingScheduling
 <td>
 <em>(Optional)</em>
 <p>Scheduling controls settings for scheduling decisions for the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shootDNS</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingShootDNS">
+SeedSettingShootDNS
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShootDNS controls the shoot DNS settings for the seed.
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.</p>
 </td>
 </tr>
 <tr>

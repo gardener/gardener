@@ -19,13 +19,13 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("imagevector", func() {

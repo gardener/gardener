@@ -21,12 +21,12 @@ import (
 	"path/filepath"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	. "github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	"github.com/gardener/gardener/pkg/utils"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Certificates", func() {

@@ -19,12 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/operations"
-	operationsvalidation "github.com/gardener/gardener/pkg/apis/operations/validation"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -34,6 +28,12 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"github.com/gardener/gardener/pkg/api"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	operationsvalidation "github.com/gardener/gardener/pkg/apis/operations/validation"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (

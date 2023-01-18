@@ -15,10 +15,10 @@
 package dependencywatchdog_test
 
 import (
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 )
 
 var _ = Describe("Logging", func() {

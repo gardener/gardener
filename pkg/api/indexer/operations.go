@@ -18,10 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AddBastionShootName adds an index for operations.BastionShootName to the given indexer.

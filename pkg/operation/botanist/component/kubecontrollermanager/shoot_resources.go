@@ -17,11 +17,11 @@ package kubecontrollermanager
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 func (k *kubeControllerManager) reconcileShootResources(ctx context.Context, serviceAccountName string) error {

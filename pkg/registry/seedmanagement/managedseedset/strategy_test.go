@@ -17,16 +17,16 @@ package managedseedset_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	. "github.com/gardener/gardener/pkg/registry/seedmanagement/managedseedset"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	. "github.com/gardener/gardener/pkg/registry/seedmanagement/managedseedset"
 )
 
 var _ = Describe("Strategy", func() {

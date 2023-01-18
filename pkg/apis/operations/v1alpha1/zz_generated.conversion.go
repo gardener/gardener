@@ -24,13 +24,14 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
-	core "github.com/gardener/gardener/pkg/apis/core"
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	operations "github.com/gardener/gardener/pkg/apis/operations"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	core "github.com/gardener/gardener/pkg/apis/core"
+	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	operations "github.com/gardener/gardener/pkg/apis/operations"
 )
 
 func init() {

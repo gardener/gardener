@@ -18,9 +18,6 @@ import (
 	"context"
 	"errors"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,6 +25,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Statefulset.", func() {

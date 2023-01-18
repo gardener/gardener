@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	"github.com/hashicorp/go-multierror"
+
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 var (

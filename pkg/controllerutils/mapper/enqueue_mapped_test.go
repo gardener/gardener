@@ -17,8 +17,6 @@ package mapper_test
 import (
 	"context"
 
-	. "github.com/gardener/gardener/pkg/controllerutils/mapper"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	. "github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 var _ = Describe("EnqueueMapped", func() {

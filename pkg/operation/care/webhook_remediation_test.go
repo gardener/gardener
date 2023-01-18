@@ -17,15 +17,6 @@ package care_test
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
-	. "github.com/gardener/gardener/pkg/operation/care"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,6 +26,15 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
+	. "github.com/gardener/gardener/pkg/operation/care"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("WebhookRemediation", func() {
@@ -226,6 +226,7 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(validatingWebhookConfiguration.Webhooks[0].NamespaceSelector.MatchExpressions).To(ConsistOf(
 						metav1.LabelSelectorRequirement{Key: "shoot.gardener.cloud/no-cleanup", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
 						metav1.LabelSelectorRequirement{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+						metav1.LabelSelectorRequirement{Key: "kubernetes.io/metadata.name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
 					))
 				})
 
@@ -393,6 +394,7 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(mutatingWebhookConfiguration.Webhooks[0].NamespaceSelector.MatchExpressions).To(ConsistOf(
 						metav1.LabelSelectorRequirement{Key: "shoot.gardener.cloud/no-cleanup", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
 						metav1.LabelSelectorRequirement{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+						metav1.LabelSelectorRequirement{Key: "kubernetes.io/metadata.name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
 					))
 				})
 

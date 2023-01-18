@@ -16,6 +16,5 @@ package fluentoperator
 
 // TODO(Kristian-ZH): Remove this when the fluent operator is deployed
 import (
-	// Dummy import which is used to vendor fluent/fluent-operator package that is used by the crd generator
 	_ "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2"
 )

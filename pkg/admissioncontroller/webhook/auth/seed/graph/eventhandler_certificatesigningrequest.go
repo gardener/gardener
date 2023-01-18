@@ -18,13 +18,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
-	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-
 	certificatesv1 "k8s.io/api/certificates/v1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+
+	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer cache.Informer) {

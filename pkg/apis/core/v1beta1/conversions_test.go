@@ -15,13 +15,13 @@
 package v1beta1_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("Conversion", func() {

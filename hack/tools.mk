@@ -34,6 +34,7 @@ DOCFORGE                   := $(TOOLS_BIN_DIR)/docforge
 GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
 GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
+GOIMPORTSREVISER           := $(TOOLS_BIN_DIR)/goimports-reviser
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
 GOMEGACHECK                := $(TOOLS_BIN_DIR)/gomegacheck.so # plugin binary
 GO_APIDIFF                 := $(TOOLS_BIN_DIR)/go-apidiff
@@ -58,6 +59,7 @@ YQ                         := $(TOOLS_BIN_DIR)/yq
 DOCFORGE_VERSION ?= v0.32.0
 GOLANGCI_LINT_VERSION ?= v1.50.1
 GO_APIDIFF_VERSION ?= v0.5.0
+GOIMPORTSREVISER_VERSION ?= v3.3.0
 GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.6.3
 KIND_VERSION ?= v0.14.0
@@ -111,6 +113,9 @@ $(GINKGO): go.mod
 
 $(GOIMPORTS): go.mod
 	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports
+
+$(GOIMPORTSREVISER): $(call tool_version_file,$(GOIMPORTSREVISER),$(GOIMPORTSREVISER_VERSION))
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/incu6us/goimports-reviser/v3@$(GOIMPORTSREVISER_VERSION)
 
 $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION))
 	@# CGO_ENABLED has to be set to 1 in order for golangci-lint to be able to load plugins

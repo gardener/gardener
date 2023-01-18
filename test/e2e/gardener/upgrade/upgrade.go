@@ -19,16 +19,16 @@ import (
 	"os"
 	"time"
 
-	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/framework"
-	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
-	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/framework"
+	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
+	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 )
 
 var _ = Describe("Gardener upgrade Tests for", func() {

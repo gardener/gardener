@@ -18,16 +18,16 @@ import (
 	"math"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
-
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -114,6 +114,10 @@ func SetDefaults_Seed(obj *Seed) {
 		obj.Spec.Settings.Scheduling = &SeedSettingScheduling{Visible: true}
 	}
 
+	if obj.Spec.Settings.ShootDNS == nil {
+		obj.Spec.Settings.ShootDNS = &SeedSettingShootDNS{Enabled: true}
+	}
+
 	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
@@ -124,6 +128,13 @@ func SetDefaults_Seed(obj *Seed) {
 
 	if obj.Spec.Settings.DependencyWatchdog == nil {
 		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
+	}
+}
+
+// SetDefaults_SeedNetworks sets default values for SeedNetworks objects.
+func SetDefaults_SeedNetworks(obj *SeedNetworks) {
+	if len(obj.IPFamilies) == 0 {
+		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
 	}
 }
 
@@ -182,7 +193,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 	}
 	if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
-		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(obj.Spec.Kubernetes.Kubelet, obj.Spec.Provider.Workers)
+		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
 	}
 	if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
 		obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
@@ -324,6 +335,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeHorizontal && obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeClusterProportional {
 		obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
+	}
+}
+
+// SetDefaults_Networking sets default values for Networking objects.
+func SetDefaults_Networking(obj *Networking) {
+	if len(obj.IPFamilies) == 0 {
+		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
 	}
 }
 
@@ -489,14 +507,21 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 
 // Helper functions
 
-func calculateDefaultNodeCIDRMaskSize(kubelet *KubeletConfig, workers []Worker) *int32 {
-	var maxPods int32 = 110 // default maxPods setting on kubelet
-
-	if kubelet != nil && kubelet.MaxPods != nil {
-		maxPods = *kubelet.MaxPods
+func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
+	if IsIPv6SingleStack(shoot.Networking.IPFamilies) {
+		// If shoot is using IPv6 single-stack, don't be stingy and allocate larger pod CIDRs per node.
+		// We don't calculate a nodeCIDRMaskSize matching the maxPods settings in this case, and simply apply
+		// kube-controller-manager's default value for the --node-cidr-mask-size flag.
+		return pointer.Int32(64)
 	}
 
-	for _, worker := range workers {
+	var maxPods int32 = 110 // default maxPods setting on kubelet
+
+	if shoot != nil && shoot.Kubernetes.Kubelet != nil && shoot.Kubernetes.Kubelet.MaxPods != nil {
+		maxPods = *shoot.Kubernetes.Kubelet.MaxPods
+	}
+
+	for _, worker := range shoot.Provider.Workers {
 		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPods {
 			maxPods = *worker.Kubernetes.Kubelet.MaxPods
 		}

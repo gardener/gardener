@@ -99,6 +99,11 @@ const (
 	// owner: @ScheererJ @DockToFuture
 	// alpha: v1.55.0
 	CoreDNSQueryRewriting featuregate.Feature = "CoreDNSQueryRewriting"
+
+	// IPv6SingleStack allows creating shoot clusters with IPv6 single-stack networking (GEP-21).
+	// owner: @timebertt
+	// alpha: v1.63.0
+	IPv6SingleStack featuregate.Feature = "IPv6SingleStack"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -113,6 +118,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HAControlPlanes:       {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting: {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:       {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

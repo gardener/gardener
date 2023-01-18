@@ -15,14 +15,14 @@
 package predicate_test
 
 import (
-	. "github.com/gardener/gardener/pkg/resourcemanager/predicate"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	. "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 var _ = Describe("#HasFinalizer", func() {

@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 )
 
 // GardenContext wraps the actual context and cluster object.

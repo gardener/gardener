@@ -484,3 +484,11 @@ func IsHAControlPlaneConfigured(shoot *core.Shoot) bool {
 func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
 	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
 }
+
+// DeterminePrimaryIPFamily determines the primary IP family out of a specified list of IP families.
+func DeterminePrimaryIPFamily(ipFamilies []core.IPFamily) core.IPFamily {
+	if len(ipFamilies) == 0 {
+		return core.IPFamilyIPv4
+	}
+	return ipFamilies[0]
+}

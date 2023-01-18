@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 )
 
 const (

@@ -47,8 +47,13 @@ function check() {
     sort |\
     uniq > "$path_actual_dependencies"
 
-  # always add vendor directory
+  # always add vendor directory and VERSION file
   echo "vendor" >> "$path_actual_dependencies"
+  echo "VERSION" >> "$path_actual_dependencies"
+
+  # sort dependencies
+  sort -o $path_current_skaffold_dependencies{,}
+  sort -o $path_actual_dependencies{,}
 
   echo -n ">> Checking defined dependencies in Skaffold config '$skaffold_config_name' for '$binary_name' in '$skaffold_file'..."
   if ! diff="$(diff "$path_current_skaffold_dependencies" "$path_actual_dependencies")"; then

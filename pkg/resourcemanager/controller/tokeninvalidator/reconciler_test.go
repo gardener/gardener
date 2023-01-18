@@ -17,8 +17,6 @@ package tokeninvalidator_test
 import (
 	"context"
 
-	. "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 )
 
 var _ = Describe("TokenInvalidator", func() {

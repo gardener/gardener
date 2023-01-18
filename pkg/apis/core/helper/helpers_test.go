@@ -815,4 +815,21 @@ var _ = Describe("helper", func() {
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
 		})
 	})
+
+	Describe("#DeterminePrimaryIPFamily", func() {
+		It("should return IPv4 for empty ipFamilies", func() {
+			Expect(DeterminePrimaryIPFamily(nil)).To(Equal(core.IPFamilyIPv4))
+			Expect(DeterminePrimaryIPFamily([]core.IPFamily{})).To(Equal(core.IPFamilyIPv4))
+		})
+
+		It("should return IPv4 if it's the first entry", func() {
+			Expect(DeterminePrimaryIPFamily([]core.IPFamily{core.IPFamilyIPv4})).To(Equal(core.IPFamilyIPv4))
+			Expect(DeterminePrimaryIPFamily([]core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6})).To(Equal(core.IPFamilyIPv4))
+		})
+
+		It("should return IPv6 if it's the first entry", func() {
+			Expect(DeterminePrimaryIPFamily([]core.IPFamily{core.IPFamilyIPv6})).To(Equal(core.IPFamilyIPv6))
+			Expect(DeterminePrimaryIPFamily([]core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4})).To(Equal(core.IPFamilyIPv6))
+		})
+	})
 })

@@ -15,12 +15,13 @@
 package helper_test
 
 import (
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	. "github.com/gardener/gardener/pkg/scheduler/apis/config/helper"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	. "github.com/gardener/gardener/pkg/scheduler/apis/config/helper"
+	"github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 var _ = Describe("Helpers test", func() {

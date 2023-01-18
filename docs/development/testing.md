@@ -332,7 +332,7 @@ $ stress -ignore "unable to grab random port" -p 16 ./test/integration/controlle
   - If the controller works on cluster-scoped resources:
     - Label the resources with a label specific to the test run, e.g. the test namespace's name: [example test](https://github.com/gardener/gardener/blob/b01239edfd594b09ecd44dd77fba7a05a74820e8/test/integration/controllermanager/cloudprofile/cloudprofile_test.go#L38)
     - Restrict the manager's cache for these objects with a corresponding label selector: [example test](https://github.com/gardener/gardener/blob/b01239edfd594b09ecd44dd77fba7a05a74820e8/test/integration/controllermanager/cloudprofile/cloudprofile_suite_test.go#L110-L116)
-    - Alternatively, use a default label selector for all objects in the manager's cache: [example test](https://github.com/gardener/gardener/blob/b01239edfd594b09ecd44dd77fba7a05a74820e8/test/integration/controllermanager/controllerdeployment/controllerdeployment_suite_test.go#L112-L116)
+    - Alternatively, use a checksum of a random UUID using `uuid.NewUUID()` function: [example test](https://github.com/gardener/gardener/blob/3840acaaf57955fd65330c83b2b2d5bdaad56179/test/integration/resourcemanager/tokeninvalidator/tokeninvalidator_suite_test.go#L71-L72)
     - This allows running a test in parallel against the same existing cluster for deflaking and stress testing, even if it works with cluster-scoped resources that are visible to all parallel test runs: [example PR](https://github.com/gardener/gardener/pull/6527)
   - Use dedicated test resources for each test case:
     - Use `GenerateName`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/health/health_test.go#L38-L48)
@@ -340,7 +340,7 @@ $ stress -ignore "unable to grab random port" -p 16 ./test/integration/controlle
     - Logging the created object names is generally a good idea to support debugging failing or flaky tests: [example test](https://github.com/gardener/gardener/blob/50f92c5dc35160fe05da9002a79e7ce4a9cf3509/test/integration/controllermanager/cloudprofile/cloudprofile_test.go#L94-L96)
     - Always delete all resources after the test case (e.g., via `DeferCleanup`) that were created for the test case 
     - This avoids conflicts between test cases and cascading failures which distract from the actual root failures
-  - don't tolerate already existing resources (~dirty test environment), code smell: ignoring already exist errors
+  - Don't tolerate already existing resources (~dirty test environment), code smell: ignoring already exist errors
 - Don't use a cached client in test code (e.g., the one from a controller-runtime manager), always construct a dedicated test client (uncached): [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_suite_test.go#L96-L97)
 - Use [asynchronous assertions](https://onsi.github.io/gomega/#making-asynchronous-assertions): `Eventually` and `Consistently`.
   - Never `Expect` anything to happen synchronously (immediately).

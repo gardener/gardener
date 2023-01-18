@@ -19,13 +19,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gardener/gardener/pkg/logger"
-
 	"github.com/go-logr/logr"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 var commonCfg *CommonConfig

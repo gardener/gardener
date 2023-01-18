@@ -19,9 +19,9 @@ import (
 	_ "embed"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/utils/imagevector"
-
 	"k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (

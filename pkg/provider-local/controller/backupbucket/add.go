@@ -15,12 +15,12 @@
 package backupbucket
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // ControllerName is the name of the controller.

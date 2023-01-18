@@ -23,15 +23,15 @@ import (
 	"net/http/httptest"
 	"time"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Handler", func() {

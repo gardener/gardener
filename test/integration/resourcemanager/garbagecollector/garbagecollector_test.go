@@ -17,8 +17,6 @@ package garbagecollector_test
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
@@ -27,7 +25,10 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Garbage collector tests", func() {
@@ -39,7 +40,7 @@ var _ = Describe("Garbage collector tests", func() {
 	)
 
 	BeforeEach(func() {
-		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		garbageCollectableObjects = make([]client.Object, 0, 14)
 
 		for i := 0; i < cap(garbageCollectableObjects)/2; i++ {

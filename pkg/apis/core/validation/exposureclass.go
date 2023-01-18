@@ -15,12 +15,12 @@
 package validation
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 // ValidateExposureClass validates a ExposureClass object.

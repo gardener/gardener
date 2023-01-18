@@ -18,14 +18,14 @@ import (
 	"bytes"
 	"io"
 
-	. "github.com/gardener/gardener/pkg/utils/imagevector"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("validation", func() {

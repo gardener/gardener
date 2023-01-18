@@ -15,14 +15,14 @@
 package framework_test
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/test/framework"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Kubernetes Utils", func() {
@@ -190,6 +190,10 @@ func appendShootConditionsToShoot(shoot *gardencorev1beta1.Shoot) {
 		},
 		{
 			Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+			Status: gardencorev1beta1.ConditionTrue,
+		},
+		{
+			Type:   gardencorev1beta1.ShootObservabilityComponentsHealthy,
 			Status: gardencorev1beta1.ConditionTrue,
 		},
 		{

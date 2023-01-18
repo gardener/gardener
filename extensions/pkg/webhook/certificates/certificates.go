@@ -22,10 +22,10 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/utils/pointer"
+
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-
-	"k8s.io/utils/pointer"
 )
 
 // GenerateUnmanagedCertificates generates a one-off CA and server cert for a webhook server. The server certificate and

@@ -15,11 +15,11 @@
 package nodelocaldns_test
 
 import (
+	. "github.com/onsi/ginkgo/v2"
+
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
-
-	. "github.com/onsi/ginkgo/v2"
 )
 
 var _ = Describe("Monitoring", func() {

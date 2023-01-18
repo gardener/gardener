@@ -15,10 +15,11 @@
 package terraformer_test
 
 import (
-	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/extensions/pkg/terraformer"
 )
 
 const (

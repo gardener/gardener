@@ -19,9 +19,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,6 +29,9 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("Manager", func() {

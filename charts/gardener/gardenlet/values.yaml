@@ -105,6 +105,8 @@ config:
         duration: 1m
       - type: ControlPlaneHealthy
         duration: 1m
+      - type: ObservabilityComponentsHealthy
+        duration: 1m
       - type: SystemComponentsHealthy
         duration: 1m
       - type: EveryNodeReady

@@ -15,11 +15,11 @@
 package actuator
 
 import (
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 )
 
 // Actuator uses a generator to render an OperatingSystemConfiguration for an Operating System

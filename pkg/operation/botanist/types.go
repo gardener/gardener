@@ -15,9 +15,9 @@
 package botanist
 
 import (
-	"github.com/gardener/gardener/pkg/operation"
-
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/gardener/gardener/pkg/operation"
 )
 
 // Botanist is a struct which has methods that perform cloud-independent operations for a Shoot cluster.

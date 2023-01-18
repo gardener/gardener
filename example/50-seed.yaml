@@ -51,6 +51,8 @@ spec:
 #     providerConfig:
 #       <some-optional-config-for-the-nginx-ingress-controller>
   networks: # seed and shoot networks must be disjunct
+    ipFamilies:
+    - IPv4
     nodes: 10.240.0.0/16
     pods: 10.241.128.0/17
     services: 10.241.0.0/17

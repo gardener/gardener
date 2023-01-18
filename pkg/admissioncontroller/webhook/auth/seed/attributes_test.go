@@ -15,13 +15,13 @@
 package seed_test
 
 import (
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
 )
 
 var _ = Describe("Attributes", func() {

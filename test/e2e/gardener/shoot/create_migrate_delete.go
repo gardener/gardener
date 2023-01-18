@@ -18,13 +18,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	. "github.com/gardener/gardener/test/framework"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {

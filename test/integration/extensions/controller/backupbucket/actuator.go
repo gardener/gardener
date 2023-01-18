@@ -19,11 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +26,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
 )
 
 // addTestControllerToManagerWithOptions adds a controller with the given Options to the given manager.

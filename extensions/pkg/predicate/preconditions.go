@@ -17,13 +17,13 @@ package predicate
 import (
 	"context"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
 // IsInGardenNamespacePredicate is a predicate which returns true when the provided object is in the 'garden' namespace.

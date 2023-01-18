@@ -20,11 +20,11 @@ import (
 	"path"
 	"text/template"
 
+	"github.com/go-logr/logr"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-
-	"github.com/go-logr/logr"
 )
 
 // DefaultUnitsPath is the default CoreOS path where to store units at.

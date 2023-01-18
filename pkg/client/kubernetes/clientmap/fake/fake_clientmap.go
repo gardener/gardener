@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ clientmap.ClientMap = &ClientMap{}

@@ -20,18 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,6 +38,18 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestBackupBucket(t *testing.T) {
@@ -112,7 +112,7 @@ var _ = BeforeSuite(func() {
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	By("Create project namespace")
+	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -120,7 +120,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
 		By("Delete project namespace")
@@ -215,8 +215,9 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddBackupEntryBucketName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
-	fakeClock = testclock.NewFakeClock(time.Now())
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+
 	Expect((&backupbucketcontroller.Reconciler{
 		Clock: fakeClock,
 		Config: config.BackupBucketControllerConfiguration{

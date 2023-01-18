@@ -17,10 +17,6 @@ package lifecycle_test
 import (
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -28,6 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Seed Lifecycle controller tests", func() {
@@ -40,6 +40,8 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now())
+
 		lease = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -221,7 +223,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		Context("rebootstrapping of ManagedSeed", func() {
 			JustBeforeEach(func() {
 				By("Create garden Namespace")
-				Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+				Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 				log.Info("Created garden Namespace", "namespace", client.ObjectKeyFromObject(gardenNamespace))
 
 				By("Create ManagedSeed")
@@ -259,6 +261,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.ShootAPIServerAvailable, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.ShootControlPlaneHealthy, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.ShootObservabilityComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.ShootSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},

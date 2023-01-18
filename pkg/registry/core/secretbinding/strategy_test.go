@@ -17,15 +17,15 @@ package secretbinding_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	secretbindingregistry "github.com/gardener/gardener/pkg/registry/core/secretbinding"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	secretbindingregistry "github.com/gardener/gardener/pkg/registry/core/secretbinding"
 )
 
 var _ = Describe("Strategy", func() {

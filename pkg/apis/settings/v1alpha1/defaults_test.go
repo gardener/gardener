@@ -17,11 +17,11 @@ package v1alpha1_test
 import (
 	"testing"
 
-	"github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 )
 
 func TestAPI(t *testing.T) {

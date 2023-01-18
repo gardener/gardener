@@ -17,10 +17,10 @@ package healthz_test
 import (
 	"context"
 
-	. "github.com/gardener/gardener/pkg/healthz"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/healthz"
 )
 
 var _ = Describe("Healthz", func() {

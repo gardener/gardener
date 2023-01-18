@@ -19,15 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,6 +33,14 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 func TestLifecycle(t *testing.T) {
@@ -102,7 +101,7 @@ var _ = BeforeSuite(func() {
 			GenerateName: testID + "-",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
@@ -121,9 +120,9 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
+	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 
-	By("Register controller")
 	Expect((&lifecycle.Reconciler{
 		Config: config.SeedControllerConfiguration{
 			MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},

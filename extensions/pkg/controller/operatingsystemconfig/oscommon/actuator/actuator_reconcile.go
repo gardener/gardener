@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	"github.com/go-logr/logr"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // Reconcile reconciles the update of a OperatingSystemConfig regenerating the os-specific format

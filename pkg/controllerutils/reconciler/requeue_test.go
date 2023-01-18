@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 )
 
 var _ = Describe("Requeue", func() {

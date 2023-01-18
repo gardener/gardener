@@ -17,10 +17,10 @@ package shoot
 import (
 	"testing"
 
-	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 )
 
 func TestShoot(t *testing.T) {

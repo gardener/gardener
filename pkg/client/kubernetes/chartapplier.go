@@ -18,9 +18,9 @@ import (
 	"context"
 	"embed"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-
 	"k8s.io/client-go/rest"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 // ChartApplier is an interface that describes needed methods that render and apply

@@ -18,12 +18,12 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	testclock "k8s.io/utils/clock/testing"
+
+	. "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestSecrets(t *testing.T) {

@@ -21,6 +21,13 @@ import (
 	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	workerhealthcheck "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
@@ -33,13 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
@@ -64,14 +64,14 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	// mcmReplicaFunc returns the desired replicas for machine controller manager
 	var mcmReplicaFunc = func() int32 {
 		switch {
+		// if there are any existing machine deployments present with a positive replica count then MCM is needed.
+		case isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments):
+			return 1
 		// If the cluster is hibernated then there is no further need of MCM and therefore its desired replicas is 0
 		case extensionscontroller.IsHibernated(cluster):
 			return 0
-		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0 if there are no existing machine deployments with positive replica count
+		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0
 		case extensionscontroller.IsHibernationEnabled(cluster) && extensionscontroller.IsCreationInProcess(cluster):
-			if isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments) {
-				return 1
-			}
 			return 0
 		// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
 		case extensionscontroller.IsHibernatingOrWakingUp(cluster):

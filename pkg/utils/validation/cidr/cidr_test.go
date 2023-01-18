@@ -17,25 +17,29 @@ package cidr_test
 import (
 	"net"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("cidr", func() {
-	Describe("#cidr IPv4", func() {
+	Context("IPv4", func() {
 		var (
+			ipFamily          string
 			invalidGardenCIDR = "invalid_cidr"
 			validGardenCIDR   = "10.0.0.0/8"
 			path              = field.NewPath("foo")
 		)
 
-		Context("NewCIDR", func() {
+		BeforeEach(func() {
+			ipFamily = IPFamilyIPv4
+		})
+
+		Describe("NewCIDR", func() {
 			It("should return a non-nil value", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -44,7 +48,7 @@ var _ = Describe("cidr", func() {
 
 		})
 
-		Context("GetCIDR", func() {
+		Describe("GetCIDR", func() {
 			It("should return a correct address", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -52,7 +56,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("GetIPNet", func() {
+		Describe("GetIPNet", func() {
 			It("should return a correct IPNet", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -71,7 +75,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("GetFieldPath", func() {
+		Describe("GetFieldPath", func() {
 			It("should return a correct FieldPath", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -88,7 +92,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("Parse", func() {
+		Describe("Parse", func() {
 			It("should return a correct FieldPath", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -102,7 +106,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateNotOverlap", func() {
+		Describe("ValidateNotOverlap", func() {
 			It("should not be a subset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				other := NewCIDR(string("2.2.2.2/32"), path)
@@ -165,7 +169,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateParse", func() {
+		Describe("ValidateParse", func() {
 			It("should parse without errors", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -184,7 +188,31 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateSubset", func() {
+		Describe("ValidateIPFamily", func() {
+			It("should not return an error for CIDR that matches IP family", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should not return an error if parsing failed", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should return an error for CIDR that doesn't match IP family", func() {
+				cdr := NewCIDR("2001:db8:11::/48", path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(path.String()),
+					"Detail": Equal(`must be a valid IPv4 address`),
+				}))
+			})
+		})
+
+		Describe("ValidateSubset", func() {
 			It("should be a subset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				other := NewCIDR(string("10.0.0.1/32"), field.NewPath("other"))
@@ -230,7 +258,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateOverlap", func() {
+		Describe("ValidateOverlap", func() {
 			It("should return an error on disjoint subnets", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				badPath := field.NewPath("bad")
@@ -258,14 +286,19 @@ var _ = Describe("cidr", func() {
 		})
 	})
 
-	Describe("#cidr IPv6", func() {
+	Context("IPv6", func() {
 		var (
+			ipFamily          string
 			invalidGardenCIDR = "invalid_cidr"
 			validGardenCIDR   = "2001:0db8:85a3::/104"
 			path              = field.NewPath("foo")
 		)
 
-		Context("NewCIDR", func() {
+		BeforeEach(func() {
+			ipFamily = IPFamilyIPv6
+		})
+
+		Describe("NewCIDR", func() {
 			It("should return a non-nil value", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -274,7 +307,7 @@ var _ = Describe("cidr", func() {
 
 		})
 
-		Context("GetCIDR", func() {
+		Describe("GetCIDR", func() {
 			It("should return a correct address", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -282,7 +315,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("GetIPNet", func() {
+		Describe("GetIPNet", func() {
 			It("should return a correct IPNet", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -301,7 +334,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("GetFieldPath", func() {
+		Describe("GetFieldPath", func() {
 			It("should return a correct FieldPath", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -318,7 +351,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("Parse", func() {
+		Describe("Parse", func() {
 			It("should return a correct FieldPath", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -332,7 +365,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateNotOverlap", func() {
+		Describe("ValidateNotOverlap", func() {
 			It("should not be a subset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				other := NewCIDR(string("3001:0db8:85a3::1/128"), path)
@@ -382,7 +415,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateParse", func() {
+		Describe("ValidateParse", func() {
 			It("should parse without errors", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
@@ -401,7 +434,31 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateSubset", func() {
+		Describe("ValidateIPFamily", func() {
+			It("should not return an error for CIDR that matches IP family", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should not return an error if parsing failed", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(BeEmpty())
+			})
+
+			It("should return an error for CIDR that doesn't match IP family", func() {
+				cdr := NewCIDR("10.1.0.0/16", path)
+
+				Expect(cdr.ValidateIPFamily(ipFamily)).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(path.String()),
+					"Detail": Equal(`must be a valid IPv6 address`),
+				}))
+			})
+		})
+
+		Describe("ValidateSubset", func() {
 			It("should be a subset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				other := NewCIDR(string("2001:0db8:85a3::1/128"), field.NewPath("other"))
@@ -447,7 +504,7 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateOverlap", func() {
+		Describe("ValidateOverlap", func() {
 			It("should return an error on disjoint subnets", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				badPath := field.NewPath("bad")

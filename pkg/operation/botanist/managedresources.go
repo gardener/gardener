@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
-
-	"github.com/hashicorp/go-multierror"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeleteManagedResources deletes all managed resources labeled with `origin=gardener` from the Shoot namespace in the Seed.

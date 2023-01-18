@@ -17,13 +17,13 @@ package clusteropenidconnectpreset
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/settings"
-	"github.com/gardener/gardener/pkg/apis/settings/validation"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/settings"
+	"github.com/gardener/gardener/pkg/apis/settings/validation"
 )
 
 type clusterOIDCPresetStrategy struct {

@@ -15,9 +15,9 @@
 package index
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // SecretRefNamespaceField is the field name for the index function that extracts the corresponding field from SecretBinding.

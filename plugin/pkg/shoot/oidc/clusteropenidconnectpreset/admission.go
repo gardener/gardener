@@ -21,6 +21,11 @@ import (
 	"io"
 	"strings"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apiserver/pkg/admission"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -29,11 +34,6 @@ import (
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingsv1alpha1lister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	applier "github.com/gardener/gardener/plugin/pkg/shoot/oidc"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apiserver/pkg/admission"
 )
 
 const (

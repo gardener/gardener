@@ -49,3 +49,11 @@ func GetDNSRecordTTL(ttl *int64) int64 {
 	}
 	return 120
 }
+
+// DeterminePrimaryIPFamily determines the primary IP family out of a specified list of IP families.
+func DeterminePrimaryIPFamily(ipFamilies []extensionsv1alpha1.IPFamily) extensionsv1alpha1.IPFamily {
+	if len(ipFamilies) == 0 {
+		return extensionsv1alpha1.IPFamilyIPv4
+	}
+	return ipFamilies[0]
+}

@@ -18,11 +18,12 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/gardener/gardener/pkg/apis/settings"
-	"github.com/gardener/gardener/pkg/utils"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/settings"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var (

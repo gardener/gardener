@@ -17,11 +17,11 @@ package secret
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/util/index"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/extensions/pkg/util/index"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // IsSecretInUseByShoot checks whether the given secret is in use by Shoot with the given provider type.

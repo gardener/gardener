@@ -17,9 +17,10 @@ package bastion
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/util/validation/field"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ConfigValidator validates the provider config of bastion resource with the cloud provider.

@@ -15,6 +15,13 @@
 package apiserver
 
 import (
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
+	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
+	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
+	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
+
 	bastionvalidator "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
@@ -37,13 +44,6 @@ import (
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootvpa "github.com/gardener/gardener/plugin/pkg/shoot/vpa"
-
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
-	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
-	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
-	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
 )
 
 var (

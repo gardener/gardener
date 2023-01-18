@@ -18,10 +18,10 @@ import (
 	"context"
 	"time"
 
-	e2e "github.com/gardener/gardener/test/e2e/gardener"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	e2e "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {

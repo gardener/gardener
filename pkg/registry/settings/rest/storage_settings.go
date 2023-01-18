@@ -15,15 +15,16 @@
 package rest
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/registry/rest"
+	genericapiserver "k8s.io/apiserver/pkg/server"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/settings"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	clusteropenidconnectpresetstore "github.com/gardener/gardener/pkg/registry/settings/clusteropenidconnectpreset/storage"
 	openidconnectpresetstore "github.com/gardener/gardener/pkg/registry/settings/openidconnectpreset/storage"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/registry/generic"
-	"k8s.io/apiserver/pkg/registry/rest"
-	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
 // StorageProvider is an empty struct.

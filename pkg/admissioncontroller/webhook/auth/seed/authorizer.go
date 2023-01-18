@@ -19,17 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -40,6 +29,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+
+	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardenlets. It never has an opinion on the request.

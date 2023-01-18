@@ -18,14 +18,14 @@ import (
 	"context"
 	"time"
 
-	. "github.com/gardener/gardener/pkg/api/core/shoot"
-	"github.com/gardener/gardener/pkg/apis/core"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/api/core/shoot"
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 var _ = Describe("Warnings", func() {

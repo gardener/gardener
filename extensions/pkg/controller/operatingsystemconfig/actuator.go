@@ -17,9 +17,9 @@ package operatingsystemconfig
 import (
 	"context"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	"github.com/go-logr/logr"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // Actuator acts upon OperatingSystemConfig resources.

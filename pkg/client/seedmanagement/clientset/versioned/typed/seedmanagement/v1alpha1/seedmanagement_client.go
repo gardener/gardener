@@ -21,9 +21,10 @@ package v1alpha1
 import (
 	"net/http"
 
+	rest "k8s.io/client-go/rest"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
-	rest "k8s.io/client-go/rest"
 )
 
 type SeedmanagementV1alpha1Interface interface {

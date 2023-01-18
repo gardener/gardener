@@ -15,17 +15,17 @@
 package original_test
 
 import (
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	mockcomponents "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/mock"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
-
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
+	mockcomponents "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/mock"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("Original", func() {

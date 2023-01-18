@@ -23,12 +23,6 @@ import (
 	"errors"
 	"time"
 
-	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/utils"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -40,6 +34,12 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
+
+	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Admin Kubeconfig", func() {

@@ -17,7 +17,7 @@ package kubeapiserver
 import (
 	"context"
 
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (k *kubeAPIServer) emptyHVPA() *hvpav1alpha1.Hvpa {

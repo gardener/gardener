@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	"github.com/mholt/archiver"
 	"github.com/onsi/ginkgo/v2"
 	"k8s.io/helm/pkg/downloader"
@@ -30,6 +28,8 @@ import (
 	"k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/repo"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 const (

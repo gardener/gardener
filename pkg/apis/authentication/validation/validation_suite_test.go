@@ -21,15 +21,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/authentication"
-	"github.com/gardener/gardener/pkg/apis/authentication/validation"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/authentication"
+	"github.com/gardener/gardener/pkg/apis/authentication/validation"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestValidation(t *testing.T) {

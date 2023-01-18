@@ -27,6 +27,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineImage,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineImageVersion,Architectures
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineImageVersion,CRI
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Networking,IPFamilies
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,NginxIngress,LoadBalancerSourceRanges
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,OIDCConfig,SigningAlgs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ProjectMember,Roles
@@ -36,6 +37,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Provider,Workers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Region,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SecretBinding,Quotas
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedNetworks,IPFamilies
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedProvider,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedSelector,ProviderTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedSettingLoadBalancerServices,Zones
@@ -84,6 +86,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImage,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,Architectures
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CRI
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Networking,IPFamilies
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NginxIngress,LoadBalancerSourceRanges
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,OIDCConfig,SigningAlgs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ProjectMember,Roles
@@ -94,6 +97,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Region,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SecretBinding,Quotas
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedNetworks,BlockCIDRs
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedNetworks,IPFamilies
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedProvider,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSelector,ProviderTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSettingLoadBalancerServices,Zones

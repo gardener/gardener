@@ -936,6 +936,10 @@ type Networking struct {
 	Nodes *string
 	// Services is the CIDR of the service network. This field is immutable.
 	Services *string
+	// IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+	// Defaults to ["IPv4"].
+	IPFamilies []IPFamily
 }
 
 const (
@@ -1254,8 +1258,10 @@ const (
 const (
 	// ShootAPIServerAvailable is a constant for a condition type indicating that the Shoot cluster's API server is available.
 	ShootAPIServerAvailable ConditionType = "APIServerAvailable"
-	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
+	// ShootControlPlaneHealthy is a constant for a condition type indicating the health of core control plane components.
 	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
+	// ShootObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
+	ShootObservabilityComponentsHealthy ConditionType = "ObservabilityComponentsHealthy"
 	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.

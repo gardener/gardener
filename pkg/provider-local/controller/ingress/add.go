@@ -16,7 +16,6 @@ package ingress
 
 import (
 	networkingv1 "k8s.io/api/networking/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

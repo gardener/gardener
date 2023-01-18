@@ -16,24 +16,13 @@ package validation
 
 import (
 	"fmt"
-	"math"
+	"math/big"
 	"net"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
-	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
-	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	"github.com/robfig/cron"
@@ -49,6 +38,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (
@@ -208,12 +208,12 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, isDockerConfigured(spec.Provider.Workers), meta.DeletionTimestamp != nil, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), meta.DeletionTimestamp != nil, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
-	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, fldPath.Child("provider"), inTemplate)...)
+	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, fldPath.Child("provider"), inTemplate)...)
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
@@ -298,16 +298,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		allErrs = append(allErrs, validateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Type, oldSpec.Networking.Type, fldPath.Child("networking", "type"))...)
-	if oldSpec.Networking.Pods != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Pods, oldSpec.Networking.Pods, fldPath.Child("networking", "pods"))...)
-	}
-	if oldSpec.Networking.Services != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Services, oldSpec.Networking.Services, fldPath.Child("networking", "services"))...)
-	}
-	if oldSpec.Networking.Nodes != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
-	}
+	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
+
 	return allErrs
 }
 
@@ -417,17 +409,38 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 	return allErrs
 }
 
+const (
+	// kube-controller-manager's default value for --node-cidr-mask-size for IPv4
+	defaultNodeCIDRMaskSizeV4 = 24
+	// kube-controller-manager's default value for --node-cidr-mask-size for IPv6
+	defaultNodeCIDRMaskSizeV6 = 64
+)
+
 // ValidateNodeCIDRMaskWithMaxPod validates if the Pod Network has enough ip addresses (configured via the NodeCIDRMask on the kube controller manager) to support the highest max pod setting on the shoot
-func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32) field.ErrorList {
+func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networking core.Networking) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	free := float64(32 - nodeCIDRMaskSize)
-	// first and last ips are reserved
-	// 2**32 will overflow int32 so use an unsigned
-	ipAdressesAvailable := uint32(math.Pow(2, free) - 2)
+	totalBitLen := int32(net.IPv4len * 8) // entire IPv4 bit length
+	defaultNodeCIDRMaskSize := defaultNodeCIDRMaskSizeV4
 
-	if ipAdressesAvailable < uint32(maxPod) {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller configuration incorrect. Please adjust the NodeCIDRMaskSize of the kube-controller to support the highest maxPod on any worker pool. The NodeCIDRMaskSize of '%d (default: 24)' of the kube-controller only supports '%d' ip adresses. Highest maxPod setting on kubelet is '%d (default: 110)'. Please choose a NodeCIDRMaskSize that at least supports %d ip adresses", nodeCIDRMaskSize, ipAdressesAvailable, maxPod, maxPod)))
+	if core.IsIPv6SingleStack(networking.IPFamilies) {
+		totalBitLen = net.IPv6len * 8 // entire IPv6 bit length
+		defaultNodeCIDRMaskSize = defaultNodeCIDRMaskSizeV6
+	}
+
+	// Each Node gets assigned a subnet of the entire pod network with a mask size of nodeCIDRMaskSize,
+	// calculate bit length of a single podCIDR subnet (Node.status.podCIDR).
+	subnetBitLen := totalBitLen - nodeCIDRMaskSize
+
+	// Calculate how many addresses a single podCIDR subnet contains.
+	// This will overflow uint64 if nodeCIDRMaskSize <= 64 (subnetBitLen >= 64, default in IPv6), so use big.Int
+	ipAdressesAvailable := &big.Int{}
+	ipAdressesAvailable.Exp(big.NewInt(2), big.NewInt(int64(subnetBitLen)), nil)
+	// first and last ips are reserved, subtract 2
+	ipAdressesAvailable.Sub(ipAdressesAvailable, big.NewInt(2))
+
+	if ipAdressesAvailable.Cmp(big.NewInt(int64(maxPod))) < 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller-manager configuration incorrect. Please adjust the nodeCIDRMaskSize to support the highest maxPod on any worker pool. The nodeCIDRMaskSize of %d (default: %d) only supports %d IP addresses. The highest maxPod setting is %d (default: 110). Please choose a nodeCIDRMaskSize that at least supports %d IP addresses", nodeCIDRMaskSize, defaultNodeCIDRMaskSize, ipAdressesAvailable, maxPod, maxPod)))
 	}
 
 	return allErrs
@@ -437,17 +450,23 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32) field.
 func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	var (
-		totalNodes       int32
-		nodeCIDRMaskSize int32 = 24
-		podNetworkCIDR         = core.DefaultPodNetworkCIDR
-	)
-
-	if shoot.Spec.Networking.Pods != nil {
-		podNetworkCIDR = *shoot.Spec.Networking.Pods
+	nodeCIDRMaskSize := int64(defaultNodeCIDRMaskSizeV4)
+	if core.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
+		nodeCIDRMaskSize = defaultNodeCIDRMaskSizeV6
 	}
 	if shoot.Spec.Kubernetes.KubeControllerManager != nil && shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
-		nodeCIDRMaskSize = *shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize
+		nodeCIDRMaskSize = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize)
+	}
+
+	// calculate maximum number of total nodes
+	totalNodes := int64(0)
+	for _, worker := range shoot.Spec.Provider.Workers {
+		totalNodes += int64(worker.Maximum)
+	}
+
+	podNetworkCIDR := core.DefaultPodNetworkCIDR
+	if shoot.Spec.Networking.Pods != nil {
+		podNetworkCIDR = *shoot.Spec.Networking.Pods
 	}
 
 	_, podNetwork, err := net.ParseCIDR(podNetworkCIDR)
@@ -456,21 +475,22 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 		return allErrs
 	}
 
-	cidrMask, _ := podNetwork.Mask.Size()
-	if cidrMask == 0 {
+	podCIDRMaskSize, _ := podNetwork.Mask.Size()
+	if podCIDRMaskSize == 0 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("networking").Child("pods"), podNetwork.String(), fmt.Sprintf("incorrect pod network mask : %s. Please ensure the mask is in proper form", podNetwork.String())))
 		return allErrs
 	}
 
-	maxNodeCount := uint32(math.Pow(2, float64(nodeCIDRMaskSize-int32(cidrMask))))
+	// Calculate how many subnets with nodeCIDRMaskSize can be allocated out of the pod network (with podCIDRMaskSize).
+	// This indicates how many Nodes we can host at max from a networking perspective.
+	var bitLen, maxNodeCount = &big.Int{}, &big.Int{}
+	bitLen.Sub(big.NewInt(nodeCIDRMaskSize), big.NewInt(int64(podCIDRMaskSize)))
+	maxNodeCount.Exp(big.NewInt(2), bitLen, nil)
 
-	for _, worker := range shoot.Spec.Provider.Workers {
-		totalNodes += worker.Maximum
-	}
-
-	if uint32(totalNodes) > maxNodeCount {
+	if maxNodeCount.Cmp(big.NewInt(totalNodes)) < 0 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("provider").Child("workers"), totalNodes, fmt.Sprintf("worker configuration incorrect. The podCIDRs in `spec.networking.pod` can only support a maximum of %d nodes. The total number of worker pool nodes should be less than %d ", maxNodeCount, maxNodeCount)))
 	}
+
 	return allErrs
 }
 
@@ -562,6 +582,24 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	}
 	if skippingMinorVersion {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
+	}
+
+	return allErrs
+}
+
+func validateNetworkingUpdate(newNetworking, oldNetworking core.Networking, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Type, oldNetworking.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.IPFamilies, oldNetworking.IPFamilies, fldPath.Child("ipFamilies"))...)
+	if oldNetworking.Pods != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Pods, oldNetworking.Pods, fldPath.Child("pods"))...)
+	}
+	if oldNetworking.Services != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Services, oldNetworking.Services, fldPath.Child("services"))...)
+	}
+	if oldNetworking.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Nodes, oldNetworking.Nodes, fldPath.Child("nodes"))...)
 	}
 
 	return allErrs
@@ -684,7 +722,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDeletionTimestamp bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, dockerConfigured, shootHasDeletionTimestamp bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -827,7 +865,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 
-	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, kubernetes.Version, fldPath.Child("kubeControllerManager"))...)
+	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, fldPath.Child("kubeControllerManager"))...)
 	allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
 	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
 	if kubernetes.Kubelet != nil {
@@ -860,11 +898,19 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
 	}
 
+	if errs := ValidateIPFamilies(networking.IPFamilies, fldPath.Child("ipFamilies")); len(errs) > 0 {
+		// further validation doesn't make any sense, because we don't know which IP family to check for in the CIDR fields
+		return append(allErrs, errs...)
+	}
+
+	primaryIPFamily := helper.DeterminePrimaryIPFamily(networking.IPFamilies)
+
 	if networking.Nodes != nil {
 		path := fldPath.Child("nodes")
 		cidr := cidrvalidation.NewCIDR(*networking.Nodes, path)
 
 		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
@@ -873,6 +919,7 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 		cidr := cidrvalidation.NewCIDR(*networking.Pods, path)
 
 		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
@@ -881,6 +928,7 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 		cidr := cidrvalidation.NewCIDR(*networking.Services, path)
 
 		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
@@ -1001,13 +1049,15 @@ func isPSPDisabled(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
 	return false
 }
 
-func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, version string, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking core.Networking, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kcm != nil {
 		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
-			if *maskSize < 16 || *maskSize > 28 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
+			if core.IsIPv4SingleStack(networking.IPFamilies) {
+				if *maskSize < 16 || *maskSize > 28 {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
+				}
 			}
 		}
 
@@ -1126,7 +1176,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 	return allErrs
 }
 
-func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking core.Networking, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(provider.Type) == 0 {
@@ -1153,7 +1203,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPat
 			// default maxPod setting on kubelet
 			maxPod = 110
 		}
-		allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize)...)
+		allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize, networking)...)
 	}
 
 	return allErrs

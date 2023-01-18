@@ -15,12 +15,12 @@
 package backupentry
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // ControllerName is the name of the controller.

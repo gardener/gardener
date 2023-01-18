@@ -15,14 +15,14 @@
 package test
 
 import (
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // Serialize serializes and encodes the passed object.

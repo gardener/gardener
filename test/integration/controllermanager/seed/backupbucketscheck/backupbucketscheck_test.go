@@ -41,6 +41,8 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock.SetTime(time.Now())
+
 		By("Create Seed")
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{

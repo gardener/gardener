@@ -17,9 +17,6 @@ package terraformer_test
 import (
 	"context"
 
-	. "github.com/gardener/gardener/extensions/pkg/terraformer"
-	"github.com/gardener/gardener/pkg/logger"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,6 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	. "github.com/gardener/gardener/extensions/pkg/terraformer"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 var _ = Describe("terraformer", func() {

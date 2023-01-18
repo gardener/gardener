@@ -15,15 +15,15 @@
 package rest
 
 import (
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/operations"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	bastionstore "github.com/gardener/gardener/pkg/registry/operations/bastion/storage"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	bastionstore "github.com/gardener/gardener/pkg/registry/operations/bastion/storage"
 )
 
 // StorageProvider is an empty struct.
