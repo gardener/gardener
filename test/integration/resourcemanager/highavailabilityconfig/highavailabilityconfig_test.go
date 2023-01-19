@@ -25,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -828,32 +827,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		})
 
 		Context("for HPAs", func() {
-			Context("with version v2beta2", func() {
-				var hpa *autoscalingv2beta2.HorizontalPodAutoscaler
-
-				BeforeEach(func() {
-					hpa = &autoscalingv2beta2.HorizontalPodAutoscaler{
-						ObjectMeta: objectMeta,
-						Spec: autoscalingv2beta2.HorizontalPodAutoscalerSpec{
-							ScaleTargetRef: autoscalingv2beta2.CrossVersionObjectReference{
-								Kind: "someKind",
-								Name: "someName",
-							},
-						},
-					}
-
-					scalingObject = hpa
-				})
-
-				tests(
-					func() *metav1.ObjectMeta { return &hpa.ObjectMeta },
-					func() *int32 { return hpa.Spec.MinReplicas },
-					func(n *int32) { hpa.Spec.MinReplicas = n },
-					func() int32 { return hpa.Spec.MaxReplicas },
-					func(n int32) { hpa.Spec.MaxReplicas = n },
-				)
-			})
-
 			Context("with version v2", func() {
 				var hpa *autoscalingv2.HorizontalPodAutoscaler
 
