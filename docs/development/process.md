@@ -142,11 +142,11 @@ Before you initiate a cherry pick, make sure that the following prerequisites ar
 - The release branch exists (check in the [branches section](https://github.com/gardener/gardener/branches)).
 - Have the `gardener/gardener` repository cloned as follows:
   - the `origin` remote should point to your fork (alternatively this can be overwritten by passing `FORK_REMOTE=<fork-remote>`).
-  - the `upstream` remote should point to the Gardener github org (alternatively this can be overwritten by passing `UPSTREAM_REMOTE=<upstream-remote>`).
+  - the `upstream` remote should point to the Gardener GitHub org (alternatively this can be overwritten by passing `UPSTREAM_REMOTE=<upstream-remote>`).
 - Have `hub` installed, which is most easily installed via
   `go get github.com/github/hub` assuming you have a standard golang
   development environment.
-- A Github token which has permissions to create a PR in an upstream branch.
+- A GitHub token which has permissions to create a PR in an upstream branch.
 
 ### Initiate a Cherry Pick
 
@@ -160,14 +160,14 @@ Before you initiate a cherry pick, make sure that the following prerequisites ar
   ```
 
   - Be aware the cherry pick script assumes you have a git remote called
-    `upstream` that points at the Gardener Github org.
+    `upstream` that points at the Gardener GitHub org.
 
   - You will need to run the cherry pick script separately for each patch
     release you want to cherry pick to. Cherry picks should be applied to all
     active release branches where the fix is applicable.
 
-  - When asked for your Github password, provide the created Github token
-    rather than your actual Github password.
+  - When asked for your GitHub password, provide the created GitHub token
+    rather than your actual GitHub password.
     Refer [https://github.com/github/hub/issues/2655#issuecomment-735836048](https://github.com/github/hub/issues/2655#issuecomment-735836048)
 
 - [cherry-pick-script](https://github.com/gardener/gardener/blob/master/hack/cherry-pick-pull.sh)

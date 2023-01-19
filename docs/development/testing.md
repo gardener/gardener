@@ -461,9 +461,9 @@ Below is a sequence describing how the tests are performed.
 ### How to Run Upgrade Tests Between Two Gardener Releases
 
 Sometimes, we need to verify/qualify two Gardener releases when we upgrade from one version to another.  
-This can performed by fetching the two Gardener versions from the  **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)** and setting appropriate env variables `GARDENER_PREVIOUS_RELEASE`, `GARDENER_NEXT_RELEASE`.   
+This can performed by fetching the two Gardener versions from the  **[GitHub Gardener release page](https://github.com/gardener/gardener/releases/latest)** and setting appropriate env variables `GARDENER_PREVIOUS_RELEASE`, `GARDENER_NEXT_RELEASE`.   
 
->**`GARDENER_PREVIOUS_RELEASE`** -- This env variable refers to a source revision/branch (or a specific release) which has to be installed first and then upgraded to version **`GARDENER_NEXT_RELEASE`**. By default, it fetches the latest release version from **[Github Gardener release page](https://github.com/gardener/gardener/releases/latest)**.
+>**`GARDENER_PREVIOUS_RELEASE`** -- This env variable refers to a source revision/branch (or a specific release) which has to be installed first and then upgraded to version **`GARDENER_NEXT_RELEASE`**. By default, it fetches the latest release version from **[GitHub Gardener release page](https://github.com/gardener/gardener/releases/latest)**.
 
 >**`GARDENER_NEXT_RELEASE`** -- This env variable refers to the target revision/branch (or a specific release) to be upgraded to after successful installation of **`GARDENER_PREVIOUS_RELEASE`**. By default, it considers the local HEAD revision, builds code, and installs Gardener from the current revision where the Gardener upgrade tests triggered.
 
