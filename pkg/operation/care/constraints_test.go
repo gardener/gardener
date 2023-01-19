@@ -361,6 +361,9 @@ var _ = Describe("Constraints", func() {
 		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
 		withoutSelectorsTables(extensionsv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
 
+		// there are no non-problematic webhooks expected for leases because
+		// Gardener considers all leases in all namespaces
+		commonTests(coordinationv1.SchemeGroupVersion.WithResource("leases"), kubeSystemNamespaceProblematic, nil)
 		withoutSelectorsTables(coordinationv1.SchemeGroupVersion.WithResource("leases"))
 		withoutSelectorsTables(coordinationv1beta1.SchemeGroupVersion.WithResource("leases"))
 

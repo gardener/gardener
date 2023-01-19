@@ -209,15 +209,10 @@ func (w *WebhookConstraintMatcher) Match(
 	var (
 		objLabels = w.ObjectLabels
 		nsLabels  = w.NamespaceLabels
+
+		matchAllObjects    = objLabels == nil
+		matchAllNamespaces = nsLabels == nil
 	)
-
-	if objLabels == nil {
-		objLabels = labels.Set{}
-	}
-
-	if nsLabels == nil {
-		nsLabels = labels.Set{}
-	}
 
 	nsSelector, err := defaultEmptySelector(namespaceLabelSelector)
 	if err != nil {
@@ -231,8 +226,8 @@ func (w *WebhookConstraintMatcher) Match(
 		return true
 	}
 
-	matchObj := objSelector.Empty() || objSelector.Matches(objLabels)
-	matchNS := nsSelector.Empty() || nsSelector.Matches(nsLabels)
+	matchObj := matchAllObjects || objSelector.Empty() || objSelector.Matches(objLabels)
+	matchNS := matchAllNamespaces || nsSelector.Empty() || nsSelector.Matches(nsLabels)
 
 	rm := ruleMatcher{rule: r, gvr: w.GVR, subresource: w.Subresource}
 	if !w.ClusterScoped {
