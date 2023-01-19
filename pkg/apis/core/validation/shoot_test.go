@@ -370,42 +370,66 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should forbid to change the Shoot ControlPlane spec", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-
-				errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":     Equal(field.ErrorTypeInvalid),
-						"BadValue": Equal(core.FailureToleranceTypeNode),
-						"Field":    Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
-					})),
-				))
-			})
-
-			It("should forbid to unset of Shoot ControlPlane", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.ControlPlane = nil
-
-				errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
-					})),
-				))
-			})
-
 			It("should allow upgrading from non-HA to HA Shoot ControlPlane.HighAvailability Spec", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 				errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 				Expect(errorList).To(BeEmpty())
+			})
+
+			Context("shoot is scheduled", func() {
+				BeforeEach(func() {
+					shoot.Spec.SeedName = pointer.String("someSeed")
+				})
+
+				It("should forbid to change the Shoot ControlPlane spec", func() {
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
+
+					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"BadValue": Equal(core.FailureToleranceTypeNode),
+							"Field":    Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
+						})),
+					))
+				})
+
+				It("should forbid to unset of Shoot ControlPlane", func() {
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.ControlPlane = nil
+
+					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
+						})),
+					))
+				})
+			})
+
+			Context("shoot is not scheduled", func() {
+				It("should allow to change the Shoot ControlPlane spec", func() {
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
+
+					Expect(ValidateShootHAConfigUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should allow to unset of Shoot ControlPlane", func() {
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.ControlPlane = nil
+
+					Expect(ValidateShootHAConfigUpdate(newShoot, shoot)).To(BeEmpty())
+				})
 			})
 		})
 

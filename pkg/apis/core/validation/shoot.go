@@ -2013,10 +2013,12 @@ func validateHAShootControlPlaneConfigurationValue(shoot *core.Shoot) field.Erro
 
 func validateShootHAControlPlaneSpecUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
 	var (
+		allErrs          = field.ErrorList{}
+		shootIsScheduled = newSpec.SeedName != nil
+
 		oldVal, newVal core.FailureToleranceType
 		oldValExists   bool
 	)
-	allErrs := field.ErrorList{}
 
 	if oldSpec.ControlPlane != nil && oldSpec.ControlPlane.HighAvailability != nil {
 		oldVal = oldSpec.ControlPlane.HighAvailability.FailureTolerance.Type
@@ -2027,7 +2029,7 @@ func validateShootHAControlPlaneSpecUpdate(newSpec, oldSpec *core.ShootSpec, fld
 		newVal = newSpec.ControlPlane.HighAvailability.FailureTolerance.Type
 	}
 
-	if oldValExists {
+	if oldValExists && shootIsScheduled {
 		// If the HighAvailability field is already set for the shoot then enforce that it cannot be changed.
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVal, oldVal, fldPath.Child("highAvailability", "failureTolerance", "type"))...)
 	}
