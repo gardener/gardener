@@ -11,7 +11,7 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
 - `Generate(context.Context, secrets.ConfigInterface, ...GenerateOption) (*corev1.Secret, error)`
 
   This method either retrieves the current secret for the given configuration or it (re)generates it in case the configuration changed, the signing CA changed (for certificate secrets), or when proactive rotation was triggered.
-  If the configuration describes a certificate authority secret then this method automatically generates a bundle secret containing the current and potentially the old certificate.\
+  If the configuration describes a certificate authority secret then this method automatically generates a bundle secret containing the current and potentially the old certificate.
   Available `GenerateOption`s:
   - `SignedByCA(string, ...SignedByCAOption)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
     - There are two `SignedByCAOption`s:
@@ -27,7 +27,7 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
 
   This method retrieves the current secret for the given name.
   In case the secret in question is a certificate authority secret then it retrieves the bundle secret by default.
-  It is important that this method only knows about secrets for which there were prior `Generate` calls.\
+  It is important that this method only knows about secrets for which there were prior `Generate` calls.
   Available `GetOption`s:
   - `Bundle` (default): This retrieves the bundle secret.
   - `Current`: This retrieves the current secret.
@@ -61,9 +61,9 @@ if err != nil {
 ```
 
 As explained above, the caller does not need to care about the renewal, rotation or the persistence of this secret - all of these concerns are handled by the secrets manager.
-Automatic renewal of secrets happens when their validity  approaches 80% or less than `10d` are left until expiration.
+Automatic renewal of secrets happens when their validity approaches 80% or less than `10d` are left until expiration.
 
-In case a CA certificate is needed by some component then it can be retrieved as follows:
+In case a CA certificate is needed by some component, then it can be retrieved as follows:
 
 ```go
 caSecret, found := k.secretsManager.Get("my-ca")
@@ -86,7 +86,7 @@ This is to ensure a smooth exchange of certificate during a CA rotation (typical
   - In phase 1, servers still use their old/existing certificates to allow clients to update their CA bundle used for verification of the servers' certificates.
   - In phase 2, the old CA is dropped, hence servers need to get a certificate signed by the new/current CA. At this point in time, clients have already adapted their CA bundles.
 
-#### Always Sign Server Certificates With Current CA
+#### Always Sign Server Certificates with Current CA
 
 In case you control all clients and update them at the same time as the server, it is possible to make the secrets manager generate even server certificates with the new/current CA.
 This can help to prevent certificate mismatches when the CA bundle is already exchanged while the server still serves with a certificate signed by a CA no longer part of the bundle.
@@ -96,7 +96,7 @@ Let's consider the two following examples:
 1. `gardenlet` deploys a webhook server (`gardener-resource-manager`) and a corresponding `MutatingWebhookConfiguration` at the same time. In this case, the server certificate should be generated with the new/current CA to avoid above mentioned certificate mismatches during a CA rotation.
 2. `gardenlet` deploys a server (`etcd`) in one step, and a client (`kube-apiserver`) in a subsequent step. In this case, the default behaviour should apply (server certificate should be signed by old/existing CA).
 
-#### Always Sign Client Certificate With Old CA
+#### Always Sign Client Certificate with Old CA
 
 In the unusual case where the client is deployed before the server, it might be useful to always use the old CA for signing the client's certificate.
 This can help to prevent certificate mismatches when the client already gets a new certificate while the server still only accepts certificates signed by the old CA.
@@ -111,18 +111,18 @@ While the `SecretsManager` is primarily used by gardenlet, it can be reused by o
 
 External components that want to reuse the `SecretsManager` should consider the following aspects:
 
-- On initialization of a `SecretsManager`, pass an `identity` specific to the component, controller and purpose. For example, gardenlet's shoot controller uses `gardenlet` as the `SecretsManager`'s identity, the `Worker` controller in `provider-foo` should use `provider-foo-worker` and the `ControlPlane` controller should use `provider-foo-controlplane-exposure` for `ControlPlane` objects of purpose `exposure`.
+- On initialization of a `SecretsManager`, pass an `identity` specific to the component, controller and purpose. For example, gardenlet's shoot controller uses `gardenlet` as the `SecretsManager`'s identity, the `Worker` controller in `provider-foo` should use `provider-foo-worker`, and the `ControlPlane` controller should use `provider-foo-controlplane-exposure` for `ControlPlane` objects of purpose `exposure`.
   The given identity is added as a value for the `manager-identity` label on managed `Secret`s.
   This label is used by the `Cleanup` function to select only those `Secret`s that are actually managed by the particular `SecretManager` instance. This is done to prevent removing still needed `Secret`s that are managed by other instances.
 - Generate dedicated CAs for signing certificates instead of depending on CAs managed by gardenlet.
 - Names of `Secret`s managed by external `SecretsManager` instances must not conflict with `Secret` names from other instances (e.g. gardenlet).
 - For CAs that should be rotated in lock-step with the Shoot CAs managed by gardenlet, components need to pass information about the last rotation initiation time and the current rotation phase to the `SecretsManager` upon initialization.
   The relevant information can be retrieved from the `Cluster` resource under `.spec.shoot.status.credentials.rotation.certificateAuthorities`.
-- Independent of the specific identity, secrets marked with the `Persist` option are automatically saved in the `ShootState` resource by gardenlet and are also restored by gardenlet on Control Plane Migration to the new Seed.
+- Independent of the specific identity, secrets marked with the `Persist` option are automatically saved in the `ShootState` resource by the gardenlet and are also restored by the gardenlet on Control Plane Migration to the new Seed.
 
 ## Migrating Existing Secrets To SecretsManager
 
-If you already have existing secrets which were not created with `SecretsManager` then you can (optionally) migrate them by labeling them with `secrets-manager-use-data-for=<config-name>`.
+If you already have existing secrets which were not created with `SecretsManager`, then you can (optionally) migrate them by labeling them with `secrets-manager-use-data-for=<config-name>`.
 For example, if your `SecretsManager` generates a `CertificateConfigSecret` with name `foo` like this
 
 ```go

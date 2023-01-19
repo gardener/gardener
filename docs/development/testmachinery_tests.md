@@ -1,7 +1,7 @@
 # Test Machinery Tests
 
 In order to automatically qualify Gardener releases, we execute a set of end-to-end tests using [Test Machinery](https://github.com/gardener/test-infra).
-This requires a full Gardener installation including infrastructure extensions as well as a setup of Test Machinery itself.
+This requires a full Gardener installation including infrastructure extensions, as well as a setup of Test Machinery itself.
 These tests operate on Shoot clusters across different Cloud Providers, using different supported Kubernetes versions and various configuration options (huge test matrix).
 
 This manual gives an overview about test machinery tests in Gardener.
@@ -18,8 +18,8 @@ Gardener test machinery tests are split into two test suites that can be found u
 * The **Gardener Test Suite** contains all tests that only require a running gardener instance.
 * The **Shoot Test Suite** contains all tests that require a predefined running shoot cluster.
 
-The corresponding tests of a test suite are defined in the import statement of the suite definition see [`shoot/run_suite_test.go`](../../test/testmachinery/suites/shoot/run_suite_test.go)
-and their source code can be found under [`test/testmachinery`](../../test/testmachinery)
+The corresponding tests of a test suite are defined in the import statement of the suite definition (see [`shoot/run_suite_test.go`](../../test/testmachinery/suites/shoot/run_suite_test.go))
+and their source code can be found under [`test/testmachinery`](../../test/testmachinery).
 
 The `test` directory is structured as follows:
 
@@ -61,7 +61,7 @@ test
 ```
 
 A suite can be executed by running the suite definition with ginkgo's `focus` and `skip` flags 
-to control the execution of specific labeled test. See example below:
+to control the execution of specific labeled test. See the example below:
 ```console
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
       --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
@@ -74,7 +74,7 @@ go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
       -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"             # Exclude all tests that are tagged SERIAL or DISRUPTIVE
 ```
 
-## Add a new test
+## Add a New Test
 
 To add a new test the framework requires the following steps (step 1. and 2. can be skipped if the test is added to an existing package):
 
@@ -93,7 +93,7 @@ var _ = ginkgo.Describe("my suite", func(){
 ```
 
 The newly created test can be tested by focusing the test with the default ginkgo focus `f.Beta().FCIt("my first test", func(ctx context.Context)`
-and run the shoot test suite with:
+and running the shoot test suite with:
 ```
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
       --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
@@ -150,25 +150,25 @@ They should be watched (and probably improved) until stable enough to be promote
 - _Default_: Tests that were _Beta_ before and proved to be stable are promoted to _Default_ eventually.
  _Default_ tests run more often, produce alerts and are _considered_ during the release decision although they don't necessarily block a release.
 - _Release_: Test are release relevant. A failing _Release_ test blocks the release pipeline.
-Therefore these tests need to be stable. Only tests proven to be stable will eventually be promoted to _Release_.
+Therefore, these tests need to be stable. Only tests proven to be stable will eventually be promoted to _Release_.
 
 Behavior Labels: 
-- _Serial_: The test should always be executed in serial with no other tests running as it may impact other tests.
-- _Destructive_: The test is destructive. Which means that is runs with no other tests and may break gardener or the shoot.
-Only create such tests if really necessary as the execution will be expensive (neither gardener nor the shoot can be reused in this case for other tests).
+- _Serial_: The test should always be executed in serial with no other tests running, as it may impact other tests.
+- _Destructive_: The test is destructive. Which means that is runs with no other tests and may break Gardener or the shoot.
+Only create such tests if really necessary, as the execution will be expensive (neither Gardener nor the shoot can be reused in this case for other tests).
 
 ## Framework
 
 The framework directory contains all the necessary functions / utilities for running test machinery tests. 
 For example, there are methods for creation/deletion of shoots, waiting for shoot deletion/creation, downloading/installing/deploying helm charts, logging, etc.
 
-The framework itself consists of 3 different framework that expect different prerequisites and offer context specific functionality.
+The framework itself consists of 3 different frameworks that expect different prerequisites and offer context specific functionality.
 - **CommonFramework**: The common framework is the base framework that handles logging and setup of commonly needed resources like helm.
-It also contains common functions for interacting with kubernetes clusters like `Waiting for resources to be ready` or `Exec into a running pod`.
-- **GardenerFramework** contains all functions of the common framework and expects a running gardener instance with the provided gardener kubeconfig and a project namespace.
+It also contains common functions for interacting with Kubernetes clusters like `Waiting for resources to be ready` or `Exec into a running pod`.
+- **GardenerFramework** contains all functions of the common framework and expects a running Gardener instance with the provided Gardener kubeconfig and a project namespace.
 It also contains functions to interact with gardener like `Waiting for a shoot to be reconciled` or `Patch a shoot` or `Get a seed`.
 - **ShootFramework**: contains all functions of the common and the gardener framework. 
-It expects a running shoot cluster defined by the shoot's name and namespace(project namespace).
+It expects a running shoot cluster defined by the shoot's name and namespace (project namespace).
 This framework contains functions to directly interact with the specific shoot.
 
 The whole framework also includes commonly used checks, ginkgo wrapper, etc. as well as commonly used tests.
@@ -177,7 +177,7 @@ Theses common application tests (like the guestbook test) can be used within mul
 
 **Config**
 
-Every framework commandline flag can also be defined by a configuration file (the value of the configuration file is only used if flag is not specified by commandline).
+Every framework commandline flag can also be defined by a configuration file (the value of the configuration file is only used if a flag is not specified by commandline).
 The test suite searches for a configuration file (yaml is preferred) if the command line flag `--config=/path/to/config/file` is provided.
 A framework can be defined in the configuration file by just using the flag name as root key e.g.
 ```yaml
@@ -188,8 +188,8 @@ project-namespace: garden-it
 
 **Report**
 
-The framework automatically writes the default ginkgo default report to stdout and a specifically structured elastichsearch bulk report file to a specified location.
-The elastichsearch bulk report will write one json document per testcase and injects metadata of the whole testsuite.
+The framework automatically writes the ginkgo default report to stdout and a specifically structured elastichsearch bulk report file to a specified location.
+The elastichsearch bulk report will write one json document per testcase and injects the metadata of the whole testsuite.
 An example document for one test case would look like the following document:
 ```
 {
@@ -229,20 +229,20 @@ resources
 
 There are two special directories that are dynamically filled with the correct test files:
 
-- **charts:** the charts will be downloaded and saved in this directory
-- **repository** contains the repository.yaml file that the target helm repos will be read from and the cache where the `stable-index.yaml` file will be created
+- **charts** - the charts will be downloaded and saved in this directory
+- **repository** - contains the `repository.yaml` file that the target helm repos will be read from and the cache where the `stable-index.yaml` file will be created
 
 ### System Tests
 
 This directory contains the system tests that have a special meaning for the testmachinery with their own Test Definition.
-Currently these system tests consists of:
+Currently, these system tests consist of:
 
 - Shoot creation
 - Shoot deletion
 - Shoot Kubernetes update
 - Gardener Full reconcile check
 
-#### Shoot Creation test
+#### Shoot Creation Test
 
 Create Shoot test is meant to test shoot creation.
 
@@ -271,7 +271,7 @@ go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_creation \
   -start-hibernated=$START_HIBERNATED
 ```
 
-#### Shoot Deletion test
+#### Shoot Deletion Test
 
 Delete Shoot test is meant to test the deletion of a shoot.
 
@@ -285,11 +285,11 @@ go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.progress \
   -project-namespace=$PROJECT_NAMESPACE
 ```
 
-#### Shoot Update test
+#### Shoot Update Test
 
-The Update Shoot test is meant to test the kubernetes version update of a existing shoot.
-If no specific version is provided the next patch version is automatically selected.
-If there is no available newer version this test is a noop.
+The Update Shoot test is meant to test the Kubernetes version update of a existing shoot.
+If no specific version is provided, the next patch version is automatically selected.
+If there is no available newer version, this test is a noop.
 
 **Example Run**
 
@@ -302,9 +302,9 @@ go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_update \
   -version=$K8S_VERSION
 ```
 
-#### Gardener Full Reconcile test
+#### Gardener Full Reconcile Test
 
-The Gardener Full Reconcile test is meant to test if all shoots of a gardener instance are successfully reconciled.
+The Gardener Full Reconcile test is meant to test if all shoots of a Gardener instance are successfully reconciled.
 
 **Example Run**
 

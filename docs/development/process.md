@@ -2,9 +2,14 @@
 
 This document describes how to contribute features or hotfixes, and how new Gardener releases are usually scheduled, validated, etc.
 
-- [Releases](#releases)
-- [Contributing new Features or Fixes](#contributing-new-features-or-fixes)
-- [Cherry Picks](#cherry-picks)
+- [Releases, Features, Hotfixes](#releases-features-hotfixes)
+  - [Releases](#releases)
+    - [Release Responsible Plan](#release-responsible-plan)
+    - [Release Validation](#release-validation)
+  - [Contributing New Features or Fixes](#contributing-new-features-or-fixes)
+  - [Cherry Picks](#cherry-picks)
+    - [Prerequisites](#prerequisites)
+    - [Initiate a Cherry Pick](#initiate-a-cherry-pick)
 
 ## Releases
 
@@ -96,7 +101,7 @@ Typically, the first week is used for the validation of the release.
 This phase includes the following steps:
 
 1. `master` (or latest `release-*` branch) is deployed to a development landscape that already hosts some existing seed and shoot clusters.
-1. An extended test suite is triggered by the "release responsible" which
+1. An extended test suite is triggered by the "release responsible" which:
    1. executes the Gardener integration tests for different Kubernetes versions, infrastructures, and `Shoot` settings.
    1. executes the Kubernetes conformance tests.
    1. executes further tests like Kubernetes/OS patch/minor version upgrades.
@@ -105,7 +110,7 @@ This phase includes the following steps:
 
 Usually, the new release is triggered in the beginning of the second week if all tests are green, all checks were successful, and if all of the planned verifications were performed by the release responsible.
 
-## Contributing new Features or Fixes
+## Contributing New Features or Fixes
 
 Please refer to the [Gardener contributor guide](https://gardener.cloud/docs/contribute/).
 Besides a lot of a general information, it also provides a checklist for newly created pull requests that may help you to prepare your changes for an efficient review process.
@@ -134,18 +139,18 @@ This section explains how to initiate cherry picks on release branches within th
 Before you initiate a cherry pick, make sure that the following prerequisites are accomplished.
 
 - A pull request merged against the `master` branch.
-- The release branch exists (check in the [branches section](https://github.com/gardener/gardener/branches))
+- The release branch exists (check in the [branches section](https://github.com/gardener/gardener/branches)).
 - Have the `gardener/gardener` repository cloned as follows:
-  - the `origin` remote should point to your fork (alternatively this can be overwritten by passing `FORK_REMOTE=<fork-remote>`)
-  - the `upstream` remote should point to the Gardener github org (alternatively this can be overwritten by passing `UPSTREAM_REMOTE=<upstream-remote>`)
+  - the `origin` remote should point to your fork (alternatively this can be overwritten by passing `FORK_REMOTE=<fork-remote>`).
+  - the `upstream` remote should point to the Gardener GitHub org (alternatively this can be overwritten by passing `UPSTREAM_REMOTE=<upstream-remote>`).
 - Have `hub` installed, which is most easily installed via
   `go get github.com/github/hub` assuming you have a standard golang
   development environment.
-- A github token which has permissions to create a PR in an upstream branch.
+- A GitHub token which has permissions to create a PR in an upstream branch.
 
 ### Initiate a Cherry Pick
 
-- Run the [cherry pick script][cherry-pick-script]
+- Run the [cherry pick script][cherry-pick-script].
 
   This example applies a master branch PR #3632 to the remote branch
   `upstream/release-v3.14`:
@@ -155,14 +160,14 @@ Before you initiate a cherry pick, make sure that the following prerequisites ar
   ```
 
   - Be aware the cherry pick script assumes you have a git remote called
-    `upstream` that points at the Gardener github org.
+    `upstream` that points at the Gardener GitHub org.
 
   - You will need to run the cherry pick script separately for each patch
     release you want to cherry pick to. Cherry picks should be applied to all
     active release branches where the fix is applicable.
 
-  - When asked for your github password, provide the created github token
-    rather than your actual github password.
+  - When asked for your GitHub password, provide the created GitHub token
+    rather than your actual GitHub password.
     Refer [https://github.com/github/hub/issues/2655#issuecomment-735836048](https://github.com/github/hub/issues/2655#issuecomment-735836048)
 
-[cherry-pick-script]: https://github.com/gardener/gardener/blob/master/hack/cherry-pick-pull.sh
+- [cherry-pick-script](https://github.com/gardener/gardener/blob/master/hack/cherry-pick-pull.sh)
