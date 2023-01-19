@@ -97,11 +97,11 @@ if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
 fi
 
 if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
-  kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry"       --server-side
+  kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry" --server-side
   kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 fi
-kubectl apply   -k "$(dirname "$0")/../example/gardener-local/calico"         --server-side
-kubectl apply   -k "$(dirname "$0")/../example/gardener-local/metrics-server" --server-side
+kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --server-side
+kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\
