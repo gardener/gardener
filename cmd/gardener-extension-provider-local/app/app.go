@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
