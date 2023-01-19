@@ -141,7 +141,7 @@ and you already have an existing secret in your system whose data should be kept
 
 | Secret Type          | Data Keys                                               |
 | -------------------- |---------------------------------------------------------|
-| Basic Auth           | `basic_auth.csv`, `username`, `password`, `auth`        |
+| Basic Auth           | `username`, `password`, `auth`                          |
 | CA Certificate       | `ca.crt`, `ca.key`                                      |
 | Non-CA Certificate   | `tls.crt`, `tls.key`                                    |
 | Control Plane Secret | `ca.crt`, `username`, `password`, `token`, `kubeconfig` |

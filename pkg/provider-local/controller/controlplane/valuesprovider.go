@@ -71,7 +71,7 @@ func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigW
 		{
 			Config: &secretsutils.BasicAuthSecretConfig{
 				Name:           local.Name + "-dummy-auth",
-				Format:         secretsutils.BasicAuthFormatCSV,
+				Format:         secretsutils.BasicAuthFormatNormal,
 				PasswordLength: 32,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.Validity(time.Hour)},

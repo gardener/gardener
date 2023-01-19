@@ -148,7 +148,6 @@ Those credentials are stored in a `Secret` with name `<shoot-name>.monitoring` i
 
 - `username`: the user name
 - `password`: the password
-- `basic_auth.csv`: the user name and password in CSV format
 - `auth`: the user name with SHA-1 representation of the password
 
 **It is the responsibility of the end-user to regularly rotate those credentials.**
