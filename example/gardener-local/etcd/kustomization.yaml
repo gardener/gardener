@@ -5,8 +5,6 @@ generatorOptions:
   disableNameSuffixHash: true
 
 namespace: garden
-commonLabels:
-  app: etcd
 
 secretGenerator:
 - name: etcd-tls
@@ -16,5 +14,6 @@ secretGenerator:
   - tls/server.key
 
 resources:
+- networkpolicy.yaml
 - service.yaml
 - statefulset.yaml
