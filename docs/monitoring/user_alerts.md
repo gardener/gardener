@@ -11,6 +11,7 @@
 |K8SNodeOutOfDisk|critical|shoot|`Node {{ $labels.node }} has run out of disk space.`|
 |K8SNodeMemoryPressure|warning|shoot|`Node {{ $labels.node }} is under memory pressure.`|
 |K8SNodeDiskPressure|warning|shoot|`Node {{ $labels.node }} is under disk pressure`|
+|K8SNodeNotReady|critical|shoot|`One or many node have not been ready for more than 10 minutes`|
 |VMRootfsFull|critical|shoot|`Root filesystem device on instance {{ $labels.instance }} is almost full.`|
 |VMConntrackTableFull|critical|shoot|`The nf_conntrack table is {{ $value }}% full.`|
 |VPNProbeAPIServerProxyFailed|critical|shoot|`The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.`|
