@@ -169,6 +169,10 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShootTemplate.Spec, &oldShootTemplate.Spec, newShootTemplate.ObjectMeta, fldPath.Child("spec"))...)
 
+	if oldShootTemplate.Spec.Networking.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newShootTemplate.Spec.Networking.Nodes, oldShootTemplate.Spec.Networking.Nodes, fldPath.Child("spec", "networking", "nodes"))...)
+	}
+
 	return allErrs
 }
 
@@ -597,9 +601,6 @@ func validateNetworkingUpdate(newNetworking, oldNetworking core.Networking, fldP
 	}
 	if oldNetworking.Services != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Services, oldNetworking.Services, fldPath.Child("services"))...)
-	}
-	if oldNetworking.Nodes != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Nodes, oldNetworking.Nodes, fldPath.Child("nodes"))...)
 	}
 
 	return allErrs

@@ -54,7 +54,8 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					Version: "1.18.14",
 				},
 				Networking: core.Networking{
-					Type: "foo",
+					Type:  "foo",
+					Nodes: pointer.String("10.181.0.0/18"),
 				},
 				Provider: core.Provider{
 					Type: "foo",
@@ -380,6 +381,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should forbid changes to immutable fields in shootTemplate", func() {
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.Region = "other-region"
+			shootCopy.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
 			newManagedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
@@ -388,6 +390,11 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shootTemplate.spec.region"),
+					"Detail": Equal("field is immutable"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shootTemplate.spec.networking.nodes"),
 					"Detail": Equal("field is immutable"),
 				})),
 			))
