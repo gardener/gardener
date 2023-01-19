@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +36,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -150,23 +152,25 @@ func (n *nginxIngress) WaitCleanup(ctx context.Context) error {
 }
 
 func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: configMapName,
+			Labels: map[string]string{
+				v1beta1constants.LabelApp: labelAppValue,
+				labelKeyRelease:           labelValueAddons,
+				labelKeyComponent:         labelValueController,
+			},
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: n.values.ConfigData,
+	}
+
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+
 	var (
 		healthProbePort = intstr.FromInt(10254)
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: configMapName,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelAppValue,
-					labelKeyRelease:           labelValueAddons,
-					labelKeyComponent:         labelValueController,
-				},
-				Namespace: metav1.NamespaceSystem,
-			},
-			Data: n.values.ConfigData,
-		}
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -268,7 +272,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: labelAppValue,
@@ -346,7 +350,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: labelAppValue,
@@ -364,7 +368,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							"origin":                    "gardener",
 						},
 						Annotations: map[string]string{
-							"checksum/config": utils.ComputeChecksum(configMap.Data),
+							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
+							// volume and hence using the function won't have any effect.
+							references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
 						},
 					},
 					Spec: corev1.PodSpec{

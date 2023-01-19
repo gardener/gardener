@@ -15,6 +15,11 @@
 package botanist_test
 
 import (
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
@@ -25,11 +30,6 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
-
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("NginxIngress", func() {

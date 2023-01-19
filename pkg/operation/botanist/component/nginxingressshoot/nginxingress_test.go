@@ -18,16 +18,6 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +27,17 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("NginxIngress", func() {
@@ -66,11 +67,14 @@ var _ = Describe("NginxIngress", func() {
 			PSPDisabled:          true,
 		}
 
+		configMapName = "addons-nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
+
 		configMapYAML = `apiVersion: v1
 data:
   dash: "false"
   dot: "3"
   foo: bar
+immutable: true
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -78,7 +82,8 @@ metadata:
     app: nginx-ingress
     component: controller
     release: addons
-  name: addons-nginx-ingress-controller
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: ` + configMapName + `
   namespace: kube-system
 `
 
@@ -273,7 +278,7 @@ metadata:
   namespace: kube-system
 spec:
   replicas: 1
-  revisionHistoryLimit: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: nginx-ingress
@@ -339,7 +344,7 @@ metadata:
   namespace: kube-system
 spec:
   replicas: 1
-  revisionHistoryLimit: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: nginx-ingress
@@ -349,7 +354,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: ` + utils.ComputeChecksum(configMapData) + `
+        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
       creationTimestamp: null
       labels:
         app: nginx-ingress
@@ -368,7 +373,7 @@ spec:
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --ingress-class=nginx
-        - --configmap=kube-system/addons-nginx-ingress-controller`
+        - --configmap=kube-system/` + configMapName
 
 			if k8sVersionGreaterEqual122 {
 				out += `
@@ -615,7 +620,7 @@ status: {}
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__"+configMapName+".yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["role__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
