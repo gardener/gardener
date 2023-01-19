@@ -67,7 +67,6 @@ func NewGardenerResourceManager(
 		Image:                                image.String(),
 		LogLevel:                             logLevel,
 		LogFormat:                            logFormat,
-		MaxConcurrentRootCAPublisherWorkers:  pointer.Int(5),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).

@@ -101,7 +101,6 @@ var _ = Describe("ResourceManager", func() {
 		maxConcurrentHealthWorkers           = 20
 		maxConcurrentTokenInvalidatorWorkers = 23
 		maxConcurrentTokenRequestorWorkers   = 21
-		maxConcurrentRootCAPublisherWorkers  = 22
 		maxConcurrentCSRApproverWorkers      = 24
 		resourceClass                        = "fake-ResourceClass"
 		syncPeriod                           = metav1.Duration{Duration: time.Second * 80}
@@ -305,7 +304,6 @@ var _ = Describe("ResourceManager", func() {
 			MaxConcurrentHealthWorkers:           &maxConcurrentHealthWorkers,
 			MaxConcurrentTokenInvalidatorWorkers: &maxConcurrentTokenInvalidatorWorkers,
 			MaxConcurrentTokenRequestorWorkers:   &maxConcurrentTokenRequestorWorkers,
-			MaxConcurrentRootCAPublisherWorkers:  &maxConcurrentRootCAPublisherWorkers,
 			MaxConcurrentCSRApproverWorkers:      &maxConcurrentCSRApproverWorkers,
 			PriorityClassName:                    priorityClassName,
 			Replicas:                             &replicas,
@@ -394,11 +392,6 @@ var _ = Describe("ResourceManager", func() {
 						SyncPeriod:      &syncPeriod,
 						AlwaysUpdate:    &alwaysUpdate,
 					},
-					RootCAPublisher: resourcemanagerv1alpha1.RootCAPublisherControllerConfig{
-						Enabled:         true,
-						ConcurrentSyncs: &maxConcurrentRootCAPublisherWorkers,
-						RootCAFile:      pointer.String("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"),
-					},
 					TokenInvalidator: resourcemanagerv1alpha1.TokenInvalidatorControllerConfig{
 						Enabled:         true,
 						ConcurrentSyncs: &maxConcurrentTokenInvalidatorWorkers,
@@ -441,7 +434,6 @@ var _ = Describe("ResourceManager", func() {
 					DisableCachedClient: &targetDisableCache,
 				}
 
-				config.Controllers.RootCAPublisher.RootCAFile = pointer.String(secretMountPathRootCA + "/bundle.crt")
 				config.Webhooks.SeccompProfile.Enabled = false
 				config.Webhooks.PodSchedulerName = resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
 					Enabled:       true,

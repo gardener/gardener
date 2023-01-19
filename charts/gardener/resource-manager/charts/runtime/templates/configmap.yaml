@@ -106,14 +106,6 @@ data:
         {{- if .Values.global.config.controllers.managedResources.managedByLabelValue }}
         managedByLabelValue: {{ .Values.global.config.controllers.managedResources.managedByLabelValue }}
         {{- end }}
-      rootCAPublisher:
-        enabled: {{ .Values.global.config.controllers.rootCAPublisher.enabled }}
-        {{- if .Values.global.config.controllers.rootCAPublisher.concurrentSyncs }}
-        concurrentSyncs: {{ .Values.global.config.controllers.rootCAPublisher.concurrentSyncs }}
-        {{- end }}
-        {{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
-        rootCAFile: /etc/gardener-resource-manager/root-ca-publisher/ca.crt
-        {{- end }}
       secret:
         {{- if .Values.global.config.controllers.secret.concurrentSyncs }}
         concurrentSyncs: {{ .Values.global.config.controllers.secret.concurrentSyncs }}

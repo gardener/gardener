@@ -328,37 +328,6 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
-	Describe("#SetDefaults_RootCAPublisherControllerConfig", func() {
-		It("should not default the object because disabled", func() {
-			obj := &RootCAPublisherControllerConfig{}
-
-			SetDefaults_RootCAPublisherControllerConfig(obj)
-
-			Expect(obj.ConcurrentSyncs).To(BeNil())
-		})
-
-		It("should default the object because enabled", func() {
-			obj := &RootCAPublisherControllerConfig{
-				Enabled: true,
-			}
-
-			SetDefaults_RootCAPublisherControllerConfig(obj)
-
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-		})
-
-		It("should not overwrite existing values", func() {
-			obj := &RootCAPublisherControllerConfig{
-				Enabled:         true,
-				ConcurrentSyncs: pointer.Int(2),
-			}
-
-			SetDefaults_RootCAPublisherControllerConfig(obj)
-
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(2)))
-		})
-	})
-
 	Describe("#SetDefaults_SecretControllerConfig", func() {
 		It("should not default the object", func() {
 			obj := &SecretControllerConfig{}

@@ -90,7 +90,6 @@ build:
         - pkg/resourcemanager/apis/config
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/crddeletionprotection
         - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
@@ -190,7 +189,6 @@ build:
         - pkg/resourcemanager/controller/health/progressing
         - pkg/resourcemanager/controller/health/utils
         - pkg/resourcemanager/controller/managedresource
-        - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/controller/secret
         - pkg/resourcemanager/controller/tokeninvalidator
         - pkg/resourcemanager/controller/tokenrequestor

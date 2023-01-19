@@ -321,47 +321,6 @@ var _ = Describe("Validation", func() {
 					))
 				})
 			})
-
-			Context("root ca publisher", func() {
-				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.RootCAPublisher.Enabled = true
-					conf.Controllers.RootCAPublisher.ConcurrentSyncs = pointer.Int(0)
-					conf.Controllers.RootCAPublisher.RootCAFile = pointer.String("some/path")
-
-					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("controllers.rootCAPublisher.concurrentSyncs"),
-						})),
-					))
-				})
-
-				It("should return errors because root ca file is nil", func() {
-					conf.Controllers.RootCAPublisher.Enabled = true
-					conf.Controllers.RootCAPublisher.ConcurrentSyncs = pointer.Int(5)
-					conf.Controllers.RootCAPublisher.RootCAFile = nil
-
-					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeRequired),
-							"Field": Equal("controllers.rootCAPublisher.rootCAFile"),
-						})),
-					))
-				})
-
-				It("should return errors because root ca file is empty", func() {
-					conf.Controllers.RootCAPublisher.Enabled = true
-					conf.Controllers.RootCAPublisher.ConcurrentSyncs = pointer.Int(5)
-					conf.Controllers.RootCAPublisher.RootCAFile = pointer.String("")
-
-					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeRequired),
-							"Field": Equal("controllers.rootCAPublisher.rootCAFile"),
-						})),
-					))
-				})
-			})
 		})
 
 		Context("webhook configuration", func() {

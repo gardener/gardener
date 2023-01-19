@@ -77,7 +77,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		MaxConcurrentHealthWorkers:           pointer.Int(10),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int(5),
-		MaxConcurrentRootCAPublisherWorkers:  pointer.Int(5),
 		MaxConcurrentCSRApproverWorkers:      pointer.Int(5),
 		PodTopologySpreadConstraintsEnabled:  true,
 		PriorityClassName:                    v1beta1constants.PriorityClassNameShootControlPlane400,

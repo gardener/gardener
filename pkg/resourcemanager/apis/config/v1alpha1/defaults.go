@@ -166,13 +166,6 @@ func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerC
 	}
 }
 
-// SetDefaults_RootCAPublisherControllerConfig sets defaults for the RootCAPublisherControllerConfig object.
-func SetDefaults_RootCAPublisherControllerConfig(obj *RootCAPublisherControllerConfig) {
-	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
-	}
-}
-
 // SetDefaults_SecretControllerConfig sets defaults for the SecretControllerConfig object.
 func SetDefaults_SecretControllerConfig(obj *SecretControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
