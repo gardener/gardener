@@ -19,37 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func constructNPAllowToAggregatePrometheus(namespace string) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "allow-to-aggregate-prometheus",
-			Namespace:   namespace,
-			Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-aggregate-prometheus=allowed' to the aggregate-prometheus."},
-		},
-		Spec: networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"networking.gardener.cloud/to-aggregate-prometheus": "allowed"},
-			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{{
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"role": "garden",
-						},
-					},
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app":  "aggregate-prometheus",
-							"role": "monitoring",
-						},
-					},
-				}},
-			}},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-		},
-	}
-}
-
 func constructNPAllowToSeedPrometheus(namespace string) *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{

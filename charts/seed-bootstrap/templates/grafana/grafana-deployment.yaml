@@ -25,12 +25,12 @@ spec:
       annotations:
 {{ include "grafana.deployment.annotations" . | indent 8 }}
       labels:
+        component: grafana
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-aggregate-prometheus: allowed
         networking.gardener.cloud/to-seed-prometheus: allowed
         networking.gardener.cloud/to-loki: allowed
-        component: grafana
+        networking.resources.gardener.cloud/to-aggregate-prometheus-web-tcp-9090: allowed
     spec:
       automountServiceAccountToken: false
       priorityClassName: gardener-system-600
