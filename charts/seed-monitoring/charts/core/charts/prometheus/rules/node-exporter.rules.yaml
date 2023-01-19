@@ -61,8 +61,8 @@ groups:
       type: shoot
       visibility: owner
     annotations:
-      summary: Node is in not in a ready state
-      description: One or many node have not been ready for more than 10 minutes 
+      summary: Nodes that are in the NotReady state
+      description: One or many nodes have not been ready for more than 10 minutes 
 
   # alert if the root filesystem is full
   - alert: VMRootfsFull
