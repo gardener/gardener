@@ -6,6 +6,8 @@
   {{- end }}
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
     endpoint = ["http://{{ .Values.registry.hostname }}:5002"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.ipv6.docker.com"]
+    endpoint = ["http://{{ .Values.registry.hostname }}:5008"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
     endpoint = ["http://{{ .Values.registry.hostname }}:5003"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]

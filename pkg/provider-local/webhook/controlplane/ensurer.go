@@ -67,6 +67,8 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc extensionscontex
   endpoint = ["http://` + kindClusterName + `:5001"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
   endpoint = ["http://` + kindClusterName + `:5002"]
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.ipv6.docker.com"]
+  endpoint = ["http://` + kindClusterName + `:5008"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
   endpoint = ["http://` + kindClusterName + `:5003"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]

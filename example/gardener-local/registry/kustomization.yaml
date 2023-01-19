@@ -9,6 +9,7 @@ commonLabels:
 resources:
 - namespace.yaml
 - docker
+- docker-ipv6
 - gcr
 - gcr-eu
 - ghcr
