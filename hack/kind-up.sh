@@ -9,6 +9,7 @@ PATH_CLUSTER_VALUES=""
 PATH_KUBECONFIG=""
 ENVIRONMENT="skaffold"
 DEPLOY_REGISTRY=true
+MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 
 parse_flags() {
@@ -31,6 +32,9 @@ parse_flags() {
       ;;
     --skip-registry)
       DEPLOY_REGISTRY=false
+      ;;
+    --multi-zonal)
+      MULTI_ZONAL=true
       ;;
     esac
 
@@ -66,7 +70,9 @@ mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-backupbuckets" \
   "$(dirname "$0")/../dev/local-registry"
 
-setup_loopback_device
+if [[ "$MULTI_ZONAL" == "true" ]]; then
+  setup_loopback_device
+fi
 
 kind create cluster \
   --name "$CLUSTER_NAME" \

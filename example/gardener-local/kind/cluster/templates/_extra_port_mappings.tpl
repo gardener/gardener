@@ -17,6 +17,7 @@
   hostPort: 9443
 {{- end }}
   listenAddress: {{ .Values.gardener.seed.istio.listenAddressDefault }}
+{{- if .Values.gardener.seed.istio.listenAddressZone0 }}
 - containerPort: 30444
 {{- if or (eq .Values.environment "local") .Values.gardener.controlPlane.deployed }}
   hostPort: 443
@@ -27,6 +28,8 @@
   hostPort: 9443
 {{- end }}
   listenAddress: {{ .Values.gardener.seed.istio.listenAddressZone0 }}
+{{- end }}
+{{- if .Values.gardener.seed.istio.listenAddressZone1 }}
 - containerPort: 30445
 {{- if or (eq .Values.environment "local") .Values.gardener.controlPlane.deployed }}
   hostPort: 443
@@ -37,6 +40,8 @@
   hostPort: 9443
 {{- end }}
   listenAddress: {{ .Values.gardener.seed.istio.listenAddressZone1 }}
+{{- end }}
+{{- if .Values.gardener.seed.istio.listenAddressZone2 }}
 - containerPort: 30446
 {{- if or (eq .Values.environment "local") .Values.gardener.controlPlane.deployed }}
   hostPort: 443
@@ -47,6 +52,7 @@
   hostPort: 9443
 {{- end }}
   listenAddress: {{ .Values.gardener.seed.istio.listenAddressZone2 }}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
