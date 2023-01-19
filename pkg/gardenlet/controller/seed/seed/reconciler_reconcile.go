@@ -28,6 +28,7 @@ import (
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -886,8 +887,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// TODO(rfranzke): Delete this in a future version.
 	{
 		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: r.GardenNamespace}},
 		); err != nil {
 			return err
 		}
