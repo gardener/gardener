@@ -767,6 +767,7 @@ func ComputeExpectedGardenletConfiguration(
 					Enabled:   true,
 					Threshold: &metav1.Duration{Duration: 300000000000},
 				},
+				ManagedResourceProgressingThreshold: &metav1.Duration{Duration: time.Hour},
 				ConditionThresholds: []gardenletv1alpha1.ConditionThreshold{
 					{
 						Type: string(gardencorev1beta1.ShootAPIServerAvailable),
