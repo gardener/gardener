@@ -1,0 +1,10 @@
+gardener:
+  seed:
+    istio:
+      listenAddresses:
+      - ::1
+
+networking:
+  ipFamily: ipv6
+  podSubnet: fd00:10:1::/56
+  serviceSubnet: fd00:10:2::/112

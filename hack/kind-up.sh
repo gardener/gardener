@@ -11,6 +11,7 @@ ENVIRONMENT="skaffold"
 DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
+ADDITIONAL_ARGS=""
 
 parse_flags() {
   while test $# -gt 0; do
@@ -74,9 +75,17 @@ if [[ "$MULTI_ZONAL" == "true" ]]; then
   setup_loopback_device
 fi
 
+if [[ "$IPFAMILY" == "ipv6" ]]; then
+  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
+fi
+
+if [[ "$IPFAMILY" == "ipv6" ]] && [[ "$MULTI_ZONAL" == "true" ]]; then
+  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={::1,::10,::11,::12}"
+fi
+
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 kubectl get nodes -o name |\
