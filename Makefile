@@ -41,6 +41,7 @@ ACTIVATE_SEEDAUTHORIZER                    := false
 SEED_NAME                                  := ""
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
+IPFAMILY                                   := ipv4
 PARALLEL_E2E_TESTS                         := 5
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
 
@@ -287,6 +288,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 # Rules for local environment                                       #
 #####################################################################
 
+kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
 kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
@@ -295,7 +297,6 @@ kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register
 kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
 gardener-extensions-up gardener-extensions-down: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
-
 gardener-extensions-up gardener-extensions-down: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
 
 kind-up: $(KIND) $(KUBECTL) $(HELM)
