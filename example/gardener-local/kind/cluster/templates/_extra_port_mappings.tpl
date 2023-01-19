@@ -17,9 +17,10 @@
   hostPort: 9443
 {{- end }}
   listenAddress: {{ .Values.gardener.seed.istio.listenAddressDefault }}
-{{- if .Values.gardener.seed.istio.listenAddressZone0 }}
-- containerPort: 30444
-{{- if or (eq .Values.environment "local") .Values.gardener.controlPlane.deployed }}
+{{- if .Values.gardener.seed.istio.additionalListenAddresses }}
+{{- range $i, $listenAddress := .Values.gardener.seed.istio.additionalListenAddresses }}
+- containerPort: {{ add 30444 $i }}
+{{- if or (eq $.Values.environment "local") $.Values.gardener.controlPlane.deployed }}
   hostPort: 443
 {{- else }}
   # TODO (plkokanov): when using skaffold to deploy, 127.0.0.2 is not used as listenAddress (unlike the local
@@ -27,34 +28,11 @@
   #  way currently to swap the dns record of the shoot's `kube-apiserver` once it is migrated to this seed.
   hostPort: 9443
 {{- end }}
-  listenAddress: {{ .Values.gardener.seed.istio.listenAddressZone0 }}
+  listenAddress: {{ $listenAddress }}
 {{- end }}
-{{- if .Values.gardener.seed.istio.listenAddressZone1 }}
-- containerPort: 30445
-{{- if or (eq .Values.environment "local") .Values.gardener.controlPlane.deployed }}
-  hostPort: 443
-{{- else }}
-  # TODO (plkokanov): when using skaffold to deploy, 127.0.0.2 is not used as listenAddress (unlike the local
-  #  deployment) because secondary IPs cannot be easily added to inside the `prow` containers. Additionally, there is no
-  #  way currently to swap the dns record of the shoot's `kube-apiserver` once it is migrated to this seed.
-  hostPort: 9443
 {{- end }}
-  listenAddress: {{ .Values.gardener.seed.istio.listenAddressZone1 }}
 {{- end }}
-{{- if .Values.gardener.seed.istio.listenAddressZone2 }}
-- containerPort: 30446
-{{- if or (eq .Values.environment "local") .Values.gardener.controlPlane.deployed }}
-  hostPort: 443
-{{- else }}
-  # TODO (plkokanov): when using skaffold to deploy, 127.0.0.2 is not used as listenAddress (unlike the local
-  #  deployment) because secondary IPs cannot be easily added to inside the `prow` containers. Additionally, there is no
-  #  way currently to swap the dns record of the shoot's `kube-apiserver` once it is migrated to this seed.
-  hostPort: 9443
 {{- end }}
-  listenAddress: {{ .Values.gardener.seed.istio.listenAddressZone2 }}
-{{- end -}}
-{{- end -}}
-{{- end -}}
 
 {{- define "extraPortMappings.gardener.operator.virtualGarden" -}}
 {{- if .Values.gardener.garden.deployed -}}
