@@ -112,8 +112,8 @@ start-admission-controller:
 start-resource-manager:
 	@./hack/local-development/start-resource-manager
 
-.PHONY: start-operator $(YQ)
-start-operator:
+.PHONY: start-operator
+start-operator: $(YQ)
 	@./hack/local-development/start-operator
 
 .PHONY: start-gardenlet
