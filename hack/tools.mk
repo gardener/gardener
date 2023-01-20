@@ -193,7 +193,7 @@ $(SKAFFOLD): $(call tool_version_file,$(SKAFFOLD),$(SKAFFOLD_VERSION))
 $(TERRAFORM): $(call tool_version_file,$(TERRAFORM),$(TERRAFORM_VERSION))
 	TMP_DIR=$$(mktemp -d); \
 		curl -Lo $$TMP_DIR/terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').zip; \
-		unzip -o $$TMP_DIR/terraform.zip terraform -d $(TOOLS_BIN_DIR)
+		unzip -DDo $$TMP_DIR/terraform.zip terraform -d $(TOOLS_BIN_DIR)
 	chmod +x $(TERRAFORM)
 
 $(YAML2JSON): go.mod
