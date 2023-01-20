@@ -65,6 +65,9 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		if cfg.Controllers.Shoot != nil {
 			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
 		}
+		if cfg.Controllers.ShootCare != nil {
+			allErrs = append(allErrs, ValidateShootCareControllerConfiguration(cfg.Controllers.ShootCare, fldPath.Child("controllers", "shootCare"))...)
+		}
 		if cfg.Controllers.ManagedSeed != nil {
 			allErrs = append(allErrs, ValidateManagedSeedControllerConfiguration(cfg.Controllers.ManagedSeed, fldPath.Child("controllers", "managedSeed"))...)
 		}
@@ -173,6 +176,33 @@ func ValidateShootControllerConfiguration(cfg *config.ShootControllerConfigurati
 		if *cfg.DNSEntryTTLSeconds < dnsEntryTTLSecondsMin || *cfg.DNSEntryTTLSeconds > dnsEntryTTLSecondsMax {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("dnsEntryTTLSeconds"), *cfg.DNSEntryTTLSeconds, fmt.Sprintf("must be within [%d,%d]", dnsEntryTTLSecondsMin, dnsEntryTTLSecondsMax)))
 		}
+	}
+
+	return allErrs
+}
+
+// ValidateShootCareControllerConfiguration validates the shootCare controller configuration.
+func ValidateShootCareControllerConfiguration(cfg *config.ShootCareControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cfg.ConcurrentSyncs != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
+
+	if cfg.SyncPeriod != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.SyncPeriod.Duration), fldPath.Child("syncPeriod"))...)
+	}
+
+	if cfg.StaleExtensionHealthChecks != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.StaleExtensionHealthChecks.Threshold.Duration), fldPath.Child("staleExtensionHealthChecks", "threshold"))...)
+	}
+
+	if cfg.ManagedResourceProgressingThreshold != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.ManagedResourceProgressingThreshold.Duration), fldPath.Child("managedResourceProgressingThreshold"))...)
+	}
+
+	for i := range cfg.ConditionThresholds {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.ConditionThresholds[i].Duration.Duration), fldPath.Child("conditionThresholds").Index(i).Child("duration"))...)
 	}
 
 	return allErrs

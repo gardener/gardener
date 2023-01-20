@@ -56,6 +56,13 @@ var _ = Describe("GardenletConfiguration", func() {
 					RetryDuration:        &metav1.Duration{Duration: time.Hour},
 					DNSEntryTTLSeconds:   pointer.Int64(120),
 				},
+				ShootCare: &config.ShootCareControllerConfiguration{
+					ConcurrentSyncs:                     &concurrentSyncs,
+					SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
+					StaleExtensionHealthChecks:          &config.StaleExtensionHealthChecks{Threshold: &metav1.Duration{Duration: time.Hour}},
+					ManagedResourceProgressingThreshold: &metav1.Duration{Duration: time.Hour},
+					ConditionThresholds:                 []config.ConditionThreshold{{Duration: metav1.Duration{Duration: time.Hour}}},
+				},
 				ManagedSeed: &config.ManagedSeedControllerConfiguration{
 					ConcurrentSyncs:  &concurrentSyncs,
 					SyncPeriod:       &metav1.Duration{Duration: 1 * time.Hour},
@@ -248,6 +255,43 @@ var _ = Describe("GardenletConfiguration", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("controllers.shoot.dnsEntryTTLSeconds"),
 				}))))
+			})
+		})
+
+		Context("shootCare controller", func() {
+			It("should forbid invalid configuration", func() {
+				invalidConcurrentSyncs := -1
+
+				cfg.Controllers.ShootCare.ConcurrentSyncs = &invalidConcurrentSyncs
+				cfg.Controllers.ShootCare.SyncPeriod = &metav1.Duration{Duration: -1}
+				cfg.Controllers.ShootCare.StaleExtensionHealthChecks = &config.StaleExtensionHealthChecks{Threshold: &metav1.Duration{Duration: -1}}
+				cfg.Controllers.ShootCare.ManagedResourceProgressingThreshold = &metav1.Duration{Duration: -1}
+				cfg.Controllers.ShootCare.ConditionThresholds = []config.ConditionThreshold{{Duration: metav1.Duration{Duration: -1}}}
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootCare.concurrentSyncs"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootCare.syncPeriod"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootCare.staleExtensionHealthChecks.threshold"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootCare.managedResourceProgressingThreshold"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootCare.conditionThresholds[0].duration"),
+					})),
+				))
 			})
 		})
 
