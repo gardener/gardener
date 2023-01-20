@@ -474,7 +474,9 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 
 	var taskFns []flow.TaskFn
 
-	for _, shoot := range shoots.Items {
+	for _, s := range shoots.Items {
+		shoot := s
+
 		if specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(&shoot); gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) != g.config.SeedConfig.Name {
 			continue
 		}
