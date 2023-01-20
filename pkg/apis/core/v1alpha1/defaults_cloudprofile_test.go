@@ -29,19 +29,10 @@ var _ = Describe("CloudProfile defaulting", func() {
 		obj = &CloudProfile{
 			Spec: CloudProfileSpec{
 				MachineImages: []MachineImage{{
-					Name: "test",
-					Versions: []MachineImageVersion{{
-						ExpirableVersion: ExpirableVersion{
-							Version: "v1.0.0",
-						},
-					}},
+					Versions: []MachineImageVersion{{}},
 				}},
-				MachineTypes: []MachineType{{
-					Name: "large",
-				}},
-				VolumeTypes: []VolumeType{{
-					Name: "fast",
-				}},
+				MachineTypes: []MachineType{{}},
+				VolumeTypes:  []VolumeType{{}},
 			},
 		}
 	})
