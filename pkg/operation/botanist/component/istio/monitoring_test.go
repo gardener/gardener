@@ -66,7 +66,7 @@ relabel_configs:
   - __meta_kubernetes_endpoint_port_name
   - __meta_kubernetes_namespace
   action: keep
-  regex: istio-ingressgateway;status-port;istio-ingress
+  regex: istio-ingressgateway;tls-tunnel;istio-ingress
 - source_labels: [__meta_kubernetes_pod_ip]
   action: replace
   target_label: __address__
