@@ -25,10 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const (
-	istioIngressGatewayServicePortNameStatus = "status-port"
-)
-
 var (
 	//go:embed charts/istio/istio-ingress
 	chartIngress     embed.FS
@@ -70,9 +66,6 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"istiodNamespace":   istioIngressGateway.Values.IstiodNamespace,
 			"loadBalancerIP":    istioIngressGateway.Values.LoadBalancerIP,
 			"serviceName":       v1beta1constants.DefaultSNIIngressServiceName,
-			"portsNames": map[string]interface{}{
-				"status": istioIngressGatewayServicePortNameStatus,
-			},
 		}
 
 		renderedIngressChart, err := i.chartRenderer.RenderEmbeddedFS(chartIngress, chartPathIngress, ManagedResourceControlName, istioIngressGateway.Namespace, values)
