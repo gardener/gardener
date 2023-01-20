@@ -9,10 +9,8 @@ gardener:
   seed:
     deployed: true
     istio:
-      listenAddressDefault: 127.0.0.1
-      listenAddressZone0: 127.0.0.10
-      listenAddressZone1: 127.0.0.11
-      listenAddressZone2: 127.0.0.12
+      listenAddresses:
+      - 127.0.0.1
   repositoryRoot: "."
   garden:
     deployed: false
