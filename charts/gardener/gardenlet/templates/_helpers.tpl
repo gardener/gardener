@@ -198,6 +198,9 @@ config.yaml: |
         threshold: {{ .Values.config.controllers.shootCare.staleExtensionHealthChecks.threshold }}
         {{- end }}
       {{- end }}
+      {{- if .Values.config.controllers.shootCare.managedResourceProgressingThreshold }}
+      managedResourceProgressingThreshold: {{ .Values.config.controllers.shootCare.managedResourceProgressingThreshold }}
+      {{- end }}
       conditionThresholds:
       {{- if .Values.config.controllers.shootCare.conditionThresholds }}
 {{ toYaml .Values.config.controllers.shootCare.conditionThresholds | indent 6 }}

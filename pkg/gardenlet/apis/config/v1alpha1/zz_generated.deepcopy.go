@@ -1172,6 +1172,11 @@ func (in *ShootCareControllerConfiguration) DeepCopyInto(out *ShootCareControlle
 		*out = new(StaleExtensionHealthChecks)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ManagedResourceProgressingThreshold != nil {
+		in, out := &in.ManagedResourceProgressingThreshold, &out.ManagedResourceProgressingThreshold
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.ConditionThresholds != nil {
 		in, out := &in.ConditionThresholds, &out.ConditionThresholds
 		*out = make([]ConditionThreshold, len(*in))

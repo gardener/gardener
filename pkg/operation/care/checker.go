@@ -89,13 +89,14 @@ var (
 
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
-	reader                             client.Reader
-	clock                              clock.Clock
-	conditionThresholds                map[gardencorev1beta1.ConditionType]time.Duration
-	staleExtensionHealthCheckThreshold *metav1.Duration
-	lastOperation                      *gardencorev1beta1.LastOperation
-	kubernetesVersion                  *semver.Version
-	gardenerVersion                    *semver.Version
+	reader                              client.Reader
+	clock                               clock.Clock
+	conditionThresholds                 map[gardencorev1beta1.ConditionType]time.Duration
+	staleExtensionHealthCheckThreshold  *metav1.Duration
+	managedResourceProgressingThreshold *metav1.Duration
+	lastOperation                       *gardencorev1beta1.LastOperation
+	kubernetesVersion                   *semver.Version
+	gardenerVersion                     *semver.Version
 }
 
 // NewHealthChecker creates a new health checker.
@@ -104,18 +105,20 @@ func NewHealthChecker(
 	clock clock.Clock,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
+	managedResourceProgressingThreshold *metav1.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
 	kubernetesVersion *semver.Version,
 	gardenerVersion *semver.Version,
 ) *HealthChecker {
 	return &HealthChecker{
-		reader:                             reader,
-		clock:                              clock,
-		conditionThresholds:                conditionThresholds,
-		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
-		lastOperation:                      lastOperation,
-		kubernetesVersion:                  kubernetesVersion,
-		gardenerVersion:                    gardenerVersion,
+		reader:                              reader,
+		clock:                               clock,
+		conditionThresholds:                 conditionThresholds,
+		staleExtensionHealthCheckThreshold:  healthCheckOutdatedThreshold,
+		managedResourceProgressingThreshold: managedResourceProgressingThreshold,
+		lastOperation:                       lastOperation,
+		kubernetesVersion:                   kubernetesVersion,
+		gardenerVersion:                     gardenerVersion,
 	}
 }
 
@@ -238,27 +241,40 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
 func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
-	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool{
-		resourcesv1alpha1.ResourcesApplied: defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy: defaultSuccessfulCheck(),
+	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
+		resourcesv1alpha1.ResourcesApplied:     defaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy:     defaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(b.clock, b.managedResourceProgressingThreshold),
 	}
 
 	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck)
 }
 
-func defaultSuccessfulCheck() func(status gardencorev1beta1.ConditionStatus) bool {
-	return func(status gardencorev1beta1.ConditionStatus) bool {
-		return status != gardencorev1beta1.ConditionFalse && status != gardencorev1beta1.ConditionUnknown
+func defaultSuccessfulCheck() func(condition gardencorev1beta1.Condition) bool {
+	return func(condition gardencorev1beta1.Condition) bool {
+		return condition.Status != gardencorev1beta1.ConditionFalse && condition.Status != gardencorev1beta1.ConditionUnknown
 	}
 }
 
-func resourcesNotProgressingCheck() func(status gardencorev1beta1.ConditionStatus) bool {
-	return func(status gardencorev1beta1.ConditionStatus) bool {
-		return status != gardencorev1beta1.ConditionTrue && status != gardencorev1beta1.ConditionUnknown
+func resourcesNotProgressingCheck(clock clock.Clock, theshold *metav1.Duration) func(condition gardencorev1beta1.Condition) bool {
+	return func(condition gardencorev1beta1.Condition) bool {
+		notProgressing := condition.Status != gardencorev1beta1.ConditionTrue && condition.Status != gardencorev1beta1.ConditionUnknown
+
+		if theshold != nil && !notProgressing && clock.Since(condition.LastTransitionTime.Time) < theshold.Duration {
+			// ManagedResource is progressing but the given threshold didn't pass.
+			// Hence, return that the ManagedResource is not progressing.
+			return true
+		}
+
+		return notProgressing
 	}
 }
 
-func (b *HealthChecker) checkManagedResourceConditions(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkManagedResourceConditions(
+	condition gardencorev1beta1.Condition,
+	mr *resourcesv1alpha1.ManagedResource,
+	conditionsToCheck map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool,
+) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 		return &c
@@ -269,8 +285,11 @@ func (b *HealthChecker) checkManagedResourceConditions(condition gardencorev1bet
 		if !ok {
 			continue
 		}
-		if !checkConditionStatus(cond.Status) {
+		if !checkConditionStatus(cond) {
 			c := b.FailedCondition(condition, cond.Reason, cond.Message)
+			if cond.Type == resourcesv1alpha1.ResourcesProgressing && b.managedResourceProgressingThreshold != nil {
+				c = b.FailedCondition(condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, b.managedResourceProgressingThreshold.Duration))
+			}
 			return &c
 		}
 		delete(conditionsToCheck, cond.Type)
@@ -587,14 +606,6 @@ func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condi
 	}
 	return *newCondition
 }
-
-var (
-	controlPlaneMonitoringLoggingSelector = mustGardenRoleLabelSelector(
-		v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.GardenRoleMonitoring,
-		v1beta1constants.GardenRoleLogging,
-	)
-)
 
 func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {
 	return (isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||

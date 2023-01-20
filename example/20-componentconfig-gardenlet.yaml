@@ -52,6 +52,7 @@ controllers:
     staleExtensionHealthChecks:
       enabled: true
     # threshold: 5m
+    managedResourceProgressingThreshold: 1h
     conditionThresholds:
     - type: APIServerAvailable
       duration: 1m

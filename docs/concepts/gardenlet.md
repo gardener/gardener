@@ -409,6 +409,8 @@ It maintains four conditions and performs the following checks:
 - `EveryNodyReady`: The conditions of the worker nodes are checked (e.g., `Ready`, `MemoryPressure`, etc.). Also, it's checked whether the Kubernetes version of the installed `kubelet` matches the desired version specified in the `Shoot` resource.
 - `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g. `ResourcesApplied`, etc.). Also, it is verified whether the VPN tunnel connection is established (which is required for the `kube-apiserver` to communicate with the worker nodes).
 
+Sometimes, `ManagedResource`s can have both `Healthy` and `Progressing` conditions set to `True` (e.g., when a `DaemonSet` rolls out one-by-one on a large cluster with many nodes) while this is not reflected in the `Shoot` status. In order to catch issues where the rollout gets stuck, one can set `.controllers.shootCare.managedResourceProgressingThreshold` in the `gardenlet`'s component configuration. If the `Progressing` condition is still `True` for more than the configured duration, the `SystemComponentsHealthy` condition in the `Shoot` is set to `False`, eventually.
+
 Each condition can optionally also have error `codes` in order to indicate which type of issue was detected (see [Shoot Status](../usage/shoot_status.md) for more details).
 
 Apart from the above, extension controllers can also contribute to the `status` or error `codes` of these conditions (see [Contributing to Shoot Health Status Conditions](../extensions/shoot-health-status-conditions.md) for more details).
