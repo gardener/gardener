@@ -37,43 +37,6 @@ type networkPolicyTransformer struct {
 func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTransformer {
 	return []networkPolicyTransformer{
 		{
-			name: "allow-to-seed-prometheus",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to the seed-prometheus.", v1beta1constants.LabelNetworkPolicyToSeedPrometheus,
-							v1beta1constants.LabelNetworkPolicyAllowed),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelNetworkPolicyToSeedPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
-							},
-						},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								NamespaceSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelRole: v1beta1constants.GardenRoleGarden,
-									},
-								},
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:  "seed-prometheus",
-										v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
-									},
-								},
-							}},
-						}},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					}
-					return nil
-				}
-			},
-		},
-
-		{
 			name: "allow-to-all-shoot-apiservers",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {

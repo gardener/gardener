@@ -118,7 +118,6 @@ var _ = Describe("Bootstrap", func() {
 
 		It("should successfully deploy all the resources (w/o any special configuration)", func() {
 			registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-			Expect(registry.Add(constructNPAllowToSeedPrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))).To(Succeed())
 			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
@@ -147,7 +146,6 @@ var _ = Describe("Bootstrap", func() {
 			deployer = NewBootstrapper(c, namespace, values)
 
 			registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-			Expect(registry.Add(constructNPAllowToSeedPrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))).To(Succeed())
 			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-public-networks", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
