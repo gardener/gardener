@@ -174,7 +174,7 @@ func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespace
 
 		for _, n := range namespaceNames.UnsortedList() {
 			namespaceName := n
-			matchLabels := matchLabelsForServiceAndNamespace(policyID, service.Namespace, namespaceName)
+			matchLabels := matchLabelsForServiceAndNamespace(policyID, service, namespaceName)
 
 			for _, fns := range []struct {
 				objectMetaFunc func(string, string, string) metav1.ObjectMeta
@@ -296,13 +296,20 @@ func policyIDFor(serviceName string, port corev1.ServicePort) string {
 	return fmt.Sprintf("%s-%s-%s", serviceName, strings.ToLower(string(port.Protocol)), port.TargetPort.String())
 }
 
-func matchLabelsForServiceAndNamespace(policyID string, serviceNamespace string, namespaceName string) map[string]string {
-	suffix := policyID
-	if serviceNamespace != namespaceName {
-		suffix = serviceNamespace + "-" + policyID
+func matchLabelsForServiceAndNamespace(policyID string, service *corev1.Service, namespaceName string) map[string]string {
+	var infix string
+
+	if service.Namespace != namespaceName {
+		infix = service.Namespace
+
+		if namespaceAlias, ok := service.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias]; ok {
+			infix = namespaceAlias
+		}
+
+		infix += "-"
 	}
 
-	return map[string]string{"networking.resources.gardener.cloud/to-" + suffix: v1beta1constants.LabelNetworkPolicyAllowed}
+	return map[string]string{"networking.resources.gardener.cloud/to-" + infix + policyID: v1beta1constants.LabelNetworkPolicyAllowed}
 }
 
 func ingressPolicyObjectMetaFor(policyID, serviceNamespace, namespaceName string) metav1.ObjectMeta {

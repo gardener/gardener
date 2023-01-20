@@ -561,5 +561,45 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port2Suffix)})}),
 			))
 		})
+
+		Context("with pod label selector namespace alias", func() {
+			alias := "alias"
+
+			BeforeEach(func() {
+				metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.resources.gardener.cloud/pod-label-selector-namespace-alias", alias)
+			})
+
+			It("should create the expected cross-namespace network policies", func() {
+				ensureNetworkPoliciesGetCreated()
+
+				By("Wait until ingress from other-namespace policy was created for first port")
+				Eventually(func(g Gomega) *metav1.LabelSelector {
+					networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port1Suffix + "-from-" + otherNamespace.Name, Namespace: service.Namespace}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+					return networkPolicy.Spec.Ingress[0].From[0].PodSelector
+				}).Should(Equal(&metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + alias + "-" + service.Name + port1Suffix: "allowed"}}))
+
+				By("Wait until egress from other-namespace policy was created for first port")
+				Eventually(func(g Gomega) metav1.LabelSelector {
+					networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Namespace + "-" + service.Name + port1Suffix, Namespace: otherNamespace.Name}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+					return networkPolicy.Spec.PodSelector
+				}).Should(Equal(metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + alias + "-" + service.Name + port1Suffix: "allowed"}}))
+
+				By("Wait until ingress from other-namespace policy was created for second port")
+				Eventually(func(g Gomega) *metav1.LabelSelector {
+					networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port2Suffix + "-from-" + otherNamespace.Name, Namespace: service.Namespace}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+					return networkPolicy.Spec.Ingress[0].From[0].PodSelector
+				}).Should(Equal(&metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + alias + "-" + service.Name + port2Suffix: "allowed"}}))
+
+				By("Wait until egress from other-namespace policy was created for second port")
+				Eventually(func(g Gomega) metav1.LabelSelector {
+					networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Namespace + "-" + service.Name + port2Suffix, Namespace: otherNamespace.Name}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+					return networkPolicy.Spec.PodSelector
+				}).Should(Equal(metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + alias + "-" + service.Name + port2Suffix: "allowed"}}))
+			})
+		})
 	})
 })

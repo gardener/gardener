@@ -664,6 +664,21 @@ The components in namespace `b` now need to be labeled with `networking.resource
 > Obviously, this approach also works for namespace selectors different from `kubernetes.io/metadata.name` to cover scenarios where the namespace name is not known upfront or where multiple namespaces with a similar label are relevant.
 > The controller creates two dedicated policies for each namespace matching the selectors. 
 
+Finally, let's say there is a `Service` called `example` which exists in different namespaces whose names are not static (e.g., `foo-1`, `foo-2`, etc.), and a component in namespace `bar` wants to initiate connections with all of them.
+
+The `example` `Service`s in these namespaces can now be annotated with `networking.resources.gardener.cloud/cross-namespace-selectors='[{"matchLabels":{"kubernetes.io/name":"bar"}}]'`.
+As a consequence, the component in namespace `bar` now needs to be labeled with `networking.resources.gardener.cloud/to-foo-1-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-foo-2-example-tcp-8080=allowed`, etc.
+This approach does not work in practice, however, since the namespace names are neither static nor known upfront.
+
+To overcome this, it is possible to specify an alias for the concrete namespace in the pod label selector via the `networking.resources.gardener.cloud/pod-label-selector-namespace-alias` annotation.
+
+In above case, the `example` `Service` in the `foo-*` namespaces could be annotated with `networking.resources.gardener.cloud/pod-label-selector-namespace-alias=all-foos`.
+This would modify the label selector in all cross-namespace `NetworkPolicy`s, i.e. instead of `networking.resources.gardener.cloud/to-foo-{1,2,...}-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-all-foos-example-tcp-8080=allowed` would be used.
+Now the component in namespace `bar` only needs this single label and is able to talk to all such `Service`s in the different namespaces.
+
+> Real-world examples for this scenario are the `kube-apiserver` `Service` (which exists in all shoot namespaces), or the `istio-ingressgateway` `Service` (which exists in all `istio-ingress*` namespaces).
+> In both cases, the names of the namespaces are not statically known and depend on user input.
+
 ## Webhooks
 
 ### Mutating Webhooks
