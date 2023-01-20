@@ -167,6 +167,7 @@ type Logging struct {
 // Addons contains references for the addons.
 type Addons struct {
 	KubernetesDashboard kubernetesdashboard.Interface
+	NginxIngress        component.Deployer
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

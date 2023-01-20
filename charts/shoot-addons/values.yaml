@@ -1,8 +1,0 @@
-global:
-  vpaEnabled: false
-  pspDisabled: false
-nginx-ingress:
-  enabled: false
-  images:
-    nginx-ingress-controller: image-repository:image-tag
-    ingress-default-backend: image-repository:image-tag

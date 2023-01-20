@@ -1,21 +1,7 @@
-{{- if .Values.rbac.create -}}
+# TODO(ary1992): Delete this Helm chart in a future version.
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  labels:
-    app: {{ template "nginx-ingress.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
+  name: addons-nginx-ingress
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  name: {{ template "nginx-ingress.fullname" . }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: {{ template "nginx-ingress.fullname" . }}
-subjects:
-  - kind: ServiceAccount
-    name: {{ template "nginx-ingress.fullname" . }}
-    namespace: {{ .Release.Namespace }}
-{{- end -}}
+    resources.gardener.cloud/mode: Ignore

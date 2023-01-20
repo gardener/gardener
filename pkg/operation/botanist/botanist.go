@@ -218,6 +218,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.Addons.NginxIngress, err = b.DefaultNginxIngress()
+	if err != nil {
+		return nil, err
+	}
 
 	return b, nil
 }
@@ -264,4 +268,11 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver
+// with dot "." suffix. It'll prevent extra requests to the DNS in case the record is not
+// available.
+func (b *Botanist) outOfClusterAPIServerFQDN() string {
+	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
 }

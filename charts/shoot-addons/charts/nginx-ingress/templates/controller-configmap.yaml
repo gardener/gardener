@@ -1,18 +1,8 @@
+# TODO(ary1992): Delete this Helm chart in a future version.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  labels:
-    app: {{ template "nginx-ingress.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
-    component: "{{ .Values.controller.name }}"
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
-  name: {{ template "nginx-ingress.controller.fullname" . }}
+  name: addons-nginx-ingress-controller
   namespace: kube-system
-data:
-  enable-vts-status: "{{ .Values.controller.stats.enabled }}"
-{{- if .Values.controller.customConfig }}
-{{ toYaml (merge .Values.controller.customConfig .Values.controller.config) | indent 2 }}
-{{- else }}
-{{ toYaml .Values.controller.config | indent 2 }}
-{{- end }}
+  annotations:
+    resources.gardener.cloud/mode: Ignore

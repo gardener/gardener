@@ -1,5 +1,0 @@
-dependencies:
-- name: nginx-ingress
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: nginx-ingress.enabled
