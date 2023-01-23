@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
@@ -148,7 +149,6 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	istioNamespaceFunc func() string,
-	istioLabelsFunc func() map[string]string,
 	values Values,
 ) Interface {
 	return &vpnSeedServer{
@@ -157,7 +157,6 @@ func New(
 		secretsManager:     secretsManager,
 		values:             values,
 		istioNamespaceFunc: istioNamespaceFunc,
-		istioLabelsFunc:    istioLabelsFunc,
 	}
 }
 
@@ -169,7 +168,6 @@ type vpnSeedServer struct {
 	values             Values
 	secrets            Secrets
 	istioNamespaceFunc func() string
-	istioLabelsFunc    func() map[string]string
 }
 
 func (v *vpnSeedServer) GetValues() Values {
@@ -236,7 +234,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := v.deployNetworkPolicy(ctx); err != nil {
+	// TODO(rfranzke): Delete this in a future release.
+	if err := kubernetesutils.DeleteObject(ctx, v.client, v.emptyNetworkPolicy()); err != nil {
 		return err
 	}
 
@@ -713,6 +712,8 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, fmt.Sprintf(`[{"matchLabels":{"%s":"%s"}}]`, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioIngress))
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt(metricsPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
@@ -785,42 +786,6 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 				Tls: &istionetworkingv1beta1.ClientTLSSettings{
 					Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
 				},
-			},
-		}
-		return nil
-	})
-	return err
-}
-
-func (v *vpnSeedServer) deployNetworkPolicy(ctx context.Context) error {
-	var (
-		networkPolicy = v.emptyNetworkPolicy()
-		igwSelectors  = v.getIngressGatewaySelectors()
-	)
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, networkPolicy, func() error {
-		networkPolicy.ObjectMeta.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
-		}
-		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: getLabels(),
-			},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							// we don't want to modify existing labels on the istio namespace
-							NamespaceSelector: &metav1.LabelSelector{},
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: igwSelectors,
-							},
-						},
-					},
-				},
-			},
-			PolicyTypes: []networkingv1.PolicyType{
-				networkingv1.PolicyTypeIngress,
 			},
 		}
 		return nil
@@ -943,10 +908,6 @@ func (v *vpnSeedServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 
 func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
 	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioNamespaceFunc()}}
-}
-
-func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
-	return v.istioLabelsFunc()
 }
 
 func getLabels() map[string]string {

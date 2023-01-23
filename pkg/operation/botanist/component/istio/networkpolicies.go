@@ -236,6 +236,7 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 				}
 			},
 		},
+		// TODO(rfranzke): Delete this network policy in a future release.
 		{
 			name: "allow-to-shoot-vpn-seed-server",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {

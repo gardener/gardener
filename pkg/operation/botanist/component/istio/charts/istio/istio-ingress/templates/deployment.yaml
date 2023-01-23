@@ -22,6 +22,7 @@ spec:
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
         networking.gardener.cloud/to-dns: allowed
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}

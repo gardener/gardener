@@ -1661,6 +1661,7 @@ spec:
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
         networking.gardener.cloud/to-dns: allowed
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: a357fe81829c12ad57e92721b93fd6efa1670d19e4cab94dfb7c792f9665c51a

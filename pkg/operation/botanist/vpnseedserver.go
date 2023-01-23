@@ -100,7 +100,6 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		func() string { return b.IstioNamespace() },
-		func() map[string]string { return b.IstioLabels() },
 		values,
 	), nil
 }
