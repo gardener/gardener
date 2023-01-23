@@ -57,6 +57,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -1839,10 +1840,10 @@ func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 	if r.values.TargetDiffersFromSourceCluster {
 		return map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyFromShootAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 		}
 	}
 

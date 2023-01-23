@@ -28,7 +28,7 @@ spec:
       labels:
 {{- if .Values.rbacSidecarEnabled }}
         networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed
 {{- end }}
 {{- if .Values.labels }}
 {{ toYaml .Values.labels | indent 8 }}

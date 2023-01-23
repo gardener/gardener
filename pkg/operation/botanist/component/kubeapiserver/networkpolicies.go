@@ -74,9 +74,10 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowToShootAPIServer(ctx context.
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
 		networkPolicy.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to "+
-				"talk to Shoot's Kubernetes API Server.", v1beta1constants.LabelNetworkPolicyToShootAPIServer,
-				v1beta1constants.LabelNetworkPolicyAllowed),
+			v1beta1constants.GardenerDescription: fmt.Sprintf("DEPRECATED: Do not use this policy anymore - label "+
+				"your pods with `networking.resources.gardener.cloud/to-kube-apiserver-tcp-443=allowed` instead. Allows "+
+				"Egress from pods labeled with '%s=%s' to talk to Shoot's Kubernetes API Server.",
+				v1beta1constants.LabelNetworkPolicyToShootAPIServer, v1beta1constants.LabelNetworkPolicyAllowed),
 		}
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{

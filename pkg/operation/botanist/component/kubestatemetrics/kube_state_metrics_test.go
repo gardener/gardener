@@ -261,7 +261,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					"type":                             string(clusterType),
 					"gardener.cloud/role":              "monitoring",
 					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+					"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 				}
 				args = []string{
 					"--port=8080",

@@ -437,6 +437,7 @@ const (
 	LabelNetworkPolicyToRuntimeAPIServer = "networking.gardener.cloud/to-runtime-apiserver"
 	// LabelNetworkPolicyToShootAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's
 	// Kubernetes API Server.
+	// Deprecated. Use `networking.resources.gardener.cloud/to-kube-apiserver-tcp-443=allowed` instead.
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
 	// LabelNetworkPolicyToShootNetworks allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks=allowed' to IPv4 blocks belonging to the Shoot network.
 	LabelNetworkPolicyToShootNetworks = "networking.gardener.cloud/to-shoot-networks"

@@ -502,13 +502,13 @@ var _ = Describe("ResourceManager", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"projected-token-mount.resources.gardener.cloud/skip": "true",
-								"networking.gardener.cloud/to-dns":                    "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver":      "allowed",
-								"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
-								"networking.gardener.cloud/from-shoot-apiserver":      "allowed",
-								v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
-								v1beta1constants.LabelApp:                             "gardener-resource-manager",
+								"projected-token-mount.resources.gardener.cloud/skip":           "true",
+								"networking.gardener.cloud/to-dns":                              "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":                "allowed",
+								"networking.gardener.cloud/from-shoot-apiserver":                "allowed",
+								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
+								v1beta1constants.GardenRole:                                     v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:                                       "gardener-resource-manager",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -2091,7 +2091,7 @@ subjects:
 				// Remove networking label from deployment template
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-runtime-apiserver")
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
+				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
 
 				utilruntime.Must(references.InjectAnnotations(deployment))

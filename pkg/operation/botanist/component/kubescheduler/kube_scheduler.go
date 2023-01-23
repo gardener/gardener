@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -245,10 +246,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
-					v1beta1constants.LabelPodMaintenanceRestart:         "true",
-					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.GardenRole:                 v1beta1constants.GardenRoleControlPlane,
+					v1beta1constants.LabelPodMaintenanceRestart: "true",
+					v1beta1constants.LabelNetworkPolicyToDNS:    v1beta1constants.LabelNetworkPolicyAllowed,
+					gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 				}),
 			},
 			Spec: corev1.PodSpec{

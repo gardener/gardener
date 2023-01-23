@@ -348,6 +348,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(rfranzke): Delete this network policy in a future release.
 	if err := k.reconcileNetworkPolicyAllowToShootAPIServer(ctx, networkPolicyAllowToShootAPIServer); err != nil {
 		return err
 	}

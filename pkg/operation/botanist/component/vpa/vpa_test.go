@@ -315,7 +315,7 @@ var _ = Describe("VPA", func() {
 								"app":                              "vpa-updater",
 								"gardener.cloud/role":              "vpa",
 								"networking.gardener.cloud/to-dns": "allowed",
-								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -596,9 +596,9 @@ var _ = Describe("VPA", func() {
 							Labels: map[string]string{
 								"app":                 "vpa-recommender",
 								"gardener.cloud/role": "vpa",
-								"networking.gardener.cloud/from-prometheus":    "allowed",
-								"networking.gardener.cloud/to-dns":             "allowed",
-								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+								"networking.gardener.cloud/from-prometheus":                     "allowed",
+								"networking.gardener.cloud/to-dns":                              "allowed",
+								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -862,9 +862,9 @@ var _ = Describe("VPA", func() {
 							Labels: map[string]string{
 								"app":                 "vpa-admission-controller",
 								"gardener.cloud/role": "vpa",
-								"networking.gardener.cloud/from-shoot-apiserver": "allowed",
-								"networking.gardener.cloud/to-dns":               "allowed",
-								"networking.gardener.cloud/to-shoot-apiserver":   "allowed",
+								"networking.gardener.cloud/from-shoot-apiserver":                "allowed",
+								"networking.gardener.cloud/to-dns":                              "allowed",
+								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -1823,7 +1823,7 @@ func dropNetworkingLabels(labels map[string]string) {
 			continue
 		}
 
-		if strings.HasPrefix(k, "networking.gardener.cloud/") {
+		if strings.HasPrefix(k, "networking.gardener.cloud/") || strings.HasPrefix(k, "networking.resources.gardener.cloud/") {
 			delete(labels, k)
 		}
 	}

@@ -32,6 +32,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -219,7 +220,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane100
 		deploymentLabels[v1beta1constants.GardenRole] = v1beta1constants.LabelMonitoring
 		podLabels = utils.MergeStringMaps(podLabels, deploymentLabels, map[string]string{
-			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 		args = append(args,
 			"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
