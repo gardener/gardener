@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 )
 
 const (
@@ -105,11 +104,9 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowToShootAPIServer(ctx context.
 
 func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy) error {
 	var (
-		protocol               = corev1.ProtocolTCP
-		portAPIServer          = intstr.FromInt(kubeapiserverconstants.Port)
-		portEtcd               = intstr.FromInt(int(etcd.PortEtcdClient))
-		portVPNSeedServerNonHA = intstr.FromInt(vpnseedserver.EnvoyPort)
-		portVPNSeedServerHA    = intstr.FromInt(vpnseedserver.OpenVPNPort)
+		protocol      = corev1.ProtocolTCP
+		portAPIServer = intstr.FromInt(kubeapiserverconstants.Port)
+		portEtcd      = intstr.FromInt(int(etcd.PortEtcdClient))
 	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
@@ -153,25 +150,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 				},
 			},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-		}
-
-		if k.values.VPN.Enabled {
-			portVPNSeedServer := &portVPNSeedServerNonHA
-			if k.values.VPN.HighAvailabilityEnabled {
-				portVPNSeedServer = &portVPNSeedServerHA
-			}
-
-			networkPolicy.Spec.Egress = append(networkPolicy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
-				To: []networkingv1.NetworkPolicyPeer{{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: vpnseedserver.GetLabels(),
-					},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{{
-					Protocol: &protocol,
-					Port:     portVPNSeedServer,
-				}},
-			})
 		}
 
 		return nil

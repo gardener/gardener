@@ -242,9 +242,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 
 	podTemplate := v.podTemplate(configMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth)
 	labels := map[string]string{
-		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.LabelApp:                             DeploymentName,
-		v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		v1beta1constants.LabelApp:   DeploymentName,
 	}
 
 	if v.values.HighAvailabilityEnabled {
@@ -805,22 +804,9 @@ func (v *vpnSeedServer) deployNetworkPolicy(ctx context.Context) error {
 		}
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
-				MatchLabels: GetLabels(),
+				MatchLabels: getLabels(),
 			},
 			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-									v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-									v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-								},
-							},
-						},
-					},
-				},
 				{
 					From: []networkingv1.NetworkPolicyPeer{
 						{
@@ -963,8 +949,7 @@ func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
 	return v.istioLabelsFunc()
 }
 
-// GetLabels returns the labels for the vpn-seed-server
-func GetLabels() map[string]string {
+func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.LabelApp:   DeploymentName,

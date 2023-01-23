@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -729,11 +730,18 @@ func (k *kubeAPIServer) handleVPNSettings(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
 	}
 
+	var portVPNSeedServer int
 	if k.values.VPN.HighAvailabilityEnabled {
 		k.handleVPNSettingsHA(deployment, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		portVPNSeedServer = vpnseedserver.OpenVPNPort
 	} else {
 		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxy, configMapEgressSelector)
+		portVPNSeedServer = vpnseedserver.EnvoyPort
 	}
+
+	deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
+		gardenerutils.NetworkPolicyLabel(vpnseedserver.ServiceName, portVPNSeedServer): v1beta1constants.LabelNetworkPolicyAllowed,
+	})
 
 	return nil
 }

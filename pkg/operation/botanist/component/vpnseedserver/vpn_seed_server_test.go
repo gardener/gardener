@@ -259,9 +259,8 @@ admin:
 			Name:      DeploymentName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleControlPlane,
-				v1beta1constants.LabelApp:                        DeploymentName,
-				"networking.gardener.cloud/from-shoot-apiserver": "allowed",
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+				v1beta1constants.LabelApp:   DeploymentName,
 			},
 		}
 
@@ -695,19 +694,6 @@ admin:
 					},
 				},
 				Ingress: []networkingv1.NetworkPolicyIngressRule{
-					{
-						From: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-									},
-								},
-							},
-						},
-					},
 					{
 						From: []networkingv1.NetworkPolicyPeer{
 							{

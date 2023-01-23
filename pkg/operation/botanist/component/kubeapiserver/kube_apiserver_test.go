@@ -880,10 +880,9 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			var (
-				protocol          = corev1.ProtocolTCP
-				portAPIServer     = intstr.FromInt(443)
-				portEtcd          = intstr.FromInt(2379)
-				portVPNSeedServer = intstr.FromInt(9443)
+				protocol      = corev1.ProtocolTCP
+				portAPIServer = intstr.FromInt(443)
+				portEtcd      = intstr.FromInt(2379)
 			)
 
 			Context("allow-kube-apiserver NetworkPolicy resource", func() {
@@ -933,20 +932,6 @@ var _ = Describe("KubeAPIServer", func() {
 									Ports: []networkingv1.NetworkPolicyPort{{
 										Protocol: &protocol,
 										Port:     &portEtcd,
-									}},
-								},
-								{
-									To: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "controlplane",
-												"app":                 "vpn-seed-server",
-											},
-										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{{
-										Protocol: &protocol,
-										Port:     &portVPNSeedServer,
 									}},
 								},
 							},
@@ -1958,7 +1943,9 @@ rules:
 				It("should have the expected pod template labels", func() {
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Labels).To(Equal(defaultLabels))
+					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
+						"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-9443": "allowed",
+					})))
 				})
 
 				It("should have the expected pod template labels with vpn enabled", func() {
@@ -1970,7 +1957,9 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Labels).To(Equal(defaultLabels))
+					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
+						"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-9443": "allowed",
+					})))
 				})
 
 				It("should have the expected pod template labels with ha vpn enabled", func() {
@@ -1983,8 +1972,9 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
-						"networking.gardener.cloud/to-shoot-networks":    "allowed",
-						"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+						"networking.gardener.cloud/to-shoot-networks":                     "allowed",
+						"networking.gardener.cloud/to-runtime-apiserver":                  "allowed",
+						"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-1194": "allowed",
 					})))
 				})
 			})
@@ -2229,6 +2219,7 @@ rules:
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
+				Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("networking.resources.gardener.cloud/to-vpn-seed-server-tcp-1194", "allowed"))
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
 				Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
