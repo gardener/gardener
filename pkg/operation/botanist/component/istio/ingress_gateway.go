@@ -25,10 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
-const (
-	istioIngressGatewayServicePortNameStatus = "status-port"
-)
-
 var (
 	//go:embed charts/istio/istio-ingress
 	chartIngress     embed.FS
@@ -75,9 +71,6 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"istiodNamespace":       istioIngressGateway.Values.IstiodNamespace,
 			"loadBalancerIP":        istioIngressGateway.Values.LoadBalancerIP,
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
-			"portsNames": map[string]interface{}{
-				"status": istioIngressGatewayServicePortNameStatus,
-			},
 		}
 
 		if istioIngressGateway.Values.MinReplicas != nil {
