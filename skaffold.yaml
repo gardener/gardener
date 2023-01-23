@@ -328,6 +328,7 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/extensions/worker
         - pkg/operation/botanist/component/kubeapiserver
+        - pkg/operation/botanist/component/kubeapiserver/constants
         - pkg/operation/botanist/component/kubecontrollermanager
         - pkg/operation/botanist/component/kubeproxy
         - pkg/operation/botanist/component/kubernetesdashboard
@@ -660,8 +661,6 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/operation/botanist/component
-        - pkg/operation/botanist/component/dependencywatchdog
-        - pkg/operation/botanist/component/etcd
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker
@@ -669,9 +668,8 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
-        - pkg/operation/botanist/component/kubeapiserver
+        - pkg/operation/botanist/component/kubeapiserver/constants
         - pkg/operation/botanist/component/kubeproxy
-        - pkg/operation/botanist/component/vpnseedserver
         - pkg/provider-local/apis/local
         - pkg/provider-local/apis/local/helper
         - pkg/provider-local/apis/local/install
@@ -939,6 +937,7 @@ build:
         - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/istio
         - pkg/operation/botanist/component/kubeapiserver
+        - pkg/operation/botanist/component/kubeapiserver/constants
         - pkg/operation/botanist/component/kubeapiserverexposure
         - pkg/operation/botanist/component/kubecontrollermanager
         - pkg/operation/botanist/component/kubeproxy

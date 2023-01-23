@@ -32,6 +32,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -228,7 +229,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",
-							ContainerPort: Port,
+							ContainerPort: kubeapiserverconstants.Port,
 							Protocol:      corev1.ProtocolTCP,
 						}},
 						Resources: k.values.Autoscaling.APIServerResources,
@@ -237,7 +238,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/livez",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(Port),
+									Port:   intstr.FromInt(kubeapiserverconstants.Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
 										Value: "Bearer " + healthCheckToken,
@@ -255,7 +256,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(Port),
+									Port:   intstr.FromInt(kubeapiserverconstants.Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
 										Value: "Bearer " + healthCheckToken,
@@ -560,7 +561,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.ServiceNetworkCIDR))
-	out = append(out, fmt.Sprintf("--secure-port=%d", Port))
+	out = append(out, fmt.Sprintf("--secure-port=%d", kubeapiserverconstants.Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
 	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey))

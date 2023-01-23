@@ -83,8 +83,6 @@ func init() {
 }
 
 const (
-	// Port is the port exposed by the kube-apiserver.
-	Port = 443
 	// SecretNameUserKubeconfig is the name for the user kubeconfig.
 	SecretNameUserKubeconfig = "user-kubeconfig"
 	// ServicePortName is the name of the port in the service.

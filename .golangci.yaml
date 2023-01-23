@@ -204,6 +204,8 @@ linters-settings:
         alias: mock${1}
       - pkg: github.com/gardener/gardener/pkg/operation/.*/(\w+)/mock$
         alias: mock${1}
+      - pkg: github.com/gardener/gardener/pkg/operation/botanist/component/(\w+)/constants
+        alias: ${1}constants
       - pkg: github.com/gardener/gardener/pkg/operation/(\w+)
         alias: ${1}pkg
       - pkg: github.com/gardener/gardener/pkg/operator/client

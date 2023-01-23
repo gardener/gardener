@@ -3303,7 +3303,7 @@ rules:
 					validateProbe := func(probe *corev1.Probe, path string, initialDelaySeconds int32) {
 						Expect(probe.ProbeHandler.HTTPGet.Path).To(Equal(path))
 						Expect(probe.ProbeHandler.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
-						Expect(probe.ProbeHandler.HTTPGet.Port).To(Equal(intstr.FromInt(Port)))
+						Expect(probe.ProbeHandler.HTTPGet.Port).To(Equal(intstr.FromInt(443)))
 						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders).To(HaveLen(1))
 						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders[0].Name).To(Equal("Authorization"))
 						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders[0].Value).To(ContainSubstring("Bearer "))

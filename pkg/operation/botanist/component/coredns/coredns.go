@@ -43,7 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -162,7 +162,7 @@ func (c *coreDNS) WaitCleanup(ctx context.Context) error {
 
 func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 	var (
-		portAPIServer       = intstr.FromInt(kubeapiserver.Port)
+		portAPIServer       = intstr.FromInt(kubeapiserverconstants.Port)
 		portDNSServerHost   = intstr.FromInt(53)
 		portDNSServer       = intstr.FromInt(corednsconstants.PortServer)
 		portMetricsEndpoint = intstr.FromInt(portMetrics)
