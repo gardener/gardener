@@ -74,6 +74,7 @@ build:
         - pkg/operation/botanist/component/kubeapiserverexposure
         - pkg/operation/botanist/component/kubescheduler
         - pkg/operation/botanist/component/resourcemanager
+        - pkg/operation/botanist/component/resourcemanager/constants
         - pkg/operation/botanist/component/shared
         - pkg/operation/botanist/component/vpa
         - pkg/operation/botanist/component/vpnseedserver

@@ -339,6 +339,7 @@ build:
         - pkg/operation/botanist/component/nodelocaldns/constants
         - pkg/operation/botanist/component/projectrbac
         - pkg/operation/botanist/component/resourcemanager
+        - pkg/operation/botanist/component/resourcemanager/constants
         - pkg/operation/botanist/component/vpa
         - pkg/operation/botanist/component/vpnseedserver
         - pkg/operation/botanist/component/vpnshoot
@@ -954,6 +955,7 @@ build:
         - pkg/operation/botanist/component/nodelocaldns/constants
         - pkg/operation/botanist/component/nodeproblemdetector
         - pkg/operation/botanist/component/resourcemanager
+        - pkg/operation/botanist/component/resourcemanager/constants
         - pkg/operation/botanist/component/seedsystem
         - pkg/operation/botanist/component/shared
         - pkg/operation/botanist/component/shootsystem

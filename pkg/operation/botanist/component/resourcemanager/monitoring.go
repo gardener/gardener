@@ -19,6 +19,8 @@ import (
 	"text/template"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	resourcemanagerconstants "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/constants"
 )
 
 const (
@@ -37,7 +39,7 @@ relabel_configs:
   - __meta_kubernetes_service_name
   - __meta_kubernetes_endpoint_port_name
   action: keep
-  regex: ` + serviceName + `;` + metricsPortName + `
+  regex: ` + resourcemanagerconstants.ServiceName + `;` + metricsPortName + `
 - action: labelmap
   regex: __meta_kubernetes_service_label_(.+)
 - source_labels: [ __meta_kubernetes_pod_name ]

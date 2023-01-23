@@ -59,6 +59,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	resourcemanagerconstants "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/constants"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
@@ -126,7 +127,6 @@ const (
 	labelChecksum = "checksum/pod-template"
 
 	configMapNamePrefix = "gardener-resource-manager"
-	serviceName         = "gardener-resource-manager"
 	secretNameServer    = "gardener-resource-manager-server"
 	clusterRoleName     = "gardener-resource-manager-seed"
 	roleName            = "gardener-resource-manager"
@@ -136,7 +136,6 @@ const (
 
 	healthPort        = 8081
 	metricsPort       = 8080
-	serverPort        = 10250
 	serverServicePort = 443
 
 	configMapDataKey = "config.yaml"
@@ -330,7 +329,10 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 
 	if r.values.TargetDiffersFromSourceCluster {
 		fns = append(fns, r.ensureShootResources)
-		fns = append(fns, r.ensureNetworkPolicy)
+		// TODO(rfranzke): Remove this in a future version.
+		fns = append(fns, func(ctx context.Context) error {
+			return kubernetesutils.DeleteObject(ctx, r.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}})
+		})
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
 		fns = append(fns, r.ensureValidatingWebhookConfiguration)
@@ -385,6 +387,8 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			r.emptyValidatingWebhookConfiguration(),
 			r.emptyClusterRole(),
 			r.emptyClusterRoleBinding(),
+			// TODO(rfranzke): Remove this in a future version.
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}},
 		}, objectsToDelete...)
 	}
 
@@ -504,7 +508,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			Webhooks: resourcemanagerv1alpha1.HTTPSServer{
 				Server: resourcemanagerv1alpha1.Server{
-					Port: serverPort,
+					Port: resourcemanagerconstants.ServerPort,
 				},
 				TLS: resourcemanagerv1alpha1.TLSServer{
 					ServerCertDir: volumeMountPathCerts,
@@ -686,7 +690,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 				Name:       serverPortName,
 				Protocol:   corev1.ProtocolTCP,
 				Port:       serverServicePort,
-				TargetPort: intstr.FromInt(serverPort),
+				TargetPort: intstr.FromInt(resourcemanagerconstants.ServerPort),
 			},
 		}
 		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
@@ -696,7 +700,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: r.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: resourcemanagerconstants.ServiceName, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev1.ConfigMap) error {
@@ -705,7 +709,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  v1beta1constants.DeploymentNameGardenerResourceManager,
-		DNSNames:                    kubernetesutils.DNSNamesForService(serviceName, r.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(resourcemanagerconstants.ServiceName, r.namespace),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(r.values.SecretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -1143,48 +1147,6 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	}
 
 	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
-}
-
-func (r *resourceManager) ensureNetworkPolicy(ctx context.Context) error {
-	networkPolicy := r.emptyNetworkPolicy()
-	protocol := corev1.ProtocolTCP
-	port := intstr.FromInt(serverPort)
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, networkPolicy, func() error {
-		networkPolicy.Labels = r.getLabels()
-		networkPolicy.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: "Allows Egress from shoot's kube-apiserver pods to gardener-resource-manager pods.",
-		}
-		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-					v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-				},
-			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: appLabel(),
-					},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{{
-					Protocol: &protocol,
-					Port:     &port,
-				}},
-			}},
-			PolicyTypes: []networkingv1.PolicyType{
-				networkingv1.PolicyTypeEgress,
-			},
-		}
-		return nil
-	})
-	return err
-}
-
-func (r *resourceManager) emptyNetworkPolicy() *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}}
 }
 
 func (r *resourceManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
@@ -1804,10 +1766,10 @@ func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret
 	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", serviceName, r.namespace, serverServicePort, path))
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
-			Name:      serviceName,
+			Name:      resourcemanagerconstants.ServiceName,
 			Namespace: r.namespace,
 			Path:      &path,
 		}
@@ -1841,7 +1803,6 @@ func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 	if r.values.TargetDiffersFromSourceCluster {
 		return map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyFromShootAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 		}

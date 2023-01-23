@@ -807,8 +807,10 @@ var _ = Describe("KubeAPIServer", func() {
 						Namespace:       networkPolicyAllowFromShootAPIServer.Namespace,
 						ResourceVersion: "1",
 						Annotations: map[string]string{
-							"gardener.cloud/description": "Allows Egress from Shoot's Kubernetes API Server to talk to " +
-								"pods labeled with 'networking.gardener.cloud/from-shoot-apiserver=allowed'.",
+							"gardener.cloud/description": "DEPRECATED: Do not use this policy anymore - label kube-apiserver " +
+								"pods with `networking.resources.gardener.cloud/to-<service-name>-tcp-<container-port>=allowed` " +
+								"instead. Allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with " +
+								"'networking.gardener.cloud/from-shoot-apiserver=allowed'.",
 						},
 					},
 					Spec: networkingv1.NetworkPolicySpec{
@@ -1936,8 +1938,9 @@ rules:
 						"app":                              "kubernetes",
 						"role":                             "apiserver",
 						"networking.gardener.cloud/to-dns": "allowed",
-						"networking.gardener.cloud/to-private-networks": "allowed",
-						"networking.gardener.cloud/to-public-networks":  "allowed",
+						"networking.gardener.cloud/to-private-networks":                              "allowed",
+						"networking.gardener.cloud/to-public-networks":                               "allowed",
+						"networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250": "allowed",
 					}
 				})
 

@@ -446,6 +446,7 @@ const (
 	LabelNetworkPolicyToAllShootAPIServers = "networking.gardener.cloud/to-all-shoot-apiservers"
 	// LabelNetworkPolicyFromShootAPIServer allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with
 	// 'networking.gardener.cloud/from-shoot-apiserver=allowed'.
+	// Deprecated. Label `kube-apiserver` pods with `networking.resources.gardener.cloud/to-<service-name>-tcp-<container-port>=allowed` instead.
 	LabelNetworkPolicyFromShootAPIServer = "networking.gardener.cloud/from-shoot-apiserver"
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.

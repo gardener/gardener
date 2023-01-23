@@ -111,8 +111,6 @@ var _ = Describe("ResourceManager", func() {
 		matchPolicyExact                     = admissionregistrationv1.Exact
 		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
-		networkPolicyProtocol                = corev1.ProtocolTCP
-		networkPolicyPort                    = intstr.FromInt(serverPort)
 		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
 
 		allowAll                       []rbacv1.PolicyRule
@@ -140,7 +138,6 @@ var _ = Describe("ResourceManager", func() {
 		validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
 		managedResourceSecret          *corev1.Secret
 		managedResource                *resourcesv1alpha1.ManagedResource
-		networkPolicy                  *networkingv1.NetworkPolicy
 	)
 
 	BeforeEach(func() {
@@ -505,7 +502,6 @@ var _ = Describe("ResourceManager", func() {
 								"projected-token-mount.resources.gardener.cloud/skip":           "true",
 								"networking.gardener.cloud/to-dns":                              "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver":                "allowed",
-								"networking.gardener.cloud/from-shoot-apiserver":                "allowed",
 								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 								v1beta1constants.GardenRole:                                     v1beta1constants.GardenRoleControlPlane,
 								v1beta1constants.LabelApp:                                       "gardener-resource-manager",
@@ -1718,41 +1714,6 @@ subjects:
 				KeepObjects:  pointer.Bool(false),
 			},
 		}
-		networkPolicy = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-kube-apiserver-to-gardener-resource-manager",
-				Namespace: deployNamespace,
-				Labels:    defaultLabels,
-				Annotations: map[string]string{
-					v1beta1constants.GardenerDescription: "Allows Egress from shoot's kube-apiserver pods to gardener-resource-manager pods.",
-				},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-						v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-						v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-					},
-				},
-				Egress: []networkingv1.NetworkPolicyEgressRule{{
-					To: []networkingv1.NetworkPolicyPeer{{
-						PodSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: "gardener-resource-manager",
-							},
-						},
-					}},
-					Ports: []networkingv1.NetworkPolicyPort{{
-						Protocol: &networkPolicyProtocol,
-						Port:     &networkPolicyPort,
-					}},
-				}},
-				PolicyTypes: []networkingv1.PolicyType{
-					networkingv1.PolicyTypeEgress,
-				},
-			},
-		}
 	})
 
 	AfterEach(func() {
@@ -1819,11 +1780,7 @@ subjects:
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(networkPolicy))
-							}),
+						c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: deployNamespace}}),
 					)
 				})
 
@@ -1918,11 +1875,7 @@ subjects:
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(networkPolicy))
-							}),
+						c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: deployNamespace}}),
 					)
 				})
 
@@ -2026,11 +1979,7 @@ subjects:
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(networkPolicy))
-						}),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: deployNamespace}}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
@@ -2092,7 +2041,6 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-runtime-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
 
 				utilruntime.Must(references.InjectAnnotations(deployment))
 				calculatePodTemplateChecksum(deployment)
@@ -2361,6 +2309,7 @@ subjects:
 					c.EXPECT().Delete(ctx, &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: deployNamespace}}),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
