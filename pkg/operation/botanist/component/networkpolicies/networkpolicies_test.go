@@ -33,7 +33,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Networkpolicies", func() {
+var _ = Describe("NetworkPolicies", func() {
 	var (
 		ctx       = context.TODO()
 		fakeErr   = fmt.Errorf("fake error")
@@ -57,23 +57,24 @@ var _ = Describe("Networkpolicies", func() {
 
 	Describe("#Deploy", func() {
 		It("should fail if any call fails", func() {
-			allowToAggregatePrometheus := constructNPAllowToAggregatePrometheus(namespace)
+			networkPolicy := constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses)
 
-			c.EXPECT().Get(ctx, kubernetesutils.Key(allowToAggregatePrometheus.Namespace, allowToAggregatePrometheus.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(fakeErr)
+			c.EXPECT().Get(ctx, kubernetesutils.Key(networkPolicy.Namespace, networkPolicy.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(fakeErr)
 
 			Expect(deployer.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("w/o any special configuration", func() {
-			expectGetUpdate(ctx, c, constructNPAllowToAggregatePrometheus(namespace))
-			expectGetUpdate(ctx, c, constructNPAllowToSeedPrometheus(namespace))
-			expectGetUpdate(ctx, c, constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))
 			expectGetUpdate(ctx, c, constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))
 			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
 			expectGetUpdate(ctx, c, constructNPAllowToPublicNetworks(namespace, values.BlockedAddresses))
 			expectGetUpdate(ctx, c, constructNPAllowToShootNetworks(namespace, values.ShootNetworkPeers))
+
+			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}})
+			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}})
+			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}})
 
 			Expect(deployer.Deploy(ctx)).To(Succeed())
 		})
@@ -98,15 +99,16 @@ var _ = Describe("Networkpolicies", func() {
 			}
 			deployer = New(c, namespace, values)
 
-			expectGetUpdate(ctx, c, constructNPAllowToAggregatePrometheus(namespace))
-			expectGetUpdate(ctx, c, constructNPAllowToSeedPrometheus(namespace))
-			expectGetUpdate(ctx, c, constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))
 			expectGetUpdate(ctx, c, constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))
 			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
 			expectGetUpdate(ctx, c, constructNPAllowToPublicNetworks(namespace, values.BlockedAddresses))
 			expectGetUpdate(ctx, c, constructNPAllowToShootNetworks(namespace, values.ShootNetworkPeers))
+
+			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}})
+			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}})
+			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}})
 
 			Expect(deployer.Deploy(ctx)).To(Succeed())
 		})
@@ -115,9 +117,6 @@ var _ = Describe("Networkpolicies", func() {
 	Describe("#Destroy", func() {
 		It("should fail if an object fails to delete", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace}}).Return(fakeErr),
 			)
 
@@ -126,15 +125,15 @@ var _ = Describe("Networkpolicies", func() {
 
 		It("should successfully destroy all objects", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "deny-all", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-private-networks", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-public-networks", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-networks", Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}}),
 			)
 
 			Expect(deployer.Destroy(ctx)).To(Succeed())

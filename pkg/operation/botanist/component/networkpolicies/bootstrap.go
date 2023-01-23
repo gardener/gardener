@@ -48,7 +48,7 @@ type bootstrapper struct {
 func (b *bootstrapper) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	for _, transformer := range getGlobalNetworkPolicyTransformers(b.values) {
+	for _, transformer := range getGlobalNetworkPolicyTransformers(b.values, false) {
 		obj := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      transformer.name,

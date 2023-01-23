@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Values contains deployment parameters for the network policies.
@@ -64,7 +65,12 @@ func (n *networkPolicies) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	// TODO(rfranzke): Delete this in a future release.
+	return kubernetesutils.DeleteObjects(ctx, n.client,
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: n.namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: n.namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: n.namespace}},
+	)
 }
 
 func (n *networkPolicies) Destroy(ctx context.Context) error {
@@ -74,11 +80,16 @@ func (n *networkPolicies) Destroy(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	// TODO(rfranzke): Delete this in a future release.
+	return kubernetesutils.DeleteObjects(ctx, n.client,
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: n.namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: n.namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: n.namespace}},
+	)
 }
 
 func (n *networkPolicies) getNetworkPolicyTransformers(values Values) []networkPolicyTransformer {
-	return append(getGlobalNetworkPolicyTransformers(n.values.GlobalValues),
+	return append(getGlobalNetworkPolicyTransformers(n.values.GlobalValues, true),
 		networkPolicyTransformer{
 			name: "allow-to-shoot-networks",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
