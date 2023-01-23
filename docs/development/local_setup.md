@@ -124,8 +124,8 @@ The Gardener repository and all the above-mentioned tools (git, golang, kubectl,
 Clone the repository from GitHub into your `$GOPATH`.
 
 ```bash
-mkdir -p $GOPATH/src/github.com/gardener
-cd $GOPATH/src/github.com/gardener
+mkdir -p $(go env GOPATH)/src/github.com/gardener
+cd $(go env GOPATH)/src/github.com/gardener
 git clone git@github.com:gardener/gardener.git
 cd gardener
 ```
