@@ -133,6 +133,7 @@ var _ = Describe("Garden controller tests", func() {
 			return crdList.Items
 		}).Should(ContainElements(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("verticalpodautoscalers.autoscaling.k8s.io")})}),
 		))
 
 		By("Verify that garden runtime CA secret was generated")
