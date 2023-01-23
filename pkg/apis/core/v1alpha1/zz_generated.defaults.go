@@ -73,6 +73,9 @@ func SetObjectDefaults_ControllerRegistration(in *ControllerRegistration) {
 	for i := range in.Spec.Resources {
 		a := &in.Spec.Resources[i]
 		SetDefaults_ControllerResource(a)
+		if a.Lifecycle != nil {
+			SetDefaults_ControllerResourceLifecycle(a.Lifecycle)
+		}
 	}
 	if in.Spec.Deployment != nil {
 		SetDefaults_ControllerRegistrationDeployment(in.Spec.Deployment)
@@ -88,6 +91,10 @@ func SetObjectDefaults_ControllerRegistrationList(in *ControllerRegistrationList
 
 func SetObjectDefaults_Project(in *Project) {
 	SetDefaults_Project(in)
+	for i := range in.Spec.Members {
+		a := &in.Spec.Members[i]
+		SetDefaults_ProjectMember(a)
+	}
 }
 
 func SetObjectDefaults_ProjectList(in *ProjectList) {

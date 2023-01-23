@@ -19,7 +19,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,71 +43,6 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 		if len(quota.Namespace) == 0 {
 			obj.Quotas[i].Namespace = obj.Namespace
 		}
-	}
-}
-
-// SetDefaults_Project sets default values for Project objects.
-func SetDefaults_Project(obj *Project) {
-	defaultSubject(obj.Spec.Owner)
-
-	for i, member := range obj.Spec.Members {
-		defaultSubject(&obj.Spec.Members[i].Subject)
-
-		if len(member.Role) == 0 && len(member.Roles) == 0 {
-			obj.Spec.Members[i].Role = ProjectMemberViewer
-		}
-	}
-
-	if obj.Spec.Namespace != nil && *obj.Spec.Namespace == v1beta1constants.GardenNamespace {
-		if obj.Spec.Tolerations == nil {
-			obj.Spec.Tolerations = &ProjectTolerations{}
-		}
-		addTolerations(&obj.Spec.Tolerations.Whitelist, Toleration{Key: SeedTaintProtected})
-		addTolerations(&obj.Spec.Tolerations.Defaults, Toleration{Key: SeedTaintProtected})
-	}
-}
-
-func defaultSubject(obj *rbacv1.Subject) {
-	if obj != nil && len(obj.APIGroup) == 0 {
-		switch obj.Kind {
-		case rbacv1.ServiceAccountKind:
-			obj.APIGroup = ""
-		case rbacv1.UserKind:
-			obj.APIGroup = rbacv1.GroupName
-		case rbacv1.GroupKind:
-			obj.APIGroup = rbacv1.GroupName
-		}
-	}
-}
-
-// SetDefaults_MachineImageVersion sets default values for MachineImageVersion objects.
-func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
-	if len(obj.CRI) == 0 {
-		obj.CRI = []CRI{
-			{
-				Name: CRINameDocker,
-			},
-		}
-	}
-
-	if len(obj.Architectures) == 0 {
-		obj.Architectures = []string{v1beta1constants.ArchitectureAMD64}
-	}
-}
-
-// SetDefaults_MachineType sets default values for MachineType objects.
-func SetDefaults_MachineType(obj *MachineType) {
-	if obj.Usable == nil {
-		trueVar := true
-		obj.Usable = &trueVar
-	}
-}
-
-// SetDefaults_VolumeType sets default values for VolumeType objects.
-func SetDefaults_VolumeType(obj *VolumeType) {
-	if obj.Usable == nil {
-		trueVar := true
-		obj.Usable = &trueVar
 	}
 }
 
@@ -459,46 +393,6 @@ func SetDefaults_NginxIngress(obj *NginxIngress) {
 	if obj.ExternalTrafficPolicy == nil {
 		v := corev1.ServiceExternalTrafficPolicyTypeCluster
 		obj.ExternalTrafficPolicy = &v
-	}
-}
-
-// SetDefaults_ControllerResource sets default values for ControllerResource objects.
-func SetDefaults_ControllerResource(obj *ControllerResource) {
-	if obj.Primary == nil {
-		obj.Primary = pointer.Bool(true)
-	}
-	if obj.Kind == "Extension" {
-		if obj.GloballyEnabled == nil {
-			obj.GloballyEnabled = pointer.Bool(false)
-		}
-
-		if obj.ReconcileTimeout == nil {
-			obj.ReconcileTimeout = &metav1.Duration{Duration: time.Minute * 3}
-		}
-
-		if obj.Lifecycle == nil {
-			obj.Lifecycle = &ControllerResourceLifecycle{}
-		}
-		if obj.Lifecycle.Reconcile == nil {
-			afterKubeAPIServer := AfterKubeAPIServer
-			obj.Lifecycle.Reconcile = &afterKubeAPIServer
-		}
-		if obj.Lifecycle.Delete == nil {
-			beforeKubeAPIServer := BeforeKubeAPIServer
-			obj.Lifecycle.Delete = &beforeKubeAPIServer
-		}
-		if obj.Lifecycle.Migrate == nil {
-			beforeKubeAPIServer := BeforeKubeAPIServer
-			obj.Lifecycle.Migrate = &beforeKubeAPIServer
-		}
-	}
-}
-
-// SetDefaults_ControllerRegistrationDeployment sets default values for ControllerDeployment objects.
-func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDeployment) {
-	p := ControllerDeploymentPolicyOnDemand
-	if obj.Policy == nil {
-		obj.Policy = &p
 	}
 }
 
