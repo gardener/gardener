@@ -186,7 +186,7 @@ func (r *Reconciler) reconcileBastion(
 		return nil
 	}
 
-	if extensionBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+	if extensionBastion.Status.LastOperation != nil && extensionBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		// copy over the extension's status to the operation bastion and set the condition
 		patch := client.MergeFrom(bastion.DeepCopy())
 		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
