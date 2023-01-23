@@ -152,12 +152,21 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
+	oldShoot, ok := a.GetOldObject().(*core.Shoot)
+	if !ok {
+		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
+	}
+
 	var allErrs field.ErrorList
 	if nginxIngressEnabled := gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons); nginxIngressEnabled {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addons", "nginxIngress", "enabled"), nginxIngressEnabled, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"))
 	}
 	if vpaEnabled := gardencorehelper.ShootWantsVerticalPodAutoscaler(shoot); !vpaEnabled {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "verticalPodAutoscaler", "enabled"), vpaEnabled, "shoot VPA has to be enabled for managed seeds"))
+	}
+
+	if oldShoot.Spec.Networking.Nodes != nil && *oldShoot.Spec.Networking.Nodes != *shoot.Spec.Networking.Nodes {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "nodes"), shoot.Spec.Networking.Nodes, "field is immutable for managed seeds"))
 	}
 
 	if len(allErrs) > 0 {

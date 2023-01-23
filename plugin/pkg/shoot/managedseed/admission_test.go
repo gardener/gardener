@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -69,6 +70,10 @@ var _ = Describe("ManagedSeed", func() {
 							Enabled: true,
 						},
 					},
+					Networking: core.Networking{
+						Type:  "foo",
+						Nodes: pointer.String("10.181.0.0/18"),
+					},
 				},
 			}
 
@@ -107,8 +112,8 @@ var _ = Describe("ManagedSeed", func() {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				shoot.Spec.Addons.NginxIngress.Enabled = true
-
-				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(BeInvalidError())
 				Expect(err.Error()).To(ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"))
@@ -119,8 +124,8 @@ var _ = Describe("ManagedSeed", func() {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
-
-				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(BeInvalidError())
 				Expect(err.Error()).To(ContainSubstring("shoot VPA has to be enabled for managed seeds"))
@@ -130,8 +135,8 @@ var _ = Describe("ManagedSeed", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
-
-				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -140,12 +145,25 @@ var _ = Describe("ManagedSeed", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, nil, apierrors.NewInternalError(errors.New("Internal Server Error"))
 				})
-
-				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).ToNot(BeInvalidError())
 			})
+
+			It("should forbid Shoot if the spec.Networking.Nodes is changes", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeInvalidError())
+			})
+
 		})
 
 		Context("delete", func() {
@@ -154,7 +172,7 @@ var _ = Describe("ManagedSeed", func() {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
-				attrs := getShootAttributes(shoot, admission.Delete, &metav1.DeleteOptions{})
+				attrs := getShootAttributes(shoot, nil, admission.Delete, &metav1.DeleteOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(BeForbiddenError())
 			})
@@ -164,7 +182,7 @@ var _ = Describe("ManagedSeed", func() {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{}}, nil
 				})
 
-				attrs := getShootAttributes(shoot, admission.Delete, &metav1.DeleteOptions{})
+				attrs := getShootAttributes(shoot, nil, admission.Delete, &metav1.DeleteOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -174,7 +192,7 @@ var _ = Describe("ManagedSeed", func() {
 					return true, nil, apierrors.NewInternalError(errors.New("Internal Server Error"))
 				})
 
-				attrs := getShootAttributes(shoot, admission.Delete, &metav1.DeleteOptions{})
+				attrs := getShootAttributes(shoot, nil, admission.Delete, &metav1.DeleteOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).ToNot(BeForbiddenError())
@@ -262,8 +280,8 @@ var _ = Describe("ManagedSeed", func() {
 	})
 })
 
-func getShootAttributes(shoot *core.Shoot, operation admission.Operation, operationOptions runtime.Object) admission.Attributes {
-	return admission.NewAttributesRecord(shoot, nil, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", operation, operationOptions, false, nil)
+func getShootAttributes(shoot *core.Shoot, oldShoot *core.Shoot, operation admission.Operation, operationOptions runtime.Object) admission.Attributes {
+	return admission.NewAttributesRecord(shoot, oldShoot, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", operation, operationOptions, false, nil)
 }
 
 func getAllShootsAttributes(namespace string) admission.Attributes {
