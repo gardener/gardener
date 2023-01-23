@@ -1,4 +1,4 @@
-# Running Gardener locally
+# Developing Gardener Locally
 
 This document will walk you through running Gardener on your local machine for development purposes.
 If you encounter difficulties, please open an issue so that we can make this process easier.
@@ -9,6 +9,18 @@ In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which i
 The Gardener components, however, will be run as regular processes on your machine (hence, no container images are being built).
 
 ![Architecture Diagram](content/getting_started_locally.png)
+
+## Alternatives
+
+When developing Gardener on your local machine you might face several limitations:
+
+- your machine doesn't have enough compute resources (see [prerequisites](#prerequisites)) for hosting a second seed cluster or multiple shoot clusters
+- developing Gardener's [IPv6 features](../usage/ipv6.md) requires a Linux machine and native IPv6 connectivity to the internet, but you're on macOS or don't have IPv6 connectivity in your office environment or via your home ISP
+
+In these cases, you might want to check out one of the following guides that run the setup described in this guide elsewhere for circumventing these limitations:
+
+- [remote local setup](#remote-local-setup): develop on a remote pod for more compute resources
+- [dev box on Google Cloud](https://github.com/gardener-community/dev-box-gcp): develop on a Google Cloud machine for more compute resource and/or simple IPv4/IPv6 dual-stack networking
 
 ## Prerequisites
 
