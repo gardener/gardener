@@ -178,7 +178,7 @@ relabel_configs:
   - __meta_kubernetes_endpoint_port_name
   - __meta_kubernetes_namespace
   action: keep
-  regex: ` + v1beta1constants.DefaultSNIIngressServiceName + `;` + istioIngressGatewayServicePortNameStatus + `;` + v1beta1constants.DefaultSNIIngressNamespace + `
+  regex: ` + v1beta1constants.DefaultSNIIngressServiceName + `;tls-tunnel;` + v1beta1constants.DefaultSNIIngressNamespace + `
 - source_labels: [__meta_kubernetes_pod_ip]
   action: replace
   target_label: __address__
