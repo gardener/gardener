@@ -252,7 +252,7 @@ func (r *Reconciler) reconcileBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+	if extensionBackupEntry.Status.LastOperation != nil && extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}
