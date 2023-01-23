@@ -553,6 +553,12 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			DisableCachedClient: r.values.TargetDisableCache,
 		}
 	} else {
+		config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
+			Enabled: true,
+			NamespaceSelectors: []metav1.LabelSelector{
+				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}},
+			},
+		}
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true
 	}

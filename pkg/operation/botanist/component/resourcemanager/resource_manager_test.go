@@ -453,6 +453,12 @@ var _ = Describe("ResourceManager", func() {
 					},
 				}
 			} else {
+				config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
+					Enabled: true,
+					NamespaceSelectors: []metav1.LabelSelector{
+						{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}},
+					},
+				}
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.ExtensionValidation.Enabled = true
 			}
