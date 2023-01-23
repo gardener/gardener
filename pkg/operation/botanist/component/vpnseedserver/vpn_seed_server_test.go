@@ -270,11 +270,12 @@ admin:
 			template := &corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
-						v1beta1constants.LabelApp:                            DeploymentName,
-						v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.GardenRole:                                     v1beta1constants.GardenRoleControlPlane,
+						v1beta1constants.LabelApp:                                       DeploymentName,
+						v1beta1constants.LabelNetworkPolicyToShootNetworks:              v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:                        v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:            v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -719,24 +720,8 @@ admin:
 						},
 					},
 				},
-				Egress: []networkingv1.NetworkPolicyEgressRule{
-					{
-						To: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-									},
-								},
-							},
-						},
-					},
-				},
 				PolicyTypes: []networkingv1.PolicyType{
 					networkingv1.PolicyTypeIngress,
-					networkingv1.PolicyTypeEgress,
 				},
 			},
 		}

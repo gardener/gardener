@@ -41,4 +41,10 @@ var _ = Describe("NetworkPolicy", func() {
 			))
 		})
 	})
+
+	Describe("#NetworkPolicyLabel", func() {
+		It("should return the expected value", func() {
+			Expect(NetworkPolicyLabel("foo", 1234)).To(Equal("networking.resources.gardener.cloud/to-foo-tcp-1234"))
+		})
+	})
 })
