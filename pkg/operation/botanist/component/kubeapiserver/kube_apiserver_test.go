@@ -106,10 +106,11 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameVPNSeedClient           = "vpn-seed-client"
 		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00"
 
-		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
-		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
-		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
-		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
+		secretNameAdmissionConfig       = "kube-apiserver-admission-config-e38ff146"
+		secretNameETCDEncryptionConfig  = "kube-apiserver-etcd-encryption-configuration-235f7353"
+		configMapNameAuditPolicy        = "audit-policy-config-f5b578b4"
+		configMapNameEgressPolicy       = "kube-apiserver-egress-selector-config-53d92abc"
+		configMapNameTerminationHandler = "kube-apiserver-watchdog-f4f4b3d5"
 
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscalerV2beta1       *autoscalingv2beta1.HorizontalPodAutoscaler
@@ -2151,7 +2152,7 @@ rules:
 					VolumeSource: corev1.VolumeSource{
 						ConfigMap: &corev1.ConfigMapVolumeSource{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "kube-apiserver-watchdog",
+								Name: configMapNameTerminationHandler,
 							},
 							DefaultMode: pointer.Int32(500),
 						},
@@ -2167,7 +2168,7 @@ rules:
 
 						expectedConfigMap = &corev1.ConfigMap{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "kube-apiserver-watchdog",
+								Name:      configMapNameTerminationHandler,
 								Namespace: namespace,
 							},
 						}

@@ -123,6 +123,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmission *corev1.ConfigMap,
 	configMapEgressSelector *corev1.ConfigMap,
+	configMapTerminationHandler *corev1.ConfigMap,
 	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountKey *corev1.Secret,
@@ -453,7 +454,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 			// graceful termination of the kube-apiserver container to complete when the --audit-log-mode setting
 			// is set to batch. For more information check
 			// https://github.com/gardener/gardener/blob/a63e23a27dabc6a25fb470128a52f8585cd136ff/pkg/operation/botanist/component/kubeapiserver/deployment.go#L677-L683
-			k.handleWatchdogSidecar(deployment, healthCheckToken)
+			k.handleWatchdogSidecar(deployment, configMapTerminationHandler, healthCheckToken)
 		}
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
@@ -1181,7 +1182,7 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 	return nil
 }
 
-func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, healthCheckToken string) {
+func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, configMap *corev1.ConfigMap, healthCheckToken string) {
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
 		Name:  containerNameWatchdog,
 		Image: k.values.Images.Watchdog,
@@ -1209,7 +1210,7 @@ func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, hea
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: watchdogConfigMapName,
+					Name: configMap.Name,
 				},
 				DefaultMode: pointer.Int32(500),
 			},

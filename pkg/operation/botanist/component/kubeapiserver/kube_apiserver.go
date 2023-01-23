@@ -309,6 +309,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
 		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		configMapTerminationHandler          = k.emptyConfigMap(watchdogConfigMapNamePrefix)
 	)
 
 	podDisruptionBudget = k.emptyPodDisruptionBudget()
@@ -424,7 +425,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if version.ConstraintK8sEqual124.Check(k.values.Version) {
-		if err := k.reconcileTerminationHandlerConfigMap(ctx); err != nil {
+		if err := k.reconcileTerminationHandlerConfigMap(ctx, configMapTerminationHandler); err != nil {
 			return err
 		}
 	}
@@ -435,6 +436,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAuditPolicy,
 		configMapAdmission,
 		configMapEgressSelector,
+		configMapTerminationHandler,
 		secretETCDEncryptionConfiguration,
 		secretOIDCCABundle,
 		secretServiceAccountKey,

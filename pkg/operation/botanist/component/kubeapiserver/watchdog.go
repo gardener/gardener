@@ -19,34 +19,26 @@ import (
 	_ "embed"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/controllerutils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
-	watchdogConfigMapName = "kube-apiserver-watchdog"
-	dataKeyWatchdogScript = "watchdog.sh"
+	watchdogConfigMapNamePrefix = "kube-apiserver-watchdog"
+	dataKeyWatchdogScript       = "watchdog.sh"
 )
 
 //go:embed resources/watchdog.sh
 var watchdogScript string
 
-func (k *kubeAPIServer) reconcileTerminationHandlerConfigMap(ctx context.Context) error {
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      watchdogConfigMapName,
-			Namespace: k.namespace,
-			Labels:    getLabels(),
-		},
+func (k *kubeAPIServer) reconcileTerminationHandlerConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
+	configMap.Labels = getLabels()
+	configMap.Data = map[string]string{
+		dataKeyWatchdogScript: watchdogScript,
 	}
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), configMap, func() error {
-		configMap.Data = map[string]string{
-			dataKeyWatchdogScript: watchdogScript,
-		}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
-		return nil
-	})
-
-	return err
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
