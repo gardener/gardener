@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
+	vpaconstants "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -132,8 +133,8 @@ func (v *vpa) Deploy(ctx context.Context) error {
 
 	serverSecret, err := v.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        "vpa-admission-controller-server",
-		CommonName:                  fmt.Sprintf("%s.%s.svc", admissionControllerServiceName, v.namespace),
-		DNSNames:                    kubernetesutils.DNSNamesForService(admissionControllerServiceName, v.namespace),
+		CommonName:                  fmt.Sprintf("%s.%s.svc", vpaconstants.AdmissionControllerServiceName, v.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(vpaconstants.AdmissionControllerServiceName, v.namespace),
 		CertType:                    secretsutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -172,12 +173,22 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		if err := v.crdDeployer.Deploy(ctx); err != nil {
 			return err
 		}
+
+		// TODO(rfranzke): Delete this in a future release.
+		if err := kubernetesutils.DeleteObject(ctx, v.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: v.namespace}}); err != nil {
+			return err
+		}
 	}
 
 	return component.DeployResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(), v.registry, allResources)
 }
 
 func (v *vpa) Destroy(ctx context.Context) error {
+	// TODO(rfranzke): Delete this in a future release.
+	if err := kubernetesutils.DeleteObject(ctx, v.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: v.namespace}}); err != nil {
+		return err
+	}
+
 	return component.DestroyResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(),
 		v.admissionControllerResourceConfigs(),
 		v.recommenderResourceConfigs(),
@@ -242,10 +253,6 @@ func (v *vpa) emptyPodDisruptionBudget(name string, k8sVersionGreaterEqual121 bo
 
 func (v *vpa) emptyVerticalPodAutoscaler(name string) *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
-}
-
-func (v *vpa) emptyNetworkPolicy(name string) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
 func (v *vpa) emptyMutatingWebhookConfiguration() *admissionregistrationv1.MutatingWebhookConfiguration {

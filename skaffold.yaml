@@ -341,6 +341,7 @@ build:
         - pkg/operation/botanist/component/resourcemanager
         - pkg/operation/botanist/component/resourcemanager/constants
         - pkg/operation/botanist/component/vpa
+        - pkg/operation/botanist/component/vpa/constants
         - pkg/operation/botanist/component/vpnseedserver
         - pkg/operation/botanist/component/vpnshoot
         - pkg/operation/common
@@ -960,6 +961,7 @@ build:
         - pkg/operation/botanist/component/shared
         - pkg/operation/botanist/component/shootsystem
         - pkg/operation/botanist/component/vpa
+        - pkg/operation/botanist/component/vpa/constants
         - pkg/operation/botanist/component/vpnauthzserver
         - pkg/operation/botanist/component/vpnseedserver
         - pkg/operation/botanist/component/vpnshoot

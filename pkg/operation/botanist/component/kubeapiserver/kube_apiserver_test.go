@@ -1941,6 +1941,7 @@ rules:
 						"networking.gardener.cloud/to-private-networks":                              "allowed",
 						"networking.gardener.cloud/to-public-networks":                               "allowed",
 						"networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250": "allowed",
+						"networking.resources.gardener.cloud/to-vpa-webhook-tcp-10250":               "allowed",
 					}
 				})
 

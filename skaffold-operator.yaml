@@ -77,6 +77,7 @@ build:
         - pkg/operation/botanist/component/resourcemanager/constants
         - pkg/operation/botanist/component/shared
         - pkg/operation/botanist/component/vpa
+        - pkg/operation/botanist/component/vpa/constants
         - pkg/operation/botanist/component/vpnseedserver
         - pkg/operator/apis/config
         - pkg/operator/apis/config/v1alpha1

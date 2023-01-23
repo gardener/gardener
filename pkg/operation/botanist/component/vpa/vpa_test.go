@@ -104,9 +104,6 @@ var _ = Describe("VPA", func() {
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		maxUnavailable      = intstr.FromInt(1)
 
-		networkPolicyProtocol = corev1.ProtocolTCP
-		networkPolicyPort     = intstr.FromInt(10250)
-
 		webhookFailurePolicy      = admissionregistrationv1.Ignore
 		webhookMatchPolicy        = admissionregistrationv1.Exact
 		webhookReinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
@@ -138,7 +135,6 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingAdmissionController  *rbacv1.ClusterRoleBinding
 		shootAccessSecretAdmissionController   *corev1.Secret
 		serviceAdmissionController             *corev1.Service
-		networkPolicyAdmissionController       *networkingv1.NetworkPolicy
 		deploymentAdmissionControllerFor       func(bool, component.ClusterType) *appsv1.Deployment
 		podDisruptionBudgetAdmissionController *policyv1.PodDisruptionBudget
 		vpaAdmissionController                 *vpaautoscalingv1.VerticalPodAutoscaler
@@ -800,40 +796,6 @@ var _ = Describe("VPA", func() {
 				}},
 			},
 		}
-		networkPolicyAdmissionController = &networkingv1.NetworkPolicy{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "networking.k8s.io/v1",
-				Kind:       "NetworkPolicy",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "allow-kube-apiserver-to-vpa-admission-controller",
-				Namespace:   namespace,
-				Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from shoot's kube-apiserver pods to the VPA admission controller."},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app":                 "kubernetes",
-						"role":                "apiserver",
-						"gardener.cloud/role": "controlplane",
-					},
-				},
-				Egress: []networkingv1.NetworkPolicyEgressRule{{
-					To: []networkingv1.NetworkPolicyPeer{{
-						PodSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"app": "vpa-admission-controller",
-							},
-						},
-					}},
-					Ports: []networkingv1.NetworkPolicyPort{{
-						Protocol: &networkPolicyProtocol,
-						Port:     &networkPolicyPort,
-					}},
-				}},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			},
-		}
 		deploymentAdmissionControllerFor = func(withServiceAccount bool, clusterType component.ClusterType) *appsv1.Deployment {
 			obj := &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
@@ -860,10 +822,9 @@ var _ = Describe("VPA", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"app":                 "vpa-admission-controller",
-								"gardener.cloud/role": "vpa",
-								"networking.gardener.cloud/from-shoot-apiserver":                "allowed",
-								"networking.gardener.cloud/to-dns":                              "allowed",
+								"app":                              "vpa-admission-controller",
+								"gardener.cloud/role":              "vpa",
+								"networking.gardener.cloud/to-dns": "allowed",
 								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 							},
 						},
@@ -1571,10 +1532,9 @@ var _ = Describe("VPA", func() {
 				serviceAdmissionController.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceAdmissionController))
 
+				// TODO(rfranzke): Delete this in a future release.
 				networkPolicy := &networkingv1.NetworkPolicy{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), networkPolicy)).To(Succeed())
-				networkPolicyAdmissionController.ResourceVersion = "1"
-				Expect(networkPolicy).To(Equal(networkPolicyAdmissionController))
+				Expect(c.Get(ctx, client.ObjectKey{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}, networkPolicy)).To(BeNotFoundError())
 
 				deployment = &appsv1.Deployment{}
 				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-admission-controller"), deployment)).To(Succeed())
@@ -1648,7 +1608,6 @@ var _ = Describe("VPA", func() {
 
 				By("Create vpa-admission-controller runtime resources")
 				Expect(c.Create(ctx, serviceAdmissionController)).To(Succeed())
-				Expect(c.Create(ctx, networkPolicyAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true, component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, podDisruptionBudgetAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, vpaAdmissionController)).To(Succeed())
@@ -1668,7 +1627,6 @@ var _ = Describe("VPA", func() {
 
 				By("Verify vpa-admission-controller runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), &corev1.Service{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), &networkingv1.NetworkPolicy{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
