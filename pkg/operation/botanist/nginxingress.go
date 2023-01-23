@@ -17,9 +17,12 @@ package botanist
 import (
 	"context"
 
+	"k8s.io/utils/pointer"
+
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingressshoot"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -44,19 +47,18 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 	}
 
 	if b.APIServerSNIEnabled() {
-		values.KubeAPIServerHost = b.outOfClusterAPIServerFQDN()
+		values.KubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 
-	if b.Shoot.GetInfo().Spec.Addons.NginxIngress != nil && b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config != nil {
-		values.ConfigData = b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config
-	}
+	if nginxIngressSpec := b.Shoot.GetInfo().Spec.Addons.NginxIngress; nginxIngressSpec != nil {
+		values.ConfigData = getConfig(nginxIngressSpec.Config)
 
-	if b.Shoot.GetInfo().Spec.Addons.NginxIngress != nil && b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges != nil {
-		values.LoadBalancerSourceRanges = b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges
-	}
-
-	if b.Shoot.GetInfo().Spec.Addons.NginxIngress != nil && b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy != nil {
-		values.ExternalTrafficPolicy = *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy
+		if nginxIngressSpec.LoadBalancerSourceRanges != nil {
+			values.LoadBalancerSourceRanges = nginxIngressSpec.LoadBalancerSourceRanges
+		}
+		if nginxIngressSpec.ExternalTrafficPolicy != nil {
+			values.ExternalTrafficPolicy = *nginxIngressSpec.ExternalTrafficPolicy
+		}
 	}
 
 	return nginxingressshoot.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
@@ -69,4 +71,18 @@ func (b *Botanist) DeployNginxIngressAddon(ctx context.Context) error {
 	}
 
 	return b.Shoot.Components.Addons.NginxIngress.Deploy(ctx)
+}
+
+func getConfig(config map[string]string) map[string]string {
+	var (
+		defaultConfig = map[string]string{
+			"server-name-hash-bucket-size": "256",
+			"use-proxy-protocol":           "false",
+			"worker-processes":             "2",
+		}
+	)
+	if config != nil {
+		return utils.MergeStringMaps(defaultConfig, config)
+	}
+	return defaultConfig
 }

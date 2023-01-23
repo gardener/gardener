@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -89,7 +87,7 @@ type Values struct {
 	// ConfigData contains the configuration details for the nginx-ingress controller.
 	ConfigData map[string]string
 	// KubeAPIServerHost is the host of the kube-apiserver.
-	KubeAPIServerHost string
+	KubeAPIServerHost *string
 	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress.
 	LoadBalancerSourceRanges []string
 	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
@@ -156,16 +154,15 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: configMapName,
 			Labels: map[string]string{
-				v1beta1constants.LabelApp: labelAppValue,
-				labelKeyRelease:           labelValueAddons,
-				labelKeyComponent:         labelValueController,
+				v1beta1constants.LabelApp:             labelAppValue,
+				labelKeyRelease:                       labelValueAddons,
+				labelKeyComponent:                     labelValueController,
+				references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable,
 			},
 			Namespace: metav1.NamespaceSystem,
 		},
 		Data: n.values.ConfigData,
 	}
-
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	var (
 		healthProbePort = intstr.FromInt(10254)
@@ -228,11 +225,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{"networking.k8s.io"},
 					Resources: []string{"ingressclasses"},
 					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{"coordination.k8s.io"},
-					Resources: []string{"leases"},
-					Verbs:     []string{"list", "watch"},
 				},
 			},
 		}
@@ -385,7 +377,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							Name:                     containerNameController,
 							Image:                    n.values.NginxControllerImage,
 							ImagePullPolicy:          corev1.PullIfNotPresent,
-							Args:                     n.getArgs(configMap),
+							Args:                     n.getArgs(configMap.Name),
 							TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 							SecurityContext: &corev1.SecurityContext{
@@ -624,6 +616,13 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
+	if n.values.KubeAPIServerHost != nil {
+		deploymentController.Spec.Template.Spec.Containers[0].Env = append(deploymentController.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "KUBERNETES_SERVICE_HOST",
+			Value: *n.values.KubeAPIServerHost,
+		})
+	}
+
 	if !n.values.PSPDisabled {
 		roleBindingPSP = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -683,17 +682,17 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	)
 }
 
-func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
+func (n *nginxIngress) getArgs(configMapName string) []string {
 	out := []string{
 		"/nginx-ingress-controller",
 		"--default-backend-service=" + metav1.NamespaceSystem + "/" + serviceNameBackend,
 		"--enable-ssl-passthrough=true",
 		"--publish-service=" + metav1.NamespaceSystem + "/" + serviceNameController,
-		"--election-id=ingress-controller-seed-leader",
+		"--election-id=ingress-controller-leader",
 		"--update-status=true",
 		"--annotations-prefix=nginx.ingress.kubernetes.io",
 		"--ingress-class=nginx",
-		"--configmap=" + metav1.NamespaceSystem + "/" + configMap.Name,
+		"--configmap=" + metav1.NamespaceSystem + "/" + configMapName,
 	}
 
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
