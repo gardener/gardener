@@ -52,6 +52,7 @@ const (
 	ContainerNameKubeAPIServer            = "kube-apiserver"
 	containerNameVPNSeedClient            = "vpn-client"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
+	containerNameWatchdog                 = "watchdog"
 
 	volumeNameAdmissionConfiguration  = "admission-config"
 	volumeNameAuditPolicy             = "audit-policy-config"
@@ -80,6 +81,7 @@ const (
 	volumeNameCentOS                  = "centos-rhel7-cabundle"
 	volumeNameEtcSSL                  = "etc-ssl"
 	volumeNameUsrShareCaCerts         = "usr-share-cacerts"
+	volumeNameWatchdog                = "watchdog"
 
 	volumeMountPathAdmissionConfiguration  = "/etc/kubernetes/admission"
 	volumeMountPathAuditPolicy             = "/etc/kubernetes/audit"
@@ -108,6 +110,7 @@ const (
 	volumeMountPathCentOS                  = "/etc/pki/ca-trust/extracted/pem"
 	volumeMountPathEtcSSL                  = "/etc/ssl"
 	volumeMountPathUsrShareCaCerts         = "/usr/share/ca-certificates"
+	volumeMountPathWatchdog                = "/var/watchdog/bin"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -120,6 +123,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmission *corev1.ConfigMap,
 	configMapEgressSelector *corev1.ConfigMap,
+	configMapTerminationHandler *corev1.ConfigMap,
 	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountKey *corev1.Secret,
@@ -443,6 +447,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
 			return err
+		}
+
+		if version.ConstraintK8sEqual124.Check(k.values.Version) {
+			// For kube-apiserver version 1.24 there is a deadlock that can occur during shutdown that prevents the
+			// graceful termination of the kube-apiserver container to complete when the --audit-log-mode setting
+			// is set to batch. For more information check
+			// https://github.com/gardener/gardener/blob/a63e23a27dabc6a25fb470128a52f8585cd136ff/pkg/operation/botanist/component/kubeapiserver/deployment.go#L677-L683
+			k.handleWatchdogSidecar(deployment, configMapTerminationHandler, healthCheckToken)
 		}
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
@@ -1168,4 +1180,40 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 	}...)
 
 	return nil
+}
+
+func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, configMap *corev1.ConfigMap, healthCheckToken string) {
+	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
+		Name:  containerNameWatchdog,
+		Image: k.values.Images.Watchdog,
+		Command: []string{
+			"/bin/sh",
+			fmt.Sprintf("%s/%s", volumeMountPathWatchdog, dataKeyWatchdogScript),
+			healthCheckToken,
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"SYS_PTRACE"},
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      volumeNameWatchdog,
+				MountPath: volumeMountPathWatchdog,
+			},
+		},
+	})
+
+	deployment.Spec.Template.Spec.ShareProcessNamespace = pointer.Bool(true)
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: volumeNameWatchdog,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configMap.Name,
+				},
+				DefaultMode: pointer.Int32(500),
+			},
+		},
+	})
 }

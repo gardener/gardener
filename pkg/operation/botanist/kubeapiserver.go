@@ -430,10 +430,16 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 		vpnClient = imageVPNClient.String()
 	}
 
+	imageWatchdog, err := b.ImageVector.FindImage(images.ImageNameAlpine, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return kubeapiserver.Images{}, err
+	}
+
 	return kubeapiserver.Images{
 		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
 		KubeAPIServer:            imageKubeAPIServer.String(),
 		VPNClient:                vpnClient,
+		Watchdog:                 imageWatchdog.String(),
 	}, nil
 }
 
