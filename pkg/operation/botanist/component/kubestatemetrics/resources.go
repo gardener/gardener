@@ -197,7 +197,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 	if k.values.ClusterType == component.ClusterTypeSeed {
 		deploymentLabels[v1beta1constants.LabelRole] = v1beta1constants.LabelMonitoring
 		podLabels = utils.MergeStringMaps(podLabels, deploymentLabels, map[string]string{
-			v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 		args = append(args,
 			"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",

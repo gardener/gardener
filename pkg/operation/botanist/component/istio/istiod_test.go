@@ -724,7 +724,7 @@ spec:
   template:
     metadata:
       labels:
-        networking.gardener.cloud/to-seed-apiserver: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
         app: istiod
         istio: pilot
         

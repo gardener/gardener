@@ -282,7 +282,7 @@ spec:
 					if role == RoleEndpoint {
 						out += `
         networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-seed-apiserver: allowed`
+        networking.gardener.cloud/to-runtime-apiserver: allowed`
 					}
 
 					if role == RoleProbe {
@@ -291,7 +291,7 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-private-networks: allowed
         networking.gardener.cloud/to-public-networks: allowed
-        networking.gardener.cloud/to-seed-apiserver: allowed`
+        networking.gardener.cloud/to-runtime-apiserver: allowed`
 					}
 
 					out += `

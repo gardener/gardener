@@ -489,7 +489,7 @@ var _ = Describe("ResourceManager", func() {
 							Labels: map[string]string{
 								"projected-token-mount.resources.gardener.cloud/skip": "true",
 								"networking.gardener.cloud/to-dns":                    "allowed",
-								"networking.gardener.cloud/to-seed-apiserver":         "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":      "allowed",
 								"networking.gardener.cloud/from-prometheus":           "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
 								"networking.gardener.cloud/from-shoot-apiserver":      "allowed",
@@ -2076,7 +2076,7 @@ subjects:
 				delete(pdbV1.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				// Remove networking label from deployment template
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-seed-apiserver")
+				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-runtime-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
 
