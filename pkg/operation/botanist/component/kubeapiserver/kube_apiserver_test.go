@@ -885,7 +885,6 @@ var _ = Describe("KubeAPIServer", func() {
 			var (
 				protocol      = corev1.ProtocolTCP
 				portAPIServer = intstr.FromInt(443)
-				portEtcd      = intstr.FromInt(2379)
 			)
 
 			Context("allow-kube-apiserver NetworkPolicy resource", func() {
@@ -922,22 +921,6 @@ var _ = Describe("KubeAPIServer", func() {
 									"role":                "apiserver",
 								},
 							},
-							Egress: []networkingv1.NetworkPolicyEgressRule{
-								{
-									To: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"app":                 "etcd-statefulset",
-												"gardener.cloud/role": "controlplane",
-											},
-										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{{
-										Protocol: &protocol,
-										Port:     &portEtcd,
-									}},
-								},
-							},
 							Ingress: []networkingv1.NetworkPolicyIngressRule{
 								{
 									From: []networkingv1.NetworkPolicyPeer{
@@ -950,7 +933,7 @@ var _ = Describe("KubeAPIServer", func() {
 									}},
 								},
 							},
-							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 						},
 					}))
 				})
@@ -988,22 +971,6 @@ var _ = Describe("KubeAPIServer", func() {
 									"role":                "apiserver",
 								},
 							},
-							Egress: []networkingv1.NetworkPolicyEgressRule{
-								{
-									To: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"app":                 "etcd-statefulset",
-												"gardener.cloud/role": "controlplane",
-											},
-										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{{
-										Protocol: &protocol,
-										Port:     &portEtcd,
-									}},
-								},
-							},
 							Ingress: []networkingv1.NetworkPolicyIngressRule{
 								{
 									From: []networkingv1.NetworkPolicyPeer{
@@ -1016,7 +983,7 @@ var _ = Describe("KubeAPIServer", func() {
 									}},
 								},
 							},
-							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 						},
 					}))
 				})
@@ -1940,6 +1907,8 @@ rules:
 						"networking.gardener.cloud/to-dns": "allowed",
 						"networking.gardener.cloud/to-private-networks":                              "allowed",
 						"networking.gardener.cloud/to-public-networks":                               "allowed",
+						"networking.resources.gardener.cloud/to-etcd-main-client-tcp-2379":           "allowed",
+						"networking.resources.gardener.cloud/to-etcd-events-client-tcp-2379":         "allowed",
 						"networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250": "allowed",
 						"networking.resources.gardener.cloud/to-vpa-webhook-tcp-10250":               "allowed",
 					}

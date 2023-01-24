@@ -303,6 +303,7 @@ build:
         - pkg/operation/botanist/component/coredns/constants
         - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
+        - pkg/operation/botanist/component/etcd/constants
         - pkg/operation/botanist/component/etcdcopybackupstask
         - pkg/operation/botanist/component/extensions/containerruntime
         - pkg/operation/botanist/component/extensions/controlplane
@@ -906,6 +907,7 @@ build:
         - pkg/operation/botanist/component/coredns/constants
         - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
+        - pkg/operation/botanist/component/etcd/constants
         - pkg/operation/botanist/component/etcdcopybackupstask
         - pkg/operation/botanist/component/extensions/backupentry
         - pkg/operation/botanist/component/extensions/containerruntime

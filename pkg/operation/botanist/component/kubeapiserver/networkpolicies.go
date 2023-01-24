@@ -25,7 +25,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 )
 
@@ -108,7 +107,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 	var (
 		protocol      = corev1.ProtocolTCP
 		portAPIServer = intstr.FromInt(kubeapiserverconstants.Port)
-		portEtcd      = intstr.FromInt(int(etcd.PortEtcdClient))
 	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
@@ -121,20 +119,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: GetLabels(),
-			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{
-				{
-					// Allow connection to shoot's etcd instances.
-					To: []networkingv1.NetworkPolicyPeer{{
-						PodSelector: &metav1.LabelSelector{
-							MatchLabels: etcd.GetLabels(),
-						},
-					}},
-					Ports: []networkingv1.NetworkPolicyPort{{
-						Protocol: &protocol,
-						Port:     &portEtcd,
-					}},
-				},
 			},
 			// Allow connections from everything which needs to talk to the API server.
 			Ingress: []networkingv1.NetworkPolicyIngressRule{
@@ -151,7 +135,7 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 					}},
 				},
 			},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 		}
 
 		return nil

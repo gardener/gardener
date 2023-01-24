@@ -19,13 +19,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	etcdconstants "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/constants"
 )
 
 // DependencyWatchdogEndpointConfiguration returns the configuration for the dependency watchdog ensuring that its dependant
 // pods are restarted as soon as it recovers from a crash loop.
 func DependencyWatchdogEndpointConfiguration(role string) (map[string]restarterapi.Service, error) {
 	return map[string]restarterapi.Service{
-		ServiceName(role): {
+		etcdconstants.ServiceName(role): {
 			Dependants: []restarterapi.DependantPods{
 				{
 					Name: v1beta1constants.GardenRoleControlPlane,
