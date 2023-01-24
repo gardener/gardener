@@ -412,6 +412,9 @@ maxPods: 110
 memorySwap: {}
 nodeStatusReportFrequency: 0s
 nodeStatusUpdateFrequency: 0s
+registerWithTaints:
+- effect: NoSchedule
+  key: node.gardener.cloud/critical-components-not-ready
 resolvConf: /etc/resolv.conf`
 
 	if rotateCertificates {
