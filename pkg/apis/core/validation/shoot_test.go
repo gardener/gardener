@@ -2260,6 +2260,47 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))),
 				),
 			)
+
+			Describe("taint validation", func() {
+				var (
+					clusterAutoscaler core.ClusterAutoscaler
+					fldPath           *field.Path
+				)
+
+				It("should allow empty ignore taints list", func() {
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+
+					Expect(errList).To(BeEmpty())
+				})
+
+				It("should allow valid ignore taints list", func() {
+					clusterAutoscaler.IgnoreTaints = []string{
+						"allowed-1",
+						"allowed-2",
+					}
+
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+
+					Expect(errList).To(BeEmpty())
+				})
+
+				It("should deny reserved taint keys", func() {
+					clusterAutoscaler.IgnoreTaints = []string{
+						"node.gardener.cloud/critical-components-not-ready",
+						"allowed-1",
+					}
+
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+
+					Expect(errList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("ignoreTaints[0]"),
+							"Detail": Equal("taint key is reserved by gardener"),
+						})),
+					))
+				})
+			})
 		})
 
 		Context("VerticalPodAutoscaler validation", func() {
@@ -4819,6 +4860,72 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("cri.containerruntimes[1].type"),
 				})),
 			))
+		})
+
+		Describe("taint validation", func() {
+			var (
+				worker     core.Worker
+				kubernetes core.Kubernetes
+				fldPath    *field.Path
+			)
+
+			BeforeEach(func() {
+				worker = core.Worker{
+					Name: "worker1",
+					Machine: core.Machine{
+						Type: "xlarge",
+					},
+				}
+				fldPath = field.NewPath("workers").Index(0)
+			})
+
+			It("should allow worker without taints", func() {
+				errList := ValidateWorker(worker, kubernetes, fldPath, false)
+
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should allow valid taints", func() {
+				worker.Taints = []corev1.Taint{{
+					Key:    "my-taint-1",
+					Effect: "NoSchedule",
+				}, {
+					Key:    "my-taint-2",
+					Effect: "NoExecute",
+				}}
+
+				errList := ValidateWorker(worker, kubernetes, fldPath, false)
+
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should forbid reserved taint keys", func() {
+				worker.Taints = []corev1.Taint{{
+					Key:    "node.gardener.cloud/critical-components-not-ready",
+					Effect: "NoSchedule",
+				}, {
+					Key:    "node.gardener.cloud/critical-components-not-ready",
+					Effect: "NoExecute",
+				}, {
+					Key:    "allowed-key",
+					Effect: "NoExecute",
+				}}
+
+				errList := ValidateWorker(worker, kubernetes, fldPath, false)
+
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("workers[0].taints[0].key"),
+						"Detail": Equal("taint key is reserved by gardener"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("workers[0].taints[1].key"),
+						"Detail": Equal("taint key is reserved by gardener"),
+					})),
+				))
+			})
 		})
 	})
 
