@@ -27,7 +27,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Network policy controller tests", func() {
+var _ = Describe("NetworkPolicy controller tests", func() {
 	var (
 		shootNamespace *corev1.Namespace
 		fooNamespace   *corev1.Namespace
@@ -71,26 +71,150 @@ var _ = Describe("Network policy controller tests", func() {
 		})
 	})
 
-	Describe("allow-to-{seed,runtime}-apiserver", func() {
-		tests := func(networkPolicyName, labelKey string) {
-			var (
-				expectedNetworkPolicySpec networkingv1.NetworkPolicySpec
-				kubernetesEndpoint        *corev1.Endpoints
-			)
+	type testAttributes struct {
+		networkPolicyName         string
+		expectedNetworkPolicySpec func() networkingv1.NetworkPolicySpec
+		inGardenNamespace         bool
+		inIstioSystemNamespace    bool
+		inShootNamespaces         bool
+	}
 
-			BeforeEach(func() {
-				kubernetesEndpoint = &corev1.Endpoints{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "kubernetes",
-					},
-				}
+	defaultTests := func(attrs testAttributes) {
+		Context("reconciliation", func() {
+			if attrs.inShootNamespaces {
+				It("should create the network policy in the shoot namespace", func() {
+					By("Wait for controller to reconcile the network policy")
+					Eventually(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec()))
+					}).Should(Succeed())
+				})
+			} else {
+				It("should not create the network policy in the shoot namespace", func() {
+					By("Ensure controller does not reconcile the network policy")
+					Consistently(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).Should(BeNotFoundError())
+					}).Should(Succeed())
+				})
+			}
+
+			if attrs.inGardenNamespace {
+				It("should create the network policy in the garden namespace", func() {
+					By("Wait for controller to reconcile the network policy")
+					Eventually(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec()))
+					}).Should(Succeed())
+				})
+			} else {
+				It("should not create the network policy in the garden namespace", func() {
+					By("Ensure controller does not reconcile the network policy")
+					Consistently(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).Should(BeNotFoundError())
+					}).Should(Succeed())
+				})
+			}
+
+			if attrs.inIstioSystemNamespace {
+				It("should create the network policy in the istio-system namespace", func() {
+					By("Wait for controller to reconcile the network policy")
+					Eventually(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec()))
+					}).Should(Succeed())
+				})
+			} else {
+				It("should not create the network policy in the istio-system namespace", func() {
+					By("Ensure controller does not reconcile the network policy")
+					Consistently(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).Should(BeNotFoundError())
+					}).Should(Succeed())
+				})
+			}
+
+			It("should not create the network policy in the foo namespace", func() {
+				By("Ensure controller does not reconcile the network policy")
+				Consistently(func(g Gomega) {
+					networkPolicy := &networkingv1.NetworkPolicy{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).Should(BeNotFoundError())
+				}).Should(Succeed())
 			})
 
+			It("should reconcile the network policy when it is changed by a third party", func() {
+				By("Modify network policy")
+				modifiedShootNetworkPolicy := &networkingv1.NetworkPolicy{}
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, modifiedShootNetworkPolicy)
+				}).Should(Succeed())
+				modifiedShootNetworkPolicy.Spec.PodSelector.MatchLabels["foo"] = "bar"
+				Expect(testClient.Update(ctx, modifiedShootNetworkPolicy)).To(Succeed())
+
+				By("Wait for controller to reconcile the network policy")
+				Eventually(func(g Gomega) {
+					shootNetworkPolicy := &networkingv1.NetworkPolicy{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, shootNetworkPolicy)).To(Succeed())
+					g.Expect(shootNetworkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec()))
+				}).Should(Succeed())
+			})
+
+			It("should not update the network policy if nothing changed", func() {
+				By("Modify namespace to trigger reconciliation")
+				beforeShootNetworkPolicy := &networkingv1.NetworkPolicy{}
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, beforeShootNetworkPolicy)
+				}).Should(Succeed())
+				gardenNamespace.Labels["foo"] = "bar"
+				Expect(testClient.Update(ctx, gardenNamespace)).To(Succeed())
+
+				By("Wait for controller to reconcile the network policy")
+				Consistently(func(g Gomega) {
+					shootNetworkPolicy := &networkingv1.NetworkPolicy{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, shootNetworkPolicy)).To(Succeed())
+					g.Expect(shootNetworkPolicy.ResourceVersion).To(Equal(beforeShootNetworkPolicy.ResourceVersion))
+				}).Should(Succeed())
+			})
+		})
+
+		Context("deletion", func() {
+			It("should delete the network policy in foo namespace", func() {
+				networkPolicy := &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: fooNamespace.Name,
+						Name:      attrs.networkPolicyName,
+					},
+					Spec: attrs.expectedNetworkPolicySpec(),
+				}
+
+				By("Create network policy")
+				Expect(testClient.Create(ctx, networkPolicy)).To(Succeed())
+
+				DeferCleanup(func() {
+					By("Delete network policy")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, networkPolicy))).To(Succeed())
+				})
+
+				By("Wait for controller to delete the network policy")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).Should(BeNotFoundError())
+				}).Should(Succeed())
+			})
+		})
+	}
+
+	Describe("allow-to-{seed,runtime}-apiserver", func() {
+		tests := func(networkPolicyName, labelKey string) {
+			var expectedNetworkPolicySpec networkingv1.NetworkPolicySpec
+
 			JustBeforeEach(func() {
+				kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
 
-				By("Construct expected network policy")
 				expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
 					Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
 					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{labelKey: "allowed"}},
@@ -98,103 +222,48 @@ var _ = Describe("Network policy controller tests", func() {
 				}
 			})
 
-			Context("reconciliation", func() {
-				It("should create the network policy in the shoot namespace", func() {
-					By("Wait for controller to reconcile the network policy")
-					Eventually(func(g Gomega) {
-						shootNetworkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: networkPolicyName}, shootNetworkPolicy)).To(Succeed())
-						g.Expect(shootNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
-					}).Should(Succeed())
-				})
-
-				It("should create the network policy in the garden namespace", func() {
-					By("Wait for controller to reconcile the network policy")
-					Eventually(func(g Gomega) {
-						gardenNetworkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, gardenNetworkPolicy)).To(Succeed())
-						g.Expect(gardenNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
-					}).Should(Succeed())
-				})
-
-				It("should create the network policy in the istio-system namespace", func() {
-					By("Wait for controller to reconcile the network policy")
-					Eventually(func(g Gomega) {
-						istioSystemNetworkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: networkPolicyName}, istioSystemNetworkPolicy)).To(Succeed())
-						g.Expect(istioSystemNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
-					}).Should(Succeed())
-				})
-
-				It("should not create the network policy in the foo namespace", func() {
-					By("Wait for controller to reconcile the network policy")
-					Consistently(func(g Gomega) {
-						fooNetworkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: networkPolicyName}, fooNetworkPolicy)).Should(BeNotFoundError())
-					}).Should(Succeed())
-				})
-
-				It("should reconcile the network policy in the shoot namespace when it is changed by a third party", func() {
-					By("Modify network policy in shoot namespace")
-					modifiedShootNetworkPolicy := &networkingv1.NetworkPolicy{}
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: networkPolicyName}, modifiedShootNetworkPolicy)
-					}).Should(Succeed())
-					modifiedShootNetworkPolicy.Spec.PodSelector.MatchLabels["foo"] = "bar"
-					Expect(testClient.Update(ctx, modifiedShootNetworkPolicy)).To(Succeed())
-
-					By("Wait for controller to reconcile the network policy")
-					Eventually(func(g Gomega) {
-						shootNetworkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: networkPolicyName}, shootNetworkPolicy)).To(Succeed())
-						g.Expect(shootNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
-					}).Should(Succeed())
-				})
-
-				It("should not update the network policy if nothing changed", func() {
-					By("Modify shoot namespace to trigger reconciliation")
-					beforeShootNetworkPolicy := &networkingv1.NetworkPolicy{}
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: networkPolicyName}, beforeShootNetworkPolicy)
-					}).Should(Succeed())
-					shootNamespace.Labels["foo"] = "bar"
-					Expect(testClient.Update(ctx, shootNamespace)).To(Succeed())
-
-					By("Wait for controller to reconcile the network policy")
-					Consistently(func(g Gomega) {
-						shootNetworkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: networkPolicyName}, shootNetworkPolicy)).To(Succeed())
-						g.Expect(shootNetworkPolicy.Generation).To(Equal(beforeShootNetworkPolicy.Generation))
-					}).Should(Succeed())
-				})
-			})
-
-			Context("deletion", func() {
-				It("should delete the network policy in foo namespace", func() {
-					fooNetworkPolicy := &networkingv1.NetworkPolicy{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: fooNamespace.Name,
-							Name:      networkPolicyName,
-						},
-						Spec: expectedNetworkPolicySpec,
-					}
-					By("Create foo network policy")
-					Expect(testClient.Create(ctx, fooNetworkPolicy)).To(Succeed())
-
-					DeferCleanup(func() {
-						By("Delete foo network policy")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, fooNetworkPolicy))).To(Succeed())
-					})
-
-					By("Wait for controller to delete the network policy")
-					Eventually(func(g Gomega) {
-						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(fooNetworkPolicy), fooNetworkPolicy)).Should(BeNotFoundError())
-					}).Should(Succeed())
-				})
+			defaultTests(testAttributes{
+				networkPolicyName:         networkPolicyName,
+				expectedNetworkPolicySpec: func() networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
+				inGardenNamespace:         true,
+				inIstioSystemNamespace:    true,
+				inShootNamespaces:         true,
 			})
 		}
 
 		tests("allow-to-seed-apiserver", "networking.gardener.cloud/to-seed-apiserver")
 		tests("allow-to-runtime-apiserver", "networking.gardener.cloud/to-runtime-apiserver")
+	})
+
+	Describe("allow-to-public-networks", func() {
+		var (
+			networkPolicyName         = "allow-to-public-networks"
+			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					To: []networkingv1.NetworkPolicyPeer{{
+						IPBlock: &networkingv1.IPBlock{
+							CIDR: "0.0.0.0/0",
+							Except: []string{
+								"10.0.0.0/8",
+								"172.16.0.0/12",
+								"192.168.0.0/16",
+								"100.64.0.0/10",
+								"169.254.169.254/32",
+							},
+						},
+					}},
+				}},
+				PolicyTypes: []networkingv1.PolicyType{"Egress"},
+			}
+		)
+
+		defaultTests(testAttributes{
+			networkPolicyName:         networkPolicyName,
+			expectedNetworkPolicySpec: func() networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
+			inGardenNamespace:         true,
+			inIstioSystemNamespace:    false,
+			inShootNamespaces:         true,
+		})
 	})
 })

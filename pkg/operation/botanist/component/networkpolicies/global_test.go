@@ -281,31 +281,3 @@ func constructNPAllowToPrivateNetworks(namespace string, peers []networkingv1.Ne
 
 	return obj
 }
-
-func constructNPAllowToPublicNetworks(namespace string, blockedAddresses []string) *networkingv1.NetworkPolicy {
-	obj := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "allow-to-public-networks",
-			Namespace:   namespace,
-			Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-public-networks=allowed' to all Public network IPs, except for (1) Private networks (RFC1918), (2) Carrier-grade NAT (RFC6598), (3) CloudProvider's specific metadata service IP. In practice, this blocks Egress traffic to all networks in the Seed cluster and only traffic to public IPv4 addresses."},
-		},
-		Spec: networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"networking.gardener.cloud/to-public-networks": "allowed"},
-			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{{
-					IPBlock: &networkingv1.IPBlock{
-						CIDR:   "0.0.0.0/0",
-						Except: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"},
-					},
-				}},
-			}},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-		},
-	}
-
-	obj.Spec.Egress[0].To[0].IPBlock.Except = append(obj.Spec.Egress[0].To[0].IPBlock.Except, blockedAddresses...)
-
-	return obj
-}

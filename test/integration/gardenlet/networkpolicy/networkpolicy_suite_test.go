@@ -17,7 +17,6 @@ package networkpolicy_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -35,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -55,7 +55,6 @@ func TestNetworkPolicy(t *testing.T) {
 const (
 	testID              = "networkpolicy-controller-test"
 	seedClusterIdentity = "seed"
-	syncPeriod          = 500 * time.Millisecond
 )
 
 var (
@@ -70,7 +69,6 @@ var (
 
 	gardenNamespace      *corev1.Namespace
 	istioSystemNamespace *corev1.Namespace
-	seed                 *gardencorev1beta1.Seed
 )
 
 var _ = BeforeSuite(func() {
@@ -101,39 +99,6 @@ var _ = BeforeSuite(func() {
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
-
-	By("Create seed")
-	seed = &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "seed-",
-			Labels:       map[string]string{testID: testRunID},
-		},
-		Spec: gardencorev1beta1.SeedSpec{
-			Provider: gardencorev1beta1.SeedProvider{
-				Region: "region",
-				Type:   "providerType",
-			},
-			Networks: gardencorev1beta1.SeedNetworks{
-				Pods:     "10.0.0.0/16",
-				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
-			},
-			DNS: gardencorev1beta1.SeedDNS{
-				IngressDomain: pointer.String("someingress.example.com"),
-			},
-		},
-	}
-	Expect(testClient.Create(ctx, seed)).To(Succeed())
-	log.Info("Created Seed for test", "seed", seed.Name)
-
-	patch := client.MergeFrom(seed.DeepCopy())
-	seed.Status.ClusterIdentity = pointer.String(seedClusterIdentity)
-	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
-
-	DeferCleanup(func() {
-		By("Delete seed")
-		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
-	})
 
 	By("Create garden namespace for test")
 	gardenNamespace = &corev1.Namespace{
@@ -193,6 +158,12 @@ var _ = BeforeSuite(func() {
 	Expect((&networkpolicy.Reconciler{
 		Config:   config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
 		Resolver: hostnameresolver.NewNoOpProvider(),
+		SeedNetworks: gardencore.SeedNetworks{
+			Pods:       "10.0.0.0/16",
+			Services:   "10.1.0.0/16",
+			Nodes:      pointer.String("10.2.0.0/16"),
+			BlockCIDRs: []string{"169.254.169.254/32"},
+		},
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")

@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -61,6 +62,19 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		}
 
 		if err := registry.Add(obj); err != nil {
+			return err
+		}
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	for _, name := range []string{"allow-to-public-networks"} {
+		if err := registry.Add(&networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Namespace:   b.namespace,
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
+			},
+		}); err != nil {
 			return err
 		}
 	}

@@ -215,45 +215,6 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues, isShootNamespace bo
 				}
 			},
 		},
-
-		{
-			name: "allow-to-public-networks",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to all Public network IPs, except for (1) Private networks (RFC1918), "+
-							"(2) Carrier-grade NAT (RFC6598), (3) CloudProvider's specific metadata service IP. In "+
-							"practice, this blocks Egress traffic to all networks in the Seed cluster and only traffic "+
-							"to public IPv4 addresses.", v1beta1constants.LabelNetworkPolicyToPublicNetworks,
-							v1beta1constants.LabelNetworkPolicyAllowed),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-							},
-						},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								IPBlock: &networkingv1.IPBlock{
-									CIDR: "0.0.0.0/0",
-									Except: append([]string{
-										Private8BitBlock().String(),
-										Private12BitBlock().String(),
-										Private16BitBlock().String(),
-										CarrierGradeNATBlock().String(),
-									}, values.BlockedAddresses...),
-								},
-							}},
-						}},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					}
-
-					return nil
-				}
-			},
-		},
 	}
 
 	if !isShootNamespace {

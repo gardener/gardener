@@ -30,6 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -44,6 +45,7 @@ type Reconciler struct {
 	Config         config.NetworkPolicyControllerConfiguration
 	Resolver       hostnameresolver.HostResolver
 	ResolverUpdate <-chan event.GenericEvent
+	SeedNetworks   gardencore.SeedNetworks
 }
 
 // Reconcile reconciles namespace in order to create some central network policies.
@@ -76,29 +78,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				Namespace: request.Name,
 			},
 		}
-		log = log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
+		networkPolicyLogger := log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
 		if !labelsMatchAnySelector(namespace.Labels, policyConfig.namespaceSelectors) {
-			log.Info("Deleting NetworkPolicy")
+			networkPolicyLogger.Info("Deleting NetworkPolicy")
 			if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
 			}
 			continue
 		}
 
-		log.V(1).Info("Reconciling NetworkPolicy")
+		networkPolicyLogger.V(1).Info("Reconciling NetworkPolicy")
 		if err := policyConfig.reconcileFunc(ctx, log, networkPolicy); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to reconcile NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
 		}
-		log.Info("Successfully reconciled NetworkPolicy")
+		networkPolicyLogger.Info("Successfully reconciled NetworkPolicy")
 	}
 
 	return reconcile.Result{}, nil
 }
 
 func (r *Reconciler) reconcileNetworkPolicy(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy, mutateFunc func(*networkingv1.NetworkPolicy)) error {
-	log = log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
-
 	if err := r.RuntimeClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy); client.IgnoreNotFound(err) != nil {
 		return err
 	}
@@ -151,6 +151,14 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			},
 		},
+		{
+			name:          "allow-to-public-networks",
+			reconcileFunc: r.reconcileNetworkPolicyAllowToPublicNetworks,
+			namespaceSelectors: []labels.Selector{
+				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
+			},
+		},
 	}
 
 	return configs
@@ -180,6 +188,35 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 		policy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{labelKey: v1beta1constants.LabelNetworkPolicyAllowed}},
 			Egress:      helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...),
+			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+		}
+	})
+}
+
+func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
+		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
+			"egress from pods labeled with '%s=%s' to all public network IPs, except for private networks (RFC1918), "+
+			"carrier-grade NAT (RFC6598), and explicitly blocked addresses configured by human operators. In practice, "+
+			"this blocks egress traffic to all networks in the cluster and only allows egress traffic to public IPv4 "+
+			"addresses.", v1beta1constants.LabelNetworkPolicyToPublicNetworks, v1beta1constants.LabelNetworkPolicyAllowed))
+
+		policy.Spec = networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
+			Egress: []networkingv1.NetworkPolicyEgressRule{{
+				To: []networkingv1.NetworkPolicyPeer{{
+					IPBlock: &networkingv1.IPBlock{
+						CIDR: "0.0.0.0/0",
+						Except: append([]string{
+							private8BitBlock().String(),
+							private12BitBlock().String(),
+							private16BitBlock().String(),
+							carrierGradeNATBlock().String(),
+						}, r.SeedNetworks.BlockCIDRs...),
+					},
+				}},
+			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}

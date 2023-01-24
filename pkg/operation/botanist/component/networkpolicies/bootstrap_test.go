@@ -125,7 +125,7 @@ var _ = Describe("Bootstrap", func() {
 			Expect(registry.Add(constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))).To(Succeed())
 			Expect(registry.Add(constructNPDenyAll(namespace, values.DenyAllTraffic))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))).To(Succeed())
-			Expect(registry.Add(constructNPAllowToPublicNetworks(namespace, values.BlockedAddresses))).To(Succeed())
+			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-public-networks", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			managedResourceSecret.Data = registry.SerializedObjects()
 
 			gomock.InOrder(
@@ -164,7 +164,7 @@ var _ = Describe("Bootstrap", func() {
 			Expect(registry.Add(constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))).To(Succeed())
 			Expect(registry.Add(constructNPDenyAll(namespace, values.DenyAllTraffic))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))).To(Succeed())
-			Expect(registry.Add(constructNPAllowToPublicNetworks(namespace, values.BlockedAddresses))).To(Succeed())
+			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-public-networks", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			managedResourceSecret.Data = registry.SerializedObjects()
 
 			gomock.InOrder(

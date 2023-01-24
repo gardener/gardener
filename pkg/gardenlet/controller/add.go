@@ -127,7 +127,8 @@ func AddToManager(
 	}
 
 	if err := (&networkpolicy.Reconciler{
-		Config: *cfg.Controllers.NetworkPolicy,
+		Config:       *cfg.Controllers.NetworkPolicy,
+		SeedNetworks: cfg.SeedConfig.Spec.Networks,
 	}).AddToManager(mgr, seedCluster); err != nil {
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
