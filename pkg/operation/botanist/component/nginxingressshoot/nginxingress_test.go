@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -65,16 +64,16 @@ var _ = Describe("NginxIngress", func() {
 			DefaultBackendImage:  defaultBackendImage,
 			ConfigData:           configMapData,
 			PSPDisabled:          true,
+			KubeAPIServerHost:    pointer.String("foo.bar"),
 		}
 
-		configMapName = "addons-nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
+		configMapName = "addons-nginx-ingress-controller"
 
 		configMapYAML = `apiVersion: v1
 data:
   dash: "false"
   dot: "3"
   foo: bar
-immutable: true
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -202,13 +201,6 @@ rules:
   - ingressclasses
   verbs:
   - get
-  - list
-  - watch
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
   - list
   - watch
 `
@@ -369,7 +361,7 @@ spec:
         - --default-backend-service=kube-system/addons-nginx-ingress-nginx-ingress-k8s-backend
         - --enable-ssl-passthrough=true
         - --publish-service=kube-system/addons-nginx-ingress-controller
-        - --election-id=ingress-controller-seed-leader
+        - --election-id=ingress-controller-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --ingress-class=nginx
@@ -391,6 +383,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: KUBERNETES_SERVICE_HOST
+          value: foo.bar
         image: ` + nginxControllerImage + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
