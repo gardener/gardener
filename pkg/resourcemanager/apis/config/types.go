@@ -126,6 +126,8 @@ type ResourceManagerControllerConfiguration struct {
 	TokenInvalidator TokenInvalidatorControllerConfig
 	// TokenRequestor is the configuration for the token-requestor controller.
 	TokenRequestor TokenRequestorControllerConfig
+	// Node is the configuration for the node controller.
+	Node NodeControllerConfig
 }
 
 // KubeletCSRApproverControllerConfig is the configuration for the kubelet-csr-approver controller.
@@ -198,6 +200,16 @@ type TokenRequestorControllerConfig struct {
 	Enabled bool
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int
+}
+
+// NodeControllerConfig is the configuration for the node controller.
+type NodeControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	ConcurrentSyncs *int
+	// Backoff is the duration to use as backoff when Nodes have non-ready node-critical pods.
+	Backoff *metav1.Duration
 }
 
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.

@@ -68,6 +68,10 @@ controllers:
   tokenRequestor:
     enabled: true
     concurrentSyncs: 5
+  node:
+    enabled: true
+    concurrentSyncs: 5
+    backoff: 10s
 webhooks:
   crdDeletionProtection:
     enabled: true

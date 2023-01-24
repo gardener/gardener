@@ -410,6 +410,40 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_NodeControllerConfig", func() {
+		It("should not default the object because disabled", func() {
+			obj := &NodeControllerConfig{}
+
+			SetDefaults_NodeControllerConfig(obj)
+
+			Expect(obj.ConcurrentSyncs).To(BeNil())
+		})
+
+		It("should default the object because enabled", func() {
+			obj := &NodeControllerConfig{
+				Enabled: true,
+			}
+
+			SetDefaults_NodeControllerConfig(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Backoff).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
+		})
+
+		It("should not overwrite existing values", func() {
+			obj := &NodeControllerConfig{
+				Enabled:         true,
+				ConcurrentSyncs: pointer.Int(2),
+				Backoff:         &metav1.Duration{Duration: time.Minute},
+			}
+
+			SetDefaults_NodeControllerConfig(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(2)))
+			Expect(obj.Backoff).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+		})
+	})
+
 	Describe("#SetDefaults_PodSchedulerNameWebhookConfig", func() {
 		It("should not default the object because disabled", func() {
 			obj := &PodSchedulerNameWebhookConfig{}
