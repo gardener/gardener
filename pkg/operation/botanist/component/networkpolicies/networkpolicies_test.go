@@ -57,7 +57,7 @@ var _ = Describe("NetworkPolicies", func() {
 
 	Describe("#Deploy", func() {
 		It("should fail if any call fails", func() {
-			networkPolicy := constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses)
+			networkPolicy := constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress)
 
 			c.EXPECT().Get(ctx, kubernetesutils.Key(networkPolicy.Namespace, networkPolicy.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(fakeErr)
 
@@ -65,7 +65,6 @@ var _ = Describe("NetworkPolicies", func() {
 		})
 
 		It("w/o any special configuration", func() {
-			expectGetUpdate(ctx, c, constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))
 			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
@@ -85,8 +84,7 @@ var _ = Describe("NetworkPolicies", func() {
 					{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"shoot": "peers"}}},
 				},
 				GlobalValues: GlobalValues{
-					SNIEnabled:       true,
-					BlockedAddresses: []string{"foo", "bar"},
+					SNIEnabled: true,
 					PrivateNetworkPeers: []networkingv1.NetworkPolicyPeer{
 						{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"private": "peers"}}},
 						{IPBlock: &networkingv1.IPBlock{CIDR: "6.7.8.9/10"}},
@@ -98,7 +96,6 @@ var _ = Describe("NetworkPolicies", func() {
 			}
 			deployer = New(c, namespace, values)
 
-			expectGetUpdate(ctx, c, constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))
 			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
@@ -115,7 +112,7 @@ var _ = Describe("NetworkPolicies", func() {
 	Describe("#Destroy", func() {
 		It("should fail if an object fails to delete", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace}}).Return(fakeErr),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace}}).Return(fakeErr),
 			)
 
 			Expect(deployer.Destroy(ctx)).To(MatchError(fakeErr))
@@ -123,7 +120,6 @@ var _ = Describe("NetworkPolicies", func() {
 
 		It("should successfully destroy all objects", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "deny-all", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-private-networks", Namespace: namespace}}),

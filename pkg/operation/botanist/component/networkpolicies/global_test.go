@@ -130,34 +130,6 @@ func constructNPAllowToAllShootAPIServers(namespace string, sniEnabled bool) *ne
 	return obj
 }
 
-func constructNPAllowToBlockedCIDRs(namespace string, blockedAddresses []string) *networkingv1.NetworkPolicy {
-	obj := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "allow-to-blocked-cidrs",
-			Namespace:   namespace,
-			Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed' to CloudProvider's specific metadata service IP."},
-		},
-		Spec: networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"networking.gardener.cloud/to-blocked-cidrs": "allowed"},
-			},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-		},
-	}
-
-	for _, address := range blockedAddresses {
-		obj.Spec.Egress = append(obj.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
-			To: []networkingv1.NetworkPolicyPeer{{
-				IPBlock: &networkingv1.IPBlock{
-					CIDR: address,
-				},
-			}},
-		})
-	}
-
-	return obj
-}
-
 func constructNPAllowToDNS(namespace string, dnsServerAddress, nodeLocalIPVSAddress *string) *networkingv1.NetworkPolicy {
 	var (
 		protocolUDP = corev1.ProtocolUDP

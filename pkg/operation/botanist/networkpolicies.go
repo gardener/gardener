@@ -79,7 +79,6 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 				// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
 				// it needs to be ensured that the traffic from old clients can still reach the API server.
 				SNIEnabled:           sniPhase == component.PhaseEnabled || sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling,
-				BlockedAddresses:     b.Seed.GetInfo().Spec.Networks.BlockCIDRs,
 				PrivateNetworkPeers:  privateNetworkPeers,
 				DenyAllTraffic:       true,
 				NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),

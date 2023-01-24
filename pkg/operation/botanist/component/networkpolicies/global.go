@@ -31,8 +31,6 @@ import (
 type GlobalValues struct {
 	// SNIEnabled states whether the SNI for kube-apiservers of shoot clusters is enabled.
 	SNIEnabled bool
-	// BlockedAddresses is a list of CIDRs that should be blocked from being accessed.
-	BlockedAddresses []string
 	// PrivateNetworkPeers is the list of peers for the private networks.
 	PrivateNetworkPeers []networkingv1.NetworkPolicyPeer
 	// DenyAllTraffic states whether all traffic should be denied by default and must be explicitly allowed by dedicated
@@ -51,39 +49,6 @@ type networkPolicyTransformer struct {
 
 func getGlobalNetworkPolicyTransformers(values GlobalValues, isShootNamespace bool) []networkPolicyTransformer {
 	result := []networkPolicyTransformer{
-		{
-			name: "allow-to-blocked-cidrs",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to CloudProvider's specific metadata service IP.", v1beta1constants.LabelNetworkPolicyToBlockedCIDRs,
-							v1beta1constants.LabelNetworkPolicyAllowed),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelNetworkPolicyToBlockedCIDRs: v1beta1constants.LabelNetworkPolicyAllowed,
-							},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					}
-
-					for _, address := range values.BlockedAddresses {
-						obj.Spec.Egress = append(obj.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
-							To: []networkingv1.NetworkPolicyPeer{{
-								IPBlock: &networkingv1.IPBlock{
-									CIDR: address,
-								},
-							}},
-						})
-					}
-
-					return nil
-				}
-			},
-		},
-
 		{
 			name: "allow-to-dns",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {

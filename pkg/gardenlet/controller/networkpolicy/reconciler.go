@@ -159,6 +159,14 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			},
 		},
+		{
+			name:          "allow-to-blocked-cidrs",
+			reconcileFunc: r.reconcileNetworkPolicyAllowToBlockedCIDRs,
+			namespaceSelectors: []labels.Selector{
+				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
+			},
+		},
 	}
 
 	return configs
@@ -219,6 +227,31 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+		}
+	})
+}
+
+func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
+		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
+			"egress from pods labeled with '%s=%s' to explicitly blocked addresses configured by human operators.",
+			v1beta1constants.LabelNetworkPolicyToBlockedCIDRs, v1beta1constants.LabelNetworkPolicyAllowed))
+
+		policy.Spec = networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToBlockedCIDRs: v1beta1constants.LabelNetworkPolicyAllowed}},
+			Egress:      []networkingv1.NetworkPolicyEgressRule{},
+			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+		}
+
+		for _, cidr := range r.SeedNetworks.BlockCIDRs {
+			policy.Spec.Egress = append(policy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
+				To: []networkingv1.NetworkPolicyPeer{{
+					IPBlock: &networkingv1.IPBlock{
+						CIDR: cidr,
+					},
+				}},
+			})
 		}
 	})
 }

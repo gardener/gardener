@@ -67,7 +67,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove this in a future release.
-	for _, name := range []string{"allow-to-public-networks"} {
+	for _, name := range []string{"allow-to-public-networks", "allow-to-blocked-cidrs"} {
 		if err := registry.Add(&networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        name,

@@ -249,12 +249,31 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 								"172.16.0.0/12",
 								"192.168.0.0/16",
 								"100.64.0.0/10",
-								"169.254.169.254/32",
+								blockedCIDR,
 							},
 						},
 					}},
 				}},
 				PolicyTypes: []networkingv1.PolicyType{"Egress"},
+			}
+		)
+
+		defaultTests(testAttributes{
+			networkPolicyName:         networkPolicyName,
+			expectedNetworkPolicySpec: func() networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
+			inGardenNamespace:         true,
+			inIstioSystemNamespace:    false,
+			inShootNamespaces:         true,
+		})
+	})
+
+	Describe("allow-to-blocked-cidrs", func() {
+		var (
+			networkPolicyName         = "allow-to-blocked-cidrs"
+			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToBlockedCIDRs: v1beta1constants.LabelNetworkPolicyAllowed}},
+				PolicyTypes: []networkingv1.PolicyType{"Egress"},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{{IPBlock: &networkingv1.IPBlock{CIDR: blockedCIDR}}}}},
 			}
 		)
 

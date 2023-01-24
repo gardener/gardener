@@ -53,8 +53,8 @@ func TestNetworkPolicy(t *testing.T) {
 }
 
 const (
-	testID              = "networkpolicy-controller-test"
-	seedClusterIdentity = "seed"
+	testID      = "networkpolicy-controller-test"
+	blockedCIDR = "169.254.169.254/32"
 )
 
 var (
@@ -162,7 +162,7 @@ var _ = BeforeSuite(func() {
 			Pods:       "10.0.0.0/16",
 			Services:   "10.1.0.0/16",
 			Nodes:      pointer.String("10.2.0.0/16"),
-			BlockCIDRs: []string{"169.254.169.254/32"},
+			BlockCIDRs: []string{blockedCIDR},
 		},
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
