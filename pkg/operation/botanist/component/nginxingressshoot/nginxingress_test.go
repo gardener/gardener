@@ -32,7 +32,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -81,7 +81,6 @@ metadata:
     app: nginx-ingress
     component: controller
     release: addons
-    resources.gardener.cloud/garbage-collectable-reference: "true"
   name: ` + configMapName + `
   namespace: kube-system
 `
@@ -346,7 +345,7 @@ spec:
   template:
     metadata:
       annotations:
-        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+        checksum/config: ` + utils.ComputeChecksum(configMapData) + `
       creationTimestamp: null
       labels:
         app: nginx-ingress
@@ -383,8 +382,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: KUBERNETES_SERVICE_HOST
-          value: foo.bar
         image: ` + nginxControllerImage + `
         imagePullPolicy: IfNotPresent
         livenessProbe:

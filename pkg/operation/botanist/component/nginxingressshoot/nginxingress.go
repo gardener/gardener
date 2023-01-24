@@ -35,7 +35,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -154,15 +154,17 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: configMapName,
 			Labels: map[string]string{
-				v1beta1constants.LabelApp:             labelAppValue,
-				labelKeyRelease:                       labelValueAddons,
-				labelKeyComponent:                     labelValueController,
-				references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable,
+				v1beta1constants.LabelApp: labelAppValue,
+				labelKeyRelease:           labelValueAddons,
+				labelKeyComponent:         labelValueController,
 			},
 			Namespace: metav1.NamespaceSystem,
 		},
 		Data: n.values.ConfigData,
 	}
+
+	// We don't call kubernetesutils.MakeUnique() here because the configmap needs to be mutable, since the nginx controller
+	// mutates it in some cases. See https://github.com/gardener/gardener/pull/7386 for more details.
 
 	var (
 		healthProbePort = intstr.FromInt(10254)
@@ -360,9 +362,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							"origin":                    "gardener",
 						},
 						Annotations: map[string]string{
-							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
-							// volume and hence using the function won't have any effect.
-							references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
+							"checksum/config": utils.ComputeChecksum(configMap.Data),
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -614,13 +614,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
-	}
-
-	if n.values.KubeAPIServerHost != nil {
-		deploymentController.Spec.Template.Spec.Containers[0].Env = append(deploymentController.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  "KUBERNETES_SERVICE_HOST",
-			Value: *n.values.KubeAPIServerHost,
-		})
 	}
 
 	if !n.values.PSPDisabled {
