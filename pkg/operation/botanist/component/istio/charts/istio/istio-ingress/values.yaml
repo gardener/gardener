@@ -21,3 +21,5 @@ ingressVersion: "1.15.3"
 #externalTrafficPolicy: Cluster
 minReplicas: 2
 maxReplicas: 5
+
+vpnEnabled: false

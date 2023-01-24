@@ -44,6 +44,7 @@ type IngressGatewayValues struct {
 	MinReplicas           *int
 	Namespace             string
 	TrustDomain           string
+	VPNEnabled            bool
 	Zones                 []string
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
@@ -67,6 +68,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"istiodNamespace":       istioIngressGateway.IstiodNamespace,
 			"loadBalancerIP":        istioIngressGateway.LoadBalancerIP,
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
+			"vpnEnabled":            istioIngressGateway.VPNEnabled,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

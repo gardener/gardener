@@ -121,6 +121,7 @@ func defaultIstio(
 		LoadBalancerIP:        conf.SNI.Ingress.ServiceExternalIP,
 		Labels:                operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
 		Namespace:             *conf.SNI.Ingress.Namespace,
+		VPNEnabled:            true,
 	}
 
 	// even if SNI is being disabled, the existing ports must stay the same
@@ -156,9 +157,10 @@ func defaultIstio(
 				ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 				Ports:                 defaultIngressGatewayConfig.Ports,
 				// LoadBalancerIP can currently not be provided for automatic ingress gateways
-				Labels:    operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
-				Zones:     []string{zone},
-				Namespace: namespace,
+				Labels:     operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
+				Zones:      []string{zone},
+				Namespace:  namespace,
+				VPNEnabled: true,
 			})
 
 			istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
@@ -182,6 +184,7 @@ func defaultIstio(
 			LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
 			Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			Namespace:             *handler.SNI.Ingress.Namespace,
+			VPNEnabled:            true,
 		})
 
 		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
@@ -202,9 +205,10 @@ func defaultIstio(
 					ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 					Ports:                 defaultIngressGatewayConfig.Ports,
 					// LoadBalancerIP can currently not be provided for automatic ingress gateways
-					Labels:    operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
-					Zones:     []string{zone},
-					Namespace: namespace,
+					Labels:     operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+					Zones:      []string{zone},
+					Namespace:  namespace,
+					VPNEnabled: true,
 				})
 
 				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{

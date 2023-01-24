@@ -922,6 +922,103 @@ data:
             global_downstream_max_connections: 750000
 `
 
+		istioIngressEnvoyVPNFilter = `apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: reversed-vpn
+  namespace: ` + deployNSIngress + `
+spec:
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+        name: 0.0.0.0_8132
+        portNumber: 8132
+    patch:
+      operation: MERGE
+      value:
+        name: envoy.filters.network.http_connection_manager
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          route_config:
+            virtual_hosts:
+            - domains:
+              - api.*
+              name: reversed-vpn
+              routes:
+              - match:
+                  connect_matcher: {}
+                route:
+                  cluster_header: Reversed-VPN
+                  upgrade_configs:
+                  - connect_config: {}
+                    upgrade_type: CONNECT
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        name: 0.0.0.0_8132
+        portNumber: 8132
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      filterClass: AUTHZ # This filter will run *after* the Istio authz filter.
+      value:
+        name: envoy.filters.http.ext_authz
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+          transport_api_version: V3
+          grpc_service:
+            envoy_grpc:
+              cluster_name: outbound|9001||reversed-vpn-auth-server.garden.svc.cluster.local
+            timeout: 0.250s
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+      foo: bar
+      
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: http-connect-listener
+  namespace: ` + deployNSIngress + `
+spec:
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        name: 0.0.0.0_8132
+        portNumber: 8132
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+    patch:
+      operation: MERGE
+      value:
+        name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+          http_protocol_options:
+            accept_http_10: true
+          upgrade_configs:
+          - upgrade_type: CONNECT
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+      foo: bar
+      
+`
+
 		istioIngressEnvoyFilter = `
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -1258,106 +1355,6 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: http-connect-listener
-  namespace: ` + deployNSIngress + `
-spec:
-  workloadSelector:
-    labels:
-      app: istio-ingressgateway
-      foo: bar
-      
-  configPatches:
-  - applyTo: NETWORK_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        name: 0.0.0.0_8132
-        portNumber: 8132
-        filterChain:
-          filter:
-            name: envoy.filters.network.http_connection_manager
-    patch:
-      operation: MERGE
-      value:
-        name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
-          http_protocol_options:
-            accept_http_10: true
-          upgrade_configs:
-          - upgrade_type: CONNECT
-
----
-
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
-  name: reversed-vpn
-  namespace: ` + deployNSIngress + `
-spec:
-  configPatches:
-  - applyTo: NETWORK_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        filterChain:
-          filter:
-            name: envoy.filters.network.http_connection_manager
-        name: 0.0.0.0_8132
-        portNumber: 8132
-    patch:
-      operation: MERGE
-      value:
-        name: envoy.filters.network.http_connection_manager
-        typed_config:
-          '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          route_config:
-            virtual_hosts:
-            - domains:
-              - api.*
-              name: reversed-vpn
-              routes:
-              - match:
-                  connect_matcher: {}
-                route:
-                  cluster_header: Reversed-VPN
-                  upgrade_configs:
-                  - connect_config: {}
-                    upgrade_type: CONNECT
-  - applyTo: HTTP_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        name: 0.0.0.0_8132
-        portNumber: 8132
-        filterChain:
-          filter:
-            name: "envoy.filters.network.http_connection_manager"
-            subFilter:
-              name: "envoy.filters.http.router"
-    patch:
-      operation: INSERT_BEFORE
-      filterClass: AUTHZ # This filter will run *after* the Istio authz filter.
-      value:
-        name: envoy.filters.http.ext_authz
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-          transport_api_version: V3
-          grpc_service:
-            envoy_grpc:
-              cluster_name: outbound|9001||reversed-vpn-auth-server.garden.svc.cluster.local
-            timeout: 0.250s
-  workloadSelector:
-    labels:
-      app: istio-ingressgateway
-      foo: bar
-      
-
----
-
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
   name: access-log
   namespace: ` + deployNSIngress + `
   labels:
@@ -1401,7 +1398,7 @@ spec:
           - name: envoy.access_loggers.stdout
 `
 
-		istioIngressGateway = `apiVersion: networking.istio.io/v1beta1
+		istioIngressVPNGateway = `apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
   name: reversed-vpn-auth-server
@@ -2188,7 +2185,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(40))
+			Expect(managedResourceSecret.Data).To(HaveLen(41))
 
 			By("Verify istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
@@ -2211,7 +2208,6 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
-			Expect(string(managedResourceSecret.Data["istio-ingress_templates_gateway_test-ingress.yaml"])).To(Equal(istioIngressGateway))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_networkpolicy_test-ingress.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))
@@ -2237,6 +2233,10 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_gateway_test-ingress.yaml"])).To(Equal(istioProxyProtocolGateway))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_virtualservice_test-ingress.yaml"])).To(Equal(istioProxyProtocolVirtualService))
+
+			By("Verify istio-reversed-vpn resources")
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(Equal(istioIngressVPNGateway))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyVPNFilter))
 		})
 
 		Context("with outdated stats filters", func() {
@@ -2295,7 +2295,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(40))
+				Expect(managedResourceSecret.Data).To(HaveLen(41))
 
 				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
@@ -2379,6 +2379,38 @@ spec:
 			It("should successfully deploy correct external traffic policy", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(&externalTrafficPolicy)))
+			})
+		})
+
+		Context("VPN disabled", func() {
+			BeforeEach(func() {
+				for i := range igw {
+					igw[i].VPNEnabled = false
+				}
+
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+						ProxyProtocol:  ipp,
+					},
+				)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(41))
+
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
 			})
 		})
 	})
@@ -2502,7 +2534,8 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 			},
-			Namespace: namespace,
+			Namespace:  namespace,
+			VPNEnabled: true,
 		},
 	}
 }
