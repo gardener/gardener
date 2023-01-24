@@ -300,7 +300,7 @@ spec:
           name: kmsg
           readOnly: true
       dnsPolicy: Default
-      priorityClassName: system-cluster-critical
+      priorityClassName: gardener-shoot-system-900
       securityContext:
         seccompProfile:
           type: RuntimeDefault

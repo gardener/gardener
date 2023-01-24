@@ -283,7 +283,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						},
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:             "system-cluster-critical",
+						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem600,
 						NodeSelector:                  map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 						TerminationGracePeriodSeconds: pointer.Int64(60),
 						SecurityContext: &corev1.PodSecurityContext{
@@ -366,7 +366,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						},
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:             "system-cluster-critical",
+						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem600,
 						DNSPolicy:                     corev1.DNSClusterFirst,
 						RestartPolicy:                 corev1.RestartPolicyAlways,
 						SchedulerName:                 corev1.DefaultSchedulerName,

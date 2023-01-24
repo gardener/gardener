@@ -309,7 +309,7 @@ spec:
             memory: 20Mi
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
-      priorityClassName: system-cluster-critical
+      priorityClassName: gardener-shoot-system-600
       securityContext:
         fsGroup: 65534
         runAsUser: 65534
@@ -442,7 +442,7 @@ spec:
       dnsPolicy: ClusterFirst
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
-      priorityClassName: system-cluster-critical
+      priorityClassName: gardener-shoot-system-600
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: addons-nginx-ingress
