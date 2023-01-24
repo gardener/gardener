@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -33,10 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 )
 
@@ -45,8 +44,8 @@ const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Cluster) error {
-	if r.SeedClient == nil {
-		r.SeedClient = seedCluster.GetClient()
+	if r.RuntimeClient == nil {
+		r.RuntimeClient = seedCluster.GetClient()
 	}
 	if r.Resolver == nil {
 		resolver, err := hostnameresolver.CreateForCluster(seedCluster.GetConfig(), mgr.GetLogger())
@@ -54,9 +53,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 			return fmt.Errorf("failed to get hostnameresolver: %w", err)
 		}
 		resolverUpdate := make(chan event.GenericEvent)
-		resolver.WithCallback(func() {
-			resolverUpdate <- event.GenericEvent{}
-		})
+		resolver.WithCallback(func() { resolverUpdate <- event.GenericEvent{} })
 		if err := mgr.Add(resolver); err != nil {
 			return fmt.Errorf("failed to add hostnameresolver to manager: %w", err)
 		}
@@ -65,12 +62,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 	}
 	if r.ResolverUpdate == nil {
 		r.ResolverUpdate = make(chan event.GenericEvent)
-	}
-	if r.GardenNamespace == "" {
-		r.GardenNamespace = v1beta1constants.GardenNamespace
-	}
-	if r.IstioSystemNamespace == "" {
-		r.IstioSystemNamespace = v1beta1constants.IstioSystemNamespace
 	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
@@ -107,7 +98,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 	if err := c.Watch(
 		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, mgr.GetLogger()),
-		predicateutils.HasName(helper.AllowToSeedAPIServer),
+		r.NetworkPolicyPredicate(),
 	); err != nil {
 		return err
 	}
@@ -118,24 +109,43 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 	)
 }
 
+// NetworkPolicyPredicate is a predicate which returns true in case the network policy name matches with one of those
+// managed by this reconciler.
+func (r *Reconciler) NetworkPolicyPredicate() predicate.Predicate {
+	var (
+		configs    = r.networkPolicyConfigs()
+		predicates = make([]predicate.Predicate, 0, len(configs))
+	)
+
+	for _, config := range configs {
+		predicates = append(predicates, predicateutils.HasName(config.name))
+	}
+
+	return predicate.Or(predicates...)
+}
+
 // MapToNamespaces is a mapper function which returns requests for all shoot namespaces + garden namespace + istio-system namespace.
 func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	namespaces := &corev1.NamespaceList{}
-	if err := r.SeedClient.List(ctx, namespaces, &client.ListOptions{
-		LabelSelector: shootNamespaceSelector,
-	}); err != nil {
-		log.Error(err, "Unable to list Shoot namespace for updating NetworkPolicy", "networkPolicyName", helper.AllowToSeedAPIServer)
-		return []reconcile.Request{}
+	namespaceNames := sets.NewString()
+
+	for _, config := range r.networkPolicyConfigs() {
+		for _, selector := range config.namespaceSelectors {
+			namespaceList := &corev1.NamespaceList{}
+			if err := r.RuntimeClient.List(ctx, namespaceList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
+				log.Error(err, "Unable to list namespaces", "selector", selector)
+				return nil
+			}
+
+			for _, namespace := range namespaceList.Items {
+				namespaceNames.Insert(namespace.Name)
+			}
+		}
 	}
 
-	requests := []reconcile.Request{
-		{NamespacedName: types.NamespacedName{Name: r.GardenNamespace}},
-		{NamespacedName: types.NamespacedName{Name: r.IstioSystemNamespace}},
+	var requests []reconcile.Request
+	for _, namespaceName := range namespaceNames.UnsortedList() {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespaceName}})
 	}
-	for _, namespace := range namespaces.Items {
-		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&namespace)})
-	}
-
 	return requests
 }
 

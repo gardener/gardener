@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -138,7 +139,10 @@ var _ = BeforeSuite(func() {
 	gardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
-			Labels:       map[string]string{testID: testRunID},
+			Labels: map[string]string{
+				testID:                     testRunID,
+				v1beta1constants.LabelRole: v1beta1constants.GardenNamespace,
+			},
 		},
 	}
 
@@ -154,7 +158,10 @@ var _ = BeforeSuite(func() {
 	istioSystemNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "istio-system-",
-			Labels:       map[string]string{testID: testRunID},
+			Labels: map[string]string{
+				testID:                      testRunID,
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem,
+			},
 		},
 	}
 	Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
@@ -184,10 +191,8 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
-		Config:               config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
-		Resolver:             hostnameresolver.NewNoOpProvider(),
-		GardenNamespace:      gardenNamespace.Name,
-		IstioSystemNamespace: istioSystemNamespace.Name,
+		Config:   config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
+		Resolver: hostnameresolver.NewNoOpProvider(),
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
