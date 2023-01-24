@@ -400,6 +400,9 @@ var _ = Describe("ResourceManager", func() {
 						Enabled:         true,
 						ConcurrentSyncs: &maxConcurrentTokenRequestorWorkers,
 					},
+					Node: resourcemanagerv1alpha1.NodeControllerConfig{
+						Enabled: false,
+					},
 				},
 				Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
 					HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
@@ -434,6 +437,7 @@ var _ = Describe("ResourceManager", func() {
 					DisableCachedClient: &targetDisableCache,
 				}
 
+				config.Controllers.Node.Enabled = true
 				config.Webhooks.SeccompProfile.Enabled = false
 				config.Webhooks.PodSchedulerName = resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
 					Enabled:       true,
