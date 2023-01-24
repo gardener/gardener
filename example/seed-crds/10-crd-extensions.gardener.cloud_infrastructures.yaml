@@ -65,7 +65,7 @@ spec:
                 type: string
               secretRef:
                 description: SecretRef is a reference to a secret that contains the
-                  actual result of the generated cloud config.
+                  cloud provider credentials.
                 properties:
                   name:
                     description: name is unique within a namespace to reference a
