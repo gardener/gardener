@@ -42,7 +42,7 @@ var shootNamespaceSelector = labels.SelectorFromSet(labels.Set{
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type Reconciler struct {
 	SeedClient           client.Client
-	Config               config.SeedAPIServerNetworkPolicyControllerConfiguration
+	Config               config.NetworkPolicyControllerConfiguration
 	Resolver             hostnameresolver.HostResolver
 	ResolverUpdate       <-chan event.GenericEvent
 	GardenNamespace      string

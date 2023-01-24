@@ -155,8 +155,8 @@ type GardenletControllerConfiguration struct {
 	ShootMigration *ShootMigrationControllerConfiguration
 	// ShootStateSync defines the configuration of the ShootState controller.
 	ShootStateSync *ShootStateSyncControllerConfiguration
-	// SeedAPIServerNetworkPolicy defines the configuration of the SeedAPIServerNetworkPolicy controller.
-	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
+	// NetworkPolicy defines the configuration of the NetworkPolicy controller.
+	NetworkPolicy *NetworkPolicyControllerConfiguration
 	// ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
 	// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
@@ -353,9 +353,9 @@ type ShootStateSyncControllerConfiguration struct {
 	ConcurrentSyncs *int
 }
 
-// SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
+// NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy
 // controller.
-type SeedAPIServerNetworkPolicyControllerConfiguration struct {
+type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
 }

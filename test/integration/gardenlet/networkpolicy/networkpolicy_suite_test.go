@@ -184,7 +184,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
-		Config:               config.SeedAPIServerNetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
+		Config:               config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
 		Resolver:             hostnameresolver.NewNoOpProvider(),
 		GardenNamespace:      gardenNamespace.Name,
 		IstioSystemNamespace: istioSystemNamespace.Name,
