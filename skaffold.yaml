@@ -1078,6 +1078,7 @@ build:
         - pkg/resourcemanager/controller/health/progressing
         - pkg/resourcemanager/controller/health/utils
         - pkg/resourcemanager/controller/managedresource
+        - pkg/resourcemanager/controller/node
         - pkg/resourcemanager/controller/networkpolicy
         - pkg/resourcemanager/controller/secret
         - pkg/resourcemanager/controller/tokeninvalidator
