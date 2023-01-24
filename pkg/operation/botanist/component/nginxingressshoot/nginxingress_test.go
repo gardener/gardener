@@ -32,7 +32,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -65,16 +64,16 @@ var _ = Describe("NginxIngress", func() {
 			DefaultBackendImage:  defaultBackendImage,
 			ConfigData:           configMapData,
 			PSPDisabled:          true,
+			KubeAPIServerHost:    pointer.String("foo.bar"),
 		}
 
-		configMapName = "addons-nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
+		configMapName = "addons-nginx-ingress-controller"
 
 		configMapYAML = `apiVersion: v1
 data:
   dash: "false"
   dot: "3"
   foo: bar
-immutable: true
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -82,7 +81,6 @@ metadata:
     app: nginx-ingress
     component: controller
     release: addons
-    resources.gardener.cloud/garbage-collectable-reference: "true"
   name: ` + configMapName + `
   namespace: kube-system
 `
@@ -204,13 +202,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - list
-  - watch
 `
 
 		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
@@ -317,7 +308,7 @@ spec:
             memory: 20Mi
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
-      priorityClassName: system-cluster-critical
+      priorityClassName: gardener-shoot-system-600
       securityContext:
         fsGroup: 65534
         runAsUser: 65534
@@ -354,7 +345,7 @@ spec:
   template:
     metadata:
       annotations:
-        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+        checksum/config: ` + utils.ComputeChecksum(configMapData) + `
       creationTimestamp: null
       labels:
         app: nginx-ingress
@@ -369,7 +360,7 @@ spec:
         - --default-backend-service=kube-system/addons-nginx-ingress-nginx-ingress-k8s-backend
         - --enable-ssl-passthrough=true
         - --publish-service=kube-system/addons-nginx-ingress-controller
-        - --election-id=ingress-controller-seed-leader
+        - --election-id=ingress-controller-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --ingress-class=nginx
@@ -448,7 +439,7 @@ spec:
       dnsPolicy: ClusterFirst
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
-      priorityClassName: system-cluster-critical
+      priorityClassName: gardener-shoot-system-600
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: addons-nginx-ingress

@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,8 +35,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -89,7 +87,7 @@ type Values struct {
 	// ConfigData contains the configuration details for the nginx-ingress controller.
 	ConfigData map[string]string
 	// KubeAPIServerHost is the host of the kube-apiserver.
-	KubeAPIServerHost string
+	KubeAPIServerHost *string
 	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress.
 	LoadBalancerSourceRanges []string
 	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
@@ -165,7 +163,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		Data: n.values.ConfigData,
 	}
 
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	// We don't call kubernetesutils.MakeUnique() here because the configmap needs to be mutable, since the nginx controller
+	// mutates it in some cases. See https://github.com/gardener/gardener/pull/7386 for more details.
 
 	var (
 		healthProbePort = intstr.FromInt(10254)
@@ -229,11 +228,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Resources: []string{"ingressclasses"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
-				{
-					APIGroups: []string{"coordination.k8s.io"},
-					Resources: []string{"leases"},
-					Verbs:     []string{"list", "watch"},
-				},
 			},
 		}
 
@@ -291,7 +285,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						},
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:             "system-cluster-critical",
+						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem600,
 						NodeSelector:                  map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 						TerminationGracePeriodSeconds: pointer.Int64(60),
 						SecurityContext: &corev1.PodSecurityContext{
@@ -368,13 +362,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							"origin":                    "gardener",
 						},
 						Annotations: map[string]string{
-							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
-							// volume and hence using the function won't have any effect.
-							references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
+							"checksum/config": utils.ComputeChecksum(configMap.Data),
 						},
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:             "system-cluster-critical",
+						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem600,
 						DNSPolicy:                     corev1.DNSClusterFirst,
 						RestartPolicy:                 corev1.RestartPolicyAlways,
 						SchedulerName:                 corev1.DefaultSchedulerName,
@@ -385,7 +377,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							Name:                     containerNameController,
 							Image:                    n.values.NginxControllerImage,
 							ImagePullPolicy:          corev1.PullIfNotPresent,
-							Args:                     n.getArgs(configMap),
+							Args:                     n.getArgs(configMap.Name),
 							TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 							SecurityContext: &corev1.SecurityContext{
@@ -683,17 +675,17 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	)
 }
 
-func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
+func (n *nginxIngress) getArgs(configMapName string) []string {
 	out := []string{
 		"/nginx-ingress-controller",
 		"--default-backend-service=" + metav1.NamespaceSystem + "/" + serviceNameBackend,
 		"--enable-ssl-passthrough=true",
 		"--publish-service=" + metav1.NamespaceSystem + "/" + serviceNameController,
-		"--election-id=ingress-controller-seed-leader",
+		"--election-id=ingress-controller-leader",
 		"--update-status=true",
 		"--annotations-prefix=nginx.ingress.kubernetes.io",
 		"--ingress-class=nginx",
-		"--configmap=" + metav1.NamespaceSystem + "/" + configMap.Name,
+		"--configmap=" + metav1.NamespaceSystem + "/" + configMapName,
 	}
 
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {

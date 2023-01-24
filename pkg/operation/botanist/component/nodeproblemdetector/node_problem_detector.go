@@ -212,7 +212,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						ServiceAccountName:            serviceAccount.Name,
 						HostNetwork:                   false,
 						TerminationGracePeriodSeconds: pointer.Int64(daemonSetTerminationGracePeriodSeconds),
-						PriorityClassName:             "system-cluster-critical",
+						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem900,
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
