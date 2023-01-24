@@ -128,9 +128,23 @@ type networkPolicyConfig struct {
 
 func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 	configs := []networkPolicyConfig{
+		// This network policy is deprecated and will be removed soon in favor of `allow-to-runtime-apiserver`.
 		{
-			name:          "allow-to-seed-apiserver",
-			reconcileFunc: r.reconcileNetworkPolicyAllowToRuntimeAPIServer,
+			name: "allow-to-seed-apiserver",
+			reconcileFunc: func(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+				return r.reconcileNetworkPolicyAllowToAPIServer(ctx, log, networkPolicy, v1beta1constants.LabelNetworkPolicyToSeedAPIServer)
+			},
+			namespaceSelectors: []labels.Selector{
+				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
+			},
+		},
+		{
+			name: "allow-to-runtime-apiserver",
+			reconcileFunc: func(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+				return r.reconcileNetworkPolicyAllowToAPIServer(ctx, log, networkPolicy, v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer)
+			},
 			namespaceSelectors: []labels.Selector{
 				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
@@ -151,23 +165,21 @@ func labelsMatchAnySelector(labelsToCheck map[string]string, selectors []labels.
 	return false
 }
 
-func (r *Reconciler) reconcileNetworkPolicyAllowToRuntimeAPIServer(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy, labelKey string) error {
 	kubernetesEndpoints := &corev1.Endpoints{}
 	if err := r.RuntimeClient.Get(ctx, client.ObjectKey{Name: "kubernetes", Namespace: corev1.NamespaceDefault}, kubernetesEndpoints); err != nil {
 		return err
 	}
-	egressRules := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...)
 
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
-		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, "Allows Egress from "+
-			"pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server "+
-			"endpoints in the default namespace.")
+		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
+			"egress traffic from pods labeled with '%s=%s' to the endpoints in the default namespace of the kube-apiserver "+
+			"of the runtime cluster.",
+			labelKey, v1beta1constants.LabelNetworkPolicyAllowed))
 
 		policy.Spec = networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed},
-			},
-			Egress:      egressRules,
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{labelKey: v1beta1constants.LabelNetworkPolicyAllowed}},
+			Egress:      helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...),
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}

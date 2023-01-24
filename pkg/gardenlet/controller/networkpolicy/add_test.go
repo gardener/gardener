@@ -63,6 +63,14 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.GenericEvent{Object: networkPolicy})).To(BeTrue())
 		})
 
+		It("should return true because the NetworkPolicy has name 'allow-to-runtime-apiserver'", func() {
+			networkPolicy.Name = "allow-to-runtime-apiserver"
+			Expect(p.Create(event.CreateEvent{Object: networkPolicy})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: networkPolicy})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: networkPolicy})).To(BeTrue())
+			Expect(p.Generic(event.GenericEvent{Object: networkPolicy})).To(BeTrue())
+		})
+
 		It("should return false because the NetworkPolicy is not managed by this reconciler", func() {
 			networkPolicy.Name = "not-managed"
 			Expect(p.Create(event.CreateEvent{Object: networkPolicy})).To(BeFalse())
