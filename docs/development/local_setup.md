@@ -16,11 +16,6 @@ This guide is split into three main parts:
 * [Building and starting Gardener components locally](#start-gardener-locally)
 * [Using your local Gardener setup to create a Shoot](#create-a-shoot)
 
-## Limitations of the Local Development Setup
-
-You can run Gardener (API server, controller manager, scheduler, gardenlet) against any local Kubernetes cluster, however, your seed and shoot clusters must be deployed to a cloud provider.
-Currently, it is not possible to run Gardener entirely isolated from any cloud provider. This means that to be able create Shoot clusters you need to register an external Seed cluster (e.g., one created in AWS).
-
 # Preparing the Setup
 
 ## [macOS only] Installing homebrew
@@ -61,15 +56,6 @@ brew install kubernetes-cli
 ```
 
 For other OS, please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
-
-## Installing helm
-You also need the [Helm](https://github.com/kubernetes/helm) CLI. On macOS run
-
-```bash
-brew install helm
-```
-
-For other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
 
 ## Installing Docker
 
@@ -138,8 +124,8 @@ The Gardener repository and all the above-mentioned tools (git, golang, kubectl,
 Clone the repository from GitHub into your `$GOPATH`.
 
 ```bash
-mkdir -p $GOPATH/src/github.com/gardener
-cd $GOPATH/src/github.com/gardener
+mkdir -p $(go env GOPATH)/src/github.com/gardener
+cd $(go env GOPATH)/src/github.com/gardener
 git clone git@github.com:gardener/gardener.git
 cd gardener
 ```
