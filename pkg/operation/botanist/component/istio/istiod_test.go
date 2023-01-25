@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -2145,7 +2146,6 @@ spec:
 			Expect(actualNS.Annotations).To(And(
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
 			))
-
 		})
 
 		It("deploys istio-ingress namespace", func() {
@@ -2237,6 +2237,40 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_gateway_test-ingress.yaml"])).To(Equal(istioProxyProtocolGateway))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_virtualservice_test-ingress.yaml"])).To(Equal(istioProxyProtocolVirtualService))
+		})
+
+		Context("with outdated stats filters", func() {
+			var statsFilterNames []string
+
+			BeforeEach(func() {
+				statsFilterNames = []string{"tcp-stats-filter-1.11", "stats-filter-1.11", "tcp-stats-filter-1.12", "stats-filter-1.12"}
+
+				for _, ingressGateway := range igw {
+					for _, statsFilterName := range statsFilterNames {
+						statsFilter := istionetworkingv1alpha3.EnvoyFilter{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      statsFilterName,
+								Namespace: ingressGateway.Namespace,
+							},
+						}
+						Expect(c.Create(ctx, &statsFilter)).To(Succeed())
+					}
+				}
+			})
+
+			It("should have removed all outdated stats filters", func() {
+				for _, ingressGateway := range igw {
+					for _, statsFilterName := range statsFilterNames {
+						statsFilter := &istionetworkingv1alpha3.EnvoyFilter{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      statsFilterName,
+								Namespace: ingressGateway.Namespace,
+							},
+						}
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(statsFilter), statsFilter)).To(BeNotFoundError())
+					}
+				}
+			})
 		})
 
 		Context("kubernetes version <v1.21", func() {
