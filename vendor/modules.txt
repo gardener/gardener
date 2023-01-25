@@ -1492,6 +1492,8 @@ k8s.io/component-base/version/verflag
 # k8s.io/component-helpers v0.26.1
 ## explicit; go 1.19
 k8s.io/component-helpers/node/util/sysctl
+k8s.io/component-helpers/scheduling/corev1
+k8s.io/component-helpers/scheduling/corev1/nodeaffinity
 # k8s.io/gengo v0.0.0-20220902162205-c0856e24416d
 ## explicit; go 1.13
 k8s.io/gengo/args
