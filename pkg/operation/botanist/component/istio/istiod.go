@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -55,16 +55,16 @@ var (
 )
 
 type istiod struct {
-	client                    crclient.Client
+	client                    client.Client
 	chartRenderer             chartrenderer.Interface
 	namespace                 string
-	values                    IstiodValues
+	values                    Values
 	istioIngressGatewayValues []IngressGateway
 	istioProxyProtocolValues  []ProxyProtocol
 }
 
-// IstiodValues holds values for the istio-istiod chart.
-type IstiodValues struct {
+// Values contains configuration values for the Istio component.
+type Values struct {
 	TrustDomain string
 	Image       string
 	Zones       []string
@@ -73,9 +73,9 @@ type IstiodValues struct {
 // NewIstio can be used to deploy istio's istiod in a namespace.
 // Destroy does nothing.
 func NewIstio(
-	client crclient.Client,
+	client client.Client,
 	chartRenderer chartrenderer.Interface,
-	values IstiodValues,
+	values Values,
 	namespace string,
 	istioIngressGatewayValues []IngressGateway,
 	istioProxyProtocolValues []ProxyProtocol,
@@ -105,7 +105,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 	// TODO(mvladev): Rotate this on every istio version upgrade.
 	for _, filterName := range []string{"tcp-stats-filter-1.11", "stats-filter-1.11", "tcp-stats-filter-1.12", "stats-filter-1.12"} {
-		if err := crclient.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
+		if err := client.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
 			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.namespace},
 		})); err != nil {
 			return err
@@ -222,7 +222,7 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: i.namespace,
 		},
-	}); crclient.IgnoreNotFound(err) != nil {
+	}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -231,7 +231,7 @@ func (i *istiod) Destroy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: istioIngressGateway.Namespace,
 			},
-		}); crclient.IgnoreNotFound(err) != nil {
+		}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}

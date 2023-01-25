@@ -2100,7 +2100,7 @@ spec:
 		istiod = NewIstio(
 			c,
 			renderer,
-			IstiodValues{
+			Values{
 				Image:       "foo/bar",
 				TrustDomain: "foo.local",
 				Zones:       []string{"a", "b", "c"},
@@ -2244,7 +2244,7 @@ spec:
 				istiod = NewIstio(
 					c,
 					renderer,
-					IstiodValues{Image: "foo/bar", TrustDomain: "foo.local"},
+					Values{Image: "foo/bar", TrustDomain: "foo.local"},
 					deployNS,
 					igw,
 					ipp,
@@ -2270,7 +2270,7 @@ spec:
 				istiod = NewIstio(
 					c,
 					renderer,
-					IstiodValues{
+					Values{
 						Image:       "foo/bar",
 						TrustDomain: "foo.local",
 						Zones:       []string{"a", "b", "c"},
@@ -2294,7 +2294,7 @@ spec:
 				istiod = NewIstio(
 					c,
 					renderer,
-					IstiodValues{
+					Values{
 						Image:       "foo/bar",
 						TrustDomain: "foo.local",
 						Zones:       []string{"a", "b", "c"},
@@ -2318,7 +2318,7 @@ spec:
 				istiod = NewIstio(
 					c,
 					renderer,
-					IstiodValues{
+					Values{
 						Image:       "foo/bar",
 						TrustDomain: "foo.local",
 						Zones:       []string{"a", "b", "c"},

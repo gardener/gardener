@@ -236,7 +236,7 @@ func defaultIstio(
 	return istio.NewIstio(
 		seedClient,
 		chartRenderer,
-		istio.IstiodValues{
+		istio.Values{
 			TrustDomain: gardencorev1beta1.DefaultDomain,
 			Image:       istiodImage.String(),
 			Zones:       gardenSeed.Spec.Provider.Zones,
