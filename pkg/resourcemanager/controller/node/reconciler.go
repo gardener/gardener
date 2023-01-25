@@ -17,16 +17,26 @@ package node
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/helper"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // Reconciler manages taints on new Node objects to block scheduling of user workload pods until all node critical
@@ -57,7 +67,115 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, nil
 	}
 
-	// TODO: add business logic
+	// prep for checks: list all DaemonSets and all node-critical pods on the given node
+	daemonSetList := &appsv1.DaemonSetList{}
+	if err := r.Client.List(ctx, daemonSetList); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed listing node-critical DaemonSets on node: %w", err)
+	}
 
-	return reconcile.Result{}, nil
+	nodeCriticalPodList := &corev1.PodList{}
+	if err := r.Client.List(ctx, nodeCriticalPodList, client.MatchingFields{indexer.PodNodeName: node.Name}, client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed listing node-critical Pods on node: %w", err)
+	}
+
+	// - for all node-critical DaemonSets: check whether a daemon pod has already been scheduled to the node
+	// - for all scheduled node-critical Pods on the node: check their readiness
+	if !(AllNodeCriticalDaemonPodsAreScheduled(log, r.Recorder, node, daemonSetList.Items, nodeCriticalPodList.Items) &&
+		AllNodeCriticalPodsAreReady(log, r.Recorder, node, nodeCriticalPodList.Items)) {
+		backoff := r.Config.Backoff.Duration
+		log.V(1).Info("Checking node again after backoff", "backoff", backoff)
+		return reconcile.Result{RequeueAfter: backoff}, nil
+	}
+
+	log.Info("All node-critical components got ready, removing taint")
+	r.Recorder.Event(node, corev1.EventTypeNormal, "NodeCriticalComponentsReady", "All node-critical components got ready, removing taint")
+	return reconcile.Result{}, RemoveTaint(ctx, r.Client, node)
+}
+
+var daemonSetGVK = appsv1.SchemeGroupVersion.WithKind("DaemonSet")
+
+// AllNodeCriticalDaemonPodsAreScheduled returns true if all node-critical DaemonSets that should be scheduled to the
+// given node have been scheduled. It uses ownerReferences of the given node-critical pods on the node for this check.
+func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.EventRecorder, node *corev1.Node, daemonSets []appsv1.DaemonSet, nodeCriticalPods []corev1.Pod) bool {
+	// collect a set of all scheduled DaemonSets on the node
+	scheduledDaemonSets := sets.NewString()
+	for _, pod := range nodeCriticalPods {
+		controllerRef := metav1.GetControllerOf(&pod)
+		if controllerRef == nil || schema.FromAPIVersionAndKind(controllerRef.APIVersion, controllerRef.Kind) != daemonSetGVK {
+			continue
+		}
+
+		scheduledDaemonSets.Insert(string(controllerRef.UID))
+	}
+
+	// filter for DaemonSets that were not scheduled to the node yet
+	var unscheduledDaemonSets []client.ObjectKey
+	for _, daemonSet := range daemonSets {
+		if daemonSet.Spec.Template.ObjectMeta.Labels[v1beta1constants.LabelNodeCriticalComponent] != "true" {
+			continue
+		}
+
+		// determine whether DaemonSet needs to be scheduled to the node at all
+		if shouldRun, _ := helper.NodeShouldRunDaemonPod(node, &daemonSet); !shouldRun {
+			continue
+		}
+
+		// check whether DaemonSet has corresponding daemon pod on the node
+		key := client.ObjectKeyFromObject(&daemonSet)
+		if !scheduledDaemonSets.Has(string(daemonSet.UID)) {
+			unscheduledDaemonSets = append(unscheduledDaemonSets, key)
+		}
+	}
+
+	if len(unscheduledDaemonSets) > 0 {
+		log.Info("Node-critical DaemonSets found that were not scheduled to Node yet", "daemonSets", unscheduledDaemonSets)
+		recorder.Eventf(node, corev1.EventTypeWarning, "UnscheduledNodeCriticalDaemonSets", "Node-critical DaemonSets found that were not scheduled to Node yet: %s", objectKeysToString(unscheduledDaemonSets))
+		return false
+	}
+
+	return true
+}
+
+// AllNodeCriticalPodsAreReady returns true if all the given pods are ready by checking their Ready conditions.
+func AllNodeCriticalPodsAreReady(log logr.Logger, recorder record.EventRecorder, node *corev1.Node, nodeCriticalPods []corev1.Pod) bool {
+	var unreadyPods []client.ObjectKey
+	for _, pod := range nodeCriticalPods {
+		if !health.IsPodReady(&pod) {
+			unreadyPods = append(unreadyPods, client.ObjectKeyFromObject(&pod))
+		}
+	}
+
+	if len(unreadyPods) > 0 {
+		log.Info("Unready node-critical Pods found on Node", "pods", unreadyPods)
+		recorder.Eventf(node, corev1.EventTypeWarning, "UnreadyNodeCriticalPods", "Unready node-critical Pods found on Node: %s", objectKeysToString(unreadyPods))
+		return false
+	}
+
+	return true
+}
+
+// RemoveTaint removes the taint managed by this controller from the given node object
+func RemoveTaint(ctx context.Context, w client.Writer, node *corev1.Node) error {
+	patch := client.MergeFromWithOptions(node.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	taints := node.Spec.Taints
+	for i := 0; i < len(taints); i++ {
+		if taints[i].Key == v1beta1constants.TaintNodeCriticalComponentsNotReady {
+			taints = append(taints[:i], taints[i+1:]...)
+			i--
+		}
+	}
+	node.Spec.Taints = taints
+
+	// Always try to patch the node object even if we did not modify it.
+	// Optimistic locking will cause the patch to fail if we operate on an old version of the object.
+	return w.Patch(ctx, node, patch)
+}
+
+func objectKeysToString(objKeys []client.ObjectKey) string {
+	var keys []string
+	for _, objKey := range objKeys {
+		keys = append(keys, objKey.String())
+	}
+
+	return strings.Join(keys, ", ")
 }

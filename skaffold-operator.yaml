@@ -190,6 +190,7 @@ build:
         - pkg/resourcemanager/controller/health/utils
         - pkg/resourcemanager/controller/managedresource
         - pkg/resourcemanager/controller/node
+        - pkg/resourcemanager/controller/node/helper
         - pkg/resourcemanager/controller/secret
         - pkg/resourcemanager/controller/tokeninvalidator
         - pkg/resourcemanager/controller/tokenrequestor
