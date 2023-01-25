@@ -65,9 +65,9 @@ type istiod struct {
 
 // IstiodValues holds values for the istio-istiod chart.
 type IstiodValues struct {
-	TrustDomain string   `json:"trustDomain,omitempty"`
-	Image       string   `json:"image,omitempty"`
-	Zones       []string `json:"zones,omitempty"`
+	TrustDomain string
+	Image       string
+	Zones       []string
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.

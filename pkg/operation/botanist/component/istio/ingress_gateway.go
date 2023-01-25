@@ -40,16 +40,16 @@ type IngressGateway struct {
 // IngressValues holds values for the istio-ingress chart.
 // The only opened port is 15021.
 type IngressValues struct {
-	TrustDomain           string                                   `json:"trustDomain,omitempty"`
-	Image                 string                                   `json:"image,omitempty"`
-	Annotations           map[string]string                        `json:"annotations,omitempty"`
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty"`
-	MinReplicas           *int                                     `json:"minReplicas,omitempty"`
-	MaxReplicas           *int                                     `json:"maxReplicas,omitempty"`
-	IstiodNamespace       string                                   `json:"istiodNamespace,omitempty"`
-	LoadBalancerIP        *string                                  `json:"loadBalancerIP,omitempty"`
-	Labels                map[string]string                        `json:"labels,omitempty"`
-	Zones                 []string                                 `json:"zones,omitempty"`
+	TrustDomain           string
+	Image                 string
+	Annotations           map[string]string
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
+	MinReplicas           *int
+	MaxReplicas           *int
+	IstiodNamespace       string
+	LoadBalancerIP        *string
+	Labels                map[string]string
+	Zones                 []string
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`

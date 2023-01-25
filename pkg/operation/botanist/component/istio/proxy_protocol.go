@@ -35,7 +35,7 @@ type ProxyProtocol struct {
 
 // ProxyValues holds values for the istio-proxy-protocol chart.
 type ProxyValues struct {
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels map[string]string
 }
 
 func (i *istiod) generateIstioProxyProtocolChart() (*chartrenderer.RenderedChart, error) {
