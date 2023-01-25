@@ -1,3 +1,4 @@
+{{- if eq .Values.proxyProtocolEnabled true -}}
 # this adds "envoy.listener.proxy_protocol" filter to the listener.
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -23,3 +24,4 @@ spec:
         per_connection_buffer_limit_bytes: 32768 # 32 KiB
         listener_filters:
         - name: envoy.filters.listener.proxy_protocol
+{{ end -}}

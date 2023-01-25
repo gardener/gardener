@@ -1,3 +1,4 @@
+{{- if eq .Values.proxyProtocolEnabled true -}}
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
@@ -15,3 +16,4 @@ spec:
       protocol: TCP
     hosts:
     - "*"
+{{ end -}}

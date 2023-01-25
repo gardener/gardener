@@ -22,4 +22,6 @@ ingressVersion: "1.15.3"
 minReplicas: 2
 maxReplicas: 5
 
+# Istio Ingress Configuration Resources
+proxyProtocolEnabled: false
 vpnEnabled: false

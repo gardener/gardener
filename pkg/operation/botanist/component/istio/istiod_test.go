@@ -55,7 +55,6 @@ var _ = Describe("istiod", func() {
 		c                     client.Client
 		istiod                component.DeployWaiter
 		igw                   []IngressGatewayValues
-		ipp                   []ProxyProtocolValues
 		igwAnnotations        map[string]string
 		labels                map[string]string
 		managedResourceName   string
@@ -2093,7 +2092,6 @@ spec:
 		gardenletfeatures.RegisterFeatureGates()
 
 		igw = makeIngressGateway(deployNSIngress, igwAnnotations, labels)
-		ipp = makeProxyProtocol(deployNSIngress, labels)
 
 		istiod = NewIstio(
 			c,
@@ -2106,7 +2104,6 @@ spec:
 					Zones:       []string{"a", "b", "c"},
 				},
 				IngressGateway: igw,
-				ProxyProtocol:  ipp,
 			},
 		)
 
@@ -2230,9 +2227,9 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-istiod-webhook-server-port.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToIstiodWebhookServerPort))
 
 			By("Verify istio-proxy-protocol resources")
-			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
-			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_gateway_test-ingress.yaml"])).To(Equal(istioProxyProtocolGateway))
-			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_virtualservice_test-ingress.yaml"])).To(Equal(istioProxyProtocolVirtualService))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(Equal(istioProxyProtocolGateway))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_proxy-protocol-virtualservice_test-ingress.yaml"])).To(Equal(istioProxyProtocolVirtualService))
 
 			By("Verify istio-reversed-vpn resources")
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(Equal(istioIngressVPNGateway))
@@ -2287,7 +2284,6 @@ spec:
 							TrustDomain: "foo.local",
 						},
 						IngressGateway: igw,
-						ProxyProtocol:  ipp,
 					},
 				)
 			})
@@ -2319,7 +2315,6 @@ spec:
 							Zones:       []string{"a", "b", "c"},
 						},
 						IngressGateway: igw,
-						ProxyProtocol:  ipp,
 					},
 				)
 			})
@@ -2345,7 +2340,6 @@ spec:
 							Zones:       []string{"a", "b", "c"},
 						},
 						IngressGateway: igw,
-						ProxyProtocol:  ipp,
 					},
 				)
 			})
@@ -2371,7 +2365,6 @@ spec:
 							Zones:       []string{"a", "b", "c"},
 						},
 						IngressGateway: igw,
-						ProxyProtocol:  ipp,
 					},
 				)
 			})
@@ -2399,7 +2392,6 @@ spec:
 							Zones:       []string{"a", "b", "c"},
 						},
 						IngressGateway: igw,
-						ProxyProtocol:  ipp,
 					},
 				)
 			})
@@ -2411,6 +2403,38 @@ spec:
 
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
+			})
+		})
+
+		Context("Proxy Protocol disabled", func() {
+			BeforeEach(func() {
+				for i := range igw {
+					igw[i].ProxyProtocolEnabled = false
+				}
+
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(41))
+
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(BeEmpty())
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(BeEmpty())
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_proxy-protocol-virtualservice_test-ingress.yaml"])).To(BeEmpty())
 			})
 		})
 	})
@@ -2534,15 +2558,9 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 			},
-			Namespace:  namespace,
-			VPNEnabled: true,
+			Namespace:            namespace,
+			ProxyProtocolEnabled: true,
+			VPNEnabled:           true,
 		},
 	}
-}
-
-func makeProxyProtocol(namespace string, labels map[string]string) []ProxyProtocolValues {
-	return []ProxyProtocolValues{{
-		Labels:    labels,
-		Namespace: namespace,
-	}}
 }

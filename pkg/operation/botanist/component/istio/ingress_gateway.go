@@ -44,6 +44,7 @@ type IngressGatewayValues struct {
 	MinReplicas           *int
 	Namespace             string
 	TrustDomain           string
+	ProxyProtocolEnabled  bool
 	VPNEnabled            bool
 	Zones                 []string
 
@@ -68,6 +69,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"istiodNamespace":       istioIngressGateway.IstiodNamespace,
 			"loadBalancerIP":        istioIngressGateway.LoadBalancerIP,
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
+			"proxyProtocolEnabled":  istioIngressGateway.ProxyProtocolEnabled,
 			"vpnEnabled":            istioIngressGateway.VPNEnabled,
 		}
 

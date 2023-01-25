@@ -121,6 +121,7 @@ func defaultIstio(
 		LoadBalancerIP:        conf.SNI.Ingress.ServiceExternalIP,
 		Labels:                operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
 		Namespace:             *conf.SNI.Ingress.Namespace,
+		ProxyProtocolEnabled:  gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
 		VPNEnabled:            true,
 	}
 
@@ -139,11 +140,6 @@ func defaultIstio(
 		defaultIngressGatewayConfig,
 	}
 
-	istioProxyGateway := []istio.ProxyProtocolValues{{
-		Labels:    operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
-		Namespace: *conf.SNI.Ingress.Namespace,
-	}}
-
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
 	if len(gardenSeed.Spec.Provider.Zones) > 1 {
 		for _, zone := range gardenSeed.Spec.Provider.Zones {
@@ -157,15 +153,11 @@ func defaultIstio(
 				ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 				Ports:                 defaultIngressGatewayConfig.Ports,
 				// LoadBalancerIP can currently not be provided for automatic ingress gateways
-				Labels:     operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
-				Zones:      []string{zone},
-				Namespace:  namespace,
-				VPNEnabled: true,
-			})
-
-			istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
-				Labels:    operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
-				Namespace: namespace,
+				Labels:               operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
+				Zones:                []string{zone},
+				Namespace:            namespace,
+				ProxyProtocolEnabled: gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+				VPNEnabled:           true,
 			})
 		}
 	}
@@ -184,12 +176,8 @@ func defaultIstio(
 			LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
 			Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			Namespace:             *handler.SNI.Ingress.Namespace,
+			ProxyProtocolEnabled:  gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
 			VPNEnabled:            true,
-		})
-
-		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
-			Labels:    operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
-			Namespace: *handler.SNI.Ingress.Namespace,
 		})
 
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
@@ -205,22 +193,29 @@ func defaultIstio(
 					ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 					Ports:                 defaultIngressGatewayConfig.Ports,
 					// LoadBalancerIP can currently not be provided for automatic ingress gateways
-					Labels:     operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
-					Zones:      []string{zone},
-					Namespace:  namespace,
-					VPNEnabled: true,
-				})
-
-				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
-					Labels:    operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
-					Namespace: namespace,
+					Labels:               operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+					Zones:                []string{zone},
+					Namespace:            namespace,
+					ProxyProtocolEnabled: gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+					VPNEnabled:           true,
 				})
 			}
 		}
 	}
 
+<<<<<<< HEAD
 	if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		istioProxyGateway = nil
+=======
+	_, seedServiceCIDR, err := net.ParseCIDR(gardenSeed.Spec.Networks.Services)
+	if err != nil {
+		return nil, err
+	}
+
+	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
+	if err != nil {
+		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
+>>>>>>> 783b8ee85 (Eliminate Proxy-Protocol Chart)
 	}
 
 	return istio.NewIstio(
@@ -233,8 +228,14 @@ func defaultIstio(
 				TrustDomain: gardencorev1beta1.DefaultDomain,
 				Zones:       gardenSeed.Spec.Provider.Zones,
 			},
+<<<<<<< HEAD
 			IngressGateway: istioIngressGateway,
 			ProxyProtocol:  istioProxyGateway,
+=======
+			IngressGateway:       istioIngressGateway,
+			DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
+			NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
+>>>>>>> 783b8ee85 (Eliminate Proxy-Protocol Chart)
 		},
 	), nil
 }

@@ -1,3 +1,4 @@
+{{- if eq .Values.proxyProtocolEnabled true -}}
 # this dummy virtual service is added so the Envoy listener is added
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
@@ -21,3 +22,4 @@ spec:
         host: localhost
         port:
           number: 9999
+{{ end -}}

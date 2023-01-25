@@ -32,8 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -72,7 +70,6 @@ type IstiodValues struct {
 type Values struct {
 	Istiod         IstiodValues
 	IngressGateway []IngressGatewayValues
-	ProxyProtocol  []ProxyProtocolValues
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.
@@ -123,11 +120,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	renderedIstioProxyProtocolChart, err := i.generateIstioProxyProtocolChart()
-	if err != nil {
-		return err
-	}
-
 	for _, istioIngressGateway := range i.values.IngressGateway {
 		gatewayNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: istioIngressGateway.Namespace}}
 		if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, gatewayNamespace, func() error {
@@ -163,9 +155,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 	renderedChart := renderedIstiodChart
 	renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioIngressGatewayChart.Manifests...)
-	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioProxyProtocolChart.Manifests...)
-	}
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	for _, transformer := range getIstioSystemNetworkPolicyTransformers() {
