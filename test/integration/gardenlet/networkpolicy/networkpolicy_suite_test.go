@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -36,7 +35,6 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -44,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestNetworkPolicy(t *testing.T) {
@@ -99,43 +96,6 @@ var _ = BeforeSuite(func() {
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
-
-	By("Create garden namespace for test")
-	gardenNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "garden-",
-			Labels: map[string]string{
-				testID:                     testRunID,
-				v1beta1constants.LabelRole: v1beta1constants.GardenNamespace,
-			},
-		},
-	}
-
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
-
-	DeferCleanup(func() {
-		By("Delete test Namespace")
-		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	By("Create istio-system namespace for test")
-	istioSystemNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "istio-system-",
-			Labels: map[string]string{
-				testID:                      testRunID,
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem,
-			},
-		},
-	}
-	Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
-	log.Info("Created istio-system Namespace for test", "namespaceName", istioSystemNamespace.Name)
-
-	DeferCleanup(func() {
-		By("Delete istio-system namespace")
-		Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{

@@ -303,6 +303,7 @@ build:
         - pkg/operation/botanist/component/clusterautoscaler
         - pkg/operation/botanist/component/clusteridentity
         - pkg/operation/botanist/component/coredns
+        - pkg/operation/botanist/component/coredns/constants
         - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
         - pkg/operation/botanist/component/etcdcopybackupstask
@@ -338,6 +339,7 @@ build:
         - pkg/operation/botanist/component/logging/kuberbacproxy
         - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/nodelocaldns
+        - pkg/operation/botanist/component/nodelocaldns/constants
         - pkg/operation/botanist/component/projectrbac
         - pkg/operation/botanist/component/resourcemanager
         - pkg/operation/botanist/component/vpa
@@ -917,6 +919,7 @@ build:
         - pkg/operation/botanist/component/clusterautoscaler
         - pkg/operation/botanist/component/clusteridentity
         - pkg/operation/botanist/component/coredns
+        - pkg/operation/botanist/component/coredns/constants
         - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
         - pkg/operation/botanist/component/etcdcopybackupstask
@@ -966,6 +969,7 @@ build:
         - pkg/operation/botanist/component/networkpolicies
         - pkg/operation/botanist/component/nginxingress
         - pkg/operation/botanist/component/nodelocaldns
+        - pkg/operation/botanist/component/nodelocaldns/constants
         - pkg/operation/botanist/component/nodeproblemdetector
         - pkg/operation/botanist/component/resourcemanager
         - pkg/operation/botanist/component/seedsystem

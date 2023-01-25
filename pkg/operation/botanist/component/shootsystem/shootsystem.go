@@ -33,9 +33,9 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
+	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns/constants"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -116,7 +116,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 
 		port53      = intstr.FromInt(53)
 		port443     = intstr.FromInt(kubeapiserver.Port)
-		port8053    = intstr.FromInt(coredns.PortServer)
+		port8053    = intstr.FromInt(corednsconstants.PortServer)
 		port10250   = intstr.FromInt(10250)
 		protocolUDP = corev1.ProtocolUDP
 		protocolTCP = corev1.ProtocolTCP
@@ -155,9 +155,9 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 						To: []networkingv1.NetworkPolicyPeer{{
 							PodSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{{
-									Key:      coredns.LabelKey,
+									Key:      corednsconstants.LabelKey,
 									Operator: metav1.LabelSelectorOpIn,
-									Values:   []string{coredns.LabelValue},
+									Values:   []string{corednsconstants.LabelValue},
 								}},
 							},
 						}},
@@ -175,9 +175,9 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 							{
 								PodSelector: &metav1.LabelSelector{
 									MatchExpressions: []metav1.LabelSelectorRequirement{{
-										Key:      coredns.LabelKey,
+										Key:      corednsconstants.LabelKey,
 										Operator: metav1.LabelSelectorOpIn,
-										Values:   []string{nodelocaldns.LabelValue},
+										Values:   []string{nodelocaldnsconstants.LabelValue},
 									}},
 								},
 							},

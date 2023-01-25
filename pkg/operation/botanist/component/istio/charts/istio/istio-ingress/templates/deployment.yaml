@@ -21,6 +21,7 @@ spec:
 {{ .Values.labels | toYaml | indent 8 }}
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
+        networking.gardener.cloud/to-dns: allowed
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}

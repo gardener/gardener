@@ -18,6 +18,7 @@ spec:
   template:
     metadata:
       labels:
+        networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
 {{ .Values.labels | toYaml | indent 8 }}
       annotations:

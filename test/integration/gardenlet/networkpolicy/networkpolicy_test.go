@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -29,11 +30,41 @@ import (
 
 var _ = Describe("NetworkPolicy controller tests", func() {
 	var (
-		shootNamespace *corev1.Namespace
-		fooNamespace   *corev1.Namespace
+		gardenNamespace       *corev1.Namespace
+		istioSystemNamespace  *corev1.Namespace
+		istioIngressNamespace *corev1.Namespace
+		shootNamespace        *corev1.Namespace
+		fooNamespace          *corev1.Namespace
 	)
 
 	BeforeEach(func() {
+		gardenNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "garden-",
+				Labels: map[string]string{
+					testID: testRunID,
+					"role": v1beta1constants.GardenNamespace,
+				},
+			},
+		}
+		istioSystemNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "istio-system-",
+				Labels: map[string]string{
+					testID:                      testRunID,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem,
+				},
+			},
+		}
+		istioIngressNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "istio-ingress-",
+				Labels: map[string]string{
+					testID:                      testRunID,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress,
+				},
+			},
+		}
 		shootNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "shoot--",
@@ -52,6 +83,33 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
+		By("Create garden namespace")
+		Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+		log.Info("Created garden namespace for test", "namespaceName", gardenNamespace.Name)
+
+		DeferCleanup(func() {
+			By("Delete garden Namespace")
+			Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		By("Create istio-system namespace")
+		Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
+		log.Info("Created istio-system namespace for test", "namespaceName", istioSystemNamespace.Name)
+
+		DeferCleanup(func() {
+			By("Delete istio-system Namespace")
+			Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		By("Create istio-ingress namespace")
+		Expect(testClient.Create(ctx, istioIngressNamespace)).To(Succeed())
+		log.Info("Created istio-ingress namespace for test", "namespaceName", istioIngressNamespace.Name)
+
+		DeferCleanup(func() {
+			By("Delete istio-ingress Namespace")
+			Expect(testClient.Delete(ctx, istioIngressNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
 		By("Create shoot namespace")
 		Expect(testClient.Create(ctx, shootNamespace)).To(Succeed())
 		log.Info("Created shoot namespace for test", "namespace", client.ObjectKeyFromObject(shootNamespace))
@@ -76,6 +134,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		expectedNetworkPolicySpec func() networkingv1.NetworkPolicySpec
 		inGardenNamespace         bool
 		inIstioSystemNamespace    bool
+		inIstioIngressNamespace   bool
 		inShootNamespaces         bool
 	}
 
@@ -134,6 +193,25 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					Consistently(func(g Gomega) {
 						networkPolicy := &networkingv1.NetworkPolicy{}
 						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).Should(BeNotFoundError())
+					}).Should(Succeed())
+				})
+			}
+
+			if attrs.inIstioIngressNamespace {
+				It("should create the network policy in the istio-ingress namespace", func() {
+					By("Wait for controller to reconcile the network policy")
+					Eventually(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec()))
+					}).Should(Succeed())
+				})
+			} else {
+				It("should not create the network policy in the istio-ingress namespace", func() {
+					By("Ensure controller does not reconcile the network policy")
+					Consistently(func(g Gomega) {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).Should(BeNotFoundError())
 					}).Should(Succeed())
 				})
 			}
@@ -262,7 +340,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			networkPolicyName:         networkPolicyName,
 			expectedNetworkPolicySpec: func() networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
 			inGardenNamespace:         true,
-			inIstioSystemNamespace:    false,
 			inShootNamespaces:         true,
 		})
 	})
@@ -281,8 +358,82 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			networkPolicyName:         networkPolicyName,
 			expectedNetworkPolicySpec: func() networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
 			inGardenNamespace:         true,
-			inIstioSystemNamespace:    false,
 			inShootNamespaces:         true,
 		})
 	})
+
+	Describe("allow-to-dns", func() {
+		defaultTests(testAttributes{
+			networkPolicyName: "allow-to-dns",
+			expectedNetworkPolicySpec: func() networkingv1.NetworkPolicySpec {
+				return networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}},
+					PolicyTypes: []networkingv1.PolicyType{"Egress"},
+					Egress: []networkingv1.NetworkPolicyEgressRule{{
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"role": "kube-system",
+									},
+								},
+								PodSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      "k8s-app",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{"kube-dns"},
+									}},
+								},
+							},
+							{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"role": "kube-system",
+									},
+								},
+								PodSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      "k8s-app",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{"node-local-dns"},
+									}},
+								},
+							},
+							// required for node local dns feature, allows egress traffic to CoreDNS
+							{
+								IPBlock: &networkingv1.IPBlock{
+									CIDR: "10.1.0.10/32",
+								},
+							},
+							// required for node local dns feature, allows egress traffic to node local dns cache
+							{
+								IPBlock: &networkingv1.IPBlock{
+									CIDR: "169.254.20.10/32",
+								},
+							},
+						},
+						Ports: []networkingv1.NetworkPolicyPort{
+							{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(53)},
+							{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(53)},
+							{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(8053)},
+							{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(8053)},
+						},
+					}},
+				}
+			},
+			inGardenNamespace:       true,
+			inIstioSystemNamespace:  true,
+			inIstioIngressNamespace: true,
+			inShootNamespaces:       true,
+		})
+	})
 })
+
+func protocolPtr(protocol corev1.Protocol) *corev1.Protocol {
+	return &protocol
+}
+
+func intStrPtr(port int) *intstr.IntOrString {
+	v := intstr.FromInt(port)
+	return &v
+}

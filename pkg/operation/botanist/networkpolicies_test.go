@@ -18,7 +18,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -118,8 +117,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -158,8 +155,6 @@ var _ = Describe("Networkpolicies", func() {
 						Except: nil,
 					}},
 				))
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -174,8 +169,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -190,8 +183,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -206,8 +197,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -222,8 +211,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 	)

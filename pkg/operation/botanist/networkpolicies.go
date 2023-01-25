@@ -15,15 +15,8 @@
 package botanist
 
 import (
-	"fmt"
-	"net"
-
-	"k8s.io/utils/pointer"
-
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // NewNetworkPoliciesDeployer is an alias for networkpolicies.New. Exposed for testing.
@@ -60,15 +53,6 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 		return nil, err
 	}
 
-	_, seedServiceCIDR, err := net.ParseCIDR(b.Seed.GetInfo().Spec.Networks.Services)
-	if err != nil {
-		return nil, err
-	}
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
-	}
-
 	return NewNetworkPoliciesDeployer(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
@@ -78,11 +62,9 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 				// Enable network policies for SNI
 				// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
 				// it needs to be ensured that the traffic from old clients can still reach the API server.
-				SNIEnabled:           sniPhase == component.PhaseEnabled || sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling,
-				PrivateNetworkPeers:  privateNetworkPeers,
-				DenyAllTraffic:       true,
-				NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
-				DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
+				SNIEnabled:          sniPhase == component.PhaseEnabled || sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling,
+				PrivateNetworkPeers: privateNetworkPeers,
+				DenyAllTraffic:      true,
 			},
 		},
 	), nil

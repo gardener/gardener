@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -57,7 +56,7 @@ var _ = Describe("NetworkPolicies", func() {
 
 	Describe("#Deploy", func() {
 		It("should fail if any call fails", func() {
-			networkPolicy := constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress)
+			networkPolicy := constructNPDenyAll(namespace, values.DenyAllTraffic)
 
 			c.EXPECT().Get(ctx, kubernetesutils.Key(networkPolicy.Namespace, networkPolicy.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(fakeErr)
 
@@ -65,7 +64,6 @@ var _ = Describe("NetworkPolicies", func() {
 		})
 
 		It("w/o any special configuration", func() {
-			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
 			expectGetUpdate(ctx, c, constructNPAllowToShootNetworks(namespace, values.ShootNetworkPeers))
@@ -89,14 +87,11 @@ var _ = Describe("NetworkPolicies", func() {
 						{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"private": "peers"}}},
 						{IPBlock: &networkingv1.IPBlock{CIDR: "6.7.8.9/10"}},
 					},
-					DenyAllTraffic:       true,
-					NodeLocalIPVSAddress: pointer.String("node-local-ipvs-address"),
-					DNSServerAddress:     pointer.String("dns-server-address"),
+					DenyAllTraffic: true,
 				},
 			}
 			deployer = New(c, namespace, values)
 
-			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
 			expectGetUpdate(ctx, c, constructNPAllowToShootNetworks(namespace, values.ShootNetworkPeers))
@@ -112,7 +107,7 @@ var _ = Describe("NetworkPolicies", func() {
 	Describe("#Destroy", func() {
 		It("should fail if an object fails to delete", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace}}).Return(fakeErr),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "deny-all", Namespace: namespace}}).Return(fakeErr),
 			)
 
 			Expect(deployer.Destroy(ctx)).To(MatchError(fakeErr))
@@ -120,7 +115,6 @@ var _ = Describe("NetworkPolicies", func() {
 
 		It("should successfully destroy all objects", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "deny-all", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-private-networks", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-networks", Namespace: namespace}}),

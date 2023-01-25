@@ -15,12 +15,8 @@
 package networkpolicies_test
 
 import (
-	"fmt"
-
-	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func constructNPAllowToAggregatePrometheus(namespace string) *networkingv1.NetworkPolicy {
@@ -123,85 +119,6 @@ func constructNPAllowToAllShootAPIServers(namespace string, sniEnabled bool) *ne
 				MatchLabels: map[string]string{
 					"app": "istio-ingressgateway",
 				},
-			},
-		})
-	}
-
-	return obj
-}
-
-func constructNPAllowToDNS(namespace string, dnsServerAddress, nodeLocalIPVSAddress *string) *networkingv1.NetworkPolicy {
-	var (
-		protocolUDP = corev1.ProtocolUDP
-		protocolTCP = corev1.ProtocolTCP
-		port53      = intstr.FromInt(53)
-		port8053    = intstr.FromInt(8053)
-
-		obj = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "allow-to-dns",
-				Namespace:   namespace,
-				Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-dns=allowed' to DNS running in 'kube-system'. In practice, most of the Pods which require network Egress need this label."},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"networking.gardener.cloud/to-dns": "allowed"},
-				},
-				Egress: []networkingv1.NetworkPolicyEgressRule{{
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"role": "kube-system",
-								},
-							},
-							PodSelector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{{
-									Key:      "k8s-app",
-									Operator: metav1.LabelSelectorOpIn,
-									Values:   []string{"kube-dns"},
-								}},
-							},
-						},
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"role": "kube-system",
-								},
-							},
-							PodSelector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{{
-									Key:      "k8s-app",
-									Operator: metav1.LabelSelectorOpIn,
-									Values:   []string{"node-local-dns"},
-								}},
-							},
-						},
-					},
-					Ports: []networkingv1.NetworkPolicyPort{
-						{Protocol: &protocolUDP, Port: &port53},
-						{Protocol: &protocolTCP, Port: &port53},
-						{Protocol: &protocolUDP, Port: &port8053},
-						{Protocol: &protocolTCP, Port: &port8053},
-					},
-				}},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			},
-		}
-	)
-
-	if dnsServerAddress != nil {
-		obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-			IPBlock: &networkingv1.IPBlock{
-				CIDR: fmt.Sprintf("%s/32", *dnsServerAddress),
-			},
-		})
-	}
-
-	if nodeLocalIPVSAddress != nil {
-		obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-			IPBlock: &networkingv1.IPBlock{
-				CIDR: fmt.Sprintf("%s/32", *nodeLocalIPVSAddress),
 			},
 		})
 	}

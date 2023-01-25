@@ -724,6 +724,7 @@ spec:
   template:
     metadata:
       labels:
+        networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         app: istiod
         istio: pilot
@@ -1569,6 +1570,7 @@ spec:
         
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
+        networking.gardener.cloud/to-dns: allowed
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: a357fe81829c12ad57e92721b93fd6efa1670d19e4cab94dfb7c792f9665c51a
@@ -1862,55 +1864,14 @@ spec:
   - Ingress
 status: {}
 `
-		istioSystemNetworkPolicyAllowToDns = `apiVersion: networking.k8s.io/v1
+		istioSystemNetworkPolicyAllowToDns = `# TODO(rfranzke): Delete this in a future version.
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  annotations:
-    gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
-      to DNS running in 'kube-system'.
-  creationTimestamp: null
   name: allow-to-dns
   namespace: ` + deployNS + `
-spec:
-  egress:
-  - ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP
-    - port: 8053
-      protocol: UDP
-    - port: 8053
-      protocol: TCP
-    to:
-    - namespaceSelector:
-        matchLabels:
-          role: kube-system
-      podSelector:
-        matchExpressions:
-        - key: k8s-app
-          operator: In
-          values:
-          - kube-dns
-    - namespaceSelector:
-        matchLabels:
-          role: kube-system
-      podSelector:
-        matchExpressions:
-        - key: k8s-app
-          operator: In
-          values:
-          - node-local-dns
-    - ipBlock:
-        cidr: 1.2.3.4/32
-    - ipBlock:
-        cidr: 1.2.3.4/32
-  podSelector:
-    matchLabels:
-      app: istiod
-  policyTypes:
-  - Egress
-status: {}
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 `
 		istioSystemNetworkPolicyDenyAll = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -1943,55 +1904,14 @@ spec:
 status: {}
 `
 
-		istioIngressNetworkPolicyAllowToDns = `apiVersion: networking.k8s.io/v1
+		istioIngressNetworkPolicyAllowToDns = `# TODO(rfranzke): Delete this in a future version.
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  annotations:
-    gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
-      to DNS running in 'kube-system'.
-  creationTimestamp: null
   name: allow-to-dns
   namespace: ` + deployNSIngress + `
-spec:
-  egress:
-  - ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP
-    - port: 8053
-      protocol: UDP
-    - port: 8053
-      protocol: TCP
-    to:
-    - namespaceSelector:
-        matchLabels:
-          role: kube-system
-      podSelector:
-        matchExpressions:
-        - key: k8s-app
-          operator: In
-          values:
-          - kube-dns
-    - namespaceSelector:
-        matchLabels:
-          role: kube-system
-      podSelector:
-        matchExpressions:
-        - key: k8s-app
-          operator: In
-          values:
-          - node-local-dns
-    - ipBlock:
-        cidr: 1.2.3.4/32
-    - ipBlock:
-        cidr: 1.2.3.4/32
-  podSelector:
-    matchLabels:
-      app: istio-ingressgateway
-  policyTypes:
-  - Egress
-status: {}
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 `
 		istioIngressNetworkPolicyToIstioD = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -2208,11 +2128,9 @@ spec:
 			c,
 			renderer,
 			IstiodValues{
-				Image:                "foo/bar",
-				TrustDomain:          "foo.local",
-				NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
-				DNSServerAddress:     pointer.String("1.2.3.4"),
-				Zones:                []string{"a", "b", "c"},
+				Image:       "foo/bar",
+				TrustDomain: "foo.local",
+				Zones:       []string{"a", "b", "c"},
 			},
 			deployNS,
 			igw,
@@ -2304,6 +2222,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_clusterrole.yaml"])).To(Equal(istioClusterRole))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule))
+			Expect(string(managedResourceSecret.Data["istio-istiod_templates_networkpolicy.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole))
@@ -2318,6 +2237,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_gateway_test-ingress.yaml"])).To(Equal(istioIngressGateway))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_networkpolicy_test-ingress.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
@@ -2326,7 +2246,6 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment))
 
 			By("Verify istio-ingress network policies")
-			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-dns.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__deny-all-egress.yaml"])).To(Equal(istioIngressNetworkPolicyDenyAllEgress))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-istiod.yaml"])).To(Equal(istioIngressNetworkPolicyToIstioD))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-reversed-vpn-auth-server.yaml"])).To(Equal(istioIngressNetworkPolicyToReversedVpnAuthServer))
@@ -2337,7 +2256,6 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-aggregate-prometheus.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromAggregatePrometheus))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-istio-ingress.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromIstioIngress))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-shoot-vpn.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromShootVpn))
-			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-dns.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-istiod-webhook-server-port.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToIstiodWebhookServerPort))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__deny-all.yaml"])).To(Equal(istioSystemNetworkPolicyDenyAll))
 
@@ -2381,11 +2299,9 @@ spec:
 					c,
 					renderer,
 					IstiodValues{
-						Image:                "foo/bar",
-						TrustDomain:          "foo.local",
-						NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
-						DNSServerAddress:     pointer.String("1.2.3.4"),
-						Zones:                []string{"a", "b", "c"},
+						Image:       "foo/bar",
+						TrustDomain: "foo.local",
+						Zones:       []string{"a", "b", "c"},
 					},
 					deployNS,
 					igw,
@@ -2407,11 +2323,9 @@ spec:
 					c,
 					renderer,
 					IstiodValues{
-						Image:                "foo/bar",
-						TrustDomain:          "foo.local",
-						NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
-						DNSServerAddress:     pointer.String("1.2.3.4"),
-						Zones:                []string{"a", "b", "c"},
+						Image:       "foo/bar",
+						TrustDomain: "foo.local",
+						Zones:       []string{"a", "b", "c"},
 					},
 					deployNS,
 					igw,
@@ -2433,11 +2347,9 @@ spec:
 					c,
 					renderer,
 					IstiodValues{
-						Image:                "foo/bar",
-						TrustDomain:          "foo.local",
-						NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
-						DNSServerAddress:     pointer.String("1.2.3.4"),
-						Zones:                []string{"a", "b", "c"},
+						Image:       "foo/bar",
+						TrustDomain: "foo.local",
+						Zones:       []string{"a", "b", "c"},
 					},
 					deployNS,
 					igw,

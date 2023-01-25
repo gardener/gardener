@@ -121,10 +121,10 @@ var _ = Describe("Bootstrap", func() {
 			Expect(registry.Add(constructNPAllowToAggregatePrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToSeedPrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))).To(Succeed())
-			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
-			Expect(registry.Add(constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))).To(Succeed())
 			Expect(registry.Add(constructNPDenyAll(namespace, values.DenyAllTraffic))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))).To(Succeed())
+			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
+			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-public-networks", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			managedResourceSecret.Data = registry.SerializedObjects()
 
@@ -149,9 +149,7 @@ var _ = Describe("Bootstrap", func() {
 					{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"private": "peers"}}},
 					{IPBlock: &networkingv1.IPBlock{CIDR: "6.7.8.9/10"}},
 				},
-				DenyAllTraffic:       true,
-				NodeLocalIPVSAddress: pointer.String("node-local-ipvs-address"),
-				DNSServerAddress:     pointer.String("dns-server-address"),
+				DenyAllTraffic: true,
 			}
 			deployer = NewBootstrapper(c, namespace, values)
 
@@ -159,11 +157,11 @@ var _ = Describe("Bootstrap", func() {
 			Expect(registry.Add(constructNPAllowToAggregatePrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToSeedPrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))).To(Succeed())
-			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
-			Expect(registry.Add(constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))).To(Succeed())
 			Expect(registry.Add(constructNPDenyAll(namespace, values.DenyAllTraffic))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))).To(Succeed())
+			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-dns", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-public-networks", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
+			Expect(registry.Add(&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-blocked-cidrs", Namespace: namespace, Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}})).To(Succeed())
 			managedResourceSecret.Data = registry.SerializedObjects()
 
 			gomock.InOrder(

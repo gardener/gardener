@@ -17,6 +17,7 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,6 +38,9 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
+	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns/constants"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -167,6 +172,16 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			},
 		},
+		{
+			name:          "allow-to-dns",
+			reconcileFunc: r.reconcileNetworkPolicyAllowToDNS,
+			namespaceSelectors: []labels.Selector{
+				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
+			},
+		},
 	}
 
 	return configs
@@ -254,4 +269,88 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 			})
 		}
 	})
+}
+
+func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+	_, seedServiceCIDR, err := net.ParseCIDR(r.SeedNetworks.Services)
+	if err != nil {
+		return err
+	}
+
+	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
+	if err != nil {
+		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
+	}
+
+	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
+		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
+			"egress from pods labeled with '%s=%s' to DNS running in '%s'. In practice, most of the pods which require "+
+			"network egress need this label.", v1beta1constants.LabelNetworkPolicyToDNS, v1beta1constants.LabelNetworkPolicyAllowed,
+			metav1.NamespaceSystem))
+
+		policy.Spec = networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}},
+			Egress: []networkingv1.NetworkPolicyEgressRule{{
+				To: []networkingv1.NetworkPolicyPeer{
+					{
+						NamespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelRole: metav1.NamespaceSystem,
+							},
+						},
+						PodSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{{
+								Key:      corednsconstants.LabelKey,
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{corednsconstants.LabelValue},
+							}},
+						},
+					},
+					{
+						NamespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelRole: metav1.NamespaceSystem,
+							},
+						},
+						PodSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{{
+								Key:      corednsconstants.LabelKey,
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{nodelocaldnsconstants.LabelValue},
+							}},
+						},
+					},
+					// required for node local dns feature, allows egress traffic to CoreDNS
+					{
+						IPBlock: &networkingv1.IPBlock{
+							CIDR: fmt.Sprintf("%s/32", seedDNSServerAddress),
+						},
+					},
+					// required for node local dns feature, allows egress traffic to node local dns cache
+					{
+						IPBlock: &networkingv1.IPBlock{
+							CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
+						},
+					},
+				},
+				Ports: []networkingv1.NetworkPolicyPort{
+					{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(corednsconstants.PortServiceServer)},
+					{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(corednsconstants.PortServiceServer)},
+					{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(corednsconstants.PortServer)},
+					{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(corednsconstants.PortServer)},
+				},
+			}},
+			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+		}
+	})
+}
+
+func protocolPtr(protocol corev1.Protocol) *corev1.Protocol {
+	return &protocol
+}
+
+func intStrPtr(port int) *intstr.IntOrString {
+	v := intstr.FromInt(port)
+	return &v
 }
