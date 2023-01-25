@@ -2107,9 +2107,9 @@ spec:
 					TrustDomain: "foo.local",
 					Zones:       []string{"a", "b", "c"},
 				},
+				IngressGateway: igw,
+				ProxyProtocol:  ipp,
 			},
-			igw,
-			ipp,
 		)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -2252,9 +2252,9 @@ spec:
 							Namespace:   deployNS,
 							TrustDomain: "foo.local",
 						},
+						IngressGateway: igw,
+						ProxyProtocol:  ipp,
 					},
-					igw,
-					ipp,
 				)
 			})
 
@@ -2284,9 +2284,9 @@ spec:
 							TrustDomain: "foo.local",
 							Zones:       []string{"a", "b", "c"},
 						},
+						IngressGateway: igw,
+						ProxyProtocol:  ipp,
 					},
-					igw,
-					ipp,
 				)
 			})
 
@@ -2310,9 +2310,9 @@ spec:
 							TrustDomain: "foo.local",
 							Zones:       []string{"a", "b", "c"},
 						},
+						IngressGateway: igw,
+						ProxyProtocol:  ipp,
 					},
-					igw,
-					ipp,
 				)
 			})
 
@@ -2336,9 +2336,9 @@ spec:
 							TrustDomain: "foo.local",
 							Zones:       []string{"a", "b", "c"},
 						},
+						IngressGateway: igw,
+						ProxyProtocol:  ipp,
 					},
-					igw,
-					ipp,
 				)
 			})
 

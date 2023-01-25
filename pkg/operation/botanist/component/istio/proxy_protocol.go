@@ -36,7 +36,7 @@ type ProxyProtocolValues struct {
 func (i *istiod) generateIstioProxyProtocolChart() (*chartrenderer.RenderedChart, error) {
 	renderedChart := &chartrenderer.RenderedChart{}
 
-	for _, istioProxyProtocol := range i.istioProxyProtocolValues {
+	for _, istioProxyProtocol := range i.values.ProxyProtocol {
 		values := map[string]interface{}{
 			"labels": istioProxyProtocol.Labels,
 		}

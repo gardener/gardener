@@ -55,11 +55,9 @@ var (
 )
 
 type istiod struct {
-	client                    client.Client
-	chartRenderer             chartrenderer.Interface
-	values                    Values
-	istioIngressGatewayValues []IngressGatewayValues
-	istioProxyProtocolValues  []ProxyProtocolValues
+	client        client.Client
+	chartRenderer chartrenderer.Interface
+	values        Values
 }
 
 // Values contains configuration values for the Istiod component.
@@ -72,7 +70,9 @@ type IstiodValues struct {
 
 // Values contains configuration values for the Istio component.
 type Values struct {
-	Istiod IstiodValues
+	Istiod         IstiodValues
+	IngressGateway []IngressGatewayValues
+	ProxyProtocol  []ProxyProtocolValues
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.
@@ -81,15 +81,11 @@ func NewIstio(
 	client client.Client,
 	chartRenderer chartrenderer.Interface,
 	values Values,
-	istioIngressGatewayValues []IngressGatewayValues,
-	istioProxyProtocolValues []ProxyProtocolValues,
 ) component.DeployWaiter {
 	return &istiod{
-		client:                    client,
-		chartRenderer:             chartRenderer,
-		values:                    values,
-		istioIngressGatewayValues: istioIngressGatewayValues,
-		istioProxyProtocolValues:  istioProxyProtocolValues,
+		client:        client,
+		chartRenderer: chartRenderer,
+		values:        values,
 	}
 }
 
@@ -130,7 +126,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+	for _, istioIngressGateway := range i.values.IngressGateway {
 		gatewayNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: istioIngressGateway.Namespace}}
 		if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, gatewayNamespace, func() error {
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
@@ -187,7 +183,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		}
 	}
 
-	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+	for _, istioIngressGateway := range i.values.IngressGateway {
 		for _, transformer := range getIstioIngressNetworkPolicyTransformers() {
 			obj := &networkingv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -229,7 +225,7 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+	for _, istioIngressGateway := range i.values.IngressGateway {
 		if err := i.client.Delete(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: istioIngressGateway.Namespace,

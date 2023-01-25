@@ -54,7 +54,7 @@ type IngressGatewayValues struct {
 func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChart, error) {
 	renderedChart := &chartrenderer.RenderedChart{}
 
-	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+	for _, istioIngressGateway := range i.values.IngressGateway {
 		values := map[string]interface{}{
 			"trustDomain":           istioIngressGateway.TrustDomain,
 			"labels":                istioIngressGateway.Labels,

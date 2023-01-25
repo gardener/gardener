@@ -229,9 +229,9 @@ func defaultIstio(
 				TrustDomain: gardencorev1beta1.DefaultDomain,
 				Zones:       gardenSeed.Spec.Provider.Zones,
 			},
+			IngressGateway: istioIngressGateway,
+			ProxyProtocol:  istioProxyGateway,
 		},
-		istioIngressGateway,
-		istioProxyGateway,
 	), nil
 }
 
