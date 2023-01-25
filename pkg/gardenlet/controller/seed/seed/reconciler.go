@@ -60,8 +60,13 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	gardenCtx, cancel := context.WithTimeout(ctx, r.Config.Controllers.Seed.SyncPeriod.Duration)
+	defer cancel()
+	seedCtx, cancel := context.WithTimeout(ctx, r.Config.Controllers.Seed.SyncPeriod.Duration/2)
+	defer cancel()
+
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.GardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
+	if err := r.GardenClient.Get(gardenCtx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -70,35 +75,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// Check if seed namespace is already available.
-	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}, &corev1.Namespace{}); err != nil {
+	if err := r.GardenClient.Get(gardenCtx, client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}, &corev1.Namespace{}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get seed namespace in garden cluster: %w", err)
 	}
 
-	seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
+	seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(gardenCtx)
 	if err != nil {
 		log.Error(err, "Failed to create a Seed object")
 		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, fmt.Sprintf("Failed to create a Seed object (%s).", err.Error()))
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
+		if err := r.patchSeedStatus(gardenCtx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after failed creation of Seed object: %w", err)
 		}
 		return reconcile.Result{}, err
 	}
 
 	if seed.Status.ClusterIdentity == nil {
-		seedClusterIdentity, err := determineClusterIdentity(ctx, r.SeedClientSet.Client())
+		seedClusterIdentity, err := determineClusterIdentity(seedCtx, r.SeedClientSet.Client())
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		log.Info("Setting cluster identity", "identity", seedClusterIdentity)
 		seed.Status.ClusterIdentity = &seedClusterIdentity
-		if err := r.GardenClient.Status().Update(ctx, seed); err != nil {
+		if err := r.GardenClient.Status().Update(seedCtx, seed); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	seedIsGarden, err := kubernetesutils.ResourcesExist(ctx, r.SeedClientSet.Client(), operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	seedIsGarden, err := kubernetesutils.ResourcesExist(seedCtx, r.SeedClientSet.Client(), operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
 	if err != nil {
 		if !meta.IsNoMatchError(err) {
 			return reconcile.Result{}, err
@@ -107,10 +112,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if seed.DeletionTimestamp != nil {
-		return r.delete(ctx, log, seedObj, seedIsGarden)
+		return r.delete(gardenCtx, seedCtx, log, seedObj, seedIsGarden)
 	}
 
-	return r.reconcile(ctx, log, seedObj, seedIsGarden)
+	return r.reconcile(gardenCtx, seedCtx, log, seedObj, seedIsGarden)
 }
 
 func (r *Reconciler) patchSeedStatus(

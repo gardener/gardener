@@ -46,11 +46,13 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	ctx, cancel := context.WithTimeout(ctx, r.Config.SyncPeriod.Duration)
+	gardenCtx, cancel := context.WithTimeout(ctx, r.Config.SyncPeriod.Duration)
+	defer cancel()
+	seedCtx, cancel := context.WithTimeout(ctx, r.Config.SyncPeriod.Duration/2)
 	defer cancel()
 
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
-	if err := r.GardenClient.Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
+	if err := r.GardenClient.Get(gardenCtx, request.NamespacedName, controllerInstallation); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -75,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		},
 	}
 
-	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
+	if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
 		msg := fmt.Sprintf("Failed to get ManagedResource %q: %s", client.ObjectKeyFromObject(managedResource).String(), err.Error())
 		conditionControllerInstallationInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 		conditionControllerInstallationHealthy = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
@@ -83,7 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())
 		controllerInstallation.Status.Conditions = v1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled, conditionControllerInstallationProgressing)
-		if err := r.GardenClient.Status().Patch(ctx, controllerInstallation, patch); err != nil {
+		if err := r.GardenClient.Status().Patch(gardenCtx, controllerInstallation, patch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to patch conditions: %w", err)
 		}
 
@@ -115,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())
 	controllerInstallation.Status.Conditions = v1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled, conditionControllerInstallationProgressing)
-	if err := r.GardenClient.Status().Patch(ctx, controllerInstallation, patch); err != nil {
+	if err := r.GardenClient.Status().Patch(gardenCtx, controllerInstallation, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to patch conditions: %w", err)
 	}
 
