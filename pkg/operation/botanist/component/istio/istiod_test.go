@@ -1876,18 +1876,10 @@ metadata:
 		istioSystemNetworkPolicyDenyAll = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  annotations:
-    gardener.cloud/description: Disables all Ingress and Egress traffic into/from
-      this namespace.
-  creationTimestamp: null
   name: deny-all
   namespace: ` + deployNS + `
-spec:
-  podSelector: {}
-  policyTypes:
-  - Egress
-  - Ingress
-status: {}
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 `
 		istioIngressNetworkPolicyDenyAllEgress = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -2213,7 +2205,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(41))
+			Expect(managedResourceSecret.Data).To(HaveLen(40))
 
 			By("Verify istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
@@ -2222,7 +2214,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_clusterrole.yaml"])).To(Equal(istioClusterRole))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule))
-			Expect(string(managedResourceSecret.Data["istio-istiod_templates_networkpolicy.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns))
+			Expect(string(managedResourceSecret.Data["istio-istiod_templates_networkpolicy.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns + "---\n" + istioSystemNetworkPolicyDenyAll))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole))
@@ -2257,7 +2249,6 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-istio-ingress.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromIstioIngress))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-shoot-vpn.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromShootVpn))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-istiod-webhook-server-port.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToIstiodWebhookServerPort))
-			Expect(string(managedResourceSecret.Data["networkpolicy__test__deny-all.yaml"])).To(Equal(istioSystemNetworkPolicyDenyAll))
 
 			By("Verify istio-proxy-protocol resources")
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
@@ -2282,7 +2273,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(41))
+				Expect(managedResourceSecret.Data).To(HaveLen(40))
 
 				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))

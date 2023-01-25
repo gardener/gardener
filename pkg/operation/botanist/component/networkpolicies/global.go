@@ -29,9 +29,6 @@ type GlobalValues struct {
 	SNIEnabled bool
 	// PrivateNetworkPeers is the list of peers for the private networks.
 	PrivateNetworkPeers []networkingv1.NetworkPolicyPeer
-	// DenyAllTraffic states whether all traffic should be denied by default and must be explicitly allowed by dedicated
-	// network policy rules.
-	DenyAllTraffic bool
 }
 
 type networkPolicyTransformer struct {
@@ -41,32 +38,6 @@ type networkPolicyTransformer struct {
 
 func getGlobalNetworkPolicyTransformers(values GlobalValues, isShootNamespace bool) []networkPolicyTransformer {
 	result := []networkPolicyTransformer{
-		{
-			name: "deny-all",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: "Disables all Ingress and Egress traffic into/from this " +
-							"namespace.",
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelNetworkPolicyToAll: v1beta1constants.LabelNetworkPolicyDisallowed,
-							},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress, networkingv1.PolicyTypeIngress},
-					}
-
-					if values.DenyAllTraffic {
-						obj.Spec.PodSelector = metav1.LabelSelector{}
-					}
-
-					return nil
-				}
-			},
-		},
-
 		{
 			name: "allow-to-private-networks",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {

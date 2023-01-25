@@ -41,22 +41,6 @@ type networkPolicyTransformer struct {
 func getIstioSystemNetworkPolicyTransformers() []networkPolicyTransformer {
 	return []networkPolicyTransformer{
 		{
-			name: "deny-all",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: "Disables all Ingress and Egress traffic into/from this " +
-							"namespace.",
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress, networkingv1.PolicyTypeIngress},
-					}
-
-					return nil
-				}
-			},
-		},
-		{
 			name: "allow-to-istiod-webhook-server-port",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {

@@ -133,6 +133,14 @@ type networkPolicyConfig struct {
 
 func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 	configs := []networkPolicyConfig{
+		{
+			name:          "deny-all",
+			reconcileFunc: r.reconcileNetworkPolicyDenyAll,
+			namespaceSelectors: []labels.Selector{
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
+			},
+		},
 		// This network policy is deprecated and will be removed soon in favor of `allow-to-runtime-apiserver`.
 		{
 			name: "allow-to-seed-apiserver",
@@ -194,6 +202,18 @@ func labelsMatchAnySelector(labelsToCheck map[string]string, selectors []labels.
 		}
 	}
 	return false
+}
+
+func (r *Reconciler) reconcileNetworkPolicyDenyAll(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
+		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, "Disables all ingress "+
+			"and egress traffic into/from this namespace.")
+
+		policy.Spec = networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+		}
+	})
 }
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy, labelKey string) error {

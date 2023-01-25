@@ -64,7 +64,6 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 				// it needs to be ensured that the traffic from old clients can still reach the API server.
 				SNIEnabled:          sniPhase == component.PhaseEnabled || sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling,
 				PrivateNetworkPeers: privateNetworkPeers,
-				DenyAllTraffic:      true,
 			},
 		},
 	), nil

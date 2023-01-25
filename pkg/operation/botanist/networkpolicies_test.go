@@ -114,7 +114,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(client).To(Equal(c))
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeFalse())
-				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
@@ -134,7 +133,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(client).To(Equal(c))
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeFalse())
-				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(ConsistOf(
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRShoot, Except: blockCIDRs}},
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: podCIDRShoot}},
@@ -166,7 +164,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(client).To(Equal(c))
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeTrue())
-				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
@@ -180,7 +177,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(client).To(Equal(c))
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeTrue())
-				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
@@ -194,7 +190,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(client).To(Equal(c))
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeTrue())
-				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
@@ -208,7 +203,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(client).To(Equal(c))
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeFalse())
-				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},

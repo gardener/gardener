@@ -6,3 +6,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     resources.gardener.cloud/mode: Ignore
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    resources.gardener.cloud/mode: Ignore

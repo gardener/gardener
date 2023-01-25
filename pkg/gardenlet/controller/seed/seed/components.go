@@ -267,7 +267,6 @@ func defaultNetworkPolicies(
 
 	return networkpolicies.NewBootstrapper(c, gardenNamespaceName, networkpolicies.GlobalValues{
 		SNIEnabled:          sniEnabled,
-		DenyAllTraffic:      false,
 		PrivateNetworkPeers: privateNetworkPeers,
 	}), nil
 }

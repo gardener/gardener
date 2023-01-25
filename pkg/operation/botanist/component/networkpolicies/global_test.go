@@ -126,28 +126,6 @@ func constructNPAllowToAllShootAPIServers(namespace string, sniEnabled bool) *ne
 	return obj
 }
 
-func constructNPDenyAll(namespace string, denyAllTraffic bool) *networkingv1.NetworkPolicy {
-	obj := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "deny-all",
-			Namespace:   namespace,
-			Annotations: map[string]string{"gardener.cloud/description": "Disables all Ingress and Egress traffic into/from this namespace."},
-		},
-		Spec: networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"networking.gardener.cloud/to-all": "disallowed"},
-			},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress, networkingv1.PolicyTypeIngress},
-		},
-	}
-
-	if denyAllTraffic {
-		obj.Spec.PodSelector = metav1.LabelSelector{}
-	}
-
-	return obj
-}
-
 func constructNPAllowToPrivateNetworks(namespace string, peers []networkingv1.NetworkPolicyPeer) *networkingv1.NetworkPolicy {
 	obj := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
