@@ -31,28 +31,24 @@ var (
 	chartPathIngress = filepath.Join("charts", "istio", "istio-ingress")
 )
 
-// IngressGateway is a set of configuration values for the istio-ingress chart.
-type IngressGateway struct {
-	Values    IngressValues
-	Namespace string
-}
-
-// IngressValues holds values for the istio-ingress chart.
+// IngressGatewayValues holds values for the istio-ingress chart.
 // The only opened port is 15021.
-type IngressValues struct {
-	TrustDomain           string
-	Image                 string
+type IngressGatewayValues struct {
 	Annotations           map[string]string
+	Labels                map[string]string
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
-	MinReplicas           *int
-	MaxReplicas           *int
+	Image                 string
 	IstiodNamespace       string
 	LoadBalancerIP        *string
-	Labels                map[string]string
+	MaxReplicas           *int
+	MinReplicas           *int
+	Namespace             string
+	TrustDomain           string
 	Zones                 []string
+
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
-	Ports []corev1.ServicePort `json:"ports,omitempty"`
+	Ports []corev1.ServicePort
 }
 
 func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChart, error) {
@@ -60,24 +56,24 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 
 	for _, istioIngressGateway := range i.istioIngressGatewayValues {
 		values := map[string]interface{}{
-			"trustDomain":           istioIngressGateway.Values.TrustDomain,
-			"labels":                istioIngressGateway.Values.Labels,
-			"annotations":           istioIngressGateway.Values.Annotations,
-			"externalTrafficPolicy": istioIngressGateway.Values.ExternalTrafficPolicy,
+			"trustDomain":           istioIngressGateway.TrustDomain,
+			"labels":                istioIngressGateway.Labels,
+			"annotations":           istioIngressGateway.Annotations,
+			"externalTrafficPolicy": istioIngressGateway.ExternalTrafficPolicy,
 			"deployNamespace":       false,
 			"priorityClassName":     "istio-ingressgateway",
-			"ports":                 istioIngressGateway.Values.Ports,
-			"image":                 istioIngressGateway.Values.Image,
-			"istiodNamespace":       istioIngressGateway.Values.IstiodNamespace,
-			"loadBalancerIP":        istioIngressGateway.Values.LoadBalancerIP,
+			"ports":                 istioIngressGateway.Ports,
+			"image":                 istioIngressGateway.Image,
+			"istiodNamespace":       istioIngressGateway.IstiodNamespace,
+			"loadBalancerIP":        istioIngressGateway.LoadBalancerIP,
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
 		}
 
-		if istioIngressGateway.Values.MinReplicas != nil {
-			values["minReplicas"] = *istioIngressGateway.Values.MinReplicas
+		if istioIngressGateway.MinReplicas != nil {
+			values["minReplicas"] = *istioIngressGateway.MinReplicas
 		}
-		if istioIngressGateway.Values.MaxReplicas != nil {
-			values["maxReplicas"] = *istioIngressGateway.Values.MaxReplicas
+		if istioIngressGateway.MaxReplicas != nil {
+			values["maxReplicas"] = *istioIngressGateway.MaxReplicas
 		}
 
 		renderedIngressChart, err := i.chartRenderer.RenderEmbeddedFS(chartIngress, chartPathIngress, ManagedResourceControlName, istioIngressGateway.Namespace, values)

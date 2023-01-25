@@ -59,7 +59,7 @@ type istiod struct {
 	chartRenderer             chartrenderer.Interface
 	namespace                 string
 	values                    Values
-	istioIngressGatewayValues []IngressGateway
+	istioIngressGatewayValues []IngressGatewayValues
 	istioProxyProtocolValues  []ProxyProtocol
 }
 
@@ -77,7 +77,7 @@ func NewIstio(
 	chartRenderer chartrenderer.Interface,
 	values Values,
 	namespace string,
-	istioIngressGatewayValues []IngressGateway,
+	istioIngressGatewayValues []IngressGatewayValues,
 	istioProxyProtocolValues []ProxyProtocol,
 ) component.DeployWaiter {
 	return &istiod{
@@ -134,21 +134,21 @@ func (i *istiod) Deploy(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-injection", "disabled")
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioIngress)
 
-			if value, ok := istioIngressGateway.Values.Labels[v1beta1constants.GardenRole]; ok && strings.HasPrefix(value, v1beta1constants.GardenRoleExposureClassHandler) {
+			if value, ok := istioIngressGateway.Labels[v1beta1constants.GardenRole]; ok && strings.HasPrefix(value, v1beta1constants.GardenRoleExposureClassHandler) {
 				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, value)
 			}
-			if value, ok := istioIngressGateway.Values.Labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
+			if value, ok := istioIngressGateway.Labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
 				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.LabelExposureClassHandlerName, value)
 			}
 
-			if value, ok := istioIngressGateway.Values.Labels[operation.IstioDefaultZoneKey]; ok {
+			if value, ok := istioIngressGateway.Labels[operation.IstioDefaultZoneKey]; ok {
 				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, operation.IstioDefaultZoneKey, value)
 			}
 
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 			zones := i.values.Zones
-			if len(istioIngressGateway.Values.Zones) > 0 {
-				zones = istioIngressGateway.Values.Zones
+			if len(istioIngressGateway.Zones) > 0 {
+				zones = istioIngressGateway.Zones
 			}
 			metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 			if len(zones) == 1 {

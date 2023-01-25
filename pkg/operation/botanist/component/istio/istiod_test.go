@@ -53,7 +53,7 @@ var _ = Describe("istiod", func() {
 		ctx                   context.Context
 		c                     client.Client
 		istiod                component.DeployWaiter
-		igw                   []IngressGateway
+		igw                   []IngressGatewayValues
 		ipp                   []ProxyProtocol
 		igwAnnotations        map[string]string
 		labels                map[string]string
@@ -2265,8 +2265,8 @@ spec:
 			BeforeEach(func() {
 				minReplicas = 3
 				maxReplicas = 8
-				igw[0].Values.MinReplicas = &minReplicas
-				igw[0].Values.MaxReplicas = &maxReplicas
+				igw[0].MinReplicas = &minReplicas
+				igw[0].MaxReplicas = &maxReplicas
 				istiod = NewIstio(
 					c,
 					renderer,
@@ -2290,7 +2290,7 @@ spec:
 		Context("external traffic policy cluster", func() {
 			BeforeEach(func() {
 				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeCluster
-				igw[0].Values.ExternalTrafficPolicy = &externalTrafficPolicy
+				igw[0].ExternalTrafficPolicy = &externalTrafficPolicy
 				istiod = NewIstio(
 					c,
 					renderer,
@@ -2314,7 +2314,7 @@ spec:
 		Context("external traffic policy local", func() {
 			BeforeEach(func() {
 				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
-				igw[0].Values.ExternalTrafficPolicy = &externalTrafficPolicy
+				igw[0].ExternalTrafficPolicy = &externalTrafficPolicy
 				istiod = NewIstio(
 					c,
 					renderer,
@@ -2444,9 +2444,9 @@ spec:
 	})
 })
 
-func makeIngressGateway(namespace string, annotations, labels map[string]string) []IngressGateway {
-	return []IngressGateway{{
-		Values: IngressValues{
+func makeIngressGateway(namespace string, annotations, labels map[string]string) []IngressGatewayValues {
+	return []IngressGatewayValues{
+		{
 			Image:           "foo/bar",
 			TrustDomain:     "foo.bar",
 			IstiodNamespace: "istio-test-system",
@@ -2455,9 +2455,9 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 			},
+			Namespace: namespace,
 		},
-		Namespace: namespace,
-	}}
+	}
 }
 
 func makeProxyProtocol(namespace string, labels map[string]string) []ProxyProtocol {

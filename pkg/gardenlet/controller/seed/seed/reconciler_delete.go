@@ -170,18 +170,18 @@ func (r *Reconciler) runDeleteSeedFlow(
 		return err
 	}
 
-	istioIngressGateway := []istio.IngressGateway{{Namespace: *r.Config.SNI.Ingress.Namespace}}
+	istioIngressGateway := []istio.IngressGatewayValues{{Namespace: *r.Config.SNI.Ingress.Namespace}}
 	if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 		for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-			istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: operation.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
+			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: operation.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
 		}
 	}
 	// Add for each ExposureClass handler in the config an own Ingress Gateway.
 	for _, handler := range r.Config.ExposureClassHandlers {
-		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: *handler.SNI.Ingress.Namespace})
+		istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: *handler.SNI.Ingress.Namespace})
 		if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 			for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-				istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
+				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
 			}
 		}
 	}
