@@ -195,17 +195,23 @@ func (r *Reconciler) runDeleteSeedFlow(
 
 	// setup for flow graph
 	var (
-		dnsRecord          = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
-		autoscaler         = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
-		kubeStateMetrics   = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-		nginxIngress       = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		networkPolicies    = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
-		dwdEndpoint        = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe           = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
-		systemResources    = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
-		vpnAuthzServer     = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
-		istioCRDs          = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
-		istio              = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{Istiod: istio.IstiodValues{Namespace: v1beta1constants.IstioSystemNamespace}, IngressGateway: istioIngressGateway})
+		dnsRecord        = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
+		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
+		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
+		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
+		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
+		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		systemResources  = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
+		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
+		istioCRDs        = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
+		istio            = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
+			Istiod: istio.IstiodValues{
+				Enabled:   true,
+				Namespace: v1beta1constants.IstioSystemNamespace,
+			},
+			IngressGateway: istioIngressGateway,
+		})
 		fluentOperatorCRDs = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
 	)
 

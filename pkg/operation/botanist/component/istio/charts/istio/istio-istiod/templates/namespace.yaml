@@ -7,4 +7,4 @@ metadata:
     istio-operator-managed: Reconcile
     istio-injection: disabled
     gardener.cloud/role: istio-system
-{{- end }}
+{{ end -}}

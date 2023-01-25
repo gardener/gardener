@@ -2098,6 +2098,7 @@ spec:
 			renderer,
 			Values{
 				Istiod: IstiodValues{
+					Enabled:     true,
 					Image:       "foo/bar",
 					Namespace:   deployNS,
 					TrustDomain: "foo.local",
@@ -2192,6 +2193,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_networkpolicy.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns + "---\n" + istioSystemNetworkPolicyDenyAll))
+			Expect(string(managedResourceSecret.Data["istio-istiod_templates_namespace.yaml"])).To(BeEmpty())
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole))
@@ -2279,6 +2281,7 @@ spec:
 					renderer,
 					Values{
 						Istiod: IstiodValues{
+							Enabled:     true,
 							Image:       "foo/bar",
 							Namespace:   deployNS,
 							TrustDomain: "foo.local",
@@ -2309,6 +2312,7 @@ spec:
 					renderer,
 					Values{
 						Istiod: IstiodValues{
+							Enabled:     true,
 							Image:       "foo/bar",
 							Namespace:   deployNS,
 							TrustDomain: "foo.local",
@@ -2334,6 +2338,7 @@ spec:
 					renderer,
 					Values{
 						Istiod: IstiodValues{
+							Enabled:     true,
 							Image:       "foo/bar",
 							Namespace:   deployNS,
 							TrustDomain: "foo.local",
@@ -2359,6 +2364,7 @@ spec:
 					renderer,
 					Values{
 						Istiod: IstiodValues{
+							Enabled:     true,
 							Image:       "foo/bar",
 							Namespace:   deployNS,
 							TrustDomain: "foo.local",
@@ -2386,6 +2392,7 @@ spec:
 					renderer,
 					Values{
 						Istiod: IstiodValues{
+							Enabled:     true,
 							Image:       "foo/bar",
 							Namespace:   deployNS,
 							TrustDomain: "foo.local",
@@ -2417,6 +2424,7 @@ spec:
 					renderer,
 					Values{
 						Istiod: IstiodValues{
+							Enabled:     true,
 							Image:       "foo/bar",
 							Namespace:   deployNS,
 							TrustDomain: "foo.local",
@@ -2437,23 +2445,95 @@ spec:
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_proxy-protocol-virtualservice_test-ingress.yaml"])).To(BeEmpty())
 			})
 		})
+
+		Context("istiod disabled", func() {
+			BeforeEach(func() {
+				for i := range igw {
+					igw[i].ProxyProtocolEnabled = false
+				}
+
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     false,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(25))
+
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_configmap.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_deployment.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_service.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_clusterrole.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_clusterrolebinding.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_destinationrule.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_namespace.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_peerauthentication.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_poddisruptionbudget.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_role.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_rolebinding.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_serviceaccount.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_sidecar.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_autoscale.yaml"))
+				Expect(managedResourceSecret.Data).ToNot(HaveKey("istio-istiod_templates_validatingwebhookconfiguration.yaml"))
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
-		It("should successfully destroy all resources", func() {
-			namespace := &corev1.Namespace{}
-			Expect(c.Create(ctx, managedResource)).To(Succeed())
-			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+		BeforeEach(func() {
+			Expect(istiod.Deploy(ctx)).To(Succeed())
+		})
 
+		It("should successfully destroy all resources", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 			Expect(istiod.Destroy(ctx)).To(Succeed())
 
+			namespace := &corev1.Namespace{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNS)))
 			Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNSIngress)))
+		})
+
+		Context("istiod disabled", func() {
+			It("should not destroy istiod resources", func() {
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     false,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+						},
+						IngressGateway: igw,
+					},
+				)
+
+				Expect(istiod.Destroy(ctx)).To(Succeed())
+
+				namespace := &corev1.Namespace{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, namespace)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNSIngress)))
+			})
 		})
 	})
 

@@ -203,39 +203,18 @@ func defaultIstio(
 		}
 	}
 
-<<<<<<< HEAD
-	if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		istioProxyGateway = nil
-=======
-	_, seedServiceCIDR, err := net.ParseCIDR(gardenSeed.Spec.Networks.Services)
-	if err != nil {
-		return nil, err
-	}
-
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
->>>>>>> 783b8ee85 (Eliminate Proxy-Protocol Chart)
-	}
-
 	return istio.NewIstio(
 		seedClient,
 		chartRenderer,
 		istio.Values{
 			Istiod: istio.IstiodValues{
+				Enabled:     true,
 				Image:       istiodImage.String(),
 				Namespace:   v1beta1constants.IstioSystemNamespace,
 				TrustDomain: gardencorev1beta1.DefaultDomain,
 				Zones:       gardenSeed.Spec.Provider.Zones,
 			},
-<<<<<<< HEAD
 			IngressGateway: istioIngressGateway,
-			ProxyProtocol:  istioProxyGateway,
-=======
-			IngressGateway:       istioIngressGateway,
-			DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
-			NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
->>>>>>> 783b8ee85 (Eliminate Proxy-Protocol Chart)
 		},
 	), nil
 }
