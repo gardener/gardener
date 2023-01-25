@@ -54,7 +54,7 @@ var _ = Describe("istiod", func() {
 		c                     client.Client
 		istiod                component.DeployWaiter
 		igw                   []IngressGatewayValues
-		ipp                   []ProxyProtocol
+		ipp                   []ProxyProtocolValues
 		igwAnnotations        map[string]string
 		labels                map[string]string
 		managedResourceName   string
@@ -2101,11 +2101,13 @@ spec:
 			c,
 			renderer,
 			Values{
-				Image:       "foo/bar",
-				TrustDomain: "foo.local",
-				Zones:       []string{"a", "b", "c"},
+				Istiod: IstiodValues{
+					Image:       "foo/bar",
+					Namespace:   deployNS,
+					TrustDomain: "foo.local",
+					Zones:       []string{"a", "b", "c"},
+				},
 			},
-			deployNS,
 			igw,
 			ipp,
 		)
@@ -2244,8 +2246,13 @@ spec:
 				istiod = NewIstio(
 					c,
 					renderer,
-					Values{Image: "foo/bar", TrustDomain: "foo.local"},
-					deployNS,
+					Values{
+						Istiod: IstiodValues{
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+						},
+					},
 					igw,
 					ipp,
 				)
@@ -2271,11 +2278,13 @@ spec:
 					c,
 					renderer,
 					Values{
-						Image:       "foo/bar",
-						TrustDomain: "foo.local",
-						Zones:       []string{"a", "b", "c"},
+						Istiod: IstiodValues{
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
 					},
-					deployNS,
 					igw,
 					ipp,
 				)
@@ -2295,11 +2304,13 @@ spec:
 					c,
 					renderer,
 					Values{
-						Image:       "foo/bar",
-						TrustDomain: "foo.local",
-						Zones:       []string{"a", "b", "c"},
+						Istiod: IstiodValues{
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
 					},
-					deployNS,
 					igw,
 					ipp,
 				)
@@ -2319,11 +2330,13 @@ spec:
 					c,
 					renderer,
 					Values{
-						Image:       "foo/bar",
-						TrustDomain: "foo.local",
-						Zones:       []string{"a", "b", "c"},
+						Istiod: IstiodValues{
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
 					},
-					deployNS,
 					igw,
 					ipp,
 				)
@@ -2460,11 +2473,9 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 	}
 }
 
-func makeProxyProtocol(namespace string, labels map[string]string) []ProxyProtocol {
-	return []ProxyProtocol{{
-		Values: ProxyValues{
-			Labels: labels,
-		},
+func makeProxyProtocol(namespace string, labels map[string]string) []ProxyProtocolValues {
+	return []ProxyProtocolValues{{
+		Labels:    labels,
 		Namespace: namespace,
 	}}
 }

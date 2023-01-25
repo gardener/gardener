@@ -138,10 +138,8 @@ func defaultIstio(
 		defaultIngressGatewayConfig,
 	}
 
-	istioProxyGateway := []istio.ProxyProtocol{{
-		Values: istio.ProxyValues{
-			Labels: operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
-		},
+	istioProxyGateway := []istio.ProxyProtocolValues{{
+		Labels:    operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
 		Namespace: *conf.SNI.Ingress.Namespace,
 	}}
 
@@ -163,10 +161,8 @@ func defaultIstio(
 				Namespace: namespace,
 			})
 
-			istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
-				Values: istio.ProxyValues{
-					Labels: operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
-				},
+			istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
+				Labels:    operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
 				Namespace: namespace,
 			})
 		}
@@ -188,10 +184,8 @@ func defaultIstio(
 			Namespace:             *handler.SNI.Ingress.Namespace,
 		})
 
-		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
-			Values: istio.ProxyValues{
-				Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
-			},
+		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
+			Labels:    operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
 
@@ -213,10 +207,8 @@ func defaultIstio(
 					Namespace: namespace,
 				})
 
-				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
-					Values: istio.ProxyValues{
-						Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
-					},
+				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocolValues{
+					Labels:    operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					Namespace: namespace,
 				})
 			}
@@ -231,11 +223,13 @@ func defaultIstio(
 		seedClient,
 		chartRenderer,
 		istio.Values{
-			TrustDomain: gardencorev1beta1.DefaultDomain,
-			Image:       istiodImage.String(),
-			Zones:       gardenSeed.Spec.Provider.Zones,
+			Istiod: istio.IstiodValues{
+				Image:       istiodImage.String(),
+				Namespace:   v1beta1constants.IstioSystemNamespace,
+				TrustDomain: gardencorev1beta1.DefaultDomain,
+				Zones:       gardenSeed.Spec.Provider.Zones,
+			},
 		},
-		v1beta1constants.IstioSystemNamespace,
 		istioIngressGateway,
 		istioProxyGateway,
 	), nil

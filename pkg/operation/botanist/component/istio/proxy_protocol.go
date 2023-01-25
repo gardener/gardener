@@ -28,14 +28,9 @@ var (
 )
 
 // ProxyProtocol is a set of configuration values for the istio-proxy-protocol chart.
-type ProxyProtocol struct {
-	Values    ProxyValues
+type ProxyProtocolValues struct {
+	Labels    map[string]string
 	Namespace string
-}
-
-// ProxyValues holds values for the istio-proxy-protocol chart.
-type ProxyValues struct {
-	Labels map[string]string
 }
 
 func (i *istiod) generateIstioProxyProtocolChart() (*chartrenderer.RenderedChart, error) {
@@ -43,7 +38,7 @@ func (i *istiod) generateIstioProxyProtocolChart() (*chartrenderer.RenderedChart
 
 	for _, istioProxyProtocol := range i.istioProxyProtocolValues {
 		values := map[string]interface{}{
-			"labels": istioProxyProtocol.Values.Labels,
+			"labels": istioProxyProtocol.Labels,
 		}
 
 		renderedProxyProtocolChart, err := i.chartRenderer.RenderEmbeddedFS(chartProxyProtocol, chartPathProxyProtocol, ManagedResourceControlName, istioProxyProtocol.Namespace, values)

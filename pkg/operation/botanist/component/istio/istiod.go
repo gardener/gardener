@@ -57,17 +57,22 @@ var (
 type istiod struct {
 	client                    client.Client
 	chartRenderer             chartrenderer.Interface
-	namespace                 string
 	values                    Values
 	istioIngressGatewayValues []IngressGatewayValues
-	istioProxyProtocolValues  []ProxyProtocol
+	istioProxyProtocolValues  []ProxyProtocolValues
+}
+
+// Values contains configuration values for the Istiod component.
+type IstiodValues struct {
+	Namespace   string
+	Image       string
+	TrustDomain string
+	Zones       []string
 }
 
 // Values contains configuration values for the Istio component.
 type Values struct {
-	TrustDomain string
-	Image       string
-	Zones       []string
+	Istiod IstiodValues
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.
@@ -76,28 +81,26 @@ func NewIstio(
 	client client.Client,
 	chartRenderer chartrenderer.Interface,
 	values Values,
-	namespace string,
 	istioIngressGatewayValues []IngressGatewayValues,
-	istioProxyProtocolValues []ProxyProtocol,
+	istioProxyProtocolValues []ProxyProtocolValues,
 ) component.DeployWaiter {
 	return &istiod{
 		client:                    client,
 		chartRenderer:             chartRenderer,
 		values:                    values,
-		namespace:                 namespace,
 		istioIngressGatewayValues: istioIngressGatewayValues,
 		istioProxyProtocolValues:  istioProxyProtocolValues,
 	}
 }
 
 func (i *istiod) Deploy(ctx context.Context) error {
-	istiodNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: i.namespace}}
+	istiodNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: i.values.Istiod.Namespace}}
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, istiodNamespace, func() error {
 		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
 		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-injection", "disabled")
 		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioSystem)
-		metav1.SetMetaDataAnnotation(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(i.values.Zones, ","))
+		metav1.SetMetaDataAnnotation(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(i.values.Istiod.Zones, ","))
 		return nil
 	}); err != nil {
 		return err
@@ -106,7 +109,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	// TODO(mvladev): Rotate this on every istio version upgrade.
 	for _, filterName := range []string{"tcp-stats-filter-1.11", "stats-filter-1.11", "tcp-stats-filter-1.12", "stats-filter-1.12"} {
 		if err := client.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
-			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.namespace},
+			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.values.Istiod.Namespace},
 		})); err != nil {
 			return err
 		}
@@ -146,7 +149,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 			}
 
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-			zones := i.values.Zones
+			zones := i.values.Istiod.Zones
 			if len(istioIngressGateway.Zones) > 0 {
 				zones = istioIngressGateway.Zones
 			}
@@ -171,7 +174,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		obj := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      transformer.name,
-				Namespace: i.namespace,
+				Namespace: i.values.Istiod.Namespace,
 			},
 		}
 
@@ -210,17 +213,17 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		chartsMap[key] = objMap[key]
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceControlName, false, chartsMap)
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, ManagedResourceControlName, false, chartsMap)
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForSeed(ctx, i.client, i.namespace, ManagedResourceControlName); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, ManagedResourceControlName); err != nil {
 		return err
 	}
 
 	if err := i.client.Delete(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: i.namespace,
+			Name: i.values.Istiod.Namespace,
 		},
 	}); client.IgnoreNotFound(err) != nil {
 		return err
@@ -247,20 +250,20 @@ func (i *istiod) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.namespace, ManagedResourceControlName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.values.Istiod.Namespace, ManagedResourceControlName)
 }
 
 func (i *istiod) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, ManagedResourceControlName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.values.Istiod.Namespace, ManagedResourceControlName)
 }
 
 func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
-	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, ManagedResourceControlName, i.namespace, map[string]interface{}{
+	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, ManagedResourceControlName, i.values.Istiod.Namespace, map[string]interface{}{
 		"serviceName": istiodServiceName,
-		"trustDomain": i.values.TrustDomain,
+		"trustDomain": i.values.Istiod.TrustDomain,
 		"labels": map[string]interface{}{
 			"app":   "istiod",
 			"istio": "pilot",
@@ -273,6 +276,6 @@ func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,
 		},
-		"image": i.values.Image,
+		"image": i.values.Istiod.Image,
 	})
 }
