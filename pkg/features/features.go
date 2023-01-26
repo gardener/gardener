@@ -104,6 +104,11 @@ const (
 	// owner: @timebertt
 	// alpha: v1.63.0
 	IPv6SingleStack featuregate.Feature = "IPv6SingleStack"
+
+	// MutableShootSpecNetworkingNodes allows updating the field `spec.networking.nodes`.
+	// owner: @axel7born
+	// alpha: v1.64.0
+	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -114,11 +119,12 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
-	ForceRestore:          {Default: false, PreRelease: featuregate.Alpha},
-	HAControlPlanes:       {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting: {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:       {Default: false, PreRelease: featuregate.Alpha},
+	ForceRestore:                    {Default: false, PreRelease: featuregate.Alpha},
+	HAControlPlanes:                 {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
+	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

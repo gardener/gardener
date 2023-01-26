@@ -19,9 +19,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/apiserver/features"
 )
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
+	features.RegisterFeatureGates()
 	RunSpecs(t, "APIs SeedManagement Validation Suite")
 }

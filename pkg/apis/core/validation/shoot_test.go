@@ -2671,7 +2671,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should allow increasing the networking nodes range", func() {
+			It("should forbid changing the networking nodes range", func() {
+				shoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/18")
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networking.nodes"),
+				}))))
+			})
+
+			It("should allow increasing the networking nodes range if feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.MutableShootSpecNetworkingNodes, true))
 				shoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/18")
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")

@@ -4886,7 +4886,7 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 					},
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the entire node network. This field is immutable.",
+							Description: "Nodes is the CIDR of the entire node network. This field is immutable if the feature gate MutableShootSpecNetworkingNodes is disabled.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -12329,7 +12329,7 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 					},
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the entire node network. This field is immutable.",
+							Description: "Nodes is the CIDR of the entire node network. This field is immutable if the feature gate MutableShootSpecNetworkingNodes is disabled.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

@@ -27,5 +27,6 @@ func RegisterFeatureGates() {
 		features.HAControlPlanes,
 		features.SeedChange,
 		features.IPv6SingleStack,
+		features.MutableShootSpecNetworkingNodes,
 	)))
 }

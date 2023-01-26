@@ -932,7 +932,8 @@ type Networking struct {
 	ProviderConfig *runtime.RawExtension
 	// Pods is the CIDR of the pod network. This field is immutable.
 	Pods *string
-	// Nodes is the CIDR of the entire node network. This field is immutable.
+	// Nodes is the CIDR of the entire node network.
+	// This field is immutable if the feature gate MutableShootSpecNetworkingNodes is disabled.
 	Nodes *string
 	// Services is the CIDR of the service network. This field is immutable.
 	Services *string
