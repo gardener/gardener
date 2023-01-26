@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -53,6 +54,8 @@ var _ = Describe("Garden controller tests", func() {
 		DeferCleanup(test.WithVars(
 			&etcd.DefaultInterval, 100*time.Millisecond,
 			&etcd.DefaultTimeout, 500*time.Millisecond,
+			&kubeapiserverexposure.DefaultInterval, 100*time.Millisecond,
+			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
 		))
 
 		garden = &operatorv1alpha1.Garden{
