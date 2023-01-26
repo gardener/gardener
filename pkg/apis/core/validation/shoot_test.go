@@ -5000,6 +5000,35 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})))),
 		)
 
+		DescribeTable("EnforceNodeAllocatable",
+			func(enforceNodeAllocatable []string, matcher gomegatypes.GomegaMatcher) {
+
+				kubeletConfig := core.KubeletConfig{
+					EnforceNodeAllocatable: enforceNodeAllocatable,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", []string{"pods", "kube-reserved", "system-reserved"}, BeEmpty()),
+			Entry("invalid values", []string{"error", "kube-reserved", "system-reserved"}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("enforceNodeAllocatable[0]"),
+			})))),
+			Entry("invalid combination of enforceNodeAllocatable", []string{"pods", "none", "system-reserved"}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("enforceNodeAllocatable"),
+				"Detail": Equal("If none is specified, no additional options must be set"),
+			})))),
+			Entry("enforceNodeAllocatable set to none", []string{"none"}, BeEmpty()),
+			Entry("duplicate values", []string{"kube-reserved", "kube-reserved", "system-reserved"}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("enforceNodeAllocatable[1]"),
+			})))),
+		)
+
 		DescribeTable("EvictionHard & EvictionSoft",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

@@ -1360,6 +1360,9 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 		}
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.ImagePullProgressDeadline, fldPath.Child("imagePullProgressDeadline"))...)
 	}
+	if kubeletConfig.EnforceNodeAllocatable != nil {
+		allErrs = append(allErrs, validateKubeletConfigEnforceNodeAllocatable(kubeletConfig.EnforceNodeAllocatable, fldPath.Child("enforceNodeAllocatable"))...)
+	}
 	if kubeletConfig.EvictionPressureTransitionPeriod != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.EvictionPressureTransitionPeriod, fldPath.Child("evictionPressureTransitionPeriod"))...)
 	}
@@ -1424,6 +1427,33 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("streamingConnectionIdleTimeout"), *v, "value must be between 30s and 4h"))
 		}
 	}
+	return allErrs
+}
+
+const enforceNodeAllocatableNone = "none"
+
+var validEnforceNodeAllocatable = sets.NewString(enforceNodeAllocatableNone, "pods", "system-reserved", "kube-reserved")
+
+func validateKubeletConfigEnforceNodeAllocatable(enforceNodeAllocatable []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if sets.NewString(enforceNodeAllocatable...).Has(enforceNodeAllocatableNone) && len(enforceNodeAllocatable) > 1 {
+		return append(allErrs, field.Invalid(fldPath, enforceNodeAllocatable, "If none is specified, no additional options must be set"))
+	}
+
+	hasSeen := sets.NewString()
+	for i, entry := range enforceNodeAllocatable {
+		if hasSeen.Has(entry) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i), entry))
+		}
+
+		hasSeen.Insert(entry)
+
+		if !validEnforceNodeAllocatable.Has(entry) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), entry, validEnforceNodeAllocatable.List()))
+		}
+	}
+
 	return allErrs
 }
 
