@@ -43,7 +43,7 @@ _Important characteristics of client-go clients:_
 ### Generated Client Sets for Gardener APIs
 
 Gardener's APIs extend the Kubernetes API by registering an extension API server (in the garden cluster) and `CustomResourceDefinition`s (on Seed clusters), meaning that the Kubernetes API will expose additional REST endpoints to manage Gardener resources in addition to the built-in API resources.
-In order to talk to these extended APIs in our controllers and components, client-gen is used to generate client-go-style clients to [`pkg/client/{core,extensions,seedmanagement,...}`](https://github.com/gardener/gardener/tree/master/pkg/client).
+In order to talk to these extended APIs in our controllers and components, client-gen is used to generate client-go-style clients to [`pkg/client/{core,extensions,seedmanagement,...}`](../../pkg/client).
 
 Usage of these clients is equivalent to `client-go` clients, and the same characteristics apply. For example:
 

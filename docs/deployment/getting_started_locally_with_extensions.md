@@ -156,7 +156,7 @@ Please ensure that your KinD and Seed clusters are online (not paused or hiberna
 make gardener-extensions-down
 ```
 
-This will delete all `Shoots` first (this could take a couple of minutes), then uninstall `gardenlet` from the Seed and the gardener components from the KinD. Finally, the additional components like container registry, etc. are deleted from both clusters.
+This will delete all `Shoots` first (this could take a couple of minutes), then uninstall `gardenlet` from the Seed and the gardener components from the KinD. Finally, the additional components like container registry, etc., are deleted from both clusters.
 
 When this is done, you can securely delete your local KinD cluster by running:
 

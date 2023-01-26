@@ -16,7 +16,7 @@ The motivation for maintaining such extension is the following:
 ## Current Limitations
 
 The following enlists the current limitations of the implementation.
-Please note that all of them are no technical limitations/blockers but simply advanced scenarios that we haven't had invested yet into.
+Please note that all of them are not technical limitations/blockers, but simply advanced scenarios that we haven't had invested yet into.
 
 1. Shoot clusters can only have multiple nodes, but inter-pod communication for pods on different nodes does not work.
 
@@ -24,13 +24,13 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
 2. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
 
-   _In order to realize DNS (see [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
+   _In order to realize DNS (see the [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
 
 3. No load balancers for Shoot clusters.
 
    _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster.
 
-5. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in cluster `coredns`.
+5. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
 
    _As the different istio ingress gateway loadbalancers have individual external IP addresses, single-zone shoot control planes can end up in a random availability zone. Having the local host use the `coredns` in the cluster as name resolver would form a name resolution cycle. The tests mitigate the issue by adapting the DNS configuration inside the affected test._
 
@@ -40,7 +40,7 @@ It is possible to deploy [`ManagedSeed`s](../usage/managed_seed.md) with `provid
 
 > Please note that this is only supported by the [`Skaffold`-based setup](../deployment/getting_started_locally.md).
 
-The corresponding e2e test can be run via
+The corresponding e2e test can be run via:
 
 ```bash
 ./hack/test-e2e-local.sh --label-filter "ManagedSeed"
@@ -69,7 +69,7 @@ The Helm chart of the `provider-local` extension defined in its [`ControllerDepl
 
 This CoreDNS instance is responsible for enabling the components running in the shoot clusters to be able to resolve the DNS names when they communicate with their `kube-apiserver`s.
 
-It contains static configuration to resolve the DNS names based on `local.gardener.cloud` to either the `istio-ingressgateway.istio-ingress.svc` or the `kube-apiserver.<shoot-namespace>.svc` addresses (depending on whether the `--apiserver-sni-enabled` flag is set to `true` or `false`).
+It contains a static configuration to resolve the DNS names based on `local.gardener.cloud` to either the `istio-ingressgateway.istio-ingress.svc` or the `kube-apiserver.<shoot-namespace>.svc` addresses (depending on whether the `--apiserver-sni-enabled` flag is set to `true` or `false`).
 
 ### Controllers
 
@@ -111,15 +111,15 @@ This controller generates a `NetworkPolicy` which allows the control plane pods 
 
 #### `Network`
 
-This controller is not implemented anymore. In the initial version of `provider-local`, there was a `Network` controller deploying [kindnetd](https://github.com/kubernetes-sigs/kind/blob/main/images/kindnetd/README.md) (see https://github.com/gardener/gardener/tree/v1.44.1/pkg/provider-local/controller/network).
+This controller is not implemented anymore. In the initial version of `provider-local`, there was a `Network` controller deploying [kindnetd](https://github.com/kubernetes-sigs/kind/blob/main/images/kindnetd/README.md) (see [release v1.44.1](https://github.com/gardener/gardener/tree/v1.44.1/pkg/provider-local/controller/network)).
 However, we decided to drop it because this setup prevented us from using `NetworkPolicy`s (kindnetd does not ship a `NetworkPolicy` controller).
-In addition, we had issues with shoot clusters having more than one node (hence, we couldn't support rolling updates, see https://github.com/gardener/gardener/pull/5666/commits/491b3cd16e40e5c20ef02367fda93a34ff9465eb).
+In addition, we had issues with shoot clusters having more than one node (hence, we couldn't support rolling updates, see [PR #5666](https://github.com/gardener/gardener/pull/5666/commits/491b3cd16e40e5c20ef02367fda93a34ff9465eb)).
 
 #### `OperatingSystemConfig`
 
 This controller leverages the standard [`oscommon` library](../../extensions/pkg/controller/operatingsystemconfig/oscommon) in order to render a simple cloud-init template which can later be executed by the shoot worker nodes.
 
-The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in https://github.com/gardener/machine-controller-manager-provider-local/tree/master/node and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
+The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [gardener/machine-controller-manager-provider-local repository](https://github.com/gardener/machine-controller-manager-provider-local/tree/master/node) and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
 
 #### `Worker`
 
@@ -148,14 +148,14 @@ In case the seed has multiple availability zones (`.spec.provider.zones`) and it
 This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
 
 #### Extension Seed
-This controller reconciles `Extensions` of type `local-ext-seed`. It creates a single `serviceaccount` named `local-ext-seed` in the shoot's namespace in the seed. The extension is reconciled before the `kube-apiserver`. More on extension lifecycle strategies can be read [here](controllerregistration.md#extension-lifecycle)).
+This controller reconciles `Extensions` of type `local-ext-seed`. It creates a single `serviceaccount` named `local-ext-seed` in the shoot's namespace in the seed. The extension is reconciled before the `kube-apiserver`. More on extension lifecycle strategies can be read in [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
 
 #### Extension Shoot
-This controller reconciles `Extensions` of type `local-ext-shoot`. It creates a single `serviceaccount` named `local-ext-shoot` in the `kube-system` namespace of the shoot. The extension is reconciled after the `kube-apiserver`. More on extension lifecycle strategies can be read [here](controllerregistration.md#extension-lifecycle)).
+This controller reconciles `Extensions` of type `local-ext-shoot`. It creates a single `serviceaccount` named `local-ext-shoot` in the `kube-system` namespace of the shoot. The extension is reconciled after the `kube-apiserver`. More on extension lifecycle strategies can be read [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
 
 #### Health Checks
 
-The health check controller leverages the [health check library](healthcheck-library.md) in order to
+The health check controller leverages the [health check library](healthcheck-library.md) in order to:
 
 - check the health of the `ManagedResource/extension-controlplane-shoot-webhooks` and populate the `SystemComponentsHealthy` condition in the `ControlPlane` resource.
 - check the health of the `ManagedResource/extension-networking-local` and populate the `SystemComponentsHealthy` condition in the `Network` resource.
@@ -184,9 +184,9 @@ It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the clus
 
 This webhook reacts on updates to `nodes/status` in both seed and shoot clusters and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
 
-Background: Typically, the `.status.{capacity,allocatable}` values are determined by the resources configured for the Docker daemon (see for example [this](https://docs.docker.com/desktop/mac/#resources) for Mac).
+Background: Typically, the `.status.{capacity,allocatable}` values are determined by the resources configured for the Docker daemon (see for example the [docker Quick Start Guide](https://docs.docker.com/desktop/mac/#resources) for Mac).
 Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.requests`, the `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
-In order to improve the user experience, on startup/leader election the provider-local extension submits an empty patch which triggers the "node webhook" (see below section) for the seed cluster.
+In order to improve the user experience, on startup/leader election the provider-local extension submits an empty patch which triggers the "node webhook" (see the below section) for the seed cluster.
 The webhook will increase the capacity of the `Node`s to allow all `Pod`s to be scheduled.
 For the shoot clusters, this empty patch trigger is not needed since the `MutatingWebhookConfiguration` is reconciled by the `ControlPlane` controller and exists before the `Node` object gets registered.
 
@@ -204,7 +204,7 @@ The corresponding test sets the DNS configuration accordingly so that the name r
 
 ## Future Work
 
-Future work could mostly focus on resolving above listed [limitations](#limitations), i.e.,
+Future work could mostly focus on resolving the above listed [limitations](#limitations), i.e.:
 
 - Implement a `cloud-controller-manager` and deploy it via the [`ControlPlane` controller](#controlplane).
 - Properly implement `.spec.machineTypes` in the `CloudProfile`s (i.e., configure `.spec.resources` properly for the created shoot worker machine pods).

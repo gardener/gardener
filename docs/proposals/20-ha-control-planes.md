@@ -38,8 +38,8 @@ reviewers:
   - [Scheduling control plane components](#scheduling-control-plane-components)
     - [Zone pinning](#zone-pinning)
     - [Single-Zone](#single-zone)
-    - [Multi-Zone (#replicas <= #zones)](#multi-zone-replicas--zones)
-    - [Multi-Zone (#replicas > #zones)](#multi-zone-replicas--zones-1)
+    - [Multi-Zone (#replicas \<= #zones)](#multi-zone-replicas--zones)
+    - [Multi-Zone (#replicas \> #zones)](#multi-zone-replicas--zones-1)
   - [Disruptions and zero downtime maintenance](#disruptions-and-zero-downtime-maintenance)
   - [Seed System Components](#seed-system-components)
   - [Shoot Control Plane Components](#shoot-control-plane-components)
@@ -63,7 +63,7 @@ reviewers:
     - [Option #2: Redundencies for all critical control plane components](#option-2-redundencies-for-all-critical-control-plane-components)
     - [Option #3: Auto-rebalance pods in the event of AZ failure](#option-3-auto-rebalance-pods-in-the-event-of-az-failure)
   - [Cost Implications on hosting HA control plane](#cost-implications-on-hosting-ha-control-plane)
-    - [Compute & Storage](#compute--storage)
+    - [Compute \& Storage](#compute--storage)
     - [Network latency](#network-latency)
     - [Cross-Zonal traffic](#cross-zonal-traffic)
       - [Ingress/Egress traffic analysis](#ingressegress-traffic-analysis)
@@ -184,7 +184,7 @@ A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec,
 
 _Proposed Change_
 
-* If the shoot is not already scheduled on a multi-zonal seed, then the [shoot admission plugin](https://github.com/gardener/gardener/tree/master/plugin/pkg/shoot/validator) must deny the request.
+* If the shoot is not already scheduled on a multi-zonal seed, then the [shoot admission plugin](../../plugin/pkg/shoot/validator) must deny the request.
 * Either shoot owner creates shoot from scratch or needs to align with Gardener operator who has to move the shoot to a proper seed first via control plane migration (editing the `shoots/binding` resource).
 * An automated control plane migration is deliberately not performed as it involves a considerable downtime and the feature itself is not stable by the time this GEP was written.
 

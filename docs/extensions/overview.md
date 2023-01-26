@@ -1,19 +1,19 @@
-# Extensibility overview
+# Extensibility Overview
 
 Initially, everything was developed in-tree in the Gardener project. All cloud providers and the configuration for all the supported operating systems were released together with the Gardener core itself.
 But as the project grew, it got more and more difficult to add new providers and maintain the existing code base.
 As a consequence and in order to become agile and flexible again, we proposed [GEP-1](../proposals/01-extensibility.md) (Gardener Enhancement Proposal).
 The document describes an out-of-tree extension architecture that keeps the Gardener core logic independent of provider-specific knowledge (similar to what Kubernetes has achieved with [out-of-tree cloud providers](https://github.com/kubernetes/enhancements/issues/88) or with [CSI volume plugins](https://github.com/kubernetes/community/pull/1258)).
 
-## Basic concepts
+## Basic Concepts
 
-Gardener keeps running in the "garden cluster" and implements the core logic of shoot cluster reconciliation/deletion.
+Gardener keeps running in the "garden cluster" and implements the core logic of shoot cluster reconciliation / deletion.
 Extensions are Kubernetes controllers themselves (like Gardener) and run in the seed clusters.
 As usual, we try to use Kubernetes wherever applicable.
 We rely on Kubernetes extension concepts in order to enable extensibility for Gardener.
 The main ideas of GEP-1 are the following:
 
-1. During the shoot reconciliation process Gardener will write CRDs into the seed cluster that are watched and managed by the extension controllers. They will reconcile (based on the `.spec`) and report whether everything went well or errors occurred in the CRD's `.status` field.
+1. During the shoot reconciliation process, Gardener will write CRDs into the seed cluster that are watched and managed by the extension controllers. They will reconcile (based on the `.spec`) and report whether everything went well or errors occurred in the CRD's `.status` field.
 
 1. Gardener keeps deploying the provider-independent control plane components (etcd, kube-apiserver, etc.). However, some of these components might still need little customization by providers, e.g., additional configuration, flags, etc. In this case, the extension controllers register webhooks in order to manipulate the manifests.
 
@@ -83,8 +83,8 @@ status:
       keyName: bar
 ```
 
-Gardener waits until the `.status.lastOperation`/`.status.lastError` indicates that the operation reached a final state and either continuous with the next step or stops and reports the potential error.
-The extension-specific output in `.status.providerStatus` is - similar to `.spec.providerConfig` - not evaluated and simply forwarded to CRDs in subsequent steps.
+Gardener waits until the `.status.lastOperation` / `.status.lastError` indicates that the operation reached a final state and either continuous with the next step, or stops and reports the potential error.
+The extension-specific output in `.status.providerStatus` is - similarly to `.spec.providerConfig` - not evaluated, and simply forwarded to CRDs in subsequent steps.
 
 **Example 2**:
 
@@ -127,10 +127,10 @@ Of course, it would have needed to create a `ConfigMap` containing the cloud con
 (Please note for this special example: The Kubernetes community is also working on making the `kube-controller-manager` provider-independent.
 However, there will most probably be still components other than the `kube-controller-manager` which need to be adapted by extensions.)
 
-If you are interested in writing an extension, or generally in digging deeper to find out the nitty-gritty details of the extension concepts please read [GEP-1](../proposals/01-extensibility.md).
+If you are interested in writing an extension, or generally in digging deeper to find out the nitty-gritty details of the extension concepts, please read [GEP-1](../proposals/01-extensibility.md).
 We are truly looking forward to your feedback!
 
-## Current status
+## Current Status
 
-Meanwhile, the out-of-tree extension architecture of Gardener is in place and has been productively validated. We are tracking all internal and external extensions of Gardener in the repo: [Gardener Extensions Library](https://github.com/gardener/gardener/tree/master/extensions#known-extension-implementations).
+Meanwhile, the out-of-tree extension architecture of Gardener is in place and has been productively validated. We are tracking all internal and external extensions of Gardener in the [Gardener Extensions Library](../../extensions#known-extension-implementations) repo.
 

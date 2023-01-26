@@ -5,7 +5,7 @@ title: etcd
 # etcd - Key-Value Store for Kubernetes
 
 [etcd](https://etcd.io/) is a strongly consistent key-value store and the most prevalent choice for the Kubernetes
-persistence layer. All API cluster objects like `Pod`s, `Deployment`s, `Secret`s, etc. are stored in `etcd`, which
+persistence layer. All API cluster objects like `Pod`s, `Deployment`s, `Secret`s, etc., are stored in `etcd`, which
 makes it an essential part of a [Kubernetes control plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components).
 
 ## Garden or Shoot Cluster Persistence

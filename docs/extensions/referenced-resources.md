@@ -1,6 +1,6 @@
 # Referenced Resources
 
-The Shoot resource can include a list of resources (usually secrets) that can be referenced by name in extension `providerConfig` and other Shoot sections, for example:
+The Shoot resource can include a list of resources (usually secrets) that can be referenced by name in the extension `providerConfig` and other Shoot sections, for example:
 
 ```yaml
 kind: Shoot

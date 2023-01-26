@@ -11,9 +11,9 @@ That being said, the core motivation for introducing this resource was to suppor
 Before introducing the `BackupEntry` extension resource, Gardener was using Terraform in order to create and manage these provider-specific resources (e.g., see [AWS Backup](https://github.com/gardener/gardener/tree/0.27.0/charts/seed-terraformer/charts/aws-backup)).
 Now, Gardener commissions an external, provider-specific controller to take over this task. You can also refer to [backupInfra proposal documentation](../proposals/02-backupinfra.md) to get idea about how the transition was done and understand the resource in broader scope.
 
-## What is the Lifespan of `BackupEntry`?
+## What Is the Lifespan of a `BackupEntry`?
 
-The bucket associated with `BackupEntry` will be created by using a `BackupBucket` resource. The `BackupEntry` resource will be created as a part of the `Shoot` creation. But resources might continue to exist post deletion of a `Shoot` (see [Gardenlet](../concepts/gardenlet.md#backupentry-controller) for more details).
+The bucket associated with `BackupEntry` will be created by using a `BackupBucket` resource. The `BackupEntry` resource will be created as a part of the `Shoot` creation. But resources might continue to exist post deletion of a `Shoot` (see [gardenlet](../concepts/gardenlet.md#backupentry-controller) for more details).
 
 ## What Needs to be Implemented to Support a New Infrastructure Provider?
 
@@ -47,7 +47,7 @@ In order to support a new infrastructure provider, you need to write a controlle
 ## References and Additional Resources
 
 * [`BackupEntry` API Reference](../api-reference/extensions.md#backupbucket)
-* [Exemplary implementation for the Azure provider](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/backupentry)
-* [`BackupBucket` resource documentation](./backupbucket.md)
-* [Shared bucket proposal](../proposals/02-backupinfra.md)
-* [Gardener-controller-manager-component-config API specification](../../pkg/controllermanager/apis/config/types.go#L101-#L107)
+* [Exemplary Implementation for the Azure Provider](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/backupentry)
+* [`BackupBucket` Resource Documentation](./backupbucket.md)
+* [Shared Bucket Proposal](../proposals/02-backupinfra.md)
+* [Gardener-controller-manager-component-config API Specification](../../pkg/controllermanager/apis/config/types.go#L101-#L107)

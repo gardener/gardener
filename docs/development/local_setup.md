@@ -110,7 +110,7 @@ When running on macOS, install the GNU core utilities and friends:
 brew install coreutils gnu-sed gnu-tar grep
 ```
 
-This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` etc. at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH` (`brew` will print out instructions for each installed formula).
+This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` etc., at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH` (`brew` will print out instructions for each installed formula).
 
 ```bash
 export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH
