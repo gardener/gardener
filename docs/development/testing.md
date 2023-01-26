@@ -210,14 +210,16 @@ The `test-integration` make rule prepares the environment automatically by downl
 make test-integration
 ```
 
-If you want to run a specific set of integration tests, you can also execute them using `./hack/test-integration.sh` directly instead of using the `test-integration` rule. For example:
+If you want to run a specific set of integration tests, you can also execute them using `./hack/test-integration.sh` directly instead of using the `test-integration` rule. Prior to execution the `PATH` environment variable needs to be set to also included the `/hack/tools/bin` directory. For example:
 
 ```bash
+export PATH=$PATH:$(pwd)/hack/tools/bin
+
 ./hack/test-integration.sh ./test/integration/resourcemanager/tokenrequestor
 ```
 
 The script takes care of preparing the environment for you.
-If you want to execute the test suites directly via `go test` or `ginkgo`, you have to point the `KUBEBUILDER_ASSETS` environment variable to the path that contains the etcd and kube-apiserver binaries. Alternatively, you can install the binaries to `/usr/local/kubebuilder/bin`.
+If you want to execute the test suites directly via `go test` or `ginkgo`, you have to point the `KUBEBUILDER_ASSETS` environment variable to the path that contains the etcd and kube-apiserver binaries. Alternatively, you can install the binaries to `/usr/local/kubebuilder/bin`. Additionally the environment variables from `hack/test-integration.env` should be sourced.
 
 ### Debugging Integration Tests
 
