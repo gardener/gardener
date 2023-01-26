@@ -41,6 +41,7 @@ var _ = Describe("Config", func() {
 			EvictionHard:                     map[string]string{"memory.available": "123"},
 			EvictionMinimumReclaim:           map[string]string{"imagefs.available": "123"},
 			EvictionSoft:                     map[string]string{"imagefs.inodesFree": "123"},
+			EnforceNodeAllocatable:           []string{"pods", "kube-reserved"},
 			EvictionSoftGracePeriod:          map[string]string{"nodefs.available": "123"},
 			EvictionPressureTransitionPeriod: &metav1.Duration{Duration: 42 * time.Minute},
 			EvictionMaxPodGracePeriod:        pointer.Int32(120),
@@ -92,7 +93,6 @@ var _ = Describe("Config", func() {
 			EnableControllerAttachDetach: pointer.Bool(true),
 			EnableDebuggingHandlers:      pointer.Bool(true),
 			EnableServer:                 pointer.Bool(true),
-			EnforceNodeAllocatable:       []string{"pods"},
 			EventBurst:                   50,
 			EventRecordQPS:               pointer.Int32(50),
 			EvictionHard: map[string]string{
@@ -183,7 +183,7 @@ var _ = Describe("Config", func() {
 			EnableControllerAttachDetach: pointer.Bool(true),
 			EnableDebuggingHandlers:      pointer.Bool(true),
 			EnableServer:                 pointer.Bool(true),
-			EnforceNodeAllocatable:       []string{"pods"},
+			EnforceNodeAllocatable:       []string{"pods", "kube-reserved"},
 			EventBurst:                   50,
 			EventRecordQPS:               pointer.Int32(50),
 			EvictionHard: utils.MergeStringMaps(params.EvictionHard, map[string]string{
@@ -277,7 +277,6 @@ var _ = Describe("Config", func() {
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 			},
 		),
-
 		Entry(
 			"kubernetes 1.21 w/o defaults",
 			"1.21.1",

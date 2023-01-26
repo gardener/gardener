@@ -44,6 +44,7 @@ type ConfigurableKubeletConfigParameters struct {
 	ContainerLogMaxFiles             *int32
 	CpuCFSQuota                      *bool
 	CpuManagerPolicy                 *string
+	EnforceNodeAllocatable           []string
 	EvictionHard                     map[string]string
 	EvictionMinimumReclaim           map[string]string
 	EvictionSoft                     map[string]string

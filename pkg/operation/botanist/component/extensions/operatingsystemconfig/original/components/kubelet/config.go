@@ -64,7 +64,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		EnableControllerAttachDetach:     pointer.Bool(true),
 		EnableDebuggingHandlers:          pointer.Bool(true),
 		EnableServer:                     pointer.Bool(true),
-		EnforceNodeAllocatable:           []string{"pods"},
+		EnforceNodeAllocatable:           params.EnforceNodeAllocatable,
 		EventBurst:                       50,
 		EventRecordQPS:                   pointer.Int32(50),
 		EvictionHard:                     params.EvictionHard,

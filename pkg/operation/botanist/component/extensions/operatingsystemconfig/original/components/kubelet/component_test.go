@@ -50,6 +50,7 @@ var _ = Describe("Component", func() {
 			ctx.CRIName = criName
 			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
 			ctx.KubeletCABundle = kubeletCABundle
+			ctx.KubeletConfigParameters.EnforceNodeAllocatable = []string{"pods"}
 			ctx.Images = map[string]*imagevector.Image{
 				"hyperkube": {
 					Name:       "pause-container",
