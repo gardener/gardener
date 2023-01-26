@@ -84,6 +84,12 @@ func defaultIstio(
 	component.DeployWaiter,
 	error,
 ) {
+	var (
+		minReplicas *int
+		maxReplicas *int
+		seedObj     = seed.GetInfo()
+	)
+
 	istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
@@ -94,19 +100,15 @@ func defaultIstio(
 		return nil, err
 	}
 
-	gardenSeed := seed.GetInfo()
-
-	var minReplicas *int
-	var maxReplicas *int
-	if len(gardenSeed.Spec.Provider.Zones) > 1 {
+	if len(seedObj.Spec.Provider.Zones) > 1 {
 		// Each availability zone should have at least 2 replicas as on some infrastructures each
 		// zonal load balancer is exposed individually via its own IP address. Therefore, having
 		// just one replica may negatively affect availability.
-		minReplicas = pointer.Int(len(gardenSeed.Spec.Provider.Zones) * 2)
+		minReplicas = pointer.Int(len(seedObj.Spec.Provider.Zones) * 2)
 		// The default configuration without availability zones has 5 as the maximum amount of
 		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
 		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
-		maxReplicas = pointer.Int(len(gardenSeed.Spec.Provider.Zones) * 4)
+		maxReplicas = pointer.Int(len(seedObj.Spec.Provider.Zones) * 4)
 	}
 
 	defaultIngressGatewayConfig := istio.IngressGatewayValues{
@@ -141,8 +143,8 @@ func defaultIstio(
 	}
 
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
-	if len(gardenSeed.Spec.Provider.Zones) > 1 {
-		for _, zone := range gardenSeed.Spec.Provider.Zones {
+	if len(seedObj.Spec.Provider.Zones) > 1 {
+		for _, zone := range seedObj.Spec.Provider.Zones {
 			namespace := operation.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
 
 			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
@@ -181,8 +183,8 @@ func defaultIstio(
 		})
 
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
-		if len(gardenSeed.Spec.Provider.Zones) > 1 {
-			for _, zone := range gardenSeed.Spec.Provider.Zones {
+		if len(seedObj.Spec.Provider.Zones) > 1 {
+			for _, zone := range seedObj.Spec.Provider.Zones {
 				namespace := operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
 
 				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
@@ -212,7 +214,7 @@ func defaultIstio(
 				Image:       istiodImage.String(),
 				Namespace:   v1beta1constants.IstioSystemNamespace,
 				TrustDomain: gardencorev1beta1.DefaultDomain,
-				Zones:       gardenSeed.Spec.Provider.Zones,
+				Zones:       seedObj.Spec.Provider.Zones,
 			},
 			IngressGateway: istioIngressGateway,
 		},
