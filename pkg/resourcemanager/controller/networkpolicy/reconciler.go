@@ -130,7 +130,7 @@ func (r *Reconciler) namespaceIsHandled(ctx context.Context, namespaceName strin
 
 func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *corev1.Service) (sets.String, error) {
 	var namespaceSelectors []metav1.LabelSelector
-	if v, ok := service.Annotations[resourcesv1alpha1.NetworkingCrossNamespaceSelectors]; ok {
+	if v, ok := service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors]; ok {
 		if err := json.Unmarshal([]byte(v), &namespaceSelectors); err != nil {
 			return nil, fmt.Errorf("failed unmarshaling %s: %w", v, err)
 		}

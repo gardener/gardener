@@ -359,9 +359,9 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		})
 	})
 
-	Context("service with cross-namespace selector", func() {
+	Context("service with namespace selector", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.resources.gardener.cloud/cross-namespace-selectors", `[{"matchLabels":{"other":"namespace"}}]`)
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.resources.gardener.cloud/namespace-selectors", `[{"matchLabels":{"other":"namespace"}}]`)
 		})
 
 		It("should create the expected cross-namespace network policies", func() {

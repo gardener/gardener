@@ -92,7 +92,7 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
 			})
 
-			It("should return true because the ports werew changed", func() {
+			It("should return true because the ports were changed", func() {
 				oldService := service.DeepCopy()
 				service.Spec.Ports = []corev1.ServicePort{{}}
 

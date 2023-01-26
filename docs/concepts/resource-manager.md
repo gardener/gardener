@@ -597,7 +597,7 @@ That's all this component needs to do - it does not need to create any `NetworkP
 
 Apart from this "simple" case where both communicating components run in the same namespace `a`, there is also the cross-namespace communication case.
 With above example, let's say there are components running in another namespace `b`, and they would like to initiate the communication with `gardener-resource-manager` in `a`.
-To cover this scenario, the `Service` can be annotated with `networking.resources.gardener.cloud/cross-namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"b"}}]'`.
+To cover this scenario, the `Service` can be annotated with `networking.resources.gardener.cloud/namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"b"}}]'`.
 
 > Note that you can specify multiple namespace selectors in this annotation which are OR-ed.
 
@@ -623,11 +623,11 @@ spec:
         matchLabels:
           networking.resources.gardener.cloud/to-a-gardener-resource-manager-tcp-10250: allowed
     ports:
-    - port: 1194
+    - port: 10250
       protocol: TCP
   podSelector:
     matchLabels:
-      app: vpn-seed-server
+      app: gardener-resource-manager
   policyTypes:
   - Ingress
 ---
@@ -643,12 +643,12 @@ metadata:
 spec:
   egress:
   - to:
-     - namespaceSelector:
-         matchLabels:
-           kubernetes.io/metadata.name: a
-       podSelector:
-         matchLabels:
-           app: gardener-resource-manager
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: a
+      podSelector:
+        matchLabels:
+          app: gardener-resource-manager
     ports:
     - port: 10250
       protocol: TCP
@@ -666,14 +666,14 @@ The components in namespace `b` now need to be labeled with `networking.resource
 
 Finally, let's say there is a `Service` called `example` which exists in different namespaces whose names are not static (e.g., `foo-1`, `foo-2`, etc.), and a component in namespace `bar` wants to initiate connections with all of them.
 
-The `example` `Service`s in these namespaces can now be annotated with `networking.resources.gardener.cloud/cross-namespace-selectors='[{"matchLabels":{"kubernetes.io/name":"bar"}}]'`.
+The `example` `Service`s in these namespaces can now be annotated with `networking.resources.gardener.cloud/namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"bar"}}]'`.
 As a consequence, the component in namespace `bar` now needs to be labeled with `networking.resources.gardener.cloud/to-foo-1-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-foo-2-example-tcp-8080=allowed`, etc.
 This approach does not work in practice, however, since the namespace names are neither static nor known upfront.
 
 To overcome this, it is possible to specify an alias for the concrete namespace in the pod label selector via the `networking.resources.gardener.cloud/pod-label-selector-namespace-alias` annotation.
 
 In above case, the `example` `Service` in the `foo-*` namespaces could be annotated with `networking.resources.gardener.cloud/pod-label-selector-namespace-alias=all-foos`.
-This would modify the label selector in all cross-namespace `NetworkPolicy`s, i.e. instead of `networking.resources.gardener.cloud/to-foo-{1,2,...}-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-all-foos-example-tcp-8080=allowed` would be used.
+This would modify the label selector in all `NetworkPolicy`s related to cross-namespace communication, i.e. instead of `networking.resources.gardener.cloud/to-foo-{1,2,...}-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-all-foos-example-tcp-8080=allowed` would be used.
 Now the component in namespace `bar` only needs this single label and is able to talk to all such `Service`s in the different namespaces.
 
 > Real-world examples for this scenario are the `kube-apiserver` `Service` (which exists in all shoot namespaces), or the `istio-ingressgateway` `Service` (which exists in all `istio-ingress*` namespaces).

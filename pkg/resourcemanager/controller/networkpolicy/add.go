@@ -103,7 +103,7 @@ func (r *Reconciler) ServicePredicate() predicate.Predicate {
 				return false
 			}
 
-			return oldService.DeletionTimestamp == nil && service.DeletionTimestamp != nil ||
+			return (oldService.DeletionTimestamp == nil && service.DeletionTimestamp != nil) ||
 				!apiequality.Semantic.DeepEqual(service.Spec.Selector, oldService.Spec.Selector) ||
 				!apiequality.Semantic.DeepEqual(service.Spec.Ports, oldService.Spec.Ports)
 		},
