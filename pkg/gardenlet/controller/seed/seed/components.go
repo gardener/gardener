@@ -256,18 +256,8 @@ func defaultNetworkPolicies(
 	component.DeployWaiter,
 	error,
 ) {
-	networks := []string{seed.Spec.Networks.Pods, seed.Spec.Networks.Services}
-	if v := seed.Spec.Networks.Nodes; v != nil {
-		networks = append(networks, *v)
-	}
-	privateNetworkPeers, err := networkpolicies.ToNetworkPolicyPeersWithExceptions(networkpolicies.AllPrivateNetworkBlocks(), networks...)
-	if err != nil {
-		return nil, err
-	}
-
 	return networkpolicies.NewBootstrapper(c, gardenNamespaceName, networkpolicies.GlobalValues{
-		SNIEnabled:          sniEnabled,
-		PrivateNetworkPeers: privateNetworkPeers,
+		SNIEnabled: sniEnabled,
 	}), nil
 }
 

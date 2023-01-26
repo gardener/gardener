@@ -35,8 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 )
 
@@ -44,7 +46,10 @@ import (
 const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+	if r.GardenClient == nil {
+		r.GardenClient = gardenCluster.GetClient()
+	}
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = seedCluster.GetClient()
 	}
@@ -104,6 +109,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		return err
 	}
 
+	if err := c.Watch(
+		source.NewKindWithCache(&extensionsv1alpha1.Cluster{}, seedCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
+		r.ClusterPredicate(),
+	); err != nil {
+		return err
+	}
+
 	return c.Watch(
 		&source.Channel{Source: r.ResolverUpdate},
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, mgr.GetLogger()),
@@ -123,6 +136,38 @@ func (r *Reconciler) NetworkPolicyPredicate() predicate.Predicate {
 	}
 
 	return predicate.Or(predicates...)
+}
+
+// ClusterPredicate is a predicate which returns 'true' when the network CIDRs of a shoot cluster change.
+func (r *Reconciler) ClusterPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			cluster, ok := e.ObjectNew.(*extensionsv1alpha1.Cluster)
+			if !ok {
+				return false
+			}
+			shoot, err := extensions.ShootFromCluster(cluster)
+			if err != nil {
+				return false
+			}
+
+			oldCluster, ok := e.ObjectOld.(*extensionsv1alpha1.Cluster)
+			if !ok {
+				return false
+			}
+			oldShoot, err := extensions.ShootFromCluster(oldCluster)
+			if err != nil {
+				return false
+			}
+
+			return !pointer.StringEqual(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
+				!pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services) ||
+				!pointer.StringEqual(shoot.Spec.Networking.Nodes, oldShoot.Spec.Networking.Nodes)
+		},
+		CreateFunc:  func(event.CreateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
 }
 
 // MapToNamespaces is a mapper function which returns requests for all shoot namespaces + garden namespace + istio-system namespace.
@@ -150,6 +195,11 @@ func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ cli
 		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespaceName}})
 	}
 	return requests
+}
+
+// MapObjectToName is a mapper function which maps an object to its name.
+func (r *Reconciler) MapObjectToName(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
 }
 
 // MapObjectToNamespace is a mapper function which maps an object to its namespace.

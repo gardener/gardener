@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +35,9 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
@@ -46,6 +49,7 @@ import (
 
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type Reconciler struct {
+	GardenClient   client.Client
 	RuntimeClient  client.Client
 	Config         config.NetworkPolicyControllerConfiguration
 	Resolver       hostnameresolver.HostResolver
@@ -173,6 +177,14 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			},
 		},
 		{
+			name:          "allow-to-private-networks",
+			reconcileFunc: r.reconcileNetworkPolicyAllowToPrivateNetworks,
+			namespaceSelectors: []labels.Selector{
+				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
+			},
+		},
+		{
 			name:          "allow-to-blocked-cidrs",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToBlockedCIDRs,
 			namespaceSelectors: []labels.Selector{
@@ -287,6 +299,58 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 					},
 				}},
 			})
+		}
+	})
+}
+
+func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+	blockedNetworkPeers := append([]string{
+		r.SeedNetworks.Pods,
+		r.SeedNetworks.Services,
+	}, r.SeedNetworks.BlockCIDRs...)
+
+	if v := r.SeedNetworks.Nodes; v != nil {
+		blockedNetworkPeers = append(blockedNetworkPeers, *v)
+	}
+
+	if strings.HasPrefix(networkPolicy.Namespace, v1beta1constants.TechnicalIDPrefix) {
+		cluster := &extensionsv1alpha1.Cluster{}
+		if err := r.RuntimeClient.Get(ctx, client.ObjectKey{Name: networkPolicy.Namespace}, cluster); err != nil {
+			return err
+		}
+
+		shoot, err := extensions.ShootFromCluster(cluster)
+		if err != nil {
+			return err
+		}
+
+		if v := shoot.Spec.Networking.Nodes; v != nil {
+			blockedNetworkPeers = append(blockedNetworkPeers, *v)
+		}
+		if v := shoot.Spec.Networking.Pods; v != nil {
+			blockedNetworkPeers = append(blockedNetworkPeers, *v)
+		}
+		if v := shoot.Spec.Networking.Services; v != nil {
+			blockedNetworkPeers = append(blockedNetworkPeers, *v)
+		}
+	}
+
+	privateNetworkPeers, err := toNetworkPolicyPeersWithExceptions(allPrivateNetworkBlocks(), blockedNetworkPeers...)
+	if err != nil {
+		return err
+	}
+
+	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
+		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
+			"egress from pods labeled with '%s=%s' to the private networks (RFC1918) and carrier-grade NAT (RFC6598), "+
+			"except for cluster-specific networks.", v1beta1constants.LabelNetworkPolicyToPrivateNetworks,
+			v1beta1constants.LabelNetworkPolicyAllowed))
+
+		policy.Spec = networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
+			Egress:      []networkingv1.NetworkPolicyEgressRule{{To: privateNetworkPeers}},
+			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
 	})
 }

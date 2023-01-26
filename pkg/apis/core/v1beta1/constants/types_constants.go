@@ -790,6 +790,7 @@ const (
 	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
 	PriorityClassNameShootControlPlane100 = "gardener-system-100"
 
-	// TechnicalIDPrefix is a prefix used for a shoot's technical id.
-	TechnicalIDPrefix = "shoot--"
+	// TechnicalIDPrefix is a prefix used for a shoot's technical id. For historic reasons, there is only one 'dash'
+	// while nowadays we always use two dashes after "shoot".
+	TechnicalIDPrefix = "shoot-"
 )

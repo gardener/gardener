@@ -16,6 +16,7 @@ package networkpolicy_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -35,6 +36,7 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -74,7 +76,12 @@ var _ = BeforeSuite(func() {
 
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
-		Environment: &envtest.Environment{},
+		Environment: &envtest.Environment{
+			CRDInstallOptions: envtest.CRDInstallOptions{
+				Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml")},
+			},
+			ErrorIfCRDPathMissing: true,
+		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
 		},
@@ -91,7 +98,10 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Create testClient")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	scheme := kubernetes.GardenScheme
+	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
+
+	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
@@ -99,7 +109,7 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
+		Scheme:             scheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
@@ -124,7 +134,7 @@ var _ = BeforeSuite(func() {
 			Nodes:      pointer.String("10.2.0.0/16"),
 			BlockCIDRs: []string{blockedCIDR},
 		},
-	}).AddToManager(mgr, mgr)).To(Succeed())
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

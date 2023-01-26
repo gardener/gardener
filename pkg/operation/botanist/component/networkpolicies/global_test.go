@@ -125,26 +125,3 @@ func constructNPAllowToAllShootAPIServers(namespace string, sniEnabled bool) *ne
 
 	return obj
 }
-
-func constructNPAllowToPrivateNetworks(namespace string, peers []networkingv1.NetworkPolicyPeer) *networkingv1.NetworkPolicy {
-	obj := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "allow-to-private-networks",
-			Namespace:   namespace,
-			Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-private-networks=allowed' to the Private networks (RFC1918), Carrier-grade NAT (RFC6598) except for (1) CloudProvider's specific metadata service IP, (2) Seed networks, (3) Shoot networks"},
-		},
-		Spec: networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"networking.gardener.cloud/to-private-networks": "allowed"},
-			},
-			Egress:      []networkingv1.NetworkPolicyEgressRule{{}},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-		},
-	}
-
-	if peers != nil {
-		obj.Spec.Egress[0].To = peers
-	}
-
-	return obj
-}

@@ -34,7 +34,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -232,7 +232,7 @@ var _ = Describe("Monitoring", func() {
 
 			secret := &corev1.Secret{}
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), secret)).To(Succeed())
-			Expect(secret.Annotations).To(HaveKeyWithValue("url", "https://gu-foo--bar."))
+			Expect(secret.Annotations).To(HaveKeyWithValue("url", "https://gu--foo--bar."))
 			Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "monitoring"))
 			Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
 		})

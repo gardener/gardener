@@ -49,19 +49,6 @@ var _ = Describe("Networkpolicies", func() {
 		serviceCIDRSeed = "192.168.0.1/24"
 		nodeCIDRSeed    = "10.224.0.0/16"
 		blockCIDRs      = []string{"10.250.10.250/32"}
-
-		defaultExpectedShootNetworkPeers = []interface{}{
-			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-				CIDR:   "10.0.0.0/8",
-				Except: []string{podCIDRSeed},
-			}},
-			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
-			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-				CIDR:   "192.168.0.0/16",
-				Except: []string{serviceCIDRSeed},
-			}},
-			networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "100.64.0.0/10"}},
-		}
 	)
 
 	BeforeEach(func() {
@@ -115,7 +102,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeFalse())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
 		),
 
@@ -138,21 +124,6 @@ var _ = Describe("Networkpolicies", func() {
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: podCIDRShoot}},
 					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/14"}},
 				))
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-						CIDR:   "10.0.0.0/8",
-						Except: append([]string{podCIDRSeed, nodeCIDRSeed}, blockCIDRs...),
-					}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-						CIDR:   "192.168.0.0/16",
-						Except: []string{serviceCIDRSeed},
-					}},
-					networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{
-						CIDR:   "100.64.0.0/10",
-						Except: nil,
-					}},
-				))
 			},
 		),
 
@@ -165,7 +136,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
 		),
 
@@ -178,7 +148,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
 		),
 
@@ -191,7 +160,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
 		),
 
@@ -204,7 +172,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(namespace).To(Equal(seedNamespace))
 				Expect(values.SNIEnabled).To(BeFalse())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 			},
 		),
 	)

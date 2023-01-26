@@ -27,8 +27,6 @@ import (
 type GlobalValues struct {
 	// SNIEnabled states whether the SNI for kube-apiservers of shoot clusters is enabled.
 	SNIEnabled bool
-	// PrivateNetworkPeers is the list of peers for the private networks.
-	PrivateNetworkPeers []networkingv1.NetworkPolicyPeer
 }
 
 type networkPolicyTransformer struct {
@@ -37,33 +35,7 @@ type networkPolicyTransformer struct {
 }
 
 func getGlobalNetworkPolicyTransformers(values GlobalValues, isShootNamespace bool) []networkPolicyTransformer {
-	result := []networkPolicyTransformer{
-		{
-			name: "allow-to-private-networks",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to the Private networks (RFC1918), Carrier-grade NAT (RFC6598) except for "+
-							"(1) CloudProvider's specific metadata service IP, (2) Seed networks, (3) Shoot networks",
-							v1beta1constants.LabelNetworkPolicyToPrivateNetworks, v1beta1constants.LabelNetworkPolicyAllowed),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-							},
-						},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: values.PrivateNetworkPeers,
-						}},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					}
-					return nil
-				}
-			},
-		},
-	}
+	var result []networkPolicyTransformer
 
 	if !isShootNamespace {
 		result = append(result,
