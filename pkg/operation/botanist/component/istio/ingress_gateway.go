@@ -80,7 +80,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			values["maxReplicas"] = *istioIngressGateway.MaxReplicas
 		}
 
-		renderedIngressChart, err := i.chartRenderer.RenderEmbeddedFS(chartIngress, chartPathIngress, ManagedResourceControlName, istioIngressGateway.Namespace, values)
+		renderedIngressChart, err := i.chartRenderer.RenderEmbeddedFS(chartIngress, chartPathIngress, releaseName, istioIngressGateway.Namespace, values)
 		if err != nil {
 			return nil, err
 		}

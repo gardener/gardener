@@ -41,10 +41,14 @@ import (
 const (
 	// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceControlName = "istio"
+	// ManagedResourceIstioSystemName is the name of the ManagedResource containing Istio-System resource specifications.
+	ManagedResourceIstioSystemName = "istio-system"
 
 	istiodServiceName            = "istiod"
 	istiodServicePortNameMetrics = "metrics"
 	portWebhookServer            = 10250
+
+	releaseName = "istio"
 )
 
 var (
@@ -97,27 +101,46 @@ func NewIstio(
 	}
 }
 
+func (i *istiod) deployIstiod(ctx context.Context) error {
+	if !i.values.Istiod.Enabled {
+		return nil
+	}
+
+	istiodNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: i.values.Istiod.Namespace}}
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, istiodNamespace, func() error {
+		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
+		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-injection", "disabled")
+		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioSystem)
+		metav1.SetMetaDataAnnotation(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(i.values.Istiod.Zones, ","))
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	renderedIstiodChart, err := i.generateIstiodChart(false)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceIstioSystemName, i.values.Suffix), false, renderedIstiodChart.AsSecretData())
+}
+
 func (i *istiod) Deploy(ctx context.Context) error {
-	var renderedIstiodChart = &chartrenderer.RenderedChart{}
+	if err := i.deployIstiod(ctx); err != nil {
+		return err
+	}
 
+	var renderedChart = &chartrenderer.RenderedChart{}
+
+	// TODO(timuthy): Block to be removed in a future version. Only required to move istiod assets to separate ManagedResource.
 	if i.values.Istiod.Enabled {
-		istiodNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: i.values.Istiod.Namespace}}
-		if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, istiodNamespace, func() error {
-			metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
-			metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-injection", "disabled")
-			metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-			metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioSystem)
-			metav1.SetMetaDataAnnotation(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(i.values.Istiod.Zones, ","))
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		var err error
-		renderedIstiodChart, err = i.generateIstiodChart()
+		renderedIstiodChartIgnore, err := i.generateIstiodChart(true)
 		if err != nil {
 			return err
 		}
+
+		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstiodChartIgnore.Manifests...)
 	}
 
 	// TODO(mvladev): Rotate this on every istio version upgrade.
@@ -169,8 +192,8 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		}
 	}
 
-	renderedChart := renderedIstiodChart
 	renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioIngressGatewayChart.Manifests...)
+
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	for _, transformer := range getIstioSystemNetworkPolicyTransformers() {
@@ -221,10 +244,9 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 func (i *istiod) Destroy(ctx context.Context) error {
 	if i.values.Istiod.Enabled {
-		if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.Suffix)); err != nil {
+		if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, ManagedResourceIstioSystemName); err != nil {
 			return err
 		}
-
 		if err := i.client.Delete(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: i.values.Istiod.Namespace,
@@ -232,6 +254,10 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
+	}
+
+	if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.Suffix)); err != nil {
+		return err
 	}
 
 	for _, istioIngressGateway := range i.values.IngressGateway {
@@ -265,8 +291,8 @@ func (i *istiod) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.values.Istiod.Namespace, ManagedResourceControlName)
 }
 
-func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
-	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, ManagedResourceControlName, i.values.Istiod.Namespace, map[string]interface{}{
+func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedChart, error) {
+	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, releaseName, i.values.Istiod.Namespace, map[string]interface{}{
 		"serviceName": istiodServiceName,
 		"trustDomain": i.values.Istiod.TrustDomain,
 		"labels": map[string]interface{}{
@@ -281,7 +307,8 @@ func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,
 		},
-		"image": i.values.Istiod.Image,
+		"image":      i.values.Istiod.Image,
+		"ignoreMode": ignoreMode,
 	})
 }
 

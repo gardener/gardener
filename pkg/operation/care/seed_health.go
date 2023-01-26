@@ -111,6 +111,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
 		managedResources = append(managedResources, istio.ManagedResourceControlName)
+		managedResources = append(managedResources, istio.ManagedResourceIstioSystemName)
 	}
 	if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
 		managedResources = append(managedResources, hvpa.ManagedResourceName)
@@ -127,7 +128,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 
 	for _, name := range managedResources {
 		namespace := v1beta1constants.GardenNamespace
-		if name == istio.ManagedResourceControlName {
+		if name == istio.ManagedResourceControlName || name == istio.ManagedResourceIstioSystemName {
 			namespace = v1beta1constants.IstioSystemNamespace
 		}
 		namespace = pointer.StringDeref(h.namespace, namespace)
