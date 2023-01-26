@@ -993,6 +993,10 @@ type KubeletConfig struct {
 	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
 	// +optional
 	CPUManagerPolicy *string `json:"cpuManagerPolicy,omitempty" protobuf:"bytes,3,opt,name=cpuManagerPolicy"`
+	// EnforceNodeAllocatable list of levels of node allocatable enforcement to be enforced by kubelet.
+	// +optional
+	// Default: {"pods"}
+	EnforceNodeAllocatable []string `json:"enforceNodeAllocatable,omitempty" protobuf:"bytes,26,rep,name=enforceNodeAllocatable"`
 	// EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.
 	// +optional
 	// Default:

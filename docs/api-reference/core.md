@@ -4891,6 +4891,19 @@ string
 </tr>
 <tr>
 <td>
+<code>enforceNodeAllocatable</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnforceNodeAllocatable list of levels of node allocatable enforcement to be enforced by kubelet.
+Default: {&ldquo;pods&rdquo;}</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>evictionHard</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.KubeletConfigEviction">

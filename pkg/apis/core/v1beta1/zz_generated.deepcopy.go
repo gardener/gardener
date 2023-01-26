@@ -1794,6 +1794,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.EnforceNodeAllocatable != nil {
+		in, out := &in.EnforceNodeAllocatable, &out.EnforceNodeAllocatable
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.EvictionHard != nil {
 		in, out := &in.EvictionHard, &out.EvictionHard
 		*out = new(KubeletConfigEviction)

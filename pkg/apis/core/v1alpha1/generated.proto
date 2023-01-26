@@ -1079,6 +1079,11 @@ message KubeletConfig {
   // +optional
   optional string cpuManagerPolicy = 3;
 
+  // EnforceNodeAllocatable list of levels of node allocatable enforcement to be enforced by kubelet.
+  // +optional
+  // Default: {"pods"}
+  repeated string enforceNodeAllocatable = 26;
+
   // EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.
   // +optional
   // Default:

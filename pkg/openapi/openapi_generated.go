@@ -3745,6 +3745,21 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"enforceNodeAllocatable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnforceNodeAllocatable list of levels of node allocatable enforcement to be enforced by kubelet. Default: {\"pods\"}",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 					"evictionHard": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction. Default:\n  memory.available:   \"100Mi/1Gi/5%\"\n  nodefs.available:   \"5%\"\n  nodefs.inodesFree:  \"5%\"\n  imagefs.available:  \"5%\"\n  imagefs.inodesFree: \"5%\"",
@@ -11186,6 +11201,21 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Description: "CPUManagerPolicy allows to set alternative CPU management policies (default: none).",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"enforceNodeAllocatable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnforceNodeAllocatable list of levels of node allocatable enforcement to be enforced by kubelet. Default: {\"pods\"}",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 					"evictionHard": {

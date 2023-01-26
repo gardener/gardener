@@ -21,6 +21,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Hibernation,Schedules
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeAPIServerConfig,APIAudiences
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeAPIServerConfig,AdmissionPlugins
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeletConfig,EnforceNodeAllocatable
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubernetesSettings,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,LastError,Codes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineControllerManagerSettings,NodeConditions
@@ -80,6 +81,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Hibernation,Schedules
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,APIAudiences
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,AdmissionPlugins
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,EnforceNodeAllocatable
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubernetesSettings,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,LastError,Codes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineControllerManagerSettings,NodeConditions

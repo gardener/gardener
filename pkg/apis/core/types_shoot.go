@@ -792,6 +792,9 @@ type KubeletConfig struct {
 	CPUCFSQuota *bool
 	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
 	CPUManagerPolicy *string
+	// EnforceNodeAllocatable list of levels of node allocatable enforcement to be enforced by kubelet.
+	// Default: {"pods"}
+	EnforceNodeAllocatable []string
 	// EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.
 	// Default:
 	//   memory.available:   "100Mi/1Gi/5%"
