@@ -114,11 +114,13 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 			Data: s.shootInfoData(),
 		}
 
-		port443                            = intstr.FromInt(kubeapiserver.Port)
-		port53                             = intstr.FromInt(53)
-		port8053                           = intstr.FromInt(coredns.PortServer)
-		protocolUDP                        = corev1.ProtocolUDP
-		protocolTCP                        = corev1.ProtocolTCP
+		port53      = intstr.FromInt(53)
+		port443     = intstr.FromInt(kubeapiserver.Port)
+		port8053    = intstr.FromInt(coredns.PortServer)
+		port10250   = intstr.FromInt(10250)
+		protocolUDP = corev1.ProtocolUDP
+		protocolTCP = corev1.ProtocolTCP
+
 		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud--allow-to-apiserver",
@@ -188,6 +190,22 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
+		networkPolicyAllowToKubelet = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--allow-to-kubelet",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to kubelet in TCP "+
+						"port 10250 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToKubelet,
+						v1beta1constants.LabelNetworkPolicyAllowed),
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToKubelet: v1beta1constants.LabelNetworkPolicyAllowed}},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port10250, Protocol: &protocolTCP}}}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			},
+		}
 	)
 
 	for _, name := range s.getServiceAccountNamesToInvalidate() {
@@ -211,6 +229,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		shootInfoConfigMap,
 		networkPolicyAllowToShootAPIServer,
 		networkPolicyAllowToDNS,
+		networkPolicyAllowToKubelet,
 	)
 }
 
