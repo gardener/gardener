@@ -32,6 +32,7 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-apiserver: allowed
         networking.gardener.cloud/from-seed: allowed
+        node.gardener.cloud/critical-component: "true"
     spec:
       serviceAccountName: apiserver-proxy
       priorityClassName: system-node-critical

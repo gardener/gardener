@@ -483,6 +483,7 @@ spec:
       labels:
         app: kubernetes
         gardener.cloud/role: system-component
+        node.gardener.cloud/critical-component: "true"
         origin: gardener
         pool: ` + pool.Name + `
         role: proxy

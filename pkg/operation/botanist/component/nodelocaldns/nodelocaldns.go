@@ -265,8 +265,9 @@ ip6.arpa:53 {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							labelKey:                                 nodelocaldnsconstants.LabelValue,
-							v1beta1constants.LabelNetworkPolicyToDNS: "allowed",
+							labelKey:                                    nodelocaldnsconstants.LabelValue,
+							v1beta1constants.LabelNetworkPolicyToDNS:    "allowed",
+							v1beta1constants.LabelNodeCriticalComponent: "true",
 						},
 						Annotations: map[string]string{
 							"prometheus.io/port":   strconv.Itoa(prometheusPort),
