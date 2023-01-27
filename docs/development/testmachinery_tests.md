@@ -171,7 +171,7 @@ It also contains functions to interact with gardener like `Waiting for a shoot t
 It expects a running shoot cluster defined by the shoot's name and namespace (project namespace).
 This framework contains functions to directly interact with the specific shoot.
 
-The whole framework also includes commonly used checks, ginkgo wrapper, etc. as well as commonly used tests.
+The whole framework also includes commonly used checks, ginkgo wrapper, etc., as well as commonly used tests.
 Theses common application tests (like the guestbook test) can be used within multiple tests to have a default application (with ingress, deployment, stateful backend) to test external factors.
 
 

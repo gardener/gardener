@@ -1,6 +1,6 @@
-# Contract: `Extension` resource
+# Contract: `Extension` Resource
 
-Gardener defines common procedures which must be passed to create a functioning shoot cluster. Well known steps are represented by special resources like `Infrastructure`, `OperatingSystemConfig` or `DNS`. These resources are typically reconciled by dedicated controllers setting up the infrastructure on the hyperscaler or managing DNS entries, etc..
+Gardener defines common procedures which must be passed to create a functioning shoot cluster. Well known steps are represented by special resources like `Infrastructure`, `OperatingSystemConfig` or `DNS`. These resources are typically reconciled by dedicated controllers setting up the infrastructure on the hyperscaler or managing DNS entries, etc.
 
 But, some requirements don't match with those special resources or don't depend on being proceeded at a specific step in the creation / deletion flow of the shoot. They require a more generic hook. Therefore, Gardener offers the `Extension` resource.
 
@@ -20,7 +20,7 @@ spec:
     globallyEnabled: true
 ```
 
-If `spec.resources[].globallyEnabled` is `true` then the `Extension` resources of the given `type` is created for every shoot cluster. Set to `false`, the `Extension` resource is only created if configured in the `Shoot` manifest.
+If `spec.resources[].globallyEnabled` is `true`, then the `Extension` resources of the given `type` is created for every shoot cluster. Set to `false`, the `Extension` resource is only created if configured in the `Shoot` manifest.
 
 The `Extension` resources are created in the shoot namespace of the seed cluster.
 
@@ -72,9 +72,9 @@ spec:
     foo: bar
 ```
 
-## Shoot reconciliation flow and Extension status
+## Shoot Reconciliation Flow and Extension Status
 
-Gardener creates Extension resources as part of the Shoot reconciliation. Moreover, it is guaranteed that the [Cluster](cluster.md) resource exists before the `Extension` resource is created. `Extension`s can be reconciled at different stages during Shoot reconciliation depending on the defined extension lifecycle strategy in the respective [ControllerRegistration](controllerregistration.md) resource. Please consult [this](controllerregistration.md#extension-lifecycle) section for more information.
+Gardener creates Extension resources as part of the Shoot reconciliation. Moreover, it is guaranteed that the [Cluster](cluster.md) resource exists before the `Extension` resource is created. `Extension`s can be reconciled at different stages during Shoot reconciliation depending on the defined extension lifecycle strategy in the respective [ControllerRegistration](controllerregistration.md) resource. Please consult the [Extension Lifecycle](controllerregistration.md#extension-lifecycle) section for more information.
 
 For an `Extension` controller it is crucial to maintain the `Extension`'s status correctly. At the end Gardener checks the status of each `Extension` and only reports a successful shoot reconciliation if the state of the last operation is `Succeeded`.
 

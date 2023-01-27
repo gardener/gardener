@@ -2,22 +2,22 @@
 title: ControlPlane Webhooks
 ---
 
-# Controlplane customization webhooks
+# ControlPlane Customization Webhooks
 
 Gardener creates the Shoot controlplane in several steps of the Shoot flow. At different point of this flow, it:
 
-* deploys standard controlplane components such as kube-apiserver, kube-controller-manager, and kube-scheduler by creating the corresponding deployments, services, and other resources in the Shoot namespace.
-* initiates the deployment of custom controlplane components by [ControlPlane controllers](controlplane.md) by creating a `ControlPlane` resource in the Shoot namespace.
+* Deploys standard controlplane components such as kube-apiserver, kube-controller-manager, and kube-scheduler by creating the corresponding deployments, services, and other resources in the Shoot namespace.
+* Initiates the deployment of custom controlplane components by [ControlPlane controllers](controlplane.md) by creating a `ControlPlane` resource in the Shoot namespace.
 
 In order to apply any provider-specific changes to the configuration provided by Gardener for the standard controlplane components, cloud extension providers can install mutating admission webhooks for the resources created by Gardener in the Shoot namespace.
 
 ## What needs to be implemented to support a new cloud provider?
 
-In order to support a new cloud provider you should install "controlplane" mutating webhooks for any of the following resources:
+In order to support a new cloud provider, you should install "controlplane" mutating webhooks for any of the following resources:
 
 * Deployment with name `kube-apiserver`, `kube-controller-manager`, or `kube-scheduler`
 * Service with name `kube-apiserver`
-* `OperatingSystemConfig` with any name and purpose `reconcile`
+* `OperatingSystemConfig` with any name, and purpose `reconcile`
 
 See [Contract Specification](#contract-specification) for more details on the contract that Gardener and webhooks should adhere to regarding the content of the above resources.
 
@@ -32,7 +32,7 @@ The labels `shoot.gardener.cloud/provider` and `seed.gardener.cloud/provider` ar
 
 This section specifies the contract that Gardener and webhooks should adhere to in order to ensure smooth interoperability. Note that this contract can't be specified formally and is therefore easy to violate, especially by Gardener. The Gardener team will nevertheless do its best to adhere to this contract in the future and to ensure via additional measures (tests, validations) that it's not unintentionally broken. If it needs to be changed intentionally, this can only happen after proper communication has taken place to ensure that the affected provider webhooks could be adapted to work with the new version of the contract.
 
-**Note:** The contract described below may not necessarily be what Gardener does currently (as of May 2019). Rather, it reflects the target state after changes for [Gardener extensibility](overview.md) have been introduced.
+> **Note:** The contract described below may not necessarily be what Gardener does currently (as of May 2019). Rather, it reflects the target state after changes for [Gardener extensibility](overview.md) have been introduced.
 
 ### kube-apiserver
 
@@ -70,7 +70,7 @@ The `volumes` field of the pod template of the `kube-apiserver` deployment, and 
 
 The `kube-apiserver` `Service` **may** be of type `LoadBalancer`, but **shall not** contain any provider-specific annotations that may be needed to actually provision a load balancer resource in the Seed provider's cloud. If any such annotations are needed, they should be added by webhooks (typically `controlplaneexposure` webhooks).
 
-The `kube-apiserver` `Service` **shall** be of type `ClusterIP`, if Gardener is using [SNI](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver (`APIServerSNI` feature gate). In this case, Gardener **shall** label this `Service` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label and expects that no mutations happen.
+The `kube-apiserver` `Service` **shall** be of type `ClusterIP` if Gardener is using [SNI](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver (`APIServerSNI` feature gate). In this case, Gardener **shall** label this `Service` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label and expects that no mutations happen.
 
 ### kube-controller-manager
 
@@ -134,7 +134,7 @@ Gardener **shall** configure the `Etcd` resource completely to set up an etcd cl
 
 Gardener **shall not** deploy a cloud-controller-manager. If it is needed, it should be added by a [`ControlPlane` controller](controlplane.md)
 
-### CSI controllers
+### CSI Controllers
 
 Gardener **shall not** deploy a CSI controller. If it is needed, it should be added by a [`ControlPlane` controller](controlplane.md)
 

@@ -139,7 +139,7 @@ The proposal section includes a detailed description of all steps involved for r
 
 - Generate `CA1`
 - Generate `CLIENT_CA1`
-- Update `kube-apiserver`, `kube-scheduler`, etc. to trust CLIENT CERTS signed by both `CA0` and `CLIENT_CA1` (`--client-ca-file` flag)
+- Update `kube-apiserver`, `kube-scheduler`, etc., to trust CLIENT CERTS signed by both `CA0` and `CLIENT_CA1` (`--client-ca-file` flag)
 - Update `kube-controller-manager` to issue new CLIENT CERTS now with `CLIENT_CA1`
 - Update kubeconfig so that its CA bundle contains both `CA0` and`CA1` (if kubeconfig still contains a legacy CLIENT CERT then rotate the kubeconfig)
 - Update `generic-token-kubeconfig` so that its CA bundle contains both `CA0` and`CA1`
@@ -156,7 +156,7 @@ The proposal section includes a detailed description of all steps involved for r
 Prerequisite: All Gardener-controlled actions listed in t1 were executed successfully (for example node rollout). The shoot owner has guaranteed that they exchanged their client credentials and triggered step 2 via an annotation.
 
 - Renew SERVER CERTS (sign them with `CA1`) for `kube-apiserver`, `kube-controller-manager`, `cloud-controller-manager` etc.
-- Update `kube-apiserver`, `kube-scheduler`, etc. to trust only CLIENT CERTS signed by `CLIENT_CA1`
+- Update `kube-apiserver`, `kube-scheduler`, etc., to trust only CLIENT CERTS signed by `CLIENT_CA1`
 - Update kubeconfig so that its CA bundle contains only `CA1`
 - Update `generic-token-kubeconfig` so that its CA bundle contains only `CA1`
 - Update `kube-controller-manager` to only contain CA1. `ServiceAccount` secrets created after this point will get secrets that include only `CA1`
@@ -209,9 +209,9 @@ This section presents a different approach to rotate the CAs which is to _tempor
 
 - Generate `CA1`
 - Generate `CLIENT_CA1`
-- Create new `DNSRecord`, `Service`, Istio configuration, etc. for second `kube-apiserver` deployment
+- Create new `DNSRecord`, `Service`, Istio configuration, etc., for second `kube-apiserver` deployment
 - Deploy second `kube-apiserver` deployment trusting only CLIENT CERTS signed by `CLIENT_CA1` and using SERVER CERT signed by `CA1`
-- Update `kube-scheduler`, etc. to trust only CLIENT CERTS signed by `CLIENT_CA1` (`--client-ca-file` flag)
+- Update `kube-scheduler`, etc., to trust only CLIENT CERTS signed by `CLIENT_CA1` (`--client-ca-file` flag)
 - Update `kube-controller-manager` to issue new CLIENT CERTS with `CLIENT_CA1`
 - Update kubeconfig so that it points to the new `DNSRecord` and its CA bundle contains only `CA1` (if kubeconfig still contains a legacy CLIENT CERT then rotate the kubeconfig)
 - Update `ServiceAccount` secrets so that their CA bundle contains both `CA0` and `CA1`

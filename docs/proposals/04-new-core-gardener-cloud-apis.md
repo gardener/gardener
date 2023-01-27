@@ -6,21 +6,22 @@ title: New Core Gardener Cloud APIs
 
 ## Table of Contents
 
-* [Table of Contents](#table-of-contents)
-* [Summary](#summary)
-* [Motivation](#motivation)
-    * [Goals](#goals)
-    * [Non-Goals](#non-goals)
-* [Proposal](#proposal)
-    * [`CloudProfile` resource](#cloudprofile-resource)
-    * [`Seed` resource](#seed-resource)
-    * [`Project` resource](#project-resource)
-    * [`SecretBinding` resource](#secretbinding-resource)
-    * [`Quota` resource](#quota-resource)
-    * [`BackupBucket` resource](#backupbucket-resource)
-    * [`BackupEntry` resource](#backupentry-resource)
-    * [`Shoot` resource](#shoot-resource)
-    * [`Plant` resource](#plant-resource)
+- [New `core.gardener.cloud/v1beta1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core](#new-coregardenercloudv1beta1-apis-required-to-extract-cloud-specificos-specific-knowledge-out-of-gardener-core)
+  - [Table of Contents](#table-of-contents)
+  - [Summary](#summary)
+  - [Motivation](#motivation)
+    - [Goals](#goals)
+    - [Non-Goals](#non-goals)
+  - [Proposal](#proposal)
+    - [`CloudProfile` resource](#cloudprofile-resource)
+    - [`Seed` resource](#seed-resource)
+    - [`Project` resource](#project-resource)
+    - [`SecretBinding` resource](#secretbinding-resource)
+    - [`Quota` resource](#quota-resource)
+    - [`BackupBucket` resource](#backupbucket-resource)
+    - [`BackupEntry` resource](#backupentry-resource)
+    - [`Shoot` resource](#shoot-resource)
+    - [`Plant` resource](#plant-resource)
 
 ## Summary
 
@@ -28,7 +29,7 @@ In [GEP-1](https://github.com/gardener/gardener/blob/master/docs/proposals/01-ex
 Meanwhile, we have progressed a lot and are about to remove the [`CloudBotanist` interface](https://github.com/gardener/gardener/blob/de75a5bfcbedd16ba341ace0eb58be2a87049dcb/pkg/operation/cloudbotanist/types.go) entirely.
 The only missing aspect that will allow providers to really maintain their code out of the core is to design new APIs.
 
-This proposal describes how the new `Shoot`, `Seed` etc. APIs will be re-designed to cope with the changes made with extensibility.
+This proposal describes how the new `Shoot`, `Seed`, etc., APIs will be re-designed to cope with the changes made with extensibility.
 We already have the new `core.gardener.cloud/v1beta1` API group that will be the new default soon.
 
 ## Motivation

@@ -1,7 +1,7 @@
 # Gardener Operator
 
 The `gardener-operator` is meant to be responsible for the garden cluster environment.
-Without this component, users must deploy ETCD, the Gardener control plane, etc. manually and with separate mechanisms (not maintained in this repository).
+Without this component, users must deploy ETCD, the Gardener control plane, etc., manually and with separate mechanisms (not maintained in this repository).
 This is quite unfortunate since this requires separate tooling, processes, etc.
 A lot of production- and enterprise-grade features were built into Gardener for managing the seed and shoot clusters, so it makes sense to re-use them as much as possible also for the garden cluster.
 

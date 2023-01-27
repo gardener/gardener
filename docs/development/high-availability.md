@@ -1,6 +1,6 @@
 # High Availability of Deployed Components
 
-`gardenlet`s and extension controllers are deploying components via `Deployment`s, `StatefulSet`s, etc. as part of the shoot control plane, or the seed or shoot system components.
+`gardenlet`s and extension controllers are deploying components via `Deployment`s, `StatefulSet`s, etc., as part of the shoot control plane, or the seed or shoot system components.
 
 Some of the above component deployments must be further tuned to improve fault tolerance / resilience of the service. This document outlines what needs to be done to achieve this goal.
 
@@ -21,7 +21,7 @@ spec:
     - europe-1c
 ```
 
-Independent of the number of zones, seed system components like the `gardenlet` or the extension controllers themselves, or others like `etcd-druid`, `dependency-watchdog`, etc. should always be running with multiple replicas.
+Independent of the number of zones, seed system components like the `gardenlet` or the extension controllers themselves, or others like `etcd-druid`, `dependency-watchdog`, etc., should always be running with multiple replicas.
 
 Concretely, all seed system components should respect the following conventions:
 

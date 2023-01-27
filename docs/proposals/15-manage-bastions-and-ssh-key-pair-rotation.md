@@ -27,7 +27,7 @@ reviewers:
     - [Limitations](#limitations)
 
 ## Motivation
-`gardenctl` (v1) has the functionality to setup `ssh` sessions to the targeted shoot cluster (nodes). To this end, infrastructure resources like VMs, public IPs, firewall rules, etc. have to be created. `gardenctl` will clean up the resources after termination of the `ssh` session (or rather when the operator is done with her work). However, there were issues in the past where these infrastructure resources were not properly cleaned up afterwards, e.g. due to some error (no retries either). Hence, the proposal is to have a dedicated controller (for each infrastructure) that manages the infrastructure resources and their cleanup. The current `gardenctl` also re-used the `ssh` node credentials for the bastion host. While that's possible, it would be safer to rather use personal or generated `ssh` key pairs to access the bastion host.
+`gardenctl` (v1) has the functionality to setup `ssh` sessions to the targeted shoot cluster (nodes). To this end, infrastructure resources like VMs, public IPs, firewall rules, etc., have to be created. `gardenctl` will clean up the resources after termination of the `ssh` session (or rather when the operator is done with her work). However, there were issues in the past where these infrastructure resources were not properly cleaned up afterwards, e.g. due to some error (no retries either). Hence, the proposal is to have a dedicated controller (for each infrastructure) that manages the infrastructure resources and their cleanup. The current `gardenctl` also re-used the `ssh` node credentials for the bastion host. While that's possible, it would be safer to rather use personal or generated `ssh` key pairs to access the bastion host.
 The static shoot-specific `ssh` key pair should be rotated regularly, e.g. once in the maintenance time window. This also means that we cannot create the node VMs anymore with infrastructure public keys as these cannot be revoked or rotated (e.g. in AWS) without terminating the VM itself.
 
 Changes to the `Bastion` resource should only be allowed for controllers on seeds that are responsible for it. This cannot be restricted when using custom resources.
@@ -208,7 +208,7 @@ status:
 Currently, the `ssh` key pair for the shoot nodes are created once during shoot cluster creation. These key pairs should be rotated on a regular basis.
 
 ### Rotation Proposal
-- `gardeneruser` original user data [component](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
+- `gardeneruser` original user data [component](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
     - The `gardeneruser` create script should be changed into a reconcile script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old `ssh` public key from the cloud-config user data.
 - Rotation trigger:
     - Once in the maintenance time window
@@ -223,7 +223,7 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
         - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates)
         - The `downloader` runs the ["execution" script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret
         - The "execution" script includes also the original user data script, which it writes to `PATH_CLOUDCONFIG`, compares it against the previous cloud config and runs the script in case it has changed
-        - Running the [original user data](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated
+        - Running the [original user data](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated
         - After the most recent cloud-config user data was applied, the "execution" script annotates the node with `checksum/cloud-config-data: <cloud-config-checksum>` to indicate the success
 
 ### Limitations

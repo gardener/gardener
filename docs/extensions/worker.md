@@ -1,17 +1,17 @@
-# Contract: `Worker` resource
+# Contract: `Worker` Resource
 
 While the control plane of a shoot cluster is living in the seed and deployed as native Kubernetes workload, the worker nodes of the shoot clusters are normal virtual machines (VMs) in the end-users infrastructure account.
 The Gardener project features a sub-project called [machine-controller-manager](https://github.com/gardener/machine-controller-manager).
 This controller is extending the Kubernetes API using custom resource definitions to represent actual VMs as `Machine` objects inside a Kubernetes system.
 This approach unlocks the possibility to manage virtual machines in the Kubernetes style and benefit from all its design principles.
 
-## What is the machine-controller-manager exactly doing?
+## What is the machine-controller-manager doing exactly?
 
 Generally, there are provider-specific `MachineClass` objects (`AWSMachineClass`, `AzureMachineClass`, etc.; similar to `StorageClass`), and `MachineDeployment`, `MachineSet`, and `Machine` objects (similar to `Deployment`, `ReplicaSet`, and `Pod`).
-A machine class describes **where** and **how** to create virtual machines (in which networks, region, availability zone, SSH key, user-data for bootstrapping, etc.) while a `Machine` results in an actual virtual machine.
+A machine class describes **where** and **how** to create virtual machines (in which networks, region, availability zone, SSH key, user-data for bootstrapping, etc.), while a `Machine` results in an actual virtual machine.
 You can read up [more information](https://github.com/gardener/machine-controller-manager) in the machine-controller-manager's [repository](https://github.com/gardener/machine-controller-manager).
 
-Before the introduction of the `Worker` extension resource Gardener was deploying the machine-controller-manager, the machine classes, and the machine deployments itself.
+Before the introduction of the `Worker` extension resource, Gardener was deploying the machine-controller-manager, the machine classes, and the machine deployments itself.
 Now, Gardener commissions an external, provider-specific controller to take over these tasks.
 
 ## What needs to be implemented to support a new worker provider?
@@ -100,9 +100,9 @@ spec:
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed virtual machines.
-Also, as you can see, Gardener copies the output of the infrastructure creation (`.spec.infrastructureProviderStatus`), see [`Infrastructure` resource](infrastructure.md), into the `.spec`.
+Also, as you can see, Gardener copies the output of the infrastructure creation (`.spec.infrastructureProviderStatus`, see [`Infrastructure` resource](infrastructure.md)), into the `.spec`.
 
-In the `.spec.pools[]` field the desired worker pools are listed.
+In the `.spec.pools[]` field, the desired worker pools are listed.
 In the above example, one pool with machine type `m4.large` and `min=3`, `max=5` machines shall be spread over two availability zones (`eu-west-1b`, `eu-west-1c`).
 This information together with the infrastructure status must be used to determine the proper configuration for the machine classes.
 
@@ -112,11 +112,11 @@ This makes sure that kubelet adds all user-specified and gardener-managed labels
 Nevertheless, this is only effective when bootstrapping new nodes.
 The provider extension (respectively, machine-controller-manager) is still responsible for updating the labels of existing `Nodes` when the worker specification changes.
 
-The `spec.pools[].nodeTemplate.capacity` field contains the resource information of the machine like `cpu`, `gpu` and `memory`. This info is used by Cluster Autoscaler to generate `nodeTemplate` during scaling the `nodeGroup` from zero.
+The `spec.pools[].nodeTemplate.capacity` field contains the resource information of the machine like `cpu`, `gpu`, and `memory`. This info is used by Cluster Autoscaler to generate `nodeTemplate` during scaling the `nodeGroup` from zero.
 
 The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
 
-When seeing such a resource your controller must make sure that it deploys the machine-controller-manager next to the control plane in the seed cluster.
+When seeing such a resource, your controller must make sure that it deploys the machine-controller-manager next to the control plane in the seed cluster.
 After that, it must compute the desired machine classes and the desired machine deployments.
 Typically, one class maps to one deployment, and one class/deployment is created per availability zone.
 Following this convention, the created resource would look like this:
@@ -261,11 +261,11 @@ Another convention is the 5-letter hash at the end of the machine class names.
 Most controllers compute a checksum out of the specification of the machine class.
 This helps to trigger a rolling update of the worker nodes if, for example, the machine image version changes.
 In this case, a new checksum will be generated which results in the creation of a new machine class.
-The `MachineDeployment`'s machine class reference (`.spec.template.spec.class.name`) is updated which triggers the rolling update process in the machine-controller-manager.
+The `MachineDeployment`'s machine class reference (`.spec.template.spec.class.name`) is updated, which triggers the rolling update process in the machine-controller-manager.
 However, all of this is only a convention that eases writing the controller, but you can do it completely differently if you desire - as long as you make sure that the described behaviours are implemented correctly.
 
-After the machine classes and machine deployments have been created the machine-controller-manager will start talking to the provider's IaaS API and create the virtual machines.
-Gardener makes sure that the content of the `userData` field that is used to bootstrap the machines contain the required configuration for installation of the kubelet and registering the VM as worker node in the shoot cluster.
+After the machine classes and machine deployments have been created, the machine-controller-manager will start talking to the provider's IaaS API and create the virtual machines.
+Gardener makes sure that the content of the `userData` field that is used to bootstrap the machines contains the required configuration for installation of the kubelet and registering the VM as worker node in the shoot cluster.
 The `Worker` extension controller shall wait until all the created `MachineDeployment`s indicate healthiness/readiness before it ends the control loop.
 
 ## Does Gardener need some information that must be returned back?
@@ -274,9 +274,9 @@ Another important benefit of the machine-controller-manager's design principles 
 We have forked the [upstream Kubernetes community's cluster-autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) and extended it so that it understands the machine API.
 Definitely, we will merge it back into the community's versions once it has been adapted properly.
 
-Our cluster-autoscaler only needs to know the minimum and maximum number of replicas **per** `MachineDeployment` and is ready to act without that it needs to talk to the provider APIs (it just modifies the `.spec.replicas` field in the `MachineDeployment` object).
+Our cluster-autoscaler only needs to know the minimum and maximum number of replicas **per** `MachineDeployment` and is ready to act. Without knowing that, it needs to talk to the provider APIs (it just modifies the `.spec.replicas` field in the `MachineDeployment` object).
 Gardener deploys this autoscaler if there is at least one worker pool that specifies `max>min`.
-In order to know how it needs to configure it, the provider-specific `Worker` extension controller must expose which `MachineDeployment`s it had created and how the `min`/`max` numbers should look like.
+In order to know how it needs to configure it, the provider-specific `Worker` extension controller must expose which `MachineDeployment`s it has created and how the `min`/`max` numbers should look like.
 
 Consequently, your controller should write this information into the `Worker` resource's `.status.machineDeployments` field:
 
@@ -300,14 +300,14 @@ status:
     maximum: 2
 ```
 
-In order to support a new worker provider you need to write a controller that watches all `Worker`s with `.spec.type=<my-provider-name>`.
+In order to support a new worker provider, you need to write a controller that watches all `Worker`s with `.spec.type=<my-provider-name>`.
 You can take a look at the below referenced example implementation for the AWS provider.
 
 ## That sounds like a lot that needs to be done, can you help me?
 
 All of the described behaviour is mostly the same for every provider.
 The only difference is maybe the version/configuration of the machine-controller-manager, and the machine class specification itself.
-You can take a look at our [extension library](https://github.com/gardener/gardener/blob/master/extensions), especially the [worker controller](https://github.com/gardener/gardener/tree/master/extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
+You can take a look at our [extension library](https://github.com/gardener/gardener/blob/master/extensions), especially the [worker controller](../../extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
 Also, using the library you only need to implement your provider specifics - all the things that can be handled generically can be taken for free and do not need to be re-implemented.
 Take a look at the [AWS worker controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker) for finding an example.
 
@@ -315,14 +315,14 @@ Take a look at the [AWS worker controller](https://github.com/gardener/gardener-
 
 All the providers require further information that is not provider specific but already part of the shoot resource.
 One example for such information is whether the shoot is hibernated or not.
-In this case all the virtual machines should be deleted/terminated, and after that the machine controller-manager should be scaled down.
+In this case, all the virtual machines should be deleted/terminated, and after that the machine controller-manager should be scaled down.
 You can take a look at the [AWS worker controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker) to see how it reads this information and how it is used.
-As Gardener cannot know which information is required by providers it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
+As Gardener cannot know which information is required by providers, it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
 They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `Worker` resource itself.
 
-## References and additional resources
+## References and Additional Resources
 
-* [`Worker` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_worker.go)
-* [Extension controller library](https://github.com/gardener/gardener/blob/master/extensions)
-* [Generic worker controller](https://github.com/gardener/gardener/tree/master/extensions/pkg/controller/worker)
-* [Exemplary implementation for the AWS provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker)
+* [`Worker` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_worker.go)
+* [Extension Controller Library](https://github.com/gardener/gardener/blob/master/extensions)
+* [Generic Worker Controller](../../extensions/pkg/controller/worker)
+* [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker)

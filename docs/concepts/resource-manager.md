@@ -203,8 +203,8 @@ This can be done from the components that create the managed resource secrets, f
 
 The objects which are part of the `ManagedResource` can be annotated with:
 
-- `resources.gardener.cloud/preserve-replicas=true` in case the `.spec.replicas` field of workload resources like `Deployment`s, `StatefulSet`s, etc. shall be preserved during updates.
-- `resources.gardener.cloud/preserve-resources=true` in case the `.spec.containers[*].resources` fields of all containers of workload resources like `Deployment`s, `StatefulSet`s, etc. shall be preserved during updates.
+- `resources.gardener.cloud/preserve-replicas=true` in case the `.spec.replicas` field of workload resources like `Deployment`s, `StatefulSet`s, etc., shall be preserved during updates.
+- `resources.gardener.cloud/preserve-resources=true` in case the `.spec.containers[*].resources` fields of all containers of workload resources like `Deployment`s, `StatefulSet`s, etc., shall be preserved during updates.
 
 > This can be useful if there are non-standard horizontal/vertical auto-scaling mechanisms in place.
 Standard mechanisms like `HorizontalPodAutoscaler` or `VerticalPodAutoscaler` will be auto-recognized by `gardener-resource-manager`, i.e., in such cases the annotations are not needed.

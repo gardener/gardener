@@ -1,4 +1,4 @@
-# Contributing to shoot health status conditions
+# Contributing to Shoot Health Status Conditions
 
 Gardener checks regularly (every minute by default) the health status of all shoot clusters.
 It categorizes its checks into four different types:
@@ -17,10 +17,10 @@ Now that the extensions deploy resources into the cluster, especially resources 
 ## What can extensions do to contribute to Gardener's health checks?
 
 Every extension resource in Gardener's `extensions.gardener.cloud/v1alpha1` API group also has a `status.conditions[]` list (like the `Shoot`).
-Extension controllers can write conditions to the resource they are acting on and use a type that also exist in the shoot's conditions.
-One exception is that `APIServerAvailable` can't be used as the Gardener clearly can identify the status of this condition and it doesn't make sense for extensions to try to contribute/modify it.
+Extension controllers can write conditions to the resource they are acting on and use a type that also exists in the shoot's conditions.
+One exception is that `APIServerAvailable` can't be used, as Gardener clearly can identify the status of this condition and it doesn't make sense for extensions to try to contribute/modify it.
 
-As an example for the `ControlPlane` controller let's take a look at the following resource:
+As an example for the `ControlPlane` controller, let's take a look at the following resource:
 
 ```yaml
 apiVersion: extensions.gardener.cloud/v1alpha1
@@ -49,7 +49,7 @@ status:
 The extension controller has declared in its extension resource that one of the deployments it is responsible for is unhealthy.
 Also, it has written a second condition using a type that is unknown by Gardener.
 
-Gardener will pick the list of conditions and recognize that the there is one with a type `ControlPlaneHealthy`.
+Gardener will pick the list of conditions and recognize that there is one with a type `ControlPlaneHealthy`.
 It will merge it with its own `ControlPlaneHealthy` condition and report it back to the `Shoot`'s status:
 
 ```yaml

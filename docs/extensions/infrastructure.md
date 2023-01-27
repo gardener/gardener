@@ -1,4 +1,4 @@
-# Contract: `Infrastructure` resource
+# Contract: `Infrastructure` Resource
 
 Every Kubernetes cluster requires some low-level infrastructure to be setup in order to work properly.
 Examples for that are networks, routing entries, security groups, IAM roles, etc.
@@ -49,7 +49,7 @@ Gardener does not evaluate it but just copies this part from what has been provi
 After your controller has created the required resources in your provider's infrastructure it needs to generate an output that can be used by other controllers in subsequent steps.
 An example for that is the `Worker` extension resource controller.
 It is responsible for creating virtual machines (shoot worker nodes) in this prepared infrastructure.
-Everything that it needs to know in order to do that (e.g., the network IDs, security group names, etc. (again: provider-specific)) needs to be provided as output in the `Infrastructure` resource:
+Everything that it needs to know in order to do that (e.g. the network IDs, security group names, etc. (again: provider-specific)) needs to be provided as output in the `Infrastructure` resource:
 
 ```yaml
 ---

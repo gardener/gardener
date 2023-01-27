@@ -706,7 +706,7 @@ We are now examining the current Shoot creation/reconciliation flow and describe
 | botanist.DeployClusterAutoscaler | Unchanged, Gardener deploys the cluster-autoscaler into the Seed. |
 
 :information: We can easily lift the contract later and allow dynamic network plugins or not using the VPN solution at all.
-We could also introduce a dedicated `ControlPlane` CRD and leave the complete responsibility of deploying kube-apiserver, kube-controller-manager, etc. to other controllers (if we need it at some point in time).
+We could also introduce a dedicated `ControlPlane` CRD and leave the complete responsibility of deploying kube-apiserver, kube-controller-manager, etc., to other controllers (if we need it at some point in time).
 
 #### Deletion flow
 

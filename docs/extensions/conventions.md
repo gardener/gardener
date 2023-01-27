@@ -1,6 +1,6 @@
-# General conventions
+# General Conventions
 
-All the extensions that are registered to Gardener are deployed to the seed clusters, on which they are required (also see [ControllerRegistration](controllerregistration.md)).
+All the extensions that are registered to Gardener are deployed to the seed clusters on which they are required (also see [ControllerRegistration](controllerregistration.md)).
 
 Some of these extensions might need to create global resources in the seed (e.g., `ClusterRole`s), i.e., it's important to have a naming scheme to avoid conflicts as it cannot be checked or validated upfront that two extensions don't use the same names.
 
@@ -11,18 +11,18 @@ Consequently, this page should help answering some general questions that might 
 Extensions are not supposed to create and use self-defined `PriorityClasses`.
 Instead, they can and should rely on well-known [`PriorityClasses`](../development/priority-classes.md) managed by gardenlet.
 
-## High Availability Of Deployed Components
+## High Availability of Deployed Components
 
-Extensions might deploy components via `Deployment`s, `StatefulSet`s, etc. as part of the shoot control plane, or the seed or shoot system components.
-In case a seed or shoot cluster is highly available, there are various failure tolerance types, see also [Highly Available Shoot Control Plane](../usage/shoot_high_availability.md).
+Extensions might deploy components via `Deployment`s, `StatefulSet`s, etc., as part of the shoot control plane, or the seed or shoot system components.
+In case a seed or shoot cluster is highly available, there are various failure tolerance types. For more information, see [Highly Available Shoot Control Plane](../usage/shoot_high_availability.md).
 Accordingly, the `replicas`, `topologySpreadConstraints` or `affinity` settings of the deployed components might need to be adapted.
 
 Instead of doing this one-by-one for each and every component, extensions can rely on a mutating webhook provided by Gardener.
-Please refer to [this document](../development/high-availability.md) for details.
+Please refer to [High Availability of Deployed Components](../development/high-availability.md) for details.
 
 ## Is there a naming scheme for (global) resources?
 
-As there is no formal process to validate non-existence of conflicts between two extensions please follow these naming schemes when creating resources (especially, when creating global resources, but it's in general a good idea for most created resources):
+As there is no formal process to validate non-existence of conflicts between two extensions, please follow these naming schemes when creating resources (especially, when creating global resources, but it's in general a good idea for most created resources):
 
 *The resource name should be prefixed with `extensions.gardener.cloud:<extension-type>-<extension-name>:<resource-name>`*, for example:
 
@@ -35,9 +35,9 @@ Some extensions might not only create resources in the seed cluster itself but a
 However, there are no credentials for the shoot for every extension.
 
 Extensions are supposed to use [`ManagedResources`](../concepts/resource-manager.md#ManagedResource-controller) to manage resources in shoot clusters.
-gardenlet deploys gardener-resource-manager instances into all shoot control planes, that will reconcile `ManagedResources` without a specified class (`spec.class=null`) in shoot clusters. Mind that Gardener acts on `ManagedResources` with the `origin=gardener` label. In order to prevent unwanted behavior extensions should omit the `origin` label or provide their own unique value for it when creating such resources.
+gardenlet deploys gardener-resource-manager instances into all shoot control planes, that will reconcile `ManagedResources` without a specified class (`spec.class=null`) in shoot clusters. Mind that Gardener acts on `ManagedResources` with the `origin=gardener` label. In order to prevent unwanted behavior, extensions should omit the `origin` label or provide their own unique value for it when creating such resources.
 
-If you need to deploy a non-DaemonSet resource, Gardener automatically ensures that it only runs on nodes that are allowed to host system components and extensions, see [System Components Webhook](../concepts/resource-manager.md#System-Components-Webhook) for more information.
+If you need to deploy a non-DaemonSet resource, Gardener automatically ensures that it only runs on nodes that are allowed to host system components and extensions. For more information, see [System Components Webhook](../concepts/resource-manager.md#System-Components-Webhook).
 
 ## How to create kubeconfigs for the shoot cluster?
 
@@ -50,7 +50,7 @@ With [GEP-18](../proposals/18-shoot-CA-rotation.md) (Shoot cluster CA rotation),
 With this, extensions cannot reuse the `ca` secret anymore to issue client certificates.
 Hence, extensions must switch to short-lived `ServiceAccount` tokens in order to support the CA rotation feature.
 
-The `generic-token-kubeconfig` secret contains the CA bundle for establishing trust to shoot API servers. However, as the secret is immutable its name changes with the rotation of the cluster CA.
+The `generic-token-kubeconfig` secret contains the CA bundle for establishing trust to shoot API servers. However, as the secret is immutable, its name changes with the rotation of the cluster CA.
 Extensions need to look up the `generic-token-kubeconfig.secret.gardener.cloud/name` annotation on the respective [`Cluster`](./cluster.md) object in order to determine which secret contains the current CA bundle.
 The helper function `extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster` can be used for this task.
 
@@ -63,4 +63,4 @@ For example, the shoot's etcd has its own CA, the kube-aggregator has its own CA
 
 With [GEP-18](../proposals/18-shoot-CA-rotation.md) (Shoot cluster CA rotation), extensions are required to do the same and generate dedicated CAs for their components (e.g. for signing a server certificate for cloud-controller-manager). They must not depend on the CA secrets managed by gardenlet.
 
-Please see [CA Rotation in Extensions](./ca-rotation.md) for the exact requirements, that extensions need to fulfill in order to support the CA rotation feature.
+Please see [CA Rotation in Extensions](./ca-rotation.md) for the exact requirements that extensions need to fulfill in order to support the CA rotation feature.

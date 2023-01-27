@@ -1,11 +1,11 @@
-# Extending project roles
+# Extending Project Roles
 
 The `Project` resource allows to specify a list of roles for every member (`.spec.members[*].roles`).
 There are a few standard roles defined by Gardener itself.
-Please consult [this document](../usage/projects.md) for further information.
+Please consult [Projects](../usage/projects.md) for further information.
 
 However, extension controllers running in the garden cluster may also create `CustomResourceDefinition`s that project members might be able to CRUD.
-For this purpose Gardener also allows to specify extension roles.
+For this purpose, Gardener also allows to specify extension roles.
 
 An extension role is prefixed with `extension:`, e.g.
 
@@ -25,10 +25,10 @@ spec:
     - extension:foo
 ```
 
-The project controller will, for every extension role, create a `ClusterRole` with name `gardener.cloud:extension:project:<projectName>:<roleName>`, i.e., for above example: `gardener.cloud:extension:project:dev:foo`.
+The project controller will, for every extension role, create a `ClusterRole` with name `gardener.cloud:extension:project:<projectName>:<roleName>`, i.e., for the above example: `gardener.cloud:extension:project:dev:foo`.
 This `ClusterRole` aggregates other `ClusterRole`s that are labeled with `rbac.gardener.cloud/aggregate-to-extension-role=foo` which might be created by extension controllers.
 
-Extension that might want to contribute to the core `admin` or `viewer` roles can use the labels `rbac.gardener.cloud/aggregate-to-project-member=true` or `rbac.gardener.cloud/aggregate-to-project-viewer=true`, respectively.
+An extension that might want to contribute to the core `admin` or `viewer` roles can use the labels `rbac.gardener.cloud/aggregate-to-project-member=true` or `rbac.gardener.cloud/aggregate-to-project-viewer=true`, respectively.
 
 Please note that the names of the extension roles are restricted to 20 characters!
 

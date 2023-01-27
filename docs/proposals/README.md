@@ -14,7 +14,7 @@ You may consider filing a GEP for the following reasons:
 -	A phased implementation approach is expected because of the widespread scope of the change
 -	Your proposed changes may be controversial
 
-We encourage you to take a look at already merged [GEPs]( https://github.com/gardener/gardener/tree/master/docs/proposals) since they give you a sense of what a typical GEP comprises.
+We encourage you to take a look at already merged [GEPs](https://github.com/gardener/gardener/tree/master/docs/proposals) since they give you a sense of what a typical GEP comprises.
 
 ## Before creating a GEP
 

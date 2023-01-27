@@ -1,4 +1,4 @@
-# Deploy resources to the Shoot cluster
+# Deploy Resources to the Shoot Cluster
 
 We have introduced a component called [`gardener-resource-manager`](../concepts/resource-manager.md) that is deployed as part of every shoot control plane in the seed.
 One of its tasks is to manage CRDs, so called `ManagedResource`s.
