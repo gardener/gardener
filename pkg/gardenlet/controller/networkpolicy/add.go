@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
@@ -126,19 +127,22 @@ func (r *Reconciler) NetworkPolicyPredicate() predicate.Predicate {
 
 // MapToNamespaces is a mapper function which returns requests for all shoot namespaces + garden namespace + istio-system namespace.
 func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	namespaceNames := sets.NewString()
-
+	var selectors []labels.Selector
 	for _, config := range r.networkPolicyConfigs() {
-		for _, selector := range config.namespaceSelectors {
-			namespaceList := &corev1.NamespaceList{}
-			if err := r.RuntimeClient.List(ctx, namespaceList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
-				log.Error(err, "Unable to list namespaces", "selector", selector)
-				return nil
-			}
+		selectors = append(selectors, config.namespaceSelectors...)
+	}
 
-			for _, namespace := range namespaceList.Items {
-				namespaceNames.Insert(namespace.Name)
-			}
+	namespaceList := &corev1.NamespaceList{}
+	if err := r.RuntimeClient.List(ctx, namespaceList); err != nil {
+		log.Error(err, "Unable to list all namespaces")
+		return nil
+	}
+
+	namespaceNames := sets.NewString()
+	for _, namespace := range namespaceList.Items {
+		if labelsMatchAnySelector(namespace.Labels, selectors) {
+			namespaceNames.Insert(namespace.Name)
+			continue
 		}
 	}
 
