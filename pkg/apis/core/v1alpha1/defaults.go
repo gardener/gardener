@@ -60,10 +60,6 @@ func SetDefaults_Seed(obj *Seed) {
 		obj.Spec.Settings.Scheduling = &SeedSettingScheduling{Visible: true}
 	}
 
-	if obj.Spec.Settings.ShootDNS == nil {
-		obj.Spec.Settings.ShootDNS = &SeedSettingShootDNS{Enabled: true}
-	}
-
 	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}

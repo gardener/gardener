@@ -206,10 +206,6 @@ type SeedSettings struct {
 	ExcessCapacityReservation *SeedSettingExcessCapacityReservation
 	// Scheduling controls settings for scheduling decisions for the seed.
 	Scheduling *SeedSettingScheduling
-	// ShootDNS controls the shoot DNS settings for the seed.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
-	// TODO(acumino) : Remove this field in gardener@v1.64
-	ShootDNS *SeedSettingShootDNS
 	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
 	LoadBalancerServices *SeedSettingLoadBalancerServices
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
@@ -224,14 +220,6 @@ type SeedSettings struct {
 // seed.
 type SeedSettingExcessCapacityReservation struct {
 	// Enabled controls whether the excess capacity reservation should be enabled.
-	Enabled bool
-}
-
-// SeedSettingShootDNS controls the shoot DNS settings for the seed.
-type SeedSettingShootDNS struct {
-	// Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the
-	// seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here.
-	// This is useful for environments where DNS is not required.
 	Enabled bool
 }
 
