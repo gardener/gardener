@@ -24,34 +24,9 @@ var NewNetworkPoliciesDeployer = networkpolicies.New
 
 // DefaultNetworkPolicies returns a deployer for the network policies that deny all traffic and allow certain components
 // to use annotations to declare their desire to transmit/receive traffic to/from other Pods/IP addresses.
-func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.Deployer, error) {
-	var shootCIDRNetworks []string
-	if v := b.Shoot.GetInfo().Spec.Networking.Nodes; v != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *v)
-	}
-	if v := b.Shoot.GetInfo().Spec.Networking.Pods; v != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *v)
-	}
-	if v := b.Shoot.GetInfo().Spec.Networking.Services; v != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *v)
-	}
-
-	shootNetworkPeers, err := networkpolicies.NetworkPolicyPeersWithExceptions(shootCIDRNetworks, b.Seed.GetInfo().Spec.Networks.BlockCIDRs...)
-	if err != nil {
-		return nil, err
-	}
-
+func (b *Botanist) DefaultNetworkPolicies() component.Deployer {
 	return NewNetworkPoliciesDeployer(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
-		networkpolicies.Values{
-			ShootNetworkPeers: shootNetworkPeers,
-			GlobalValues: networkpolicies.GlobalValues{
-				// Enable network policies for SNI
-				// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
-				// it needs to be ensured that the traffic from old clients can still reach the API server.
-				SNIEnabled: sniPhase == component.PhaseEnabled || sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling,
-			},
-		},
-	), nil
+	)
 }

@@ -435,6 +435,26 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		})
 	})
 
+	Describe("allow-to-shoot-networks", func() {
+		defaultTests(testAttributes{
+			networkPolicyName: "allow-to-shoot-networks",
+			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec {
+				return networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
+					PolicyTypes: []networkingv1.PolicyType{"Egress"},
+					Egress: []networkingv1.NetworkPolicyEgressRule{{
+						To: []networkingv1.NetworkPolicyPeer{
+							{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/18"}},
+							{IPBlock: &networkingv1.IPBlock{CIDR: "10.150.0.0/16"}},
+							{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/17"}},
+						}},
+					},
+				}
+			},
+			inShootNamespaces: true,
+		})
+	})
+
 	Describe("allow-to-blocked-cidrs", func() {
 		var (
 			networkPolicyName         = "allow-to-blocked-cidrs"

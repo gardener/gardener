@@ -23,13 +23,10 @@ import (
 	. "github.com/onsi/gomega"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("NetworkPolicies", func() {
@@ -41,13 +38,12 @@ var _ = Describe("NetworkPolicies", func() {
 		ctrl     *gomock.Controller
 		c        *mockclient.MockClient
 		deployer component.Deployer
-		values   Values
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		deployer = New(c, namespace, values)
+		deployer = New(c, namespace)
 	})
 
 	AfterEach(func() {
@@ -56,37 +52,12 @@ var _ = Describe("NetworkPolicies", func() {
 
 	Describe("#Deploy", func() {
 		It("should fail if any call fails", func() {
-			networkPolicy := constructNPAllowToShootNetworks(namespace, values.ShootNetworkPeers)
-
-			c.EXPECT().Get(ctx, kubernetesutils.Key(networkPolicy.Namespace, networkPolicy.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(fakeErr)
+			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}}).Return(fakeErr)
 
 			Expect(deployer.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("w/o any special configuration", func() {
-			expectGetUpdate(ctx, c, constructNPAllowToShootNetworks(namespace, values.ShootNetworkPeers))
-
-			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}})
-			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}})
-			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}})
-
-			Expect(deployer.Deploy(ctx)).To(Succeed())
-		})
-
-		It("w/ SNI enabled, w/ blocked addresses, w/ deny all, w/ private network peers, w/ shoot network peers", func() {
-			values = Values{
-				ShootNetworkPeers: []networkingv1.NetworkPolicyPeer{
-					{IPBlock: &networkingv1.IPBlock{CIDR: "1.2.3.4/5"}},
-					{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"shoot": "peers"}}},
-				},
-				GlobalValues: GlobalValues{
-					SNIEnabled: true,
-				},
-			}
-			deployer = New(c, namespace, values)
-
-			expectGetUpdate(ctx, c, constructNPAllowToShootNetworks(namespace, values.ShootNetworkPeers))
-
 			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}})
 			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}})
 			c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}})
@@ -98,7 +69,7 @@ var _ = Describe("NetworkPolicies", func() {
 	Describe("#Destroy", func() {
 		It("should fail if an object fails to delete", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-networks", Namespace: namespace}}).Return(fakeErr),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}}).Return(fakeErr),
 			)
 
 			Expect(deployer.Destroy(ctx)).To(MatchError(fakeErr))
@@ -106,7 +77,6 @@ var _ = Describe("NetworkPolicies", func() {
 
 		It("should successfully destroy all objects", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-networks", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: namespace}}),
@@ -116,34 +86,3 @@ var _ = Describe("NetworkPolicies", func() {
 		})
 	})
 })
-
-func constructNPAllowToShootNetworks(namespace string, peers []networkingv1.NetworkPolicyPeer) *networkingv1.NetworkPolicy {
-	obj := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "allow-to-shoot-networks",
-			Namespace:   namespace,
-			Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks=allowed' to IPv4 blocks belonging to the Shoot network. In practice, this should be used by components which use 'vpn-seed' to communicate to Pods in the Shoot cluster."},
-		},
-		Spec: networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"networking.gardener.cloud/to-shoot-networks": "allowed"},
-			},
-			Egress:      []networkingv1.NetworkPolicyEgressRule{{}},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-		},
-	}
-
-	if peers != nil {
-		obj.Spec.Egress[0].To = peers
-	}
-
-	return obj
-}
-
-func expectGetUpdate(ctx context.Context, c *mockclient.MockClient, expected *networkingv1.NetworkPolicy) {
-	c.EXPECT().Get(ctx, kubernetesutils.Key(expected.Namespace, expected.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
-	c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-		Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-			Expect(obj).To(DeepEqual(expected))
-		})
-}

@@ -197,10 +197,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
 	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
-	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
-	if err != nil {
-		return nil, err
-	}
+	o.Shoot.Components.NetworkPolicies = b.DefaultNetworkPolicies()
 	o.Shoot.Components.HVPA = hvpa.New(nil, b.Shoot.SeedNamespace, hvpa.Values{})
 
 	// Logging

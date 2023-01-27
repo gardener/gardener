@@ -34,137 +34,131 @@ type networkPolicyTransformer struct {
 	transform func(*networkingv1.NetworkPolicy) func() error
 }
 
-func getGlobalNetworkPolicyTransformers(values GlobalValues, isShootNamespace bool) []networkPolicyTransformer {
-	var result []networkPolicyTransformer
-
-	if !isShootNamespace {
-		result = append(result,
-			networkPolicyTransformer{
-				name: "allow-to-aggregate-prometheus",
-				transform: func(obj *networkingv1.NetworkPolicy) func() error {
-					return func() error {
-						obj.Annotations = map[string]string{
-							v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-								"'%s=%s' to the aggregate-prometheus.", v1beta1constants.LabelNetworkPolicyToAggregatePrometheus,
-								v1beta1constants.LabelNetworkPolicyAllowed),
-						}
-						obj.Spec = networkingv1.NetworkPolicySpec{
-							PodSelector: metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									v1beta1constants.LabelNetworkPolicyToAggregatePrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
-								},
-							},
-							Egress: []networkingv1.NetworkPolicyEgressRule{{
-								To: []networkingv1.NetworkPolicyPeer{{
-									NamespaceSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.LabelRole: v1beta1constants.GardenRoleGarden,
-										},
-									},
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.LabelApp:  "aggregate-prometheus",
-											v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
-										},
-									},
-								}},
-							}},
-							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						}
-						return nil
+func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTransformer {
+	return []networkPolicyTransformer{
+		{
+			name: "allow-to-aggregate-prometheus",
+			transform: func(obj *networkingv1.NetworkPolicy) func() error {
+				return func() error {
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to the aggregate-prometheus.", v1beta1constants.LabelNetworkPolicyToAggregatePrometheus,
+							v1beta1constants.LabelNetworkPolicyAllowed),
 					}
-				},
-			},
-
-			networkPolicyTransformer{
-				name: "allow-to-seed-prometheus",
-				transform: func(obj *networkingv1.NetworkPolicy) func() error {
-					return func() error {
-						obj.Annotations = map[string]string{
-							v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-								"'%s=%s' to the seed-prometheus.", v1beta1constants.LabelNetworkPolicyToSeedPrometheus,
-								v1beta1constants.LabelNetworkPolicyAllowed),
-						}
-						obj.Spec = networkingv1.NetworkPolicySpec{
-							PodSelector: metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									v1beta1constants.LabelNetworkPolicyToSeedPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
-								},
+					obj.Spec = networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelNetworkPolicyToAggregatePrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
 							},
-							Egress: []networkingv1.NetworkPolicyEgressRule{{
-								To: []networkingv1.NetworkPolicyPeer{{
-									NamespaceSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.LabelRole: v1beta1constants.GardenRoleGarden,
-										},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{{
+							To: []networkingv1.NetworkPolicyPeer{{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelRole: v1beta1constants.GardenRoleGarden,
 									},
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.LabelApp:  "seed-prometheus",
-											v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
-										},
-									},
-								}},
-							}},
-							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						}
-						return nil
-					}
-				},
-			},
-
-			networkPolicyTransformer{
-				name: "allow-to-all-shoot-apiservers",
-				transform: func(obj *networkingv1.NetworkPolicy) func() error {
-					return func() error {
-						obj.Annotations = map[string]string{
-							v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-								"'%s=%s' to all the shoot apiservers running in the seed cluster.",
-								v1beta1constants.LabelNetworkPolicyToAllShootAPIServers, v1beta1constants.LabelNetworkPolicyAllowed),
-						}
-						obj.Spec = networkingv1.NetworkPolicySpec{
-							PodSelector: metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									v1beta1constants.LabelNetworkPolicyToAllShootAPIServers: v1beta1constants.LabelNetworkPolicyAllowed,
 								},
-							},
-							Egress: []networkingv1.NetworkPolicyEgressRule{{
-								To: []networkingv1.NetworkPolicyPeer{{
-									NamespaceSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-										},
-									},
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-											v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-											v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-										},
-									},
-								}},
-							}},
-							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						}
-
-						if values.SNIEnabled {
-							obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-								// we don't want to modify existing labels on the istio namespace
-								NamespaceSelector: &metav1.LabelSelector{},
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
+										v1beta1constants.LabelApp:  "aggregate-prometheus",
+										v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
 									},
 								},
-							})
-						}
-
-						return nil
+							}},
+						}},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 					}
-				},
+					return nil
+				}
 			},
-		)
-	}
+		},
 
-	return result
+		{
+			name: "allow-to-seed-prometheus",
+			transform: func(obj *networkingv1.NetworkPolicy) func() error {
+				return func() error {
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to the seed-prometheus.", v1beta1constants.LabelNetworkPolicyToSeedPrometheus,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					}
+					obj.Spec = networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelNetworkPolicyToSeedPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
+							},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{{
+							To: []networkingv1.NetworkPolicyPeer{{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelRole: v1beta1constants.GardenRoleGarden,
+									},
+								},
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelApp:  "seed-prometheus",
+										v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
+									},
+								},
+							}},
+						}},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+					}
+					return nil
+				}
+			},
+		},
+
+		{
+			name: "allow-to-all-shoot-apiservers",
+			transform: func(obj *networkingv1.NetworkPolicy) func() error {
+				return func() error {
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to all the shoot apiservers running in the seed cluster.",
+							v1beta1constants.LabelNetworkPolicyToAllShootAPIServers, v1beta1constants.LabelNetworkPolicyAllowed),
+					}
+					obj.Spec = networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelNetworkPolicyToAllShootAPIServers: v1beta1constants.LabelNetworkPolicyAllowed,
+							},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{{
+							To: []networkingv1.NetworkPolicyPeer{{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+									},
+								},
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
+									},
+								},
+							}},
+						}},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+					}
+
+					if values.SNIEnabled {
+						obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
+							// we don't want to modify existing labels on the istio namespace
+							NamespaceSelector: &metav1.LabelSelector{},
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
+								},
+							},
+						})
+					}
+
+					return nil
+				}
+			},
+		},
+	}
 }
