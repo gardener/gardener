@@ -39,7 +39,7 @@ The Gardener components, however, will be run as regular processes on your machi
 make kind-up KIND_ENV=local
 ```
 
-> If you want to setup a IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
+> If you want to setup an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
 
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
