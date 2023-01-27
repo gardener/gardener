@@ -2247,6 +2247,7 @@ spec:
 				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
 				HaveKeyWithValue("istio-injection", "disabled"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				HaveKeyWithValue("gardener.cloud/role", "istio-system"),
 			))
 			Expect(actualNS.Annotations).To(And(
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),

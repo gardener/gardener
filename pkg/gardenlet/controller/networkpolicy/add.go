@@ -142,7 +142,6 @@ func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ cli
 	for _, namespace := range namespaceList.Items {
 		if labelsMatchAnySelector(namespace.Labels, selectors) {
 			namespaceNames.Insert(namespace.Name)
-			continue
 		}
 	}
 
