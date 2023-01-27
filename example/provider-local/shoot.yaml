@@ -32,8 +32,7 @@ spec:
       maxSurge: 1
       maxUnavailable: 0
   kubernetes:
-    # TODO(ialidzhikov): Update to 1.26.0 after the merge of https://github.com/gardener/gardener/pull/7275.
-    version: 1.25.4
+    version: 1.26.0
     kubelet:
       seccompDefault: true
       serializeImagePulls: false
