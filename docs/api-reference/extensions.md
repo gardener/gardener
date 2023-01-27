@@ -1157,7 +1157,7 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
-<p>SecretRef is a reference to a secret that contains the actual result of the generated cloud config.</p>
+<p>SecretRef is a reference to a secret that contains the cloud provider credentials.</p>
 </td>
 </tr>
 <tr>
@@ -3212,7 +3212,7 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
-<p>SecretRef is a reference to a secret that contains the actual result of the generated cloud config.</p>
+<p>SecretRef is a reference to a secret that contains the cloud provider credentials.</p>
 </td>
 </tr>
 <tr>

@@ -73,7 +73,7 @@ type InfrastructureSpec struct {
 	DefaultSpec `json:",inline"`
 	// Region is the region of this infrastructure. This field is immutable.
 	Region string `json:"region"`
-	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
+	// SecretRef is a reference to a secret that contains the cloud provider credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// SSHPublicKey is the public SSH key that should be used with this infrastructure.
 	// +optional
