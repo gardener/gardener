@@ -1023,6 +1023,7 @@ build:
         - cmd/gardener-resource-manager/app/bootstrappers
         - cmd/utils
         - pkg/api/extensions
+        - pkg/api/indexer
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
