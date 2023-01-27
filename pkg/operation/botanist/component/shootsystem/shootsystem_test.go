@@ -302,6 +302,34 @@ metadata:
 				expectPriorityClasses(managedResourceSecret.Data)
 			})
 		})
+
+		Context("NetworkPolicies", func() {
+			networkPolicyToAPIServerYAML := `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows traffic to the API server in TCP port 443 for
+      pods labeled with 'networking.gardener.cloud/to-apiserver=allowed'.
+  creationTimestamp: null
+  name: gardener.cloud--allow-to-apiserver
+  namespace: kube-system
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-apiserver: allowed
+  policyTypes:
+  - Egress
+status: {}
+`
+
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-apiserver.yaml"])).To(Equal(networkPolicyToAPIServerYAML))
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {

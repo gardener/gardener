@@ -16,13 +16,16 @@ package shootsystem
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,6 +33,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -107,6 +111,25 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 			},
 			Data: s.shootInfoData(),
 		}
+
+		port443                            = intstr.FromInt(kubeapiserver.Port)
+		protocolTCP                        = corev1.ProtocolTCP
+		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--allow-to-apiserver",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows traffic to the API server in TCP "+
+						"port 443 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToAPIServer,
+						v1beta1constants.LabelNetworkPolicyAllowed),
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port443, Protocol: &protocolTCP}}}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			},
+		}
 	)
 
 	for _, name := range s.getServiceAccountNamesToInvalidate() {
@@ -128,6 +151,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 
 	return registry.AddAllAndSerialize(
 		shootInfoConfigMap,
+		networkPolicyAllowToShootAPIServer,
 	)
 }
 
