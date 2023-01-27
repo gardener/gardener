@@ -210,10 +210,10 @@ The `test-integration` make rule prepares the environment automatically by downl
 make test-integration
 ```
 
-If you want to run a specific set of integration tests, you can also execute them using `./hack/test-integration.sh` directly instead of using the `test-integration` rule. Prior to execution the `PATH` environment variable needs to be set to also included the `/hack/tools/bin` directory. For example:
+If you want to run a specific set of integration tests, you can also execute them using `./hack/test-integration.sh` directly instead of using the `test-integration` rule. Prior to execution, the `PATH` environment variable needs to be set to also included the tools binary directory. For example:
 
 ```bash
-export PATH=$PATH:$(pwd)/hack/tools/bin
+export PATH="$PATH:$PWD/hack/tools/bin"
 
 ./hack/test-integration.sh ./test/integration/resourcemanager/tokenrequestor
 ```
