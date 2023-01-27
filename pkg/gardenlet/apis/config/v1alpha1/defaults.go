@@ -177,8 +177,8 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ShootStateSync == nil {
 		obj.ShootStateSync = &ShootStateSyncControllerConfiguration{}
 	}
-	if obj.SeedAPIServerNetworkPolicy == nil {
-		obj.SeedAPIServerNetworkPolicy = &SeedAPIServerNetworkPolicyControllerConfiguration{}
+	if obj.NetworkPolicy == nil {
+		obj.NetworkPolicy = &NetworkPolicyControllerConfiguration{}
 	}
 	if obj.ManagedSeed == nil {
 		obj.ManagedSeed = &ManagedSeedControllerConfiguration{}
@@ -433,8 +433,8 @@ func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncContro
 	}
 }
 
-// SetDefaults_SeedAPIServerNetworkPolicyControllerConfiguration sets defaults for the seed apiserver endpoints controller.
-func SetDefaults_SeedAPIServerNetworkPolicyControllerConfiguration(obj *SeedAPIServerNetworkPolicyControllerConfiguration) {
+// SetDefaults_NetworkPolicyControllerConfiguration sets defaults for the seed apiserver endpoints controller.
+func SetDefaults_NetworkPolicyControllerConfiguration(obj *NetworkPolicyControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		// only use few workers for each seed, as the API server endpoints should stay the same most of the time.
 		v := 3

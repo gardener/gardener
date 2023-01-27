@@ -31,7 +31,7 @@ controllers:
     syncPeriod: 30s
   controllerInstallationRequired:
     concurrentSyncs: 1
-  seedAPIServerNetworkPolicy:
+  networkPolicy:
     concurrentSyncs: 5
   shoot:
     concurrentSyncs: 20

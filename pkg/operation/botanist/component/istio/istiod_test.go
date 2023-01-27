@@ -724,7 +724,7 @@ spec:
   template:
     metadata:
       labels:
-        networking.gardener.cloud/to-seed-apiserver: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
         app: istiod
         istio: pilot
         
@@ -2247,6 +2247,7 @@ spec:
 				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
 				HaveKeyWithValue("istio-injection", "disabled"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				HaveKeyWithValue("gardener.cloud/role", "istio-system"),
 			))
 			Expect(actualNS.Annotations).To(And(
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
@@ -2263,6 +2264,7 @@ spec:
 				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
 				HaveKeyWithValue("istio-injection", "disabled"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				HaveKeyWithValue("gardener.cloud/role", "istio-ingress"),
 			))
 			Expect(actualNS.Annotations).To(And(
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),

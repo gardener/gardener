@@ -192,9 +192,9 @@ type GardenletControllerConfiguration struct {
 	// ShootStateSync defines the configuration of the ShootState controller
 	// +optional
 	ShootStateSync *ShootStateSyncControllerConfiguration `json:"shootStateSync,omitempty"`
-	// SeedAPIServerNetworkPolicy defines the configuration of the SeedAPIServerNetworkPolicy controller
+	// NetworkPolicy defines the configuration of the NetworkPolicy controller
 	// +optional
-	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration `json:"seedAPIServerNetworkPolicy,omitempty"`
+	NetworkPolicy *NetworkPolicyControllerConfiguration `json:"networkPolicy,omitempty"`
 	// ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.
 	// +optional
 	ManagedSeed *ManagedSeedControllerConfiguration `json:"managedSeed,omitempty"`
@@ -431,9 +431,9 @@ type ShootStateSyncControllerConfiguration struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
-// SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
+// NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy
 // controller.
-type SeedAPIServerNetworkPolicyControllerConfiguration struct {
+type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`

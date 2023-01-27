@@ -304,6 +304,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*NetworkPolicyControllerConfiguration)(nil), (*config.NetworkPolicyControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_NetworkPolicyControllerConfiguration_To_config_NetworkPolicyControllerConfiguration(a.(*NetworkPolicyControllerConfiguration), b.(*config.NetworkPolicyControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.NetworkPolicyControllerConfiguration)(nil), (*NetworkPolicyControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_NetworkPolicyControllerConfiguration_To_v1alpha1_NetworkPolicyControllerConfiguration(a.(*config.NetworkPolicyControllerConfiguration), b.(*NetworkPolicyControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*RemoteWriteMonitoringConfig)(nil), (*config.RemoteWriteMonitoringConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_RemoteWriteMonitoringConfig_To_config_RemoteWriteMonitoringConfig(a.(*RemoteWriteMonitoringConfig), b.(*config.RemoteWriteMonitoringConfig), scope)
 	}); err != nil {
@@ -341,16 +351,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.SNIIngress)(nil), (*SNIIngress)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_SNIIngress_To_v1alpha1_SNIIngress(a.(*config.SNIIngress), b.(*SNIIngress), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*SeedAPIServerNetworkPolicyControllerConfiguration)(nil), (*config.SeedAPIServerNetworkPolicyControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration_To_config_SeedAPIServerNetworkPolicyControllerConfiguration(a.(*SeedAPIServerNetworkPolicyControllerConfiguration), b.(*config.SeedAPIServerNetworkPolicyControllerConfiguration), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*config.SeedAPIServerNetworkPolicyControllerConfiguration)(nil), (*SeedAPIServerNetworkPolicyControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_SeedAPIServerNetworkPolicyControllerConfiguration_To_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration(a.(*config.SeedAPIServerNetworkPolicyControllerConfiguration), b.(*SeedAPIServerNetworkPolicyControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -1109,7 +1109,7 @@ func autoConvert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletCo
 	out.ShootCare = (*config.ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
 	out.ShootMigration = (*config.ShootMigrationControllerConfiguration)(unsafe.Pointer(in.ShootMigration))
 	out.ShootStateSync = (*config.ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
-	out.SeedAPIServerNetworkPolicy = (*config.SeedAPIServerNetworkPolicyControllerConfiguration)(unsafe.Pointer(in.SeedAPIServerNetworkPolicy))
+	out.NetworkPolicy = (*config.NetworkPolicyControllerConfiguration)(unsafe.Pointer(in.NetworkPolicy))
 	out.ManagedSeed = (*config.ManagedSeedControllerConfiguration)(unsafe.Pointer(in.ManagedSeed))
 	out.ShootSecret = (*config.ShootSecretControllerConfiguration)(unsafe.Pointer(in.ShootSecret))
 	return nil
@@ -1134,7 +1134,7 @@ func autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletCo
 	out.ShootCare = (*ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
 	out.ShootMigration = (*ShootMigrationControllerConfiguration)(unsafe.Pointer(in.ShootMigration))
 	out.ShootStateSync = (*ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
-	out.SeedAPIServerNetworkPolicy = (*SeedAPIServerNetworkPolicyControllerConfiguration)(unsafe.Pointer(in.SeedAPIServerNetworkPolicy))
+	out.NetworkPolicy = (*NetworkPolicyControllerConfiguration)(unsafe.Pointer(in.NetworkPolicy))
 	out.ManagedSeed = (*ManagedSeedControllerConfiguration)(unsafe.Pointer(in.ManagedSeed))
 	out.ShootSecret = (*ShootSecretControllerConfiguration)(unsafe.Pointer(in.ShootSecret))
 	return nil
@@ -1287,6 +1287,26 @@ func Convert_config_MonitoringConfig_To_v1alpha1_MonitoringConfig(in *config.Mon
 	return autoConvert_config_MonitoringConfig_To_v1alpha1_MonitoringConfig(in, out, s)
 }
 
+func autoConvert_v1alpha1_NetworkPolicyControllerConfiguration_To_config_NetworkPolicyControllerConfiguration(in *NetworkPolicyControllerConfiguration, out *config.NetworkPolicyControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_v1alpha1_NetworkPolicyControllerConfiguration_To_config_NetworkPolicyControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_NetworkPolicyControllerConfiguration_To_config_NetworkPolicyControllerConfiguration(in *NetworkPolicyControllerConfiguration, out *config.NetworkPolicyControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_NetworkPolicyControllerConfiguration_To_config_NetworkPolicyControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_NetworkPolicyControllerConfiguration_To_v1alpha1_NetworkPolicyControllerConfiguration(in *config.NetworkPolicyControllerConfiguration, out *NetworkPolicyControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_config_NetworkPolicyControllerConfiguration_To_v1alpha1_NetworkPolicyControllerConfiguration is an autogenerated conversion function.
+func Convert_config_NetworkPolicyControllerConfiguration_To_v1alpha1_NetworkPolicyControllerConfiguration(in *config.NetworkPolicyControllerConfiguration, out *NetworkPolicyControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_NetworkPolicyControllerConfiguration_To_v1alpha1_NetworkPolicyControllerConfiguration(in, out, s)
+}
+
 func autoConvert_v1alpha1_RemoteWriteMonitoringConfig_To_config_RemoteWriteMonitoringConfig(in *RemoteWriteMonitoringConfig, out *config.RemoteWriteMonitoringConfig, s conversion.Scope) error {
 	out.URL = in.URL
 	out.Keep = *(*[]string)(unsafe.Pointer(&in.Keep))
@@ -1377,26 +1397,6 @@ func autoConvert_config_SNIIngress_To_v1alpha1_SNIIngress(in *config.SNIIngress,
 // Convert_config_SNIIngress_To_v1alpha1_SNIIngress is an autogenerated conversion function.
 func Convert_config_SNIIngress_To_v1alpha1_SNIIngress(in *config.SNIIngress, out *SNIIngress, s conversion.Scope) error {
 	return autoConvert_config_SNIIngress_To_v1alpha1_SNIIngress(in, out, s)
-}
-
-func autoConvert_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration_To_config_SeedAPIServerNetworkPolicyControllerConfiguration(in *SeedAPIServerNetworkPolicyControllerConfiguration, out *config.SeedAPIServerNetworkPolicyControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	return nil
-}
-
-// Convert_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration_To_config_SeedAPIServerNetworkPolicyControllerConfiguration is an autogenerated conversion function.
-func Convert_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration_To_config_SeedAPIServerNetworkPolicyControllerConfiguration(in *SeedAPIServerNetworkPolicyControllerConfiguration, out *config.SeedAPIServerNetworkPolicyControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration_To_config_SeedAPIServerNetworkPolicyControllerConfiguration(in, out, s)
-}
-
-func autoConvert_config_SeedAPIServerNetworkPolicyControllerConfiguration_To_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration(in *config.SeedAPIServerNetworkPolicyControllerConfiguration, out *SeedAPIServerNetworkPolicyControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	return nil
-}
-
-// Convert_config_SeedAPIServerNetworkPolicyControllerConfiguration_To_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration is an autogenerated conversion function.
-func Convert_config_SeedAPIServerNetworkPolicyControllerConfiguration_To_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration(in *config.SeedAPIServerNetworkPolicyControllerConfiguration, out *SeedAPIServerNetworkPolicyControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_config_SeedAPIServerNetworkPolicyControllerConfiguration_To_v1alpha1_SeedAPIServerNetworkPolicyControllerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_SeedCareControllerConfiguration_To_config_SeedCareControllerConfiguration(in *SeedCareControllerConfiguration, out *config.SeedCareControllerConfiguration, s conversion.Scope) error {

@@ -28,10 +28,10 @@ This network policy is only useful if reversed vpn is disabled, as otherwise the
 The policy `allow-to-blocked-cidrs` allows pods with the label `networking.gardener.cloud/to-blocked-cidrs=allowed` to access IPs that are explicitly blocked for all control planes in a Seed cluster (configurable via `spec.networks.blockCIDRS`). 
 This is used for instance to block the cloud provider's metadata service.
 
-Another network policy to be highlighted is `allow-to-seed-apiserver`.
-Some components need access to the Seed API Server. This can be allowed by labeling the pod with `networking.gardener.cloud/to-seed-apiserver=allowed`.
+Another network policy to be highlighted is `allow-to-runtime-apiserver`.
+Some components need access to the Seed API Server. This can be allowed by labeling the pod with `networking.gardener.cloud/to-runtime-apiserver=allowed`.
 This policy allows exactly the IPs of the `kube-apiserver` of the Seed.
-While all other policies have a static set of permissions (do not change during the lifecycle of the Shoot), the policy `allow-to-seed-apiserver` is reconciled to reflect the endpoints in the `default` namespace.
+While all other policies have a static set of permissions (do not change during the lifecycle of the Shoot), the policy `allow-to-runtime-apiserver` is reconciled to reflect the endpoints in the `default` namespace.
 This is required because endpoint IPs are not necessarily stable (think of scaling the Seed API Server pods or hibernating the Seed cluster (acting as a managed seed) in a local development environment).
 
 Furthermore, the following network policies exist in the Shoot namespace.
@@ -108,7 +108,7 @@ allow-to-dns                      networking.gardener.cloud/to-dns=allowed
 allow-to-loki                     networking.gardener.cloud/to-loki=allowed                       
 allow-to-private-networks         networking.gardener.cloud/to-private-networks=allowed                    
 allow-to-public-networks          networking.gardener.cloud/to-public-networks=allowed                     
-allow-to-seed-apiserver           networking.gardener.cloud/to-seed-apiserver=allowed                      
+allow-to-runtime-apiserver        networking.gardener.cloud/to-runtime-apiserver=allowed                      
 deny-all                          networking.gardener.cloud/to-all=disallowed                              
 ```
 

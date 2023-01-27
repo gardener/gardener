@@ -843,7 +843,7 @@ func ComputeExpectedGardenletConfiguration(
 			ControllerInstallationRequired: &gardenletv1alpha1.ControllerInstallationRequiredControllerConfiguration{
 				ConcurrentSyncs: &one,
 			},
-			SeedAPIServerNetworkPolicy: &gardenletv1alpha1.SeedAPIServerNetworkPolicyControllerConfiguration{
+			NetworkPolicy: &gardenletv1alpha1.NetworkPolicyControllerConfiguration{
 				ConcurrentSyncs: &three,
 			},
 		},

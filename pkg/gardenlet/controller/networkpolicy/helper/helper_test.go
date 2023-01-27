@@ -15,25 +15,15 @@
 package helper_test
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("helper", func() {
@@ -243,148 +233,6 @@ var _ = Describe("helper", func() {
 				},
 			}
 			Expect(egressRules).To(Equal(expectedRules))
-		})
-	})
-
-	Describe("#EnsureNetworkPolicy", func() {
-		var (
-			ctrl              *gomock.Controller
-			mockRuntimeClient = mockclient.NewMockClient(ctrl)
-			ctx               = context.TODO()
-			tcp               = corev1.ProtocolTCP
-			port443           = intstr.FromInt(443)
-			namespace         = "shoot-ns"
-
-			expectedRules = []networkingv1.NetworkPolicyEgressRule{
-				{
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", "10.250.119.142"),
-							},
-						},
-					},
-				},
-				{
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Protocol: &tcp,
-							Port:     &port443,
-						},
-					},
-				},
-			}
-		)
-
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			mockRuntimeClient = mockclient.NewMockClient(ctrl)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		It("should create the allow-to-seed-apiserver Network Policy", func() {
-			mockRuntimeClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errors.NewNotFound(core.Resource("networkpolicy"), ""))
-			mockRuntimeClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
-				policy, ok := obj.(*networkingv1.NetworkPolicy)
-				Expect(ok).To(BeTrue())
-				Expect(policy.Annotations).To(HaveKeyWithValue("gardener.cloud/description", "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace."))
-				Expect(policy.Spec).To(Equal(networkingv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed},
-					},
-					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					Egress:      expectedRules,
-					Ingress:     []networkingv1.NetworkPolicyIngressRule{},
-				}))
-				return nil
-			})
-
-			err := EnsureNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("should update the allow-to-seed-apiserver Network Policy", func() {
-			mockRuntimeClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(nil)
-			mockRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-				DoAndReturn(func(_ context.Context, policy *networkingv1.NetworkPolicy, _ client.Patch, _ ...client.PatchOption) error {
-					Expect(policy.Annotations).To(HaveKeyWithValue("gardener.cloud/description", "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace."))
-					Expect(policy.Spec).To(Equal(networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						Egress:      expectedRules,
-						Ingress:     []networkingv1.NetworkPolicyIngressRule{},
-					}))
-					return nil
-				})
-
-			err := EnsureNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("#PolicyChanged", func() {
-		var (
-			defaultEgressRules   []networkingv1.NetworkPolicyEgressRule
-			defaultNetworkPolicy networkingv1.NetworkPolicy
-		)
-
-		BeforeEach(func() {
-			defaultEgressRules = []networkingv1.NetworkPolicyEgressRule{
-				{
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Protocol: (*corev1.Protocol)(pointer.String("TCP")),
-							Port: &intstr.IntOrString{
-								Type:   intstr.Int,
-								IntVal: 12345,
-							},
-						},
-					},
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-						},
-					},
-				},
-			}
-			defaultNetworkPolicy = networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "foo",
-					Name:      "bar",
-				},
-				Spec: networkingv1.NetworkPolicySpec{
-					Egress: defaultEgressRules,
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{"networking.gardener.cloud/to-seed-apiserver": "allowed"},
-					},
-					PolicyTypes: []networkingv1.PolicyType{"Egress"},
-				},
-			}
-		})
-
-		It("should return false if nothing changed", func() {
-			Expect(PolicyChanged(defaultNetworkPolicy.Spec, defaultEgressRules)).To(BeFalse())
-		})
-
-		It("should return true if EgressRules changed", func() {
-			defaultEgressRules = append(defaultEgressRules, networkingv1.NetworkPolicyEgressRule{
-				To: []networkingv1.NetworkPolicyPeer{
-					{
-						NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"bar": "foo"}},
-					},
-				},
-			})
-			Expect(PolicyChanged(defaultNetworkPolicy.Spec, defaultEgressRules)).To(BeTrue())
-		})
-
-		It("should return true if NetworkPolicy changed", func() {
-			defaultNetworkPolicy.Spec.PodSelector.MatchLabels["foo"] = "bar"
-			Expect(PolicyChanged(defaultNetworkPolicy.Spec, defaultEgressRules)).To(BeTrue())
 		})
 	})
 })

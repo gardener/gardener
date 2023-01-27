@@ -15,30 +15,17 @@
 package helper
 
 import (
-	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 )
-
-// AllowToSeedAPIServer is the name of the Network Policy that allows egress to the Seed's Kubernetes API Server
-// endpoints in the default namespace.
-const AllowToSeedAPIServer = "allow-to-seed-apiserver"
 
 // GetEgressRules creates Network Policy egress rules from endpoint subsets.
 func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPolicyEgressRule {
-	var (
-		egressRules = []networkingv1.NetworkPolicyEgressRule{}
-	)
+	var egressRules []networkingv1.NetworkPolicyEgressRule
 
 	for _, subset := range subsets {
 		egressRule := networkingv1.NetworkPolicyEgressRule{}
@@ -72,45 +59,4 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 	}
 
 	return egressRules
-}
-
-// EnsureNetworkPolicy ensures the Network Policy 'allow-to-seed-apiserver' in the given namespace
-func EnsureNetworkPolicy(ctx context.Context, seedClient client.Client, namespace string, egressRules []networkingv1.NetworkPolicyEgressRule) error {
-	policy := networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      AllowToSeedAPIServer,
-			Namespace: namespace,
-		},
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, &policy, func() error {
-		MutatePolicy(&policy, egressRules)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("failed to create / update NetworkPolicy %q in namespace %q: %w", AllowToSeedAPIServer, namespace, err)
-	}
-	return nil
-}
-
-// MutatePolicy mutates a given network policy with given egress rules
-func MutatePolicy(policy *networkingv1.NetworkPolicy, egressRules []networkingv1.NetworkPolicyEgressRule) {
-	policy.Annotations = map[string]string{
-		"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace.",
-	}
-
-	policy.Spec = networkingv1.NetworkPolicySpec{
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed},
-		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-		Egress:      egressRules,
-		Ingress:     []networkingv1.NetworkPolicyIngressRule{},
-	}
-}
-
-// PolicyChanged checks if egressRules will change the existing spec
-func PolicyChanged(existingSpec networkingv1.NetworkPolicySpec, egressRules []networkingv1.NetworkPolicyEgressRule) bool {
-	newPolicy := &networkingv1.NetworkPolicy{}
-	MutatePolicy(newPolicy, egressRules)
-	return !apiequality.Semantic.DeepEqual(existingSpec, newPolicy.Spec)
 }
