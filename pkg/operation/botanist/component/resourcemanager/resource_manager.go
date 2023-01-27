@@ -255,8 +255,6 @@ type Values struct {
 	MaxConcurrentTokenInvalidatorWorkers *int
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations
 	MaxConcurrentTokenRequestorWorkers *int
-	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
-	MaxConcurrentRootCAPublisherWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations
 	MaxConcurrentCSRApproverWorkers *int
 	// PriorityClassName is the name of the priority class.
@@ -569,19 +567,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		config.Webhooks.TokenInvalidator.Enabled = true
 		config.Controllers.TokenInvalidator.Enabled = true
 		config.Controllers.TokenInvalidator.ConcurrentSyncs = v
-	}
-
-	if v := r.values.MaxConcurrentRootCAPublisherWorkers; v != nil {
-		config.Controllers.RootCAPublisher.Enabled = true
-		config.Controllers.RootCAPublisher.ConcurrentSyncs = v
-
-		if r.values.TargetDiffersFromSourceCluster {
-			config.Controllers.RootCAPublisher.RootCAFile = pointer.String(volumeMountPathRootCA + "/" + secrets.DataKeyCertificateBundle)
-		} else {
-			// default to using the CA cert from the mounted service account. Relevant when source=target cluster.
-			// In this case, the CA cert of the source cluster is published.
-			config.Controllers.RootCAPublisher.RootCAFile = pointer.String(volumeMountPathAPIServerAccess + "/ca.crt")
-		}
 	}
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {

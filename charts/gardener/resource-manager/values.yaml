@@ -86,11 +86,6 @@ global:
         syncPeriod: 1m
         alwaysUpdate: false
         managedByLabelValue: gardener
-      rootCAPublisher:
-        enabled: false
-      # concurrentSyncs: 5
-      # rootCACertificate: |
-      #   some-tls-certificate
       secret:
         concurrentSyncs: 5
       tokenInvalidator:

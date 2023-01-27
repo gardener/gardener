@@ -54,10 +54,6 @@ controllers:
     syncPeriod: 1m
     alwaysUpdate: false
     managedByLabelValue: gardener
-  rootCAPublisher:
-    enabled: false
-    concurrentSyncs: 5
-#   rootCAFile: path/to/root/ca.crt
   secret:
     concurrentSyncs: 5
   tokenInvalidator:

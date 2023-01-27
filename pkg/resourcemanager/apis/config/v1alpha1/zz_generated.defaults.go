@@ -50,7 +50,6 @@ func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfigura
 	SetDefaults_GarbageCollectorControllerConfig(&in.Controllers.GarbageCollector)
 	SetDefaults_HealthControllerConfig(&in.Controllers.Health)
 	SetDefaults_ManagedResourceControllerConfig(&in.Controllers.ManagedResource)
-	SetDefaults_RootCAPublisherControllerConfig(&in.Controllers.RootCAPublisher)
 	SetDefaults_SecretControllerConfig(&in.Controllers.Secret)
 	SetDefaults_TokenInvalidatorControllerConfig(&in.Controllers.TokenInvalidator)
 	SetDefaults_TokenRequestorControllerConfig(&in.Controllers.TokenRequestor)

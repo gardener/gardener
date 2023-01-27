@@ -130,8 +130,6 @@ type ResourceManagerControllerConfiguration struct {
 	Health HealthControllerConfig `json:"health"`
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig `json:"managedResource"`
-	// RootCAPublisher is the configuration for the root-ca-publisher controller.
-	RootCAPublisher RootCAPublisherControllerConfig `json:"rootCAPublisher"`
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig `json:"secret"`
 	// TokenInvalidator is the configuration for the token-invalidator controller.
@@ -185,18 +183,6 @@ type ManagedResourceControllerConfig struct {
 	// Default: gardener
 	// +optional
 	ManagedByLabelValue *string `json:"managedByLabelValue,omitempty"`
-}
-
-// RootCAPublisherControllerConfig is the configuration for the root-ca-publisher controller.
-type RootCAPublisherControllerConfig struct {
-	// Enabled defines whether this controller is enabled.
-	Enabled bool `json:"enabled"`
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// RootCAFile is the path to a file containing the root CA.
-	// +optional
-	RootCAFile *string `json:"rootCAFile,omitempty"`
 }
 
 // SecretControllerConfig is the configuration for the secret controller.

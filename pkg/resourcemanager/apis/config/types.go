@@ -118,8 +118,6 @@ type ResourceManagerControllerConfiguration struct {
 	Health HealthControllerConfig
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig
-	// RootCAPublisher is the configuration for the root-ca-publisher controller.
-	RootCAPublisher RootCAPublisherControllerConfig
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig
 	// TokenInvalidator is the configuration for the token-invalidator controller.
@@ -165,16 +163,6 @@ type ManagedResourceControllerConfig struct {
 	// will have key `resources.gardener.cloud/managed-by`.
 	// Default: gardener
 	ManagedByLabelValue *string
-}
-
-// RootCAPublisherControllerConfig is the configuration for the root-ca-publisher controller.
-type RootCAPublisherControllerConfig struct {
-	// Enabled defines whether this controller is enabled.
-	Enabled bool
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	ConcurrentSyncs *int
-	// RootCAFile is the path to a file containing the root CA.
-	RootCAFile *string
 }
 
 // SecretControllerConfig is the configuration for the secret controller.

@@ -28,9 +28,6 @@ spec:
         {{- if and .Values.global.config.server.webhooks.certificate .Values.global.config.server.webhooks.privateKey }}
         checksum/secret-server-tls: {{ include (print $.Template.BasePath "/secret-server-tls.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
-        checksum/secret-root-ca: {{ include (print $.Template.BasePath "/secret-root-ca.yaml") . | sha256sum }}
-        {{- end }}
         {{- if .Values.global.podAnnotations }}
         {{ toYaml .Values.global.podAnnotations | indent 8 }}
         {{- end }}
@@ -100,10 +97,6 @@ spec:
         - name: tls
           mountPath: /etc/gardener-resource-manager/tls
 {{- end }}
-{{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
-        - name: root-ca
-          mountPath: /etc/gardener-resource-manager/root-ca-publisher
-{{- end }}
       volumes:
       - name: config
         configMap:
@@ -127,10 +120,4 @@ spec:
         secret:
           secretName: gardener-resource-manager-tls
           defaultMode: 420
-{{- end }}
-{{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
-      - name: root-ca
-          secret:
-            secretName: gardener-resource-manager-root-ca
-            defaultMode: 420
 {{- end }}

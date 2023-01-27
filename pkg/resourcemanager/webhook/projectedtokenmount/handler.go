@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -134,10 +133,10 @@ func getVolume(expirationSeconds int64) corev1.Volume {
 					{
 						ConfigMap: &corev1.ConfigMapProjection{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: rootcapublisher.RootCACertConfigMapName,
+								Name: "kube-root-ca.crt",
 							},
 							Items: []corev1.KeyToPath{{
-								Key:  rootcapublisher.RootCADataKey,
+								Key:  "ca.crt",
 								Path: "ca.crt",
 							}},
 						},
