@@ -65,9 +65,6 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
-
-	gardenNamespace      *corev1.Namespace
-	istioSystemNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
