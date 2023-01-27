@@ -282,7 +282,8 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 				Name:      "gardener.cloud--allow-vpn",
 				Namespace: metav1.NamespaceSystem,
 				Annotations: map[string]string{
-					v1beta1constants.GardenerDescription: "Allows the VPN to communicate with shoot components and makes the VPN reachable from the seed.",
+					v1beta1constants.GardenerDescription: "Allows the VPN to communicate with shoot components and makes " +
+						"the VPN reachable from the seed.",
 				},
 			},
 			Spec: networkingv1.NetworkPolicySpec{
@@ -297,15 +298,38 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
 		clusterRolePSP    *rbacv1.ClusterRole
 		roleBindingPSP    *rbacv1.RoleBinding
+
+		labels = map[string]string{
+			v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
+			v1beta1constants.LabelApp:       LabelValue,
+			managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+		}
+		template = v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth, secretDH)
+
+		networkPolicyFromSeed = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--allow-from-seed",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from the control plane to "+
+						"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootFromSeed, v1beta1constants.LabelNetworkPolicyAllowed),
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootFromSeed: v1beta1constants.LabelNetworkPolicyAllowed}},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{{
+					From: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{
+							MatchLabels: template.Labels,
+						},
+					}},
+				}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+			},
+		}
+		deploymentOrStatefulSet client.Object
 	)
 
-	labels := map[string]string{
-		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-		v1beta1constants.LabelApp:       LabelValue,
-		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
-	}
-	template := v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth, secretDH)
-	var deploymentOrStatefulSet client.Object
 	if !v.values.HighAvailabilityEnabled {
 		deploymentOrStatefulSet = v.deployment(labels, template)
 	} else {
@@ -435,10 +459,11 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		}
 	}
 
-	objects := []client.Object{}
+	var objects []client.Object
 	for _, item := range secretsVPNShoot {
 		objects = append(objects, item.secret)
 	}
+
 	if v.values.HighAvailabilityEnabled {
 		pdb, err := v.podDisruptionBudget()
 		if err != nil {
@@ -446,12 +471,14 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		}
 		objects = append(objects, pdb)
 	}
+
 	objects = append(objects,
 		secretCA,
 		secretTLSAuth,
 		secretDH,
 		serviceAccount,
 		networkPolicy,
+		networkPolicyFromSeed,
 		deploymentOrStatefulSet,
 		clusterRole,
 		clusterRoleBinding,
@@ -461,6 +488,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		clusterRolePSP,
 		roleBindingPSP,
 	)
+
 	return registry.AddAllAndSerialize(objects...)
 }
 
