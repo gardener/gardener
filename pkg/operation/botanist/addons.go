@@ -29,7 +29,6 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -140,24 +139,15 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
 	var (
-		kasFQDN           = b.outOfClusterAPIServerFQDN()
-		kubernetesVersion = b.Shoot.GetInfo().Spec.Kubernetes.Version
-		global            = map[string]interface{}{
-			"kubernetesVersion": kubernetesVersion,
-			"podNetwork":        b.Shoot.Networks.Pods.String(),
-			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
-			"pspDisabled":       b.Shoot.PSPDisabled,
+		global = map[string]interface{}{
+			"vpaEnabled":  b.Shoot.WantsVerticalPodAutoscaler,
+			"pspDisabled": b.Shoot.PSPDisabled,
 		}
-
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
 		}
-
 		nodeExporterConfig     = map[string]interface{}{}
 		blackboxExporterConfig = map[string]interface{}{}
-		networkPolicyConfig    = netpol.ShootNetworkPolicyValues{
-			Enabled: true,
-		}
 	)
 
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, images.ImageNameNodeExporter)
@@ -174,10 +164,10 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
-	apiserverProxyConfig := map[string]interface{}{
+	apiServerProxyConfig := map[string]interface{}{
 		"advertiseIPAddress": b.APIServerClusterIP,
 		"proxySeedServer": map[string]interface{}{
-			"host": kasFQDN,
+			"host": b.outOfClusterAPIServerFQDN(),
 			"port": "8443",
 		},
 		"webhook": map[string]interface{}{
@@ -186,21 +176,20 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 	}
 
-	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, images.ImageNameApiserverProxySidecar, images.ImageNameApiserverProxy)
+	apiServerProxy, err := b.InjectShootShootImages(apiServerProxyConfig, images.ImageNameApiserverProxySidecar, images.ImageNameApiserverProxy)
 	if err != nil {
 		return nil, err
 	}
 
 	values := map[string]interface{}{
 		"global":          global,
-		"apiserver-proxy": common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
+		"apiserver-proxy": common.GenerateAddonConfig(apiServerProxy, b.APIServerSNIEnabled()),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Operation.IsShootMonitoringEnabled()),
-		"network-policies":    networkPolicyConfig,
+		"network-policies":    common.GenerateAddonConfig(nil, true),
 		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled),
-		"cluster-identity":    map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
 
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
@@ -209,12 +198,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 // generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrenderer.RenderedChart, error) {
-	global := map[string]interface{}{
-		"vpaEnabled":  b.Shoot.WantsVerticalPodAutoscaler,
-		"pspDisabled": b.Shoot.PSPDisabled,
-	}
-
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
-		"global": global,
+		"global": map[string]interface{}{
+			"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
+		},
 	})
 }
