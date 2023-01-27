@@ -1,40 +1,8 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  annotations:
-    gardener.cloud/description: |
-      Allows Egress from pods labeled with 'networking.gardener.cloud/to-dns=allowed'
-      to DNS running in the 'kube-system' namespace.
   name: gardener.cloud--allow-to-dns
   namespace: kube-system
-  labels:
-    origin: gardener
-spec:
-  podSelector:
-    matchLabels:
-      networking.gardener.cloud/to-dns: allowed
-  policyTypes:
-  - Egress
-  egress:
-  - to:
-    - podSelector:
-        matchExpressions:
-        - {key: k8s-app, operator: In, values: [kube-dns]}
-    ports:
-    - protocol: UDP
-      port: 8053
-    - protocol: TCP
-      port: 8053
-  # this allows Pods with 'dnsPolicy: Default' to talk to
-  # the node's DNS provider.
-  - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - podSelector:
-        matchExpressions:
-        - {key: k8s-app, operator: In, values: [node-local-dns]}
-    ports:
-    - protocol: UDP
-      port: 53
-    - protocol: TCP
-      port: 53
+  annotations:
+    resources.gardener.cloud/mode: Ignore

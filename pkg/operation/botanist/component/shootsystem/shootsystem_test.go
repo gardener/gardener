@@ -304,7 +304,8 @@ metadata:
 		})
 
 		Context("NetworkPolicies", func() {
-			networkPolicyToAPIServerYAML := `apiVersion: networking.k8s.io/v1
+			var (
+				networkPolicyToAPIServer = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   annotations:
@@ -325,9 +326,55 @@ spec:
   - Egress
 status: {}
 `
+				networkPolicyToDNS = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress traffic from pods labeled with 'networking.gardener.cloud/to-dns=allowed'
+      to DNS running in the 'kube-system' namespace.
+  creationTimestamp: null
+  name: gardener.cloud--allow-to-dns
+  namespace: kube-system
+spec:
+  egress:
+  - ports:
+    - port: 8053
+      protocol: UDP
+    - port: 8053
+      protocol: TCP
+    to:
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - node-local-dns
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-dns: allowed
+  policyTypes:
+  - Egress
+status: {}
+`
+			)
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-apiserver.yaml"])).To(Equal(networkPolicyToAPIServerYAML))
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-apiserver.yaml"])).To(Equal(networkPolicyToAPIServer))
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-dns.yaml"])).To(Equal(networkPolicyToDNS))
 			})
 		})
 	})

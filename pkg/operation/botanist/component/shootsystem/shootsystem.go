@@ -33,7 +33,9 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -113,6 +115,9 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		port443                            = intstr.FromInt(kubeapiserver.Port)
+		port53                             = intstr.FromInt(53)
+		port8053                           = intstr.FromInt(coredns.PortServer)
+		protocolUDP                        = corev1.ProtocolUDP
 		protocolTCP                        = corev1.ProtocolTCP
 		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -128,6 +133,59 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
 				Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port443, Protocol: &protocolTCP}}}},
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			},
+		}
+		networkPolicyAllowToDNS = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--allow-to-dns",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic from pods labeled "+
+						"with '%s=%s' to DNS running in the '%s' namespace.", v1beta1constants.LabelNetworkPolicyToDNS,
+						v1beta1constants.LabelNetworkPolicyAllowed, metav1.NamespaceSystem),
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				Egress: []networkingv1.NetworkPolicyEgressRule{
+					{
+						To: []networkingv1.NetworkPolicyPeer{{
+							PodSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{{
+									Key:      coredns.LabelKey,
+									Operator: metav1.LabelSelectorOpIn,
+									Values:   []string{coredns.LabelValue},
+								}},
+							},
+						}},
+						Ports: []networkingv1.NetworkPolicyPort{
+							{Protocol: &protocolUDP, Port: &port8053},
+							{Protocol: &protocolTCP, Port: &port8053},
+						},
+					},
+					// this allows Pods with 'dnsPolicy: Default' to talk to the node's DNS provider.
+					{
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"},
+							},
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      coredns.LabelKey,
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{nodelocaldns.LabelValue},
+									}},
+								},
+							},
+						},
+						Ports: []networkingv1.NetworkPolicyPort{
+							{Protocol: &protocolUDP, Port: &port53},
+							{Protocol: &protocolTCP, Port: &port53},
+						},
+					},
+				},
 			},
 		}
 	)
@@ -152,6 +210,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 	return registry.AddAllAndSerialize(
 		shootInfoConfigMap,
 		networkPolicyAllowToShootAPIServer,
+		networkPolicyAllowToDNS,
 	)
 }
 
