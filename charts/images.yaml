@@ -142,10 +142,28 @@ images:
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
   tag: "1.10.0"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'protected'
+      authentication_enforced: false
+      user_interaction: 'end-user'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'high'
+      availability_requirement: 'high'
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: registry.k8s.io/dns/k8s-dns-node-cache
   tag: "1.22.15"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'end-user'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'high'
+      availability_requirement: 'high'
 - name: node-problem-detector
   sourceRepository: github.com/kubernetes/node-problem-detector
   repository: registry.k8s.io/node-problem-detector/node-problem-detector
@@ -423,10 +441,28 @@ images:
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
   tag: "1.15.3-distroless"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'public'
+      authentication_enforced: false
+      user_interaction: 'end-user'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'high'
+      availability_requirement: 'high'
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
   tag: "1.15.3-distroless"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'protected'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'high'
+      availability_requirement: 'low'
 
 # External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server
@@ -439,6 +475,15 @@ images:
   sourceRepository: github.com/envoyproxy/envoy
   repository: envoyproxy/envoy-distroless
   tag: "v1.24.1"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'protected'
+      authentication_enforced: false
+      user_interaction: 'end-user'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'high'
+      availability_requirement: 'high'
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
