@@ -206,6 +206,22 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 			},
 		}
+		networkPolicyAllowToPublicNetworks = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--allow-to-public-networks",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to all networks for "+
+						"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyToPublicNetworks,
+						v1beta1constants.LabelNetworkPolicyAllowed),
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}}}}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			},
+		}
 	)
 
 	for _, name := range s.getServiceAccountNamesToInvalidate() {
@@ -230,6 +246,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		networkPolicyAllowToShootAPIServer,
 		networkPolicyAllowToDNS,
 		networkPolicyAllowToKubelet,
+		networkPolicyAllowToPublicNetworks,
 	)
 }
 
