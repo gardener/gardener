@@ -145,6 +145,22 @@ const (
 	// PodTopologySpreadConstraintsSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// adding the pod-template-hash selector to the topology spread constraint.
 	PodTopologySpreadConstraintsSkip = "topology-spread-constraints.resources.gardener.cloud/skip"
+
+	// NetworkingNamespaceSelectors is a constant for an annotation on a Service which contains a list of namespace
+	// selectors. By default, NetworkPolicy resources are only created in the Service's namespace. If any selector is
+	// present, NetworkPolicy resources are also created in all namespaces matching any of the provided selectors.
+	NetworkingNamespaceSelectors = "networking.resources.gardener.cloud/namespace-selectors"
+	// NetworkingPodLabelSelectorNamespaceAlias is a constant for an annotation on a Service which describes the label
+	// that can be used to define an alias for the namespace name in the default pod label selector. This is helpful for
+	// scenarios where the target service can exist n-times in multiple namespaces and a component needs to talk to all
+	// of them but doesn't know the namespace names upfront.
+	NetworkingPodLabelSelectorNamespaceAlias = "networking.resources.gardener.cloud/pod-label-selector-namespace-alias"
+	// NetworkingServiceName is a constant for a label on a NetworkPolicy which contains the name of the Service is has
+	// been created for.
+	NetworkingServiceName = "networking.resources.gardener.cloud/service-name"
+	// NetworkingServiceNamespace is a constant for a label on a NetworkPolicy which contains the namespace of the
+	// Service is has been created for.
+	NetworkingServiceNamespace = "networking.resources.gardener.cloud/service-namespace"
 )
 
 // +kubebuilder:resource:shortName="mr"

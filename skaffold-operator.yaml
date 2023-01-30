@@ -197,6 +197,7 @@ build:
         - pkg/resourcemanager/webhook/crddeletionprotection
         - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
+        - pkg/resourcemanager/controller/networkpolicy
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount

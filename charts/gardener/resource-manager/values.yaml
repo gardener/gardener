@@ -86,6 +86,12 @@ global:
         syncPeriod: 1m
         alwaysUpdate: false
         managedByLabelValue: gardener
+      networkPolicy:
+        enabled: false
+        concurrentSyncs: 5
+      # namespaceSelectors:
+      # - matchLabels:
+      #     foo: bar
       secret:
         concurrentSyncs: 5
       tokenInvalidator:

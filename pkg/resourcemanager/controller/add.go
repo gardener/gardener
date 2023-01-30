@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
@@ -89,6 +90,14 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		GarbageCollectorActivated: cfg.Controllers.GarbageCollector.Enabled,
 	}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 		return fmt.Errorf("failed adding managed resource controller: %w", err)
+	}
+
+	if cfg.Controllers.NetworkPolicy.Enabled {
+		if err := (&networkpolicy.Reconciler{
+			Config: cfg.Controllers.NetworkPolicy,
+		}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding networkpolicy controller: %w", err)
+		}
 	}
 
 	if err := (&secret.Reconciler{

@@ -25,7 +25,7 @@ You can find an example configuration file [here](../../example/resource-manager
 
 ## Controllers
 
-### `ManagedResource` Controller
+### [`ManagedResource` Controller](../../pkg/resourcemanager/controller/managedresource)
 
 This controller watches custom objects called `ManagedResource`s in the `resources.gardener.cloud/v1alpha1` API group.
 These objects contain references to secrets, which itself contain the resources to be managed.
@@ -144,7 +144,7 @@ A `ManagedResource` has an optional `.spec.class` field that allows it to indica
 The `.controllers.resourceClass` field in the component configuration restricts the watch to `ManagedResource`s with the given `.spec.class`.
 A default class is assumed if no class is specified.
 
-#### Conditions
+#### [Conditions](../../pkg/resourcemanager/controller/health)
 
 A `ManagedResource` has a `ManagedResourceStatus`, which has an array of Conditions. Conditions currently include:
 
@@ -233,7 +233,7 @@ By default, cluster id is not used. If cluster id is specified, the format is `<
 
 In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `.conrollers.managedResources.managedByLabelValue` field in the component configuration.
 
-### Garbage Collector For Immutable `ConfigMap`s/`Secret`s
+### [Garbage Collector For Immutable `ConfigMap`s/`Secret`s](../../pkg/resourcemanager/controller/garbagecollector)
 
 In Kubernetes, workload resources (e.g., `Pod`s) can mount `ConfigMap`s or `Secret`s or reference them via environment variables in containers.
 Typically, when the content of such a `ConfigMap`/`Secret` gets changed, then the respective workload is usually not dynamically reloading the configuration, i.e., a restart is required.
@@ -310,7 +310,7 @@ The GC controller would delete the `ConfigMap/test-1234` because it is considere
 
 The GC controller can be activated by setting the `.controllers.garbageCollector.enabled` field to `true` in the component configuration.
 
-### TokenInvalidator
+### [TokenInvalidator Controller](../../pkg/resourcemanager/controller/tokeninvalidator)
 
 The Kubernetes community is slowly transitioning from static `ServiceAccount` token `Secret`s to [`ServiceAccount` Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection).
 Typically, when you create a `ServiceAccount`
@@ -413,7 +413,7 @@ In order to enable the _TokenInvalidator_ you have to set both `.controllers.tok
 The below graphic shows an overview of the Token Invalidator for Service account secrets in the Shoot cluster.
 ![image](images/resource-manager-token-invalidator.jpg)
 
-### TokenRequestor
+### [TokenRequestor Controller](../../pkg/resourcemanager/controller/tokenrequestor)
 
 This controller provides the service to create and auto-renew tokens via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/).
 
@@ -490,7 +490,7 @@ Please see the graphic below:
 
 ![image](images/resource-manager-projected-token-controlplane-to-shoot-apiserver.jpg)
 
-### Kubelet Server `CertificateSigningRequest` Approver
+### [Kubelet Server `CertificateSigningRequest` Approver](../../pkg/resourcemanager/controller/csrapprover)
 
 Gardener configures the kubelets such that they request two certificates via the `CertificateSigningRequest` API:
 
@@ -517,6 +517,167 @@ It watches `CertificateSigningRequest`s with the `kubernetes.io/kubelet-serving`
 
 If any one of these requirements is violated, the `CertificateSigningRequest` will be denied.
 Otherwise, once approved, the `kube-controller-manager`'s `csrsigner` controller will issue the requested certificate. 
+
+### [`NetworkPolicy` Controller](../../pkg/resourcemanager/controller/networkpolicy)
+
+This controller reconciles `Service`s with a non-empty `.spec.podSelector`.
+It creates two `NetworkPolicy`s for each port in the `.spec.ports[]` list.
+For example:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gardener-resource-manager
+  namespace: a
+spec:
+  selector:
+    app: gardener-resource-manager
+  ports:
+  - name: server
+    port: 443
+    protocol: TCP
+    targetPort: 10250
+```
+
+leads to
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows ingress TCP traffic to port 10250 for pods
+      selected by the a/gardener-resource-manager service selector from pods running
+      in namespace a labeled with map[networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250:allowed].
+  name: ingress-to-gardener-resource-manager-tcp-10250
+  namespace: a
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250: allowed
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: gardener-resource-manager
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress TCP traffic to port 10250 from pods
+      running in namespace a labeled with map[networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250:allowed]
+      to pods selected by the a/gardener-resource-manager service selector.
+  name: egress-to-gardener-resource-manager-tcp-10250
+  namespace: a
+spec:
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: gardener-resource-manager
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250: allowed
+  policyTypes:
+  - Egress
+```
+
+A component that initiates the connection to `gardener-resource-manager`'s `tcp/10250` port can now be labeled with `networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250=allowed`.
+That's all this component needs to do - it does not need to create any `NetworkPolicy`s itself.
+
+Apart from this "simple" case where both communicating components run in the same namespace `a`, there is also the cross-namespace communication case.
+With above example, let's say there are components running in another namespace `b`, and they would like to initiate the communication with `gardener-resource-manager` in `a`.
+To cover this scenario, the `Service` can be annotated with `networking.resources.gardener.cloud/namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"b"}}]'`.
+
+> Note that you can specify multiple namespace selectors in this annotation which are OR-ed.
+
+This will make the controller create additional `NetworkPolicy`s as follows:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows ingress TCP traffic to port 10250 for pods selected
+      by the a/gardener-resource-manager service selector from pods running in namespace b
+      labeled with map[networking.resources.gardener.cloud/to-a-gardener-resource-manager-tcp-10250:allowed].
+  name: ingress-to-gardener-resource-manager-tcp-10250-from-b
+  namespace: a
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: b
+      podSelector:
+        matchLabels:
+          networking.resources.gardener.cloud/to-a-gardener-resource-manager-tcp-10250: allowed
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: gardener-resource-manager
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress TCP traffic to port 10250 from pods running in
+      namespace b labeled with map[networking.resources.gardener.cloud/to-a-gardener-resource-manager-tcp-10250:allowed]
+      to pods selected by the a/gardener-resource-manager service selector.
+  name: egress-to-a-gardener-resource-manager-tcp-10250
+  namespace: b
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: a
+      podSelector:
+        matchLabels:
+          app: gardener-resource-manager
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      networking.resources.gardener.cloud/to-a-gardener-resource-manager-tcp-10250: allowed
+  policyTypes:
+  - Egress
+```
+
+The components in namespace `b` now need to be labeled with `networking.resources.gardener.cloud/to-a-gardener-resource-manager-tcp-10250=allowed`, but that's already it.
+
+> Obviously, this approach also works for namespace selectors different from `kubernetes.io/metadata.name` to cover scenarios where the namespace name is not known upfront or where multiple namespaces with a similar label are relevant.
+> The controller creates two dedicated policies for each namespace matching the selectors. 
+
+Finally, let's say there is a `Service` called `example` which exists in different namespaces whose names are not static (e.g., `foo-1`, `foo-2`, etc.), and a component in namespace `bar` wants to initiate connections with all of them.
+
+The `example` `Service`s in these namespaces can now be annotated with `networking.resources.gardener.cloud/namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"bar"}}]'`.
+As a consequence, the component in namespace `bar` now needs to be labeled with `networking.resources.gardener.cloud/to-foo-1-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-foo-2-example-tcp-8080=allowed`, etc.
+This approach does not work in practice, however, since the namespace names are neither static nor known upfront.
+
+To overcome this, it is possible to specify an alias for the concrete namespace in the pod label selector via the `networking.resources.gardener.cloud/pod-label-selector-namespace-alias` annotation.
+
+In above case, the `example` `Service` in the `foo-*` namespaces could be annotated with `networking.resources.gardener.cloud/pod-label-selector-namespace-alias=all-foos`.
+This would modify the label selector in all `NetworkPolicy`s related to cross-namespace communication, i.e. instead of `networking.resources.gardener.cloud/to-foo-{1,2,...}-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-all-foos-example-tcp-8080=allowed` would be used.
+Now the component in namespace `bar` only needs this single label and is able to talk to all such `Service`s in the different namespaces.
+
+> Real-world examples for this scenario are the `kube-apiserver` `Service` (which exists in all shoot namespaces), or the `istio-ingressgateway` `Service` (which exists in all `istio-ingress*` namespaces).
+> In both cases, the names of the namespaces are not statically known and depend on user input.
 
 ## Webhooks
 
