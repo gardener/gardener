@@ -106,7 +106,7 @@ const (
 	IPv6SingleStack featuregate.Feature = "IPv6SingleStack"
 
 	// MutableShootSpecNetworkingNodes allows updating the field `spec.networking.nodes`.
-	// owner: @axel7born
+	// owner: @axel7born @ScheererJ @DockToFuture @kon-angelo
 	// alpha: v1.64.0
 	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
 )
