@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -34,6 +35,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		defer cancel()
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+
+		node.VerifyNodeCriticalComponentsBootstrapping(ctx, f.ShootFramework)
 
 		By("Hibernate Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
