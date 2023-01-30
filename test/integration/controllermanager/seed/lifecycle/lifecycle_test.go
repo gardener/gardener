@@ -161,7 +161,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			seed.Status.Conditions = []gardencorev1beta1.Condition{{
 				Type:               gardencorev1beta1.SeedGardenletReady,
 				Status:             gardencorev1beta1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+				LastTransitionTime: metav1.Time{Time: fakeClock.Now().Add(-24 * time.Hour)},
 			}}
 			Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 		})
