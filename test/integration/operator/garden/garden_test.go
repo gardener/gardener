@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -199,10 +198,6 @@ var _ = Describe("Garden controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed(), "for "+etcd.Name)
 
 				patch := client.MergeFrom(etcd.DeepCopy())
-				delete(etcd.Annotations, "gardener.cloud/operation")
-				g.Expect(testClient.Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
-
-				patch = client.MergeFrom(etcd.DeepCopy())
 				etcd.Status.ObservedGeneration = &etcd.Generation
 				etcd.Status.Ready = pointer.Bool(true)
 				g.Expect(testClient.Status().Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
