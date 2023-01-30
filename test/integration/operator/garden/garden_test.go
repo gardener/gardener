@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -56,6 +57,7 @@ var _ = Describe("Garden controller tests", func() {
 			&etcd.DefaultTimeout, 500*time.Millisecond,
 			&kubeapiserverexposure.DefaultInterval, 100*time.Millisecond,
 			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
+			&resourcemanager.SkipWebhookDeployment, true,
 		))
 
 		garden = &operatorv1alpha1.Garden{
@@ -158,20 +160,6 @@ var _ = Describe("Garden controller tests", func() {
 			deployment.Status.ObservedGeneration = deployment.Generation
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
 			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
-		}).Should(Succeed())
-
-		// The gardener-resource-manager is not really running in this test scenario, hence there is nothing to serve
-		// the webhook endpoints. However, the envtest kube-apiserver would try to reach them, so let's better delete
-		// them here for the sake of this test.
-		By("Delete gardener-resource-manager webhooks")
-		mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
-		validatingWebhookConfiguration := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
-		Eventually(func(g Gomega) {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
-
-			g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
-			g.Expect(testClient.Delete(ctx, validatingWebhookConfiguration)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Verify that the garden system components have been deployed")

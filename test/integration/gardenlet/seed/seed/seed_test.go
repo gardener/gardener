@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -51,7 +50,10 @@ var _ = Describe("Seed controller tests", func() {
 	)
 
 	JustBeforeEach(func() {
-		DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
+		DeferCleanup(test.WithVars(
+			&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
+			&resourcemanager.SkipWebhookDeployment, true,
+		))
 		DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
 
 		seed = &gardencorev1beta1.Seed{
@@ -289,20 +291,6 @@ var _ = Describe("Seed controller tests", func() {
 							deployment.Status.ObservedGeneration = deployment.Generation
 							deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
 							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
-						}).Should(Succeed())
-
-						// The gardener-resource-manager is not really running in this test scenario, hence there is
-						// nothing to serve the webhook endpoints. However, the envtest kube-apiserver would try to
-						// reach them, so let's better delete them here for the sake of this test.
-						By("Delete gardener-resource-manager webhooks")
-						mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
-						validatingWebhookConfiguration := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
-						Eventually(func(g Gomega) {
-							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
-							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
-
-							g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
-							g.Expect(testClient.Delete(ctx, validatingWebhookConfiguration)).To(Succeed())
 						}).Should(Succeed())
 					} else {
 						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
