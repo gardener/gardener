@@ -240,6 +240,9 @@ type ClientService struct {
 	// Annotations specify the annotations that should be added to the client service
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// Labels specify the labels that should be added to the client service
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // SharedConfig defines parameters shared and used by Etcd as well as backup-restore sidecar.
