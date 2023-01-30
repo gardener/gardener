@@ -215,7 +215,7 @@ make test-integration
 If you want to run a specific set of integration tests, you can also execute them using `./hack/test-integration.sh` directly instead of using the `test-integration` rule. Prior to execution, the `PATH` environment variable needs to be set to also included the tools binary directory. For example:
 
 ```bash
-export PATH="$PATH:$PWD/hack/tools/bin"
+export PATH="$PWD/hack/tools/bin:$PATH"
 
 source ./hack/test-integration.env
 ./hack/test-integration.sh ./test/integration/resourcemanager/tokenrequestor
@@ -411,14 +411,14 @@ make test-e2e-local  # alternatively: make test-e2e-local-simple
 If you want to run a specific set of e2e test cases, you can also execute them using `./hack/test-e2e-local.sh` directly in combination with [ginkgo label filters](https://onsi.github.io/ginkgo/#spec-labels). For example:
 
 ```bash
-./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation"
+./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation" ./test/e2e/gardener/...
 ```
 
 If you want to use an existing shoot instead of creating a new one for the test case and deleting it afterwards, you can specify the existing shoot via the following flags.
 This can be useful to speed up the development of e2e tests.
 
 ```bash
-./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation" -- --project-namespace=garden-local --existing-shoot-name=local
+./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation" ./test/e2e/gardener/... -- --project-namespace=garden-local --existing-shoot-name=local
 ```
 
 For more information, see [Developing Gardener Locally](getting_started_locally.md) and [Deploying Gardener Locally](../deployment/getting_started_locally.md).
