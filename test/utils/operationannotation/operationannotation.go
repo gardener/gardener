@@ -54,7 +54,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-// Reconcile finalizes namespaces as soon as they are marked for deletion.
+// Reconcile removes the operation annotation from the object.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -65,10 +65,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
-	}
-
-	if obj.GetAnnotations()[v1beta1constants.GardenerOperation] == "" {
-		return reconcile.Result{}, nil
 	}
 
 	log.V(1).Info("Removing operation annotation")
