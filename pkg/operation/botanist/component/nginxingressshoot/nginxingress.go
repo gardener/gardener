@@ -519,6 +519,25 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			}},
 		}
 
+		networkPolicy = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--allow-to-from-nginx",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{v1beta1constants.GardenerDescription: "Allows all egress and ingress " +
+					"traffic for the nginx-ingress controller.",
+				},
+				Labels: map[string]string{
+					"origin": "gardener",
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: *deploymentController.Spec.Selector,
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{{}},
+				Ingress:     []networkingv1.NetworkPolicyIngressRule{{}},
+			},
+		}
+
 		serviceController = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceNameController,
@@ -669,6 +688,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		roleBinding,
 		roleBindingPSP,
 		serviceAccount,
+		networkPolicy,
 		serviceController,
 		serviceBackend,
 		vpa,

@@ -127,6 +127,31 @@ spec:
   - Ingress
 status: {}
 `
+			networkPolicyFromSeedYAML = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Ingress from the control plane to pods labeled
+      with 'networking.gardener.cloud/from-seed=allowed'.
+  creationTimestamp: null
+  name: gardener.cloud--allow-from-seed
+  namespace: kube-system
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: vpn-shoot
+          gardener.cloud/role: system-component
+          origin: gardener
+          type: tunnel
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/from-seed: allowed
+  policyTypes:
+  - Ingress
+status: {}
+`
 			serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
@@ -662,6 +687,7 @@ status: {}
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
+			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-from-seed.yaml"])).To(Equal(networkPolicyFromSeedYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
 
 		})
@@ -760,7 +786,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(10))
+					Expect(managedResourceSecret.Data).To(HaveLen(11))
 					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
 					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
 					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
@@ -773,7 +799,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(7))
+					Expect(managedResourceSecret.Data).To(HaveLen(8))
 				})
 			})
 		})

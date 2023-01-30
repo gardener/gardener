@@ -113,6 +113,33 @@ metadata:
   namespace: kube-system
 `
 
+		networkPolicyYAML = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows all egress and ingress traffic for the nginx-ingress
+      controller.
+  creationTimestamp: null
+  labels:
+    origin: gardener
+  name: gardener.cloud--allow-to-from-nginx
+  namespace: kube-system
+spec:
+  egress:
+  - {}
+  ingress:
+  - {}
+  podSelector:
+    matchLabels:
+      app: nginx-ingress
+      component: controller
+      release: addons
+  policyTypes:
+  - Ingress
+  - Egress
+status: {}
+`
+
 		serviceBackendYAML = `apiVersion: v1
 kind: Service
 metadata:
@@ -615,6 +642,7 @@ status: {}
 			Expect(string(managedResourceSecret.Data["role__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
+			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-from-nginx.yaml"])).To(Equal(networkPolicyYAML))
 		})
 
 		Context("Kubernetes version >= 1.22", func() {
@@ -629,7 +657,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(13))
+					Expect(managedResourceSecret.Data).To(HaveLen(14))
 
 					Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
 					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
@@ -645,7 +673,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(11))
+					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
 					Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
 					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
@@ -665,7 +693,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(12))
+					Expect(managedResourceSecret.Data).To(HaveLen(13))
 
 					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
@@ -680,7 +708,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(10))
+					Expect(managedResourceSecret.Data).To(HaveLen(11))
 
 					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
 				})

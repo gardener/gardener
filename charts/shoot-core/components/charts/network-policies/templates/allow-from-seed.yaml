@@ -1,24 +1,8 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  annotations:
-    gardener.cloud/description: |
-      Allows Ingress from the control plane to pods labeled with
-      'networking.gardener.cloud/from-seed=allowed'.
   name: gardener.cloud--allow-from-seed
   namespace: kube-system
-  labels:
-    origin: gardener
-spec:
-  podSelector:
-    matchLabels:
-      networking.gardener.cloud/from-seed: allowed
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: vpn-shoot
-          gardener.cloud/role: system-component
-          origin: gardener
+  annotations:
+    resources.gardener.cloud/mode: Ignore

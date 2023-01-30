@@ -911,7 +911,6 @@ build:
         - pkg/logger
         - pkg/operation
         - pkg/operation/botanist
-        - pkg/operation/botanist/addons/networkpolicy
         - pkg/operation/botanist/component/nginxingressshoot
         - pkg/operation/botanist/component
         - pkg/operation/botanist/component/backupentry

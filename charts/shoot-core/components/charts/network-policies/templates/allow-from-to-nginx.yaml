@@ -1,21 +1,8 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  annotations:
-    gardener.cloud/description: |
-      Allows all Egress and Ingress for the nginx-controller
   name: gardener.cloud--allow-to-from-nginx
   namespace: kube-system
-  labels:
-    origin: gardener
-spec:
-  podSelector:
-    matchLabels:
-      app: nginx-ingress
-  policyTypes:
-  - Ingress
-  - Egress
-  egress:
-  - {}
-  ingress:
-  - {}
+  annotations:
+    resources.gardener.cloud/mode: Ignore

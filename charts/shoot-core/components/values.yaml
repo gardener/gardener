@@ -1,6 +1,4 @@
 global:
-  kubernetesVersion: 1.20.1
-  podNetwork: 100.96.0.0/11
   vpaEnabled: false
   pspDisabled: false
 apiserver-proxy:
@@ -24,5 +22,3 @@ network-policies:
 podsecuritypolicies:
   enabled: true
   allowPrivilegedContainers: false
-shoot-info:
-  enabled: true

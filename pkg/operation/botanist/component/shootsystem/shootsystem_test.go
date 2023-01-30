@@ -302,6 +302,125 @@ metadata:
 				expectPriorityClasses(managedResourceSecret.Data)
 			})
 		})
+
+		Context("NetworkPolicies", func() {
+			var (
+				networkPolicyToAPIServer = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows traffic to the API server in TCP port 443 for
+      pods labeled with 'networking.gardener.cloud/to-apiserver=allowed'.
+  creationTimestamp: null
+  name: gardener.cloud--allow-to-apiserver
+  namespace: kube-system
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-apiserver: allowed
+  policyTypes:
+  - Egress
+status: {}
+`
+				networkPolicyToDNS = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress traffic from pods labeled with 'networking.gardener.cloud/to-dns=allowed'
+      to DNS running in the 'kube-system' namespace.
+  creationTimestamp: null
+  name: gardener.cloud--allow-to-dns
+  namespace: kube-system
+spec:
+  egress:
+  - ports:
+    - port: 8053
+      protocol: UDP
+    - port: 8053
+      protocol: TCP
+    to:
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - node-local-dns
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-dns: allowed
+  policyTypes:
+  - Egress
+status: {}
+`
+				networkPolicyToKubelet = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress traffic to kubelet in TCP port 10250
+      for pods labeled with 'networking.gardener.cloud/to-kubelet=allowed'.
+  creationTimestamp: null
+  name: gardener.cloud--allow-to-kubelet
+  namespace: kube-system
+spec:
+  egress:
+  - ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-kubelet: allowed
+  policyTypes:
+  - Egress
+status: {}
+`
+				networkPolicyToPublicNetworks = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress traffic to all networks for pods labeled
+      with 'networking.gardener.cloud/to-public-networks=allowed'.
+  creationTimestamp: null
+  name: gardener.cloud--allow-to-public-networks
+  namespace: kube-system
+spec:
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-public-networks: allowed
+  policyTypes:
+  - Egress
+status: {}
+`
+			)
+
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-apiserver.yaml"])).To(Equal(networkPolicyToAPIServer))
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-dns.yaml"])).To(Equal(networkPolicyToDNS))
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-kubelet.yaml"])).To(Equal(networkPolicyToKubelet))
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-public-networks.yaml"])).To(Equal(networkPolicyToPublicNetworks))
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
