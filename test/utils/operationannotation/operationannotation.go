@@ -49,7 +49,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(r.ForObject(), builder.WithPredicates(r.hasOperationAnnotation())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }
