@@ -34,6 +34,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
+var (
+	// DefaultInterval is the default interval for retry operations.
+	DefaultInterval = 5 * time.Second
+	// DefaultTimeout is the default timeout and defines how long Gardener should wait
+	// for a successful reconciliation of the service resource.
+	DefaultTimeout = 10 * time.Minute
+)
+
 // ServiceValues configure the kube-apiserver service.
 type ServiceValues struct {
 	AnnotationsFunc func() map[string]string
@@ -172,10 +180,10 @@ func (s *service) Destroy(ctx context.Context) error {
 }
 
 func (s *service) Wait(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, DefaultTimeout)
 	defer cancel()
 
-	return s.waiter.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+	return s.waiter.Until(ctx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
 		// this ingress can be either the kube-apiserver's service or istio's IGW loadbalancer.
 		svc := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{

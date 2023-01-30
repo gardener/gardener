@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/operationannotation"
 )
 
 func TestGarden(t *testing.T) {
@@ -129,6 +131,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
+
+	// The controller waits for the operation annotation to be removed from Etcd resources, so we need to add a
+	// reconciler for it since envtest does not run the responsible controller (etcd-druid).
+	Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidv1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 
 	By("Register controller")
 	chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)

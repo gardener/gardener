@@ -88,6 +88,10 @@ var (
 	//go:embed assets/crd-resources.gardener.cloud_managedresources.yaml
 	// CRD is the custom resource definition for ManagedResources.
 	CRD string
+
+	// SkipWebhookDeployment is a variable which controls whether the webhook deployment should be skipped.
+	// Exposed for testing.
+	SkipWebhookDeployment bool
 )
 
 func init() {
@@ -1026,6 +1030,10 @@ func (r *resourceManager) emptyPodDisruptionBudget() client.Object {
 }
 
 func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
+	if SkipWebhookDeployment {
+		return nil
+	}
+
 	mutatingWebhookConfiguration := r.emptyMutatingWebhookConfiguration()
 
 	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
@@ -1052,6 +1060,10 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 }
 
 func (r *resourceManager) ensureValidatingWebhookConfiguration(ctx context.Context) error {
+	if SkipWebhookDeployment {
+		return nil
+	}
+
 	validatingWebhookConfiguration := r.emptyValidatingWebhookConfiguration()
 
 	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
