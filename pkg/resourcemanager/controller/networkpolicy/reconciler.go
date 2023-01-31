@@ -194,6 +194,14 @@ func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespace
 		}
 	}
 
+	if _, ok := service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts]; ok {
+		objectMeta := metav1.ObjectMeta{Name: "ingress-to-" + service.Name + "-from-world", Namespace: service.Namespace}
+		desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return r.reconcileIngressFromWorldPolicy(ctx, service, objectMeta)
+		})
+	}
+
 	return taskFns, desiredObjectMetaKeys
 }
 
@@ -289,6 +297,37 @@ func (r *Reconciler) reconcileEgressPolicy(
 		return nil
 	})
 
+	return err
+}
+
+func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, service *corev1.Service, networkPolicyObjectMeta metav1.ObjectMeta) error {
+	var ports []networkingv1.NetworkPolicyPort
+	if err := json.Unmarshal([]byte(service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts]), &ports); err != nil {
+		return fmt.Errorf("failed unmarshaling %s: %w", service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts], err)
+	}
+
+	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
+		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
+		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
+
+		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
+			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", ports,
+			client.ObjectKeyFromObject(service)))
+
+		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
+			From: []networkingv1.NetworkPolicyPeer{
+				{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
+				{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+			},
+			Ports: ports,
+		}}
+		networkPolicy.Spec.Egress = nil
+		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
+		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
+
+		return nil
+	})
 	return err
 }
 

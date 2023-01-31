@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
@@ -88,7 +89,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 }
 
 // ServicePredicate returns a predicate which filters UPDATE events on services such that only updates to the deletion
-// timestamp, the port list or the pod label selector are relevant.
+// timestamp, the port list, the pod label selector, or well-known annotations are relevant.
 func (r *Reconciler) ServicePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -104,7 +105,10 @@ func (r *Reconciler) ServicePredicate() predicate.Predicate {
 
 			return (oldService.DeletionTimestamp == nil && service.DeletionTimestamp != nil) ||
 				!apiequality.Semantic.DeepEqual(service.Spec.Selector, oldService.Spec.Selector) ||
-				!apiequality.Semantic.DeepEqual(service.Spec.Ports, oldService.Spec.Ports)
+				!apiequality.Semantic.DeepEqual(service.Spec.Ports, oldService.Spec.Ports) ||
+				oldService.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] != service.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] ||
+				oldService.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] != service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] ||
+				oldService.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts]
 		},
 	}
 }
