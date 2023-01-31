@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
@@ -93,8 +94,12 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	testScheme := kubernetes.GardenScheme
-	Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
+	testSchemeBuilder := runtime.NewSchemeBuilder(
+		kubernetes.AddGardenSchemeToScheme,
+		extensionsv1alpha1.AddToScheme,
+	)
+	testScheme := runtime.NewScheme()
+	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
 
 	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})

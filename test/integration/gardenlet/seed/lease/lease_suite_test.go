@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
@@ -90,11 +91,15 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	scheme := kubernetes.GardenScheme
-	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
+	testSchemeBuilder := runtime.NewSchemeBuilder(
+		kubernetes.AddGardenSchemeToScheme,
+		resourcesv1alpha1.AddToScheme,
+	)
+	testScheme := runtime.NewScheme()
+	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
 
 	By("Create test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create seed")
@@ -143,7 +148,7 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
+		Scheme:             testScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 	})
