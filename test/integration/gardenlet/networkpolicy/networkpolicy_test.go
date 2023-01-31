@@ -202,8 +202,8 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 	defaultTests := func(attrs testAttributes) {
 		Context("reconciliation", func() {
-			It("should create the network policy in the expected network policies", func() {
-				By("Wait for controller to create the network policy")
+			It("should create the network policy in the correct namespaces", func() {
+				By("Wait for controller to create the network policy in expected namespaces")
 				Eventually(func(g Gomega) {
 					if attrs.inShootNamespaces {
 						networkPolicy := &networkingv1.NetworkPolicy{}
@@ -230,7 +230,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					}
 				}).Should(Succeed())
 
-				By("Ensure controllers does not create the network policy")
+				By("Ensure controller does not create the network policy in unexpected namespaces")
 				Consistently(func(g Gomega) {
 					if !attrs.inShootNamespaces {
 						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
@@ -250,56 +250,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 				}).Should(Succeed())
-			})
-
-			Context("updates", func() {
-				var updateTestNamespace *corev1.Namespace
-
-				BeforeEach(func() {
-					if attrs.inGardenNamespace {
-						updateTestNamespace = gardenNamespace
-					} else if attrs.inIstioIngressNamespace {
-						updateTestNamespace = istioIngressNamespace
-					} else if attrs.inIstioSystemNamespace {
-						updateTestNamespace = istioSystemNamespace
-					} else if attrs.inShootNamespaces {
-						updateTestNamespace = shootNamespace
-					}
-				})
-
-				It("should reconcile the network policy when it is changed by a third party", func() {
-					By("Modify network policy")
-					networkPolicy := &networkingv1.NetworkPolicy{}
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKey{Namespace: updateTestNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)
-					}).Should(Succeed())
-					networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{"foo": "bar"}
-					Expect(testClient.Update(ctx, networkPolicy)).To(Succeed())
-
-					By("Wait for controller to reconcile the network policy")
-					Eventually(func(g Gomega) {
-						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: updateTestNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
-						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(updateTestNamespace.Name)))
-					}).Should(Succeed())
-				})
-
-				It("should not update the network policy if nothing changed", func() {
-					By("Modify namespace to trigger reconciliation")
-					beforeShootNetworkPolicy := &networkingv1.NetworkPolicy{}
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKey{Namespace: updateTestNamespace.Name, Name: attrs.networkPolicyName}, beforeShootNetworkPolicy)
-					}).Should(Succeed())
-					updateTestNamespace.Labels["foo"] = "bar"
-					Expect(testClient.Update(ctx, updateTestNamespace)).To(Succeed())
-
-					By("Wait for controller to reconcile the network policy")
-					Consistently(func(g Gomega) {
-						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: updateTestNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
-						g.Expect(networkPolicy.ResourceVersion).To(Equal(beforeShootNetworkPolicy.ResourceVersion))
-					}).Should(Succeed())
-				})
 			})
 		})
 
@@ -321,9 +271,9 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				})
 
 				By("Wait for controller to delete the network policy")
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).Should(BeNotFoundError())
-				}).Should(Succeed())
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
+				}).Should(BeNotFoundError())
 			})
 		})
 	}
@@ -532,6 +482,49 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inIstioSystemNamespace:  true,
 			inIstioIngressNamespace: true,
 			inShootNamespaces:       true,
+		})
+	})
+
+	Context("updates", func() {
+		networkPolicyName := "allow-to-dns"
+
+		It("should reconcile the network policy when it is changed by a third party", func() {
+			By("Fetch network policy")
+			networkPolicy := &networkingv1.NetworkPolicy{}
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, networkPolicy)
+			}).Should(Succeed())
+			desiredSpec := networkPolicy.Spec
+
+			By("Modify network policy to trigger reconciliation")
+			networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{"foo": "bar"}
+			Expect(testClient.Update(ctx, networkPolicy)).To(Succeed())
+
+			By("Wait for controller to reconcile the network policy")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(desiredSpec))
+		})
+
+		It("should not update the network policy if nothing changed", func() {
+			By("Fetch network policy")
+			beforeShootNetworkPolicy := &networkingv1.NetworkPolicy{}
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, beforeShootNetworkPolicy)
+			}).Should(Succeed())
+
+			By("Modify namespace to trigger reconciliation")
+			gardenNamespace.Labels["foo"] = "bar"
+			Expect(testClient.Update(ctx, gardenNamespace)).To(Succeed())
+
+			By("Ensure controller does not reconcile the network policy unnecessarily")
+			Consistently(func(g Gomega) string {
+				networkPolicy := &networkingv1.NetworkPolicy{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
+				return networkPolicy.ResourceVersion
+			}).Should(Equal(beforeShootNetworkPolicy.ResourceVersion))
 		})
 	})
 })
