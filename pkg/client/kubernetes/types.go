@@ -91,8 +91,8 @@ func DefaultCreateOptions() metav1.CreateOptions { return metav1.CreateOptions{}
 // DefaultUpdateOptions are the default options for UPDATE requests.
 func DefaultUpdateOptions() metav1.UpdateOptions { return metav1.UpdateOptions{} }
 
-func init() {
-	gardenSchemeBuilder := runtime.NewSchemeBuilder(
+var (
+	gardenSchemeBuilder = runtime.NewSchemeBuilder(
 		kubernetesscheme.AddToScheme,
 		gardencoreinstall.AddToScheme,
 		seedmanagementinstall.AddToScheme,
@@ -100,9 +100,8 @@ func init() {
 		operationsinstall.AddToScheme,
 		apiregistrationscheme.AddToScheme,
 	)
-	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
-	seedSchemeBuilder := runtime.NewSchemeBuilder(
+	seedSchemeBuilder = runtime.NewSchemeBuilder(
 		kubernetesscheme.AddToScheme,
 		extensionsv1alpha1.AddToScheme,
 		resourcesv1alpha1.AddToScheme,
@@ -114,9 +113,8 @@ func init() {
 		istionetworkingv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
 	)
-	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 
-	shootSchemeBuilder := runtime.NewSchemeBuilder(
+	shootSchemeBuilder = runtime.NewSchemeBuilder(
 		kubernetesscheme.AddToScheme,
 		apiextensionsscheme.AddToScheme,
 		apiregistrationscheme.AddToScheme,
@@ -124,7 +122,21 @@ func init() {
 		metricsv1beta1.AddToScheme,
 		volumesnapshotv1beta1.AddToScheme,
 	)
-	utilruntime.Must(shootSchemeBuilder.AddToScheme(ShootScheme))
+)
+
+var (
+	// AddGardenSchemeToScheme adds all object kinds used in the Garden cluster into the given scheme.
+	AddGardenSchemeToScheme = gardenSchemeBuilder.AddToScheme
+	// AddSeedSchemeToScheme adds all object kinds used in the Seed cluster into the given scheme.
+	AddSeedSchemeToScheme = seedSchemeBuilder.AddToScheme
+	// AddShootSchemeToScheme adds all object kinds used in the Shoot cluster into the given scheme.
+	AddShootSchemeToScheme = shootSchemeBuilder.AddToScheme
+)
+
+func init() {
+	utilruntime.Must(AddGardenSchemeToScheme(GardenScheme))
+	utilruntime.Must(AddSeedSchemeToScheme(SeedScheme))
+	utilruntime.Must(AddShootSchemeToScheme(ShootScheme))
 }
 
 // MergeFunc determines how oldOj is merged into new oldObj.
