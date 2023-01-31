@@ -11,6 +11,7 @@ ENVIRONMENT="skaffold"
 DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
+ADDITIONAL_ARGS=""
 
 parse_flags() {
   while test $# -gt 0; do
@@ -53,12 +54,12 @@ setup_loopback_device() {
   fi
   LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
   echo "Checking loopback device ${LOOPBACK_DEVICE}..."
-  for address in 127.0.0.10 127.0.0.11 127.0.0.12; do
+  for address in 127.0.0.10 127.0.0.11 127.0.0.12 ::10 ::11 ::12; do
     if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address; then
       echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
     else
       echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
-      ip address add $address dev ${LOOPBACK_DEVICE}
+      sudo ip address add $address dev ${LOOPBACK_DEVICE}
     fi
   done
   echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
@@ -74,9 +75,17 @@ if [[ "$MULTI_ZONAL" == "true" ]]; then
   setup_loopback_device
 fi
 
+if [[ "$IPFAMILY" == "ipv6" ]]; then
+  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
+fi
+
+if [[ "$IPFAMILY" == "ipv6" ]] && [[ "$MULTI_ZONAL" == "true" ]]; then
+  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={::1,::10,::11,::12}"
+fi
+
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 kubectl get nodes -o name |\
@@ -88,11 +97,11 @@ if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
 fi
 
 if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
-  kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry"       --server-side
+  kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry" --server-side
   kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 fi
-kubectl apply   -k "$(dirname "$0")/../example/gardener-local/calico"         --server-side
-kubectl apply   -k "$(dirname "$0")/../example/gardener-local/metrics-server" --server-side
+kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --server-side
+kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\

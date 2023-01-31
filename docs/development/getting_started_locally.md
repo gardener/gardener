@@ -51,6 +51,8 @@ In these cases, you might want to check out one of the following options that ru
 make kind-up KIND_ENV=local
 ```
 
+> If you want to setup an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
+
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config` since you will need to target this KinD cluster multiple times.
@@ -66,6 +68,29 @@ With this, mirrored images don't have to be pulled again after recreating the cl
 
 The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
 Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
+
+## Outgoing IPv6 Single-Stack Networking (optional)
+
+If you want to test IPv6-related features, we need to configure NAT for outgoing traffic from the kind network to the internet.
+After `make kind-up IPFAMILY=ipv6`, check the network created by kind:
+
+```bash
+$ docker network inspect kind | jq '.[].IPAM.Config[].Subnet'
+"172.18.0.0/16"
+"fc00:f853:ccd:e793::/64"
+```
+
+Determine which device is used for outgoing internet traffic by looking at the default route:
+
+```bash
+$ ip route show default
+default via 192.168.195.1 dev enp3s0 proto dhcp src 192.168.195.34 metric 100
+```
+
+Configure NAT for traffic from the kind cluster to the internet using the IPv6 range and the network device from the previous two steps:
+```bash
+ip6tables -t nat -A POSTROUTING -o enp3s0 -s fc00:f853:ccd:e793::/64 -j MASQUERADE
+```
 
 ## Setting Up Gardener
 
