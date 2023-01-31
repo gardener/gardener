@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -45,29 +46,24 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
 	}
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ShootCare.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
-		r.EventHandler(),
-		predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetShootSeedNames),
-		r.ShootPredicate(),
-	)
+		}).
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+			r.EventHandler(),
+			builder.WithPredicates(
+				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetShootSeedNames),
+				r.ShootPredicate(),
+			),
+		).
+		Complete(r)
 }
 
 // RandomDurationWithMetaDuration is an alias for utils.RandomDurationWithMetaDuration.

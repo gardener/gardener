@@ -17,6 +17,7 @@ package csrapprover
 import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,28 +41,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		r.TargetClient = targetCluster.GetClient()
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, targetCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-		predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			csr, ok := obj.(*certificatesv1.CertificateSigningRequest)
-			return ok && csr.Spec.SignerName == certificatesv1.KubeletServingSignerName
-		}),
-	)
+		}).
+		Watches(
+			source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, targetCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					csr, ok := obj.(*certificatesv1.CertificateSigningRequest)
+					return ok && csr.Spec.SignerName == certificatesv1.KubeletServingSignerName
+				}),
+			),
+		).Complete(r)
 }

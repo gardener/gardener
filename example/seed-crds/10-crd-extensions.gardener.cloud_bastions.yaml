@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: bastions.extensions.gardener.cloud
 spec:
@@ -63,12 +63,12 @@ spec:
                       properties:
                         cidr:
                           description: CIDR is a string representing the IP Block
-                            Valid examples are "192.168.1.1/24" or "2001:db9::/64"
+                            Valid examples are "192.168.1.0/24" or "2001:db8::/64"
                           type: string
                         except:
                           description: Except is a slice of CIDRs that should not
-                            be included within an IP Block Valid examples are "192.168.1.1/24"
-                            or "2001:db9::/64" Except values will be rejected if they
+                            be included within an IP Block Valid examples are "192.168.1.0/24"
+                            or "2001:db8::/64" Except values will be rejected if they
                             are outside the CIDR range
                           items:
                             type: string
@@ -273,7 +273,7 @@ spec:
                           description: API version of the referent
                           type: string
                         kind:
-                          description: 'Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"'
+                          description: 'Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                           type: string
                         name:
                           description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'

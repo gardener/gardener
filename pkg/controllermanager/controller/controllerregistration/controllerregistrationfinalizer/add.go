@@ -38,7 +38,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&gardencorev1beta1.ControllerRegistration{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

@@ -405,12 +405,11 @@ func CreateTokenForServiceAccount(ctx context.Context, k8sClient kubernetes.Inte
 		},
 	}
 
-	result, err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(serviceAccount.Namespace).CreateToken(ctx, serviceAccount.Name, tokenRequest, metav1.CreateOptions{})
-	if err != nil {
+	if err := k8sClient.Client().SubResource("token").Create(ctx, serviceAccount, tokenRequest); err != nil {
 		return "", err
 	}
 
-	return result.Status.Token, nil
+	return tokenRequest.Status.Token, nil
 }
 
 // NewClientFromServiceAccount returns a kubernetes client for a service account.

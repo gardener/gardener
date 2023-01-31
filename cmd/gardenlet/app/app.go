@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -160,6 +161,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
+		Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
+			RecoverPanic: pointer.Bool(true),
+		},
 
 		ClientDisableCacheFor: []client.Object{
 			&corev1.Event{},
@@ -343,11 +347,6 @@ func (g *garden) Start(ctx context.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed creating garden cluster object: %w", err)
-	}
-
-	log.Info("Setting up ready check for garden informer sync")
-	if err := g.mgr.AddReadyzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthz(gardenCluster.GetCache())); err != nil {
-		return err
 	}
 
 	log.Info("Cleaning bootstrap authentication data used to request a certificate if needed")

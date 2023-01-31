@@ -192,7 +192,7 @@ Versions:
 	Z may also be '*' or 'x' to match a wildcard.
 	You may also just write X.Y, which means X.Y.*.
 
-	A version may be prefixed with '~' to match the the most recent Z release
+	A version may be prefixed with '~' to match the most recent Z release
 	in the given Y release ( [X.Y.Z, X.Y+1.0) ).
 
 	Finally, you may suffix the version with '!' to force checking the

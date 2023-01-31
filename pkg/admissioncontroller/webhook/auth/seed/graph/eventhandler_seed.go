@@ -28,8 +28,8 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			seed, ok := obj.(*gardencorev1beta1.Seed)
 			if !ok {
@@ -80,6 +80,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) {
 			g.handleSeedDelete(seed)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {

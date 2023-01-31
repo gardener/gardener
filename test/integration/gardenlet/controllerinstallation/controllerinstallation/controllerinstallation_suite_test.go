@@ -109,7 +109,9 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Create test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	testScheme := kubernetes.GardenScheme
+	Expect(resourcesv1alpha1.AddToScheme(testScheme)).To(Succeed())
+	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create seed")
@@ -162,7 +164,7 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
+		Scheme:             testScheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
@@ -184,8 +186,6 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
-
-	Expect(resourcesv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 
 	By("Create test clientset")
 	testClientSet, err = kubernetes.NewWithConfig(

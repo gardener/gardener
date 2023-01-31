@@ -20,6 +20,7 @@ import (
 
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -46,27 +47,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.Clock = clock.RealClock{}
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.ControllerInstallation{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		r.ControllerInstallationPredicate(),
-		r.HelmTypePredicate(gardenCluster.GetClient()),
-	)
+		}).
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.ControllerInstallation{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				r.ControllerInstallationPredicate(),
+				r.HelmTypePredicate(gardenCluster.GetClient()),
+			),
+		).
+		Complete(r)
 }
 
 // ControllerInstallationPredicate returns a predicate that evaluates to true in all cases except for 'Update' events.

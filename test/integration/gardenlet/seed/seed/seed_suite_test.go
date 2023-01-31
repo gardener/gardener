@@ -31,6 +31,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -133,10 +134,14 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
+			Mapper: mapper,
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),

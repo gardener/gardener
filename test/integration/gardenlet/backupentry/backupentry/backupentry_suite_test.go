@@ -227,7 +227,6 @@ var _ = BeforeSuite(func() {
 		},
 		SeedName:        seed.Name,
 		GardenNamespace: seedGardenNamespace.Name,
-
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

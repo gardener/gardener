@@ -47,15 +47,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		r.Clock = clock.RealClock{}
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
 	c, err := controller.New(
 		ControllerName,
 		mgr,
 		controller.Options{
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		},
 	)
 	if err != nil {
@@ -77,7 +74,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		})
 
 	if !targetCacheDisabled {

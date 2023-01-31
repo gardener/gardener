@@ -27,8 +27,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if csrV1, ok := obj.(*certificatesv1.CertificateSigningRequest); ok {
 				g.handleCertificateSigningRequestCreate(csrV1.Name, csrV1.Spec.Request, csrV1.Spec.Usages)
@@ -47,6 +47,7 @@ func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer 
 			}
 		},
 	})
+	return err
 }
 
 func (g *graph) handleCertificateSigningRequestCreate(name string, request []byte, usages []certificatesv1.KeyUsage) {

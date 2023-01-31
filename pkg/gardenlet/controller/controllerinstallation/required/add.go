@@ -59,15 +59,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	r.Lock = &sync.RWMutex{}
 	r.KindToRequiredTypes = make(map[string]sets.String)
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
+	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
+	// Hence, we have to build up the controller manually.
 	c, err := controller.New(
 		ControllerName,
 		mgr,
 		controller.Options{
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		},
 	)
 	if err != nil {

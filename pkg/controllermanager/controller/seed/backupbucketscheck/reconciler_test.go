@@ -30,12 +30,12 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
-	backupbucketregistry "github.com/gardener/gardener/pkg/registry/core/backupbucket"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -74,10 +74,11 @@ var _ = Describe("Reconciler", func() {
 
 			fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
-			c = test.NewClientWithFieldSelectorSupport(
-				fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build(),
-				backupbucketregistry.ToSelectableFields,
-			)
+			c = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithObjects(seed).
+				WithIndex(&gardencorev1beta1.BackupBucket{}, core.BackupBucketSeedName, indexer.BackupBucketSeedNameIndexerFunc).
+				Build()
 
 			conf = config.SeedBackupBucketsCheckControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: syncPeriod},

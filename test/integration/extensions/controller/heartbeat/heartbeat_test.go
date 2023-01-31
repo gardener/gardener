@@ -45,7 +45,7 @@ var _ = Describe("Extensions Heartbeat Controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
 			g.Expect(lease.Spec.HolderIdentity).To(PointTo(Equal(testID)))
-			g.Expect(lease.Spec.RenewTime.Equal(&metav1.MicroTime{Time: fakeClock.Now()})).To(BeTrue())
+			g.Expect(lease.Spec.RenewTime.Equal(&metav1.MicroTime{Time: fakeClock.Now().Truncate(time.Microsecond)})).To(BeTrue())
 		}).Should(Succeed())
 
 		By("Step fake clock")
@@ -54,7 +54,7 @@ var _ = Describe("Extensions Heartbeat Controller tests", func() {
 		By("Wait until heartbeat lease's RenewTime is updated")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
-			g.Expect(lease.Spec.RenewTime.Equal(&metav1.MicroTime{Time: fakeClock.Now()})).To(BeTrue())
+			g.Expect(lease.Spec.RenewTime.Equal(&metav1.MicroTime{Time: fakeClock.Now().Truncate(time.Microsecond)})).To(BeTrue())
 		}).Should(Succeed())
 	})
 })

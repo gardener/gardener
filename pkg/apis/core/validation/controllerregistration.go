@@ -134,7 +134,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 				allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("seedSelector"), "specifying a seed selector is not allowed when controlling resources primarily"))
 			}
 
-			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(deployment.SeedSelector, deploymentPath.Child("seedSelector"))...)
+			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(deployment.SeedSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, deploymentPath.Child("seedSelector"))...)
 		}
 
 		deploymentRefsCount := len(deployment.DeploymentRefs)

@@ -447,7 +447,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				mc := mockclient.NewMockClient(ctrl)
-				mc.EXPECT().Status().Return(mc).AnyTimes()
+				mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+
+				mc.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
 
 				mc.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-access-cloud-config-downloader"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				mc.EXPECT().Create(ctx, &corev1.Secret{
@@ -495,7 +497,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					// restore state
 					expectedWithState := obj.DeepCopy()
 					expectedWithState.Status.State = &runtime.RawExtension{Raw: state}
-					test.EXPECTPatch(ctx, mc, expectedWithState, obj, types.MergePatchType)
+					test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
 
 					// annotate with restore annotation
 					expectedWithRestore := expectedWithState.DeepCopy()

@@ -43,7 +43,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&corev1.Event{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

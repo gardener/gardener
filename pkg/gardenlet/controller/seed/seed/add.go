@@ -19,6 +19,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -62,27 +63,26 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.ClientCertificateExpirationTimestamp = &metav1.Time{Time: gardenletClientCertificate.Leaf.NotAfter}
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
-			RecoverPanic:            true,
-		},
-	)
+		}).
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(
+				predicateutils.HasName(r.Config.SeedConfig.Name),
+				predicate.GenerationChangedPredicate{},
+			),
+		).
+		Build(r)
 	if err != nil {
 		return err
 	}
 
 	c.GetLogger().Info("The client certificate used to communicate with the garden cluster has expiration date", "expirationDate", r.ClientCertificateExpirationTimestamp)
 
-	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicateutils.HasName(r.Config.SeedConfig.Name),
-		predicate.GenerationChangedPredicate{},
-	)
+	return nil
 }

@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/features"
@@ -62,11 +61,10 @@ var (
 	log       logr.Logger
 	fakeClock *testclock.FakeClock
 
-	restConfig     *rest.Config
-	testEnv        *gardenerenvtest.GardenerTestEnvironment
-	testClient     client.Client
-	testCoreClient *gardencoreversionedclientset.Clientset
-	testRunID      string
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testClient client.Client
+	testRunID  string
 
 	seed          *gardencorev1beta1.Seed
 	testNamespace *corev1.Namespace
@@ -102,8 +100,6 @@ var _ = BeforeSuite(func() {
 
 	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).NotTo(HaveOccurred())
-	testCoreClient, err = gardencoreversionedclientset.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]

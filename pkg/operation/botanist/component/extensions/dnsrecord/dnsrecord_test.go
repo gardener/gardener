@@ -630,7 +630,9 @@ var _ = Describe("DNSRecord", func() {
 
 		It("should properly restore the DNSRecord resource state", func() {
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Status().Return(mc)
+			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+
+			mc.EXPECT().Status().Return(mockStatusWriter)
 
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Return(apierrors.NewNotFound(corev1.Resource("secrets"), name))
@@ -652,7 +654,7 @@ var _ = Describe("DNSRecord", func() {
 			// Restore state
 			dnsWithState := dns.DeepCopy()
 			dnsWithState.Status.State = state
-			test.EXPECTPatch(ctx, mc, dnsWithState, dns, types.MergePatchType)
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, dnsWithState, dns, types.MergePatchType)
 
 			// Annotate with restore annotation
 			dnsWithRestore := dnsWithState.DeepCopy()

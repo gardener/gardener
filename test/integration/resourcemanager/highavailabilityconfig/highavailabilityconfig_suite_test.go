@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 		Logger:       log,
 		TargetClient: testClient,
 		// Use the same version as the envtest package
-		TargetVersion: semver.MustParse("1.25.0"),
+		TargetVersion: semver.MustParse("1.26.0"),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

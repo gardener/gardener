@@ -40,7 +40,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, predicates ...predicate.P
 		For(&corev1.Service{}, builder.WithPredicates(predicates...)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

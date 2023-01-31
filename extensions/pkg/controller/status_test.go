@@ -47,6 +47,7 @@ var _ = Describe("Status", func() {
 		ctrl *gomock.Controller
 		log  logr.Logger
 		c    *mockclient.MockClient
+		sw   *mockclient.MockStatusWriter
 
 		statusUpdater StatusUpdater
 		obj           extensionsv1alpha1.Object
@@ -56,6 +57,7 @@ var _ = Describe("Status", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		c = mockclient.NewMockClient(ctrl)
+		sw = mockclient.NewMockStatusWriter(ctrl)
 
 		statusUpdater = NewStatusUpdater()
 		statusUpdater.InjectClient(c)
@@ -74,8 +76,8 @@ var _ = Describe("Status", func() {
 	Describe("#Processing", func() {
 		It("should return an error if the Patch() call fails", func() {
 			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
 			)
 
 			Expect(statusUpdater.Processing(ctx, log, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
@@ -83,8 +85,8 @@ var _ = Describe("Status", func() {
 
 		It("should update the last operation as expected", func() {
 			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
 					lastOperation := obj.GetExtensionStatus().GetLastOperation()
 
 					Expect(lastOperation.Type).To(Equal(lastOpType))
@@ -101,8 +103,8 @@ var _ = Describe("Status", func() {
 	Describe("#Error", func() {
 		It("should return an error if the Patch() call fails", func() {
 			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
 			)
 
 			Expect(statusUpdater.Error(ctx, log, obj, fakeErr, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
@@ -110,8 +112,8 @@ var _ = Describe("Status", func() {
 
 		It("should update the last operation as expected (w/o error codes)", func() {
 			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
 					var (
 						description = strings.Title(lastOpDesc) + ": " + fakeErr.Error()
 
@@ -140,8 +142,8 @@ var _ = Describe("Status", func() {
 			err := helper.NewErrorWithCodes(fmt.Errorf("unauthorized"), gardencorev1beta1.ErrorInfraUnauthorized)
 
 			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
 					var (
 						description = strings.Title(lastOpDesc) + ": " + err.Error()
 
@@ -170,8 +172,8 @@ var _ = Describe("Status", func() {
 	Describe("#Success", func() {
 		It("should return an error if the Patch() call fails", func() {
 			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
 			)
 
 			Expect(statusUpdater.Success(ctx, log, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
@@ -179,8 +181,8 @@ var _ = Describe("Status", func() {
 
 		It("should update the last operation as expected", func() {
 			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
 					var (
 						lastOperation      = obj.GetExtensionStatus().GetLastOperation()
 						lastError          = obj.GetExtensionStatus().GetLastError()

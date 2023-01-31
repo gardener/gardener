@@ -22,12 +22,12 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilsets "k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	setsutils "github.com/gardener/gardener/pkg/utils/sets"
 )
 
 // Handler contains required nodeSelector and tolerations information.
@@ -82,7 +82,7 @@ func (h *Handler) handleTolerations(ctx context.Context, log logr.Logger, pod *c
 	}
 
 	var (
-		tolerations = setsutils.New[corev1.Toleration]()
+		tolerations = utilsets.New[corev1.Toleration]()
 
 		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
 		// before they are added to the tolerations set.

@@ -27,6 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -66,7 +68,11 @@ var _ = Describe("managedseed", func() {
 		)
 
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(managedSeed).Build()
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithObjects(managedSeed).
+				WithIndex(&seedmanagementv1alpha1.ManagedSeed{}, seedmanagement.ManagedSeedShootName, indexer.ManagedSeedShootNameIndexerFunc).
+				Build()
 		})
 
 		It("should return the ManagedSeed for the given shoot namespace and name, if it exists", func() {

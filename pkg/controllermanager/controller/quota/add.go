@@ -41,7 +41,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&gardencorev1beta1.Quota{}).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

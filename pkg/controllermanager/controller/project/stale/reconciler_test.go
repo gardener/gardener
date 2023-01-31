@@ -44,6 +44,7 @@ var _ = Describe("Reconciler", func() {
 		fakeClock *testing.FakeClock
 
 		k8sGardenRuntimeClient *mockclient.MockClient
+		mockStatusWriter       *mockclient.MockStatusWriter
 
 		projectName       = "foo"
 		namespaceName     = "garden-foo"
@@ -76,6 +77,7 @@ var _ = Describe("Reconciler", func() {
 	BeforeEach(func() {
 		ctrl := gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
+		mockStatusWriter = mockclient.NewMockStatusWriter(ctrl)
 		fakeClock = testing.NewFakeClock(time.Now())
 
 		project = &gardencorev1beta1.Project{
@@ -146,7 +148,7 @@ var _ = Describe("Reconciler", func() {
 
 			namespace.Annotations = map[string]string{v1beta1constants.ProjectSkipStaleCheck: "true"}
 
-			expectNonStaleMarking(k8sGardenRuntimeClient, project)
+			expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 			_, result := reconciler.Reconcile(ctx, request)
 			Expect(result).To(Succeed())
@@ -157,7 +159,7 @@ var _ = Describe("Reconciler", func() {
 
 			project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
 
-			expectNonStaleMarking(k8sGardenRuntimeClient, project)
+			expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 			_, result := reconciler.Reconcile(ctx, request)
 			Expect(result).To(Succeed())
@@ -168,7 +170,7 @@ var _ = Describe("Reconciler", func() {
 
 			project.Status.LastActivityTimestamp = &metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
 
-			expectNonStaleMarking(k8sGardenRuntimeClient, project)
+			expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 			_, result := reconciler.Reconcile(ctx, request)
 			Expect(result).To(Succeed())
@@ -187,7 +189,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					})
 
-					expectNonStaleMarking(k8sGardenRuntimeClient, project)
+					expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -200,7 +202,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					})
 
-					expectNonStaleMarking(k8sGardenRuntimeClient, project)
+					expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -222,7 +224,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					})
 
-					expectNonStaleMarking(k8sGardenRuntimeClient, project)
+					expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -248,7 +250,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					})
 
-					expectNonStaleMarking(k8sGardenRuntimeClient, project)
+					expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -271,7 +273,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					})
 
-					expectNonStaleMarking(k8sGardenRuntimeClient, project)
+					expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -298,7 +300,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					})
 
-					expectNonStaleMarking(k8sGardenRuntimeClient, project)
+					expectNonStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -321,7 +323,7 @@ var _ = Describe("Reconciler", func() {
 					k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
 					k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-					expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, nil, nil, fakeClock)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -356,7 +358,7 @@ var _ = Describe("Reconciler", func() {
 					}).AnyTimes()
 					k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-					expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, nil, nil, fakeClock)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -376,7 +378,7 @@ var _ = Describe("Reconciler", func() {
 					})
 					k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
 
-					expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, nil, nil, fakeClock)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -388,7 +390,7 @@ var _ = Describe("Reconciler", func() {
 					k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 					k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-					expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, nil, nil, fakeClock)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -403,7 +405,7 @@ var _ = Describe("Reconciler", func() {
 					k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 					k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-					expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, nil, fakeClock)
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, &staleSinceTimestamp, nil, fakeClock)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -421,7 +423,7 @@ var _ = Describe("Reconciler", func() {
 					k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 					k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-					expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, fakeClock)
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, fakeClock)
 
 					_, result := reconciler.Reconcile(ctx, request)
 					Expect(result).To(Succeed())
@@ -441,7 +443,7 @@ var _ = Describe("Reconciler", func() {
 					k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 					k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-					expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, fakeClock)
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, fakeClock)
 
 					defer test.WithVar(&gardenerutils.TimeNow, func() time.Time {
 						return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
@@ -463,18 +465,18 @@ var _ = Describe("Reconciler", func() {
 	})
 })
 
-func expectNonStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, project *gardencorev1beta1.Project) {
-	k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient)
+func expectNonStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, mockStatusWriter *mockclient.MockStatusWriter, project *gardencorev1beta1.Project) {
+	k8sGardenRuntimeClient.EXPECT().Status().Return(mockStatusWriter)
 
 	projectPatched := project.DeepCopy()
 	projectPatched.Status.StaleSinceTimestamp = nil
 	projectPatched.Status.StaleAutoDeleteTimestamp = nil
 
-	test.EXPECTPatch(context.TODO(), k8sGardenRuntimeClient, projectPatched, project, types.MergePatchType)
+	test.EXPECTStatusPatch(context.TODO(), mockStatusWriter, projectPatched, project, types.MergePatchType)
 }
 
-func expectStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, project *gardencorev1beta1.Project, staleSinceTimestamp, staleAutoDeleteTimestamp *metav1.Time, fakeClock *testing.FakeClock) {
-	k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient)
+func expectStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, mockStatusWriter *mockclient.MockStatusWriter, project *gardencorev1beta1.Project, staleSinceTimestamp, staleAutoDeleteTimestamp *metav1.Time, fakeClock *testing.FakeClock) {
+	k8sGardenRuntimeClient.EXPECT().Status().Return(mockStatusWriter)
 
 	projectPatched := project.DeepCopy()
 	if staleSinceTimestamp == nil {
@@ -484,5 +486,5 @@ func expectStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, project *
 	}
 	projectPatched.Status.StaleAutoDeleteTimestamp = staleAutoDeleteTimestamp
 
-	test.EXPECTPatch(context.TODO(), k8sGardenRuntimeClient, projectPatched, project, types.MergePatchType)
+	test.EXPECTStatusPatch(context.TODO(), mockStatusWriter, projectPatched, project, types.MergePatchType)
 }

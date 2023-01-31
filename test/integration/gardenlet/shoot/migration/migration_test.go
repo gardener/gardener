@@ -122,9 +122,7 @@ var _ = Describe("Shoot migration controller tests", func() {
 
 		By("Patch .spec.seedName in Shoot to " + seed.Name)
 		shoot.Spec.SeedName = pointer.String(seed.Name)
-		var err error
-		shoot, err = testCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		Expect(testClient.SubResource("binding").Update(ctx, shoot)).To(Succeed())
 	})
 
 	It("should set migration start time", func() {

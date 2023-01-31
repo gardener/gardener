@@ -24,6 +24,8 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/pointer"
+	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -610,6 +612,9 @@ var _ = Describe("Options", func() {
 					LeaderElectionResourceLock: leaderElectionResourceLock,
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
+					Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
+						RecoverPanic: pointer.Bool(true),
+					},
 				}))
 			})
 		})

@@ -45,24 +45,6 @@ func HasName(name string) predicate.Predicate {
 	})
 }
 
-// Not inverts the passed predicate.
-func Not(p predicate.Predicate) predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(event event.CreateEvent) bool {
-			return !p.Create(event)
-		},
-		UpdateFunc: func(event event.UpdateEvent) bool {
-			return !p.Update(event)
-		},
-		GenericFunc: func(event event.GenericEvent) bool {
-			return !p.Generic(event)
-		},
-		DeleteFunc: func(event event.DeleteEvent) bool {
-			return !p.Delete(event)
-		},
-	}
-}
-
 // EventType is an alias for byte.
 type EventType byte
 

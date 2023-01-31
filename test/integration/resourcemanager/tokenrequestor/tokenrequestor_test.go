@@ -15,6 +15,8 @@
 package tokenrequestor_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -61,6 +63,8 @@ var _ = Describe("TokenRequestor tests", func() {
 				Namespace: testNamespace.Name,
 			},
 		}
+
+		fakeClock.SetTime(time.Now().Round(time.Second))
 	})
 
 	It("should behave correctly when: create w/o label, update w/ label, delete w/ label", func() {

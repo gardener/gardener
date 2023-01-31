@@ -64,7 +64,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		controller.Options{
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		},
 	)
 	if err != nil {

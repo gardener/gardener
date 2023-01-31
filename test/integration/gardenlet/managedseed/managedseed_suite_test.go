@@ -204,6 +204,8 @@ var _ = BeforeSuite(func() {
 				WaitSyncPeriod:   &metav1.Duration{Duration: 5 * time.Millisecond},
 				ConcurrentSyncs:  pointer.Int(5),
 				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
+				// This controller is pretty heavy-weight, so use a higher duration.
+				SyncPeriod: &metav1.Duration{Duration: time.Minute},
 			},
 		},
 		SeedConfig: &config.SeedConfig{

@@ -59,7 +59,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster cluster.Clu
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

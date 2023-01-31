@@ -25,15 +25,14 @@ var (
 // where X, Y, and Z may also be wildcards ('*', 'x'),
 // and pre-release names & numbers may also be wildcards.  The prerelease section is slightly
 // restricted to match what k8s does.
-// The the whole string is a version selector as follows:
-//
-// - X.Y.Z matches version X.Y.Z where x, y, and z are
-//   are ints >= 0, and Z may be '*' or 'x'
-// - X.Y is equivalent to X.Y.*
-// - ~X.Y.Z means >= X.Y.Z && < X.Y+1.0
-// - <X.Y.Z means older than the X.Y.Z (mainly useful for cleanup (similarly for <=)
-// - an '!' at the end means force checking API server for the latest versions
-//   instead of settling for local matches.
+// The whole string is a version selector as follows:
+//   - X.Y.Z matches version X.Y.Z where x, y, and z are
+//     are ints >= 0, and Z may be '*' or 'x'
+//   - X.Y is equivalent to X.Y.*
+//   - ~X.Y.Z means >= X.Y.Z && < X.Y+1.0
+//   - <X.Y.Z means older than the X.Y.Z (mainly useful for cleanup (similarly for <=)
+//   - an '!' at the end means force checking API server for the latest versions
+//     instead of settling for local matches.
 //
 // ^[^~]?SEMVER(!)??$ .
 func FromExpr(expr string) (Spec, error) {

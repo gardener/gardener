@@ -324,20 +324,25 @@ func (w *webhookTriggerer) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := w.trigger(ctx, w.client, w.client.Status(), &corev1.NodeList{}); err != nil {
+	if err := w.trigger(ctx, w.client, nil, w.client.Status(), &corev1.NodeList{}); err != nil {
 		return err
 	}
 
-	return w.trigger(ctx, w.client, w.client, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-probe"})
+	return w.trigger(ctx, w.client, w.client, nil, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-probe"})
 }
 
-func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.StatusWriter, objectList client.ObjectList, opts ...client.ListOption) error {
+func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.Writer, statusWriter client.StatusWriter, objectList client.ObjectList, opts ...client.ListOption) error {
 	if err := reader.List(ctx, objectList, opts...); err != nil {
 		return err
 	}
 
 	return meta.EachListItem(objectList, func(obj runtime.Object) error {
-		object := obj.(client.Object)
-		return writer.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
+		switch object := obj.(type) {
+		case *appsv1.Deployment:
+			return writer.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
+		case *corev1.Node:
+			return statusWriter.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
+		}
+		return nil
 	})
 }

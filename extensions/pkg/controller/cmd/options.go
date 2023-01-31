@@ -24,6 +24,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/utils/pointer"
+	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -241,7 +243,17 @@ func (m *ManagerOptions) Complete() error {
 		return fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir, m.MetricsBindAddress, m.HealthBindAddress, logger}
+	m.config = &ManagerConfig{
+		m.LeaderElection,
+		m.LeaderElectionResourceLock,
+		m.LeaderElectionID,
+		m.LeaderElectionNamespace,
+		m.WebhookServerHost,
+		m.WebhookServerPort,
+		m.WebhookCertDir,
+		m.MetricsBindAddress,
+		m.HealthBindAddress,
+		logger}
 	return nil
 }
 
@@ -286,6 +298,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.MetricsBindAddress = c.MetricsBindAddress
 	opts.HealthProbeBindAddress = c.HealthBindAddress
 	opts.Logger = c.Logger
+	opts.Controller = controllerconfigv1alpha1.ControllerConfigurationSpec{RecoverPanic: pointer.Bool(true)}
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.

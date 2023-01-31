@@ -27,8 +27,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) {
-	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) error {
+	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			shoot, ok := obj.(*gardencorev1beta1.Shoot)
 			if !ok {
@@ -70,6 +70,7 @@ func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) {
 			g.handleShootDelete(shoot)
 		},
 	})
+	return err
 }
 
 func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {

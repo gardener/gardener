@@ -37,6 +37,10 @@ var _ = Describe("admissionplugins", func() {
 				Expect(err).To(HaveOccurred())
 			}
 		},
+		Entry("Unknown admission plugin", "Unknown", "1.25", false, false),
+		Entry("Known admission plugin but version not present in supported range", "PodSecurityPolicy", "1.25", false, true),
+		Entry("Known admission plugin and version present in supported range", "DenyServiceExternalIPs", "1.25", true, true),
+		Entry("Known admission plugin but version range not present", "PodNodeSelector", "1.25", true, true),
 	)
 
 	Describe("AdmissionPluginVersionRange", func() {

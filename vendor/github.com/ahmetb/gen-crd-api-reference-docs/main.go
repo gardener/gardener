@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	texttemplate "text/template"
 	"time"
@@ -70,6 +71,7 @@ type apiPackage struct {
 	apiVersion string
 	GoPackages []*types.Package
 	Types      []*types.Type // because multiple 'types.Package's can add types to an apiVersion
+	Constants  []*types.Type
 }
 
 func (v *apiPackage) identifier() string { return fmt.Sprintf("%s/%s", v.apiGroup, v.apiVersion) }
@@ -245,6 +247,17 @@ func containsString(sl []string, str string) bool {
 // offer, and combines the types in them.
 func combineAPIPackages(pkgs []*types.Package) ([]*apiPackage, error) {
 	pkgMap := make(map[string]*apiPackage)
+	var pkgIds []string
+
+	flattenTypes := func(typeMap map[string]*types.Type) []*types.Type {
+		typeList := make([]*types.Type, 0, len(typeMap))
+
+		for _, t := range typeMap {
+			typeList = append(typeList, t)
+		}
+
+		return typeList
+	}
 
 	for _, pkg := range pkgs {
 		apiGroup, apiVersion, err := apiVersionForPackage(pkg)
@@ -263,17 +276,23 @@ func combineAPIPackages(pkgs []*types.Package) ([]*apiPackage, error) {
 			pkgMap[id] = &apiPackage{
 				apiGroup:   apiGroup,
 				apiVersion: apiVersion,
-				Types:      typeList,
+				Types:      flattenTypes(pkg.Types),
+				Constants:  flattenTypes(pkg.Constants),
 				GoPackages: []*types.Package{pkg},
 			}
+			pkgIds = append(pkgIds, id)
 		} else {
-			v.Types = append(v.Types, typeList...)
+			v.Types = append(v.Types, flattenTypes(pkg.Types)...)
+			v.Constants = append(v.Types, flattenTypes(pkg.Constants)...)
 			v.GoPackages = append(v.GoPackages, pkg)
 		}
 	}
+
+	sort.Sort(sort.StringSlice(pkgIds))
+
 	out := make([]*apiPackage, 0, len(pkgMap))
-	for _, v := range pkgMap {
-		out = append(out, v)
+	for _, id := range pkgIds {
+		out = append(out, pkgMap[id])
 	}
 	return out, nil
 }
@@ -433,6 +452,18 @@ func tryDereference(t *types.Type) *types.Type {
 	return t
 }
 
+// finalUnderlyingTypeOf walks the type hierarchy for t and returns
+// its base type (i.e. the type that has no further underlying type).
+func finalUnderlyingTypeOf(t *types.Type) *types.Type {
+	for {
+		if t.Underlying == nil {
+			return t
+		}
+
+		t = t.Underlying
+	}
+}
+
 func typeDisplayName(t *types.Type, c generatorConfig, typePkgMap map[*types.Type]*apiPackage) string {
 	s := typeIdentifier(t)
 	if isLocalType(t, typePkgMap) {
@@ -453,6 +484,21 @@ func typeDisplayName(t *types.Type, c generatorConfig, typePkgMap map[*types.Typ
 	case types.Map:
 		// return original name
 		return t.Name.Name
+	case types.DeclarationOf:
+		// For constants, we want to display the value
+		// rather than the name of the constant, since the
+		// value is what users will need to write into YAML
+		// specs.
+		if t.ConstValue != nil {
+			u := finalUnderlyingTypeOf(t)
+			// Quote string constants to make it clear to the documentation reader.
+			if u.Kind == types.Builtin && u.Name.Name == "string" {
+				return strconv.Quote(*t.ConstValue)
+			}
+
+			return *t.ConstValue
+		}
+		klog.Fatalf("type %s is a non-const declaration, which is unhandled", t.Name)
 	default:
 		klog.Fatalf("type %s has kind=%v which is unhandled", t.Name, t.Kind)
 	}
@@ -507,7 +553,7 @@ func sortTypes(typs []*types.Type) []*types.Type {
 		} else if !isExportedType(t1) && isExportedType(t2) {
 			return false
 		}
-		return t1.Name.Name < t2.Name.Name
+		return t1.Name.String() < t2.Name.String()
 	})
 	return typs
 }
@@ -563,6 +609,9 @@ func extractTypeToPackageMap(pkgs []*apiPackage) map[*types.Type]*apiPackage {
 		for _, t := range ap.Types {
 			out[t] = ap
 		}
+		for _, t := range ap.Constants {
+			out[t] = ap
+		}
 	}
 	return out
 }
@@ -576,6 +625,22 @@ func packageMapToList(pkgs map[string]*apiPackage) []*apiPackage {
 		out = append(out, v)
 	}
 	return out
+}
+
+// constantsOfType finds all the constants in pkg that have the
+// same underlying type as t. This is intended for use by enum
+// type validation, where users need to specify one of a specific
+// set of constant values for a field.
+func constantsOfType(t *types.Type, pkg *apiPackage) []*types.Type {
+	constants := []*types.Type{}
+
+	for _, c := range pkg.Constants {
+		if c.Underlying == t {
+			constants = append(constants, c)
+		}
+	}
+
+	return sortTypes(constants)
 }
 
 func render(w io.Writer, pkgs []*apiPackage, config generatorConfig) error {
@@ -614,6 +679,7 @@ func render(w io.Writer, pkgs []*apiPackage, config generatorConfig) error {
 		"hiddenMember":     func(m types.Member) bool { return hiddenMember(m, config) },
 		"isLocalType":      isLocalType,
 		"isOptionalMember": isOptionalMember,
+		"constantsOfType":  func(t *types.Type) []*types.Type { return constantsOfType(t, typePkgMap[t]) },
 	}).ParseGlob(filepath.Join(*flTemplateDir, "*.tpl"))
 	if err != nil {
 		return errors.Wrap(err, "parse error")

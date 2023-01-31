@@ -189,9 +189,9 @@ type: Opaque
 
 			configMapNameFor = func(ipvsEnabled bool) string {
 				if !ipvsEnabled {
-					return "kube-proxy-config-1c3aa913"
+					return "kube-proxy-config-47550688"
 				}
-				return "kube-proxy-config-ef237614"
+				return "kube-proxy-config-e93f60cb"
 			}
 			configMapYAMLFor = func(ipvsEnabled bool) string {
 				out := `apiVersion: v1
@@ -231,6 +231,7 @@ data:
     healthzBindAddress: ""
     hostnameOverride: ""
     iptables:
+      localhostNodePorts: null
       masqueradeAll: false
       masqueradeBit: null
       minSyncPeriod: 0s
@@ -258,7 +259,6 @@ data:
     oomScoreAdj: null
     portRange: ""
     showHiddenMetricsForVersion: ""
-    udpIdleTimeout: 0s
     winkernel:
       enableDSR: false
       forwardHealthCheckVip: false

@@ -28,7 +28,6 @@ import (
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
@@ -136,28 +135,6 @@ func (c *FakeShoots) DeleteCollection(ctx context.Context, opts v1.DeleteOptions
 func (c *FakeShoots) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Shoot, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(shootsResource, c.ns, name, pt, data, subresources...), &v1beta1.Shoot{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1beta1.Shoot), err
-}
-
-// CreateAdminKubeconfigRequest takes the representation of a adminKubeconfigRequest and creates it.  Returns the server's representation of the adminKubeconfigRequest, and an error, if there is any.
-func (c *FakeShoots) CreateAdminKubeconfigRequest(ctx context.Context, shootName string, adminKubeconfigRequest *v1alpha1.AdminKubeconfigRequest, opts v1.CreateOptions) (result *v1alpha1.AdminKubeconfigRequest, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateSubresourceAction(shootsResource, shootName, "adminkubeconfig", c.ns, adminKubeconfigRequest), &v1alpha1.AdminKubeconfigRequest{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.AdminKubeconfigRequest), err
-}
-
-// UpdateBinding takes the representation of a shoot and updates it. Returns the server's representation of the shoot, and an error, if there is any.
-func (c *FakeShoots) UpdateBinding(ctx context.Context, shootName string, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (result *v1beta1.Shoot, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(shootsResource, "binding", c.ns, shoot), &v1beta1.Shoot{})
 
 	if obj == nil {
 		return nil, err

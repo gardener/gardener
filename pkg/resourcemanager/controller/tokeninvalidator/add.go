@@ -22,6 +22,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -48,30 +49,23 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.TargetClient = targetCluster.GetClient()
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
-			MaxConcurrentReconciles: 1,
-			RateLimiter:             r.RateLimiter,
-			RecoverPanic:            true,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
 	secret := &metav1.PartialObjectMetadata{}
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 
-	if err := c.Watch(
-		source.NewKindWithCache(secret, targetCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		r.SecretPredicate(),
-	); err != nil {
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+			RateLimiter:             r.RateLimiter,
+		}).
+		Watches(
+			source.NewKindWithCache(secret, targetCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(r.SecretPredicate()),
+		).
+		Build(r)
+	if err != nil {
 		return err
 	}
 

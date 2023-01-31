@@ -91,7 +91,7 @@ Then, you have a few options for managing your binaries:
   `--use-env` makes the command unconditionally use the value of
   KUBEBUILDER_ASSETS as long as it contains the required binaries, and
   `-i` indicates that we only ever want to work with installed binaries
-  (no reaching out the the remote GCS storage).
+  (no reaching out the remote GCS storage).
 
   As noted about, you can use `ENVTEST_INSTALLED_ONLY=true` to switch `-i`
   on by default, and you can use `ENVTEST_USE_ENV=true` to switch

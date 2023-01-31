@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -59,7 +60,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&corev1.Namespace{}, builder.WithPredicates(predicate.IsDeleting())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
-			RecoverPanic:            true,
+			RecoverPanic:            pointer.Bool(true),
 		}).
 		Complete(r)
 }

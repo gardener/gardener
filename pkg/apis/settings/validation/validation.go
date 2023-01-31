@@ -36,7 +36,7 @@ var (
 func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.ShootSelector, fldPath.Child("shootSelector"))...)
+	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.ShootSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("shootSelector"))...)
 	if spec.Weight <= 0 || spec.Weight > 100 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("weight"), spec.Weight, "must be in the range 1-100"))
 	}

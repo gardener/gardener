@@ -243,8 +243,7 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 
 	By("Register controller")
 	Expect((&shootcontroller.Reconciler{
-		Config:                  config,
-		VersionedGardenerClient: versionedTestClient,
+		Config: config,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

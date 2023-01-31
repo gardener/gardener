@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -53,27 +54,20 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		r.Clock = clock.RealClock{}
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-			RecoverPanic:            true,
 			RateLimiter:             r.RateLimiter,
-		},
-	)
+		}).
+		Watches(
+			source.NewKindWithCache(&operationsv1alpha1.Bastion{}, gardenCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
+		Build(r)
 	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&operationsv1alpha1.Bastion{}, gardenCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		predicate.GenerationChangedPredicate{},
-	); err != nil {
 		return err
 	}
 

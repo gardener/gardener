@@ -114,7 +114,6 @@ build:
         - pkg/utils/managedresources/builder
         - pkg/utils/retry
         - pkg/utils/secrets
-        - pkg/utils/sets
         - pkg/utils/secrets/manager
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
@@ -214,7 +213,6 @@ build:
         - pkg/utils/kubernetes/unstructured
         - pkg/utils/retry
         - pkg/utils/secrets
-        - pkg/utils/sets
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
