@@ -30,8 +30,8 @@ Such `ConfigMap`s may contain four fields in their `data`:
 
 * `scrape_config`: This field contains Prometheus scrape configuration for the component(s) and metrics that shall be scraped.
 * `alerting_rules`: This field contains Alertmanager rules for alerts that shall be raised.
-* (deprecated)`dashboard_operators`: This field contains a Grafana dashboard in JSON that is only relevant for Gardener operators.
-* (deprecated)`dashboard_users`: This field contains a Grafana dashboard in JSON that is only relevant for Gardener users (shoot owners).
+* `dashboard_operators`: This field contains a Grafana dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
+* `dashboard_users`: This field contains a Grafana dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
 
 **Example:** A `ControlPlane` controller deploying a `cloud-controller-manager` into the shoot namespace wants to integrate monitoring configuration for scraping metrics, alerting rules, dashboards, and logging configuration for exposing logs to the end users.
 
@@ -99,12 +99,12 @@ In Kubernetes clusters, container logs are non-persistent and do not survive sto
 Gardener logging consists of components in three roles - log collectors and forwarders, log persistency and exploration/consumption interfaces. All of them live in the seed clusters in multiple instances:
 - Logs are persisted by Loki instances deployed as StatefulSets - one per shoot namespace, if the `Logging` feature gate is enabled and the [shoot purpose](../usage/shoot_purposes.md#behavioral-differences) is not `testing`, and one in the `garden` namespace. The shoot instances store logs from the control plane components hosted there. The `garden` Loki instance is responsible for logs from the rest of the seed namespaces - `kube-system`, `garden`, `extension-*`, and others.
 - Fluent-bit DaemonSets deployed on each seed node collect logs from it. A custom plugin takes care to distribute the collected log messages to the Loki instances that they are intended for. This allows to fetch the logs once for the whole cluster, and to distribute them afterwards.
-- Grafana is the UI component used to explore monitoring and log data together for easier troubleshooting and in context. Grafana instances are configured to use the corresponding Loki instances, sharing the same namespace as data providers. There is one Grafana Deployment in the `garden` namespace and two Deployments per shoot namespace (one exposed to the end users and one for the operators). 
+- Grafana is the UI component used to explore monitoring and log data together for easier troubleshooting and in context. Grafana instances are configured to use the corresponding Loki instances, sharing the same namespace as data providers. There is one Grafana Deployment in the `garden` namespace and one Deployment per shoot namespace (exposed to the end users and to the operators).
 
 Logs can be produced from various sources, such as containers or systemd, and in different formats. The fluent-bit design supports configurable [data pipeline](https://docs.fluentbit.io/manual/concepts/data-pipeline) to address that problem. Gardener provides such [configuration](../../charts/seed-bootstrap/charts/fluent-bit/templates/fluent-bit-configmap.yaml) for logs produced by all its core managed components as a `ConfigMap`. Extensions can contribute their own, specific configurations as `ConfigMap`s too. See for example the [logging configuration](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/configmap-logging.yaml) for the Gardener AWS provider extension. The Gardener reconciliation loop watches such resources and updates the fluent-bit agents dynamically.
 
-### Fluent-bit Log Parsers and Filters 
-To integrate with Gardener logging, extensions can and *should* specify how fluent-bit will handle the logs produced by the managed components that they contribute to Gardener. Normally, that would require to configure a *parser* for the specific logging format, if none of the available is applicable, and a *filter* defining how to apply it. For a complete reference for the configuration options, refer to fluent-bit's [documentation](https://docs.fluentbit.io/manual/).   
+### Fluent-bit Log Parsers and Filters
+To integrate with Gardener logging, extensions can and *should* specify how fluent-bit will handle the logs produced by the managed components that they contribute to Gardener. Normally, that would require to configure a *parser* for the specific logging format, if none of the available is applicable, and a *filter* defining how to apply it. For a complete reference for the configuration options, refer to fluent-bit's [documentation](https://docs.fluentbit.io/manual/).
 
 > **Note:** At the moment, only *parser* and *filter* configurations are supported.
 
@@ -162,20 +162,18 @@ In this case we have predefined filter which copies the log's tag into the log r
 Further details how to define parsers and use them with examples can be found in the following [guide](../development/log_parsers.md).
 
 ### Grafana
-The three types of Grafana instances found in a seed cluster are configured to expose logs of different origin in their dashboards:
+The two types of Grafana instances found in a seed cluster are configured to expose logs of different origin in their dashboards:
 - Garden Grafana dashboards expose logs from non-shoot namespaces of the seed clusters
   - [Pod Logs](../../charts/seed-bootstrap/dashboards/pod-logs.json)
   - [Extensions](../../charts/seed-bootstrap/dashboards/extensions-dashboard.json)
   - [Systemd Logs](../../charts/seed-bootstrap/dashboards/systemd-logs.json)
-- Shoot User Grafana dashboards expose a subset of the logs shown to operators
+- Shoot Grafana dashboards expose logs from the shoot cluster namespace where they belong
   - Kube Apiserver
   - Kube Controller Manager
   - Kube Scheduler
   - Cluster Autoscaler
   - VPA components
-- Shoot Operator Grafana dashboards expose logs from the shoot cluster namespace where they belong
-  - All user's dashboards
-  - [Kubernetes Pods](../../charts/seed-monitoring/charts/grafana/dashboards/operators/kubernetes-pods-dashboard.json)
+  - [Kubernetes Pods](../../charts/seed-monitoring/charts/grafana/dashboards/owners/kubernetes-pods-dashboard.json)
 
 If the type of logs exposed in the Grafana instances needs to be changed, it is necessary to update the corresponding instance dashboard configurations.
 
