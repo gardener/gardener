@@ -107,7 +107,7 @@ In the above example, one pool with machine type `m4.large` and `min=3`, `max=5`
 This information together with the infrastructure status must be used to determine the proper configuration for the machine classes.
 
 The `spec.pools[].labels` map contains all labels that should be added to all nodes of the corresponding worker pool.
-Gardener configures kubelet's `--node-labels` flag to contain all labels mentioned here.
+Gardener configures kubelet's `--node-labels` flag to contain all labels that are mentioned here and allowed by the [`NodeRestriction` admission plugin](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction).
 This makes sure that kubelet adds all user-specified and gardener-managed labels to the new `Node` object when registering a new machine with the API server.
 Nevertheless, this is only effective when bootstrapping new nodes.
 The provider extension (respectively, machine-controller-manager) is still responsible for updating the labels of existing `Nodes` when the worker specification changes.
