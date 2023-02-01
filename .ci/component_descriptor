@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
+export force_legacy_component_cli=y
 "$(dirname $0)"/../hack/.ci/component_descriptor "$(dirname $0)"/..
