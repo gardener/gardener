@@ -177,7 +177,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 
 		labels[v1beta1constants.LabelNodeLocalDNS] = strconv.FormatBool(w.values.NodeLocalDNSENabled)
 
-		if gardencorev1beta1helper.SystemComponentsAllowed(&workerPool) {
+		if v1beta1helper.SystemComponentsAllowed(&workerPool) {
 			labels[v1beta1constants.LabelWorkerPoolSystemComponents] = "true"
 		}
 
