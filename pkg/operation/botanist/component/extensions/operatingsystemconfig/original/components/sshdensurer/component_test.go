@@ -149,6 +149,6 @@ fi
 
 # Disabling the sshd service does not terminate already established connections
 # Kill all currently established ssh connections
-pkill sshd || true
+pkill -x sshd || true
 `
 )
