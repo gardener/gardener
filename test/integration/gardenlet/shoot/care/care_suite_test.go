@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -118,13 +119,17 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	scheme := kubernetes.GardenScheme
-	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(druidv1alpha1.AddToScheme(scheme)).To(Succeed())
+	testSchemeBuilder := runtime.NewSchemeBuilder(
+		kubernetes.AddGardenSchemeToScheme,
+		extensionsv1alpha1.AddToScheme,
+		resourcesv1alpha1.AddToScheme,
+		druidv1alpha1.AddToScheme,
+	)
+	testScheme := runtime.NewScheme()
+	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
 
 	By("Create test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
@@ -152,7 +157,7 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             scheme,
+		Scheme:             testScheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			DefaultSelector: cache.ObjectSelector{

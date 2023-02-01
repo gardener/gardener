@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -105,11 +106,15 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("Create test client")
-	scheme := kubernetes.GardenScheme
-	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
+	testSchemeBuilder := runtime.NewSchemeBuilder(
+		kubernetes.AddGardenSchemeToScheme,
+		extensionsv1alpha1.AddToScheme,
+	)
+	testScheme := runtime.NewScheme()
+	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
+	By("Create test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create test Namespace")
@@ -130,7 +135,7 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             scheme,
+		Scheme:             testScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
