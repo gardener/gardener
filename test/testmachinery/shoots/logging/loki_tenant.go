@@ -64,8 +64,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	f := framework.NewShootFramework(nil)
 
 	var (
-		grafanaOperatorsIngress client.Object = &networkingv1.Ingress{}
-		grafanaUsersIngress     client.Object = &networkingv1.Ingress{}
+		grafanaIngress client.Object = &networkingv1.Ingress{}
 
 		shootNamespace           = &corev1.Namespace{}
 		shootNamespaceLabelKey   = "gardener.cloud/test"
@@ -76,10 +75,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		checkRequiredResources(ctx, f.SeedClient)
 		// Get shoot namespace name
 		shootNamespace.ObjectMeta.Name = f.ShootSeedNamespace()
-		// Get the grafana-operators Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaOperators}, grafanaOperatorsIngress))
-		// Get the grafana-users Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaUsers}, grafanaUsersIngress))
+		// Get the grafana Ingress
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafana}, grafanaIngress))
 		// Set label to the testing namespace
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
 			metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
@@ -122,8 +119,8 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		operatorLoggerRegex := operatorLoggerName + "-.*"
 
 		ginkgo.By("Get Loki tenant IDs")
-		userID := getXScopeOrgID(grafanaUsersIngress.GetAnnotations())
-		operatorID := getXScopeOrgID(grafanaOperatorsIngress.GetAnnotations())
+		userID := "user"
+		operatorID := getXScopeOrgID(grafanaIngress.GetAnnotations())
 
 		ginkgo.By("Wait until Loki StatefulSet is ready")
 		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, lokiName, f.ShootSeedNamespace(), f.SeedClient))
