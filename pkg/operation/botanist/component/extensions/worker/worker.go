@@ -16,6 +16,8 @@ package worker
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -35,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
@@ -84,8 +86,8 @@ type Values struct {
 	InfrastructureProviderStatus *runtime.RawExtension
 	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
 	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
-	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
-	NodeLocalDNSEnabled bool
+	// NodeLocalDNSENabled indicates whether node local dns is enabled or not.
+	NodeLocalDNSENabled bool
 }
 
 // New creates a new instance of Interface.
@@ -165,6 +167,35 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
+		// copy labels map
+		labels := utils.MergeStringMaps(workerPool.Labels)
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels["node.kubernetes.io/role"] = "node"
+		labels["kubernetes.io/arch"] = *workerPool.Machine.Architecture
+
+		labels[v1beta1constants.LabelNodeLocalDNS] = strconv.FormatBool(w.values.NodeLocalDNSENabled)
+
+		if gardencorev1beta1helper.SystemComponentsAllowed(&workerPool) {
+			labels[v1beta1constants.LabelWorkerPoolSystemComponents] = "true"
+		}
+
+		// worker pool name labels
+		labels[v1beta1constants.LabelWorkerPool] = workerPool.Name
+		labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
+
+		// add CRI labels selected by the RuntimeClass
+		if workerPool.CRI != nil {
+			labels[extensionsv1alpha1.CRINameWorkerLabel] = string(workerPool.CRI.Name)
+			if len(workerPool.CRI.ContainerRuntimes) > 0 {
+				for _, cr := range workerPool.CRI.ContainerRuntimes {
+					key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
+					labels[key] = "true"
+				}
+			}
+		}
+
 		var pConfig *runtime.RawExtension
 		if workerPool.ProviderConfig != nil {
 			pConfig = &runtime.RawExtension{
@@ -206,7 +237,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled),
+			Labels:         labels,
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
