@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -56,25 +57,19 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.selectors = append(r.selectors, selector)
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		},
-	)
+		}).
+		Watches(
+			source.NewKindWithCache(&corev1.Service{}, targetCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(r.ServicePredicate()),
+		).
+		Build(r)
 	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&corev1.Service{}, targetCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		r.ServicePredicate(),
-	); err != nil {
 		return err
 	}
 
