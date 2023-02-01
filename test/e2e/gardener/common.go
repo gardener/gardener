@@ -98,9 +98,6 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 					CRI: &gardencorev1beta1.CRI{
 						Name: gardencorev1beta1.CRINameContainerD,
 					},
-					Labels: map[string]string{
-						"foo": "bar",
-					},
 					Minimum: 1,
 					Maximum: 1,
 				}},
