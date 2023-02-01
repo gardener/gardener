@@ -167,8 +167,8 @@ var _ = Describe("Secrets", func() {
 			})
 
 			It("should delete ssh-keypair secrets when ssh access is set to false in workers settings", func() {
-				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + ".ssh-keypair", Namespace: seedNamespace}})).To(Succeed())
-				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + ".ssh-keypair.old", Namespace: seedNamespace}})).To(Succeed())
+				Expect(gardenClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + ".ssh-keypair", Namespace: gardenNamespace}})).To(Succeed())
+				Expect(gardenClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + ".ssh-keypair.old", Namespace: gardenNamespace}})).To(Succeed())
 
 				shoot := botanist.Shoot.GetInfo()
 				shoot.Spec = gardencorev1beta1.ShootSpec{
