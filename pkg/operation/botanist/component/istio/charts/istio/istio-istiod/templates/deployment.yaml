@@ -39,7 +39,6 @@ spec:
         - --log_output_level=all:warn,ads:error
         - --domain
         - {{ .Values.trustDomain }}
-        - --plugins=authn,authz,health # remove mixer plugin
         - --keepaliveMaxServerConnectionAge
         - "30m"
         ports:
