@@ -72,7 +72,8 @@ spec:
             memory: 400Mi
       volumes:
       - name: grafana-storage
-        emptyDir: {}
+        emptyDir:
+          sizeLimit: 100Mi
       - name: grafana-dashboards
         configMap:
           name: {{ include "grafana.dashboards.name" . }}
