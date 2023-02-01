@@ -102,6 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if err := r.Client.Status().Update(ctx, seed); err != nil {
 			return reconcile.Result{}, err
 		}
+		conditionGardenletReady = &newCondition
 	}
 
 	// If the gardenlet's client certificate is expired and the seed belongs to a `ManagedSeed` then we reconcile it in
