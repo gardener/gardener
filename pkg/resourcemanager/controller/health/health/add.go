@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -58,16 +59,27 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		r.Clock = clock.RealClock{}
 	}
 
-	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
-	// Hence, we have to build up the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		},
-	)
+		}).
+		Watches(
+			&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
+			r.EnqueueCreateAndUpdate(),
+			builder.WithPredicates(
+				predicate.Or(
+					resourcemanagerpredicate.ClassChangedPredicate(),
+					// start health checks immediately after MR has been reconciled
+					resourcemanagerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, resourcemanagerpredicate.DefaultConditionChange),
+					resourcemanagerpredicate.NoLongerIgnored(),
+				),
+				resourcemanagerpredicate.NotIgnored(),
+				r.ClassFilter,
+			),
+		).
+		Build(r)
 	if err != nil {
 		return err
 	}
@@ -113,18 +125,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		}
 	}
 
-	return c.Watch(
-		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		r.EnqueueCreateAndUpdate(),
-		predicate.Or(
-			resourcemanagerpredicate.ClassChangedPredicate(),
-			// start health checks immediately after MR has been reconciled
-			resourcemanagerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, resourcemanagerpredicate.DefaultConditionChange),
-			resourcemanagerpredicate.NoLongerIgnored(),
-		),
-		resourcemanagerpredicate.NotIgnored(),
-		r.ClassFilter,
-	)
+	return nil
 }
 
 // EnqueueCreateAndUpdate returns an event handler which only enqueues create and update events.
