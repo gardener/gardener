@@ -326,7 +326,7 @@ func (b *Botanist) deleteShootCredentialFromGarden(ctx context.Context, nameSuff
 		})
 	}
 
-	return kubernetesutils.DeleteObjects(ctx, b.ShootClientSet.Client(), secretsToDelete...)
+	return kubernetesutils.DeleteObjects(ctx, b.GardenClient, secretsToDelete...)
 }
 
 func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) error {
