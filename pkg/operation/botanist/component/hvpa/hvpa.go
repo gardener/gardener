@@ -57,7 +57,6 @@ const (
 // Interface contains functions for an HVPA deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 }
 
 // New creates a new instance of DeployWaiter for the HVPA controller.

@@ -101,22 +101,3 @@ func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error)
 
 	return component.CentralMonitoringConfig{ScrapeConfigs: []string{scrapeConfig.String()}}, nil
 }
-
-// ScrapeConfigs returns the scrape configurations for Prometheus.
-func (h *hvpa) ScrapeConfigs() ([]string, error) {
-	var scrapeConfig bytes.Buffer
-
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
-		"relabeledNamespace": h.namespace,
-		"allowedMetrics":     monitoringAllowedMetrics,
-	}); err != nil {
-		return nil, err
-	}
-
-	return []string{scrapeConfig.String()}, nil
-}
-
-// AlertingRules returns the alerting rules for AlertManager.
-func (h *hvpa) AlertingRules() (map[string]string, error) {
-	return nil, nil
-}

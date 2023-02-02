@@ -32,9 +32,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -106,10 +104,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	if b.Shoot.WantsClusterAutoscaler {
 		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
-	}
-
-	if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.HVPA)
 	}
 
 	for _, component := range monitoringComponents {

@@ -42,13 +42,6 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
-    - podSelector:
-        matchLabels:
-          app: hvpa-controller
-          gardener.cloud/role: hvpa
-      namespaceSelector:
-        matchLabels:
-          role: garden
     {{- if .Values.shoot.sniEnabled }}
     - namespaceSelector: {}
       podSelector:
