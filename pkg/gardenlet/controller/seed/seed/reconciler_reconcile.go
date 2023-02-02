@@ -203,8 +203,8 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	// TODO (kris94): remove after a couple of releases
-	if err := CleanupLegacyPriorityClasses(ctx, r.SeedClientSet.Client()); err != nil {
+	// TODO(ialidzhikov): Remove the cleanup logic in 1.66.
+	if err := CleanupLegacyLokiPriorityClass(ctx, r.SeedClientSet.Client()); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -1273,19 +1273,13 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil
 }
 
-// CleanupLegacyPriorityClasses deletes reversed-vpn-auth-server and fluent-bit priority classes.
-func CleanupLegacyPriorityClasses(ctx context.Context, seedClient client.Client) error {
-	// TODO(ialidzhikov): Clean up the loki PriorityClass as well in a future release.
-	for _, name := range []string{"reversed-vpn-auth-server", "fluent-bit"} {
-		priorityClass := &schedulingv1.PriorityClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
-		}
-		if err := client.IgnoreNotFound(seedClient.Delete(ctx, priorityClass)); err != nil {
-			return err
-		}
+// CleanupLegacyLokiPriorityClass deletes the loki priority class.
+func CleanupLegacyLokiPriorityClass(ctx context.Context, seedClient client.Client) error {
+	priorityClass := &schedulingv1.PriorityClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "loki",
+		},
 	}
 
-	return nil
+	return client.IgnoreNotFound(seedClient.Delete(ctx, priorityClass))
 }

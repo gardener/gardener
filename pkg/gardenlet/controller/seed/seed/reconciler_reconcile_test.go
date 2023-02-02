@@ -37,6 +37,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Reconcile", func() {
@@ -50,33 +51,30 @@ var _ = Describe("Reconcile", func() {
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 	})
 
-	Describe("#CleanupLegacyPriorityClasses", func() {
-		Context("when there are no legacy priority classes in the cluster", func() {
-			It("should not return an error when attempting to clean legacy priority classes that do not exist", func() {
-				Expect(CleanupLegacyPriorityClasses(ctx, seedClient)).To(Succeed())
+	Describe("#CleanupLegacyLokiPriorityClass", func() {
+		Context("when there is no legacy loki priority class in the cluster", func() {
+			It("should not return an error when attempting to clean the loki priority class that does not exist", func() {
+				Expect(CleanupLegacyLokiPriorityClass(ctx, seedClient)).To(Succeed())
 			})
 		})
 
-		Context("when there are legacy priority classes in the cluster", func() {
+		Context("when there is legacy loki priority class in the cluster", func() {
+			var lokiPriorityClass = &schedulingv1.PriorityClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "loki",
+				},
+				Value: 1,
+			}
+
 			BeforeEach(func() {
-				pcNames := []string{"reversed-vpn-auth-server", "fluent-bit", "random"}
-				for _, name := range pcNames {
-					pc := &schedulingv1.PriorityClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: name,
-						},
-						Value: 1,
-					}
-					Expect(seedClient.Create(ctx, pc)).To(Succeed())
-				}
+				Expect(seedClient.Create(ctx, lokiPriorityClass)).To(Succeed())
 			})
 
-			It("should delete all legacy priority classes", func() {
-				Expect(CleanupLegacyPriorityClasses(ctx, seedClient)).To(Succeed())
-				priorityClasses := &schedulingv1.PriorityClassList{}
-				Expect(seedClient.List(ctx, priorityClasses)).To(Succeed())
-				Expect(len(priorityClasses.Items)).To(Equal(1))
-				Expect(priorityClasses.Items[0].Name).To(Equal("random"))
+			It("should delete the legacy loki priority class", func() {
+				Expect(CleanupLegacyLokiPriorityClass(ctx, seedClient)).To(Succeed())
+
+				err := seedClient.Get(ctx, client.ObjectKeyFromObject(lokiPriorityClass), &schedulingv1.PriorityClass{})
+				Expect(err).To(BeNotFoundError())
 			})
 		})
 	})
