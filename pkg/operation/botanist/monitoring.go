@@ -205,7 +205,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,
-				"authSecretName": credentialsSecret.Name,
+				"authSecretName": credentialsUsersSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputePrometheusHost(),
