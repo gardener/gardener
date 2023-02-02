@@ -106,7 +106,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	reconcileTaskFns, desiredObjectMetaKeys := r.reconcileDesiredPolicies(service, namespaceNames)
+	reconcileTaskFns, desiredObjectMetaKeys, err := r.reconcileDesiredPolicies(service, namespaceNames)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	deleteTaskFns := r.deleteStalePolicies(networkPolicyList, desiredObjectMetaKeys)
 
 	return reconcile.Result{}, flow.Parallel(append(reconcileTaskFns, deleteTaskFns...)...)(ctx)
@@ -166,35 +169,56 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 	return namespaceNames, nil
 }
 
-func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespaceNames sets.String) ([]flow.TaskFn, []string) {
+func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespaceNames sets.String) ([]flow.TaskFn, []string, error) {
 	var (
 		taskFns               []flow.TaskFn
 		desiredObjectMetaKeys []string
+
+		addTasksForRelevantNamespacesAndPort = func(port networkingv1.NetworkPolicyPort, customPodLabelSelector string) {
+			policyID := policyIDFor(service.Name, port)
+			podLabelSelector := policyID
+
+			if customPodLabelSelector != "" {
+				policyID += "-via-" + customPodLabelSelector
+				podLabelSelector = customPodLabelSelector
+			}
+
+			for _, n := range namespaceNames.UnsortedList() {
+				namespaceName := n
+				matchLabels := matchLabelsForServiceAndNamespace(podLabelSelector, service, namespaceName)
+
+				for _, fns := range []struct {
+					objectMetaFunc func(string, string, string) metav1.ObjectMeta
+					reconcileFunc  func(context.Context, *corev1.Service, networkingv1.NetworkPolicyPort, metav1.ObjectMeta, string, map[string]string) error
+				}{
+					{objectMetaFunc: ingressPolicyObjectMetaFor, reconcileFunc: r.reconcileIngressPolicy},
+					{objectMetaFunc: egressPolicyObjectMetaFor, reconcileFunc: r.reconcileEgressPolicy},
+				} {
+					reconcileFn := fns.reconcileFunc
+					objectMeta := fns.objectMetaFunc(policyID, service.Namespace, namespaceName)
+					desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
+
+					taskFns = append(taskFns, func(ctx context.Context) error {
+						return reconcileFn(ctx, service, port, objectMeta, namespaceName, matchLabels)
+					})
+				}
+			}
+		}
 	)
 
 	for _, p := range service.Spec.Ports {
-		port := networkingv1.NetworkPolicyPort{Protocol: &p.Protocol, Port: &p.TargetPort}
-		policyID := policyIDFor(service.Name, port)
+		port := p
+		addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, "")
+	}
 
-		for _, n := range namespaceNames.UnsortedList() {
-			namespaceName := n
-			matchLabels := matchLabelsForServiceAndNamespace(policyID, service, namespaceName)
+	if customPodLabelSelector, allowedPorts := service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector], service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts]; customPodLabelSelector != "" && allowedPorts != "" {
+		var ports []networkingv1.NetworkPolicyPort
+		if err := json.Unmarshal([]byte(allowedPorts), &ports); err != nil {
+			return nil, nil, fmt.Errorf("failed unmarshaling %s: %w", allowedPorts, err)
+		}
 
-			for _, fns := range []struct {
-				objectMetaFunc func(string, string, string) metav1.ObjectMeta
-				reconcileFunc  func(context.Context, *corev1.Service, networkingv1.NetworkPolicyPort, metav1.ObjectMeta, string, map[string]string) error
-			}{
-				{objectMetaFunc: ingressPolicyObjectMetaFor, reconcileFunc: r.reconcileIngressPolicy},
-				{objectMetaFunc: egressPolicyObjectMetaFor, reconcileFunc: r.reconcileEgressPolicy},
-			} {
-				reconcileFn := fns.reconcileFunc
-				objectMeta := fns.objectMetaFunc(policyID, service.Namespace, namespaceName)
-				desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
-
-				taskFns = append(taskFns, func(ctx context.Context) error {
-					return reconcileFn(ctx, service, port, objectMeta, namespaceName, matchLabels)
-				})
-			}
+		for _, port := range ports {
+			addTasksForRelevantNamespacesAndPort(port, customPodLabelSelector)
 		}
 	}
 
@@ -206,7 +230,7 @@ func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespace
 		})
 	}
 
-	return taskFns, desiredObjectMetaKeys
+	return taskFns, desiredObjectMetaKeys, nil
 }
 
 func (r *Reconciler) deleteStalePolicies(networkPolicyList *metav1.PartialObjectMetadataList, desiredObjectMetaKeys []string) []flow.TaskFn {
@@ -333,7 +357,7 @@ func policyIDFor(serviceName string, port networkingv1.NetworkPolicyPort) string
 	return fmt.Sprintf("%s-%s-%s", serviceName, strings.ToLower(string(*port.Protocol)), port.Port.String())
 }
 
-func matchLabelsForServiceAndNamespace(policyID string, service *corev1.Service, namespaceName string) map[string]string {
+func matchLabelsForServiceAndNamespace(podLabelSelector string, service *corev1.Service, namespaceName string) map[string]string {
 	var infix string
 
 	if service.Namespace != namespaceName {
@@ -346,7 +370,7 @@ func matchLabelsForServiceAndNamespace(policyID string, service *corev1.Service,
 		infix += "-"
 	}
 
-	return map[string]string{"networking.resources.gardener.cloud/to-" + infix + policyID: v1beta1constants.LabelNetworkPolicyAllowed}
+	return map[string]string{"networking.resources.gardener.cloud/to-" + infix + podLabelSelector: v1beta1constants.LabelNetworkPolicyAllowed}
 }
 
 func ingressPolicyObjectMetaFor(policyID, serviceNamespace, namespaceName string) metav1.ObjectMeta {
