@@ -173,7 +173,7 @@ func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespace
 	)
 
 	for _, p := range service.Spec.Ports {
-		port := p
+		port := networkingv1.NetworkPolicyPort{Protocol: &p.Protocol, Port: &p.TargetPort}
 		policyID := policyIDFor(service.Name, port)
 
 		for _, n := range namespaceNames.UnsortedList() {
@@ -182,7 +182,7 @@ func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespace
 
 			for _, fns := range []struct {
 				objectMetaFunc func(string, string, string) metav1.ObjectMeta
-				reconcileFunc  func(context.Context, *corev1.Service, corev1.ServicePort, metav1.ObjectMeta, string, map[string]string) error
+				reconcileFunc  func(context.Context, *corev1.Service, networkingv1.NetworkPolicyPort, metav1.ObjectMeta, string, map[string]string) error
 			}{
 				{objectMetaFunc: ingressPolicyObjectMetaFor, reconcileFunc: r.reconcileIngressPolicy},
 				{objectMetaFunc: egressPolicyObjectMetaFor, reconcileFunc: r.reconcileEgressPolicy},
@@ -233,7 +233,7 @@ func (r *Reconciler) deleteStalePolicies(networkPolicyList *metav1.PartialObject
 func (r *Reconciler) reconcileIngressPolicy(
 	ctx context.Context,
 	service *corev1.Service,
-	port corev1.ServicePort,
+	port networkingv1.NetworkPolicyPort,
 	networkPolicyObjectMeta metav1.ObjectMeta,
 	namespaceName string,
 	matchLabels map[string]string,
@@ -245,17 +245,14 @@ func (r *Reconciler) reconcileIngressPolicy(
 
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"ingress %s traffic to port %s for pods selected by the %s service selector from pods running in namespace %s labeled "+
-			"with %s.", port.Protocol, port.TargetPort.String(), client.ObjectKeyFromObject(service), namespaceName, matchLabels))
+			"with %s.", *port.Protocol, port.Port.String(), client.ObjectKeyFromObject(service), namespaceName, matchLabels))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
 			From: []networkingv1.NetworkPolicyPeer{{
 				PodSelector:       &metav1.LabelSelector{MatchLabels: matchLabels},
 				NamespaceSelector: ingressNamespaceSelectorFor(service.Namespace, namespaceName),
 			}},
-			Ports: []networkingv1.NetworkPolicyPort{{
-				Protocol: &port.Protocol,
-				Port:     &port.TargetPort,
-			}},
+			Ports: []networkingv1.NetworkPolicyPort{port},
 		}}
 		networkPolicy.Spec.Egress = nil
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
@@ -269,7 +266,7 @@ func (r *Reconciler) reconcileIngressPolicy(
 func (r *Reconciler) reconcileEgressPolicy(
 	ctx context.Context,
 	service *corev1.Service,
-	port corev1.ServicePort,
+	port networkingv1.NetworkPolicyPort,
 	networkPolicyObjectMeta metav1.ObjectMeta,
 	namespaceName string,
 	matchLabels map[string]string,
@@ -282,7 +279,7 @@ func (r *Reconciler) reconcileEgressPolicy(
 
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"egress %s traffic to port %s from pods running in namespace %s labeled with %s to pods selected by the %s service "+
-			"selector.", port.Protocol, port.TargetPort.String(), namespaceName, matchLabels, client.ObjectKeyFromObject(service)))
+			"selector.", *port.Protocol, port.Port.String(), namespaceName, matchLabels, client.ObjectKeyFromObject(service)))
 
 		networkPolicy.Spec.Ingress = nil
 		networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
@@ -290,10 +287,7 @@ func (r *Reconciler) reconcileEgressPolicy(
 				PodSelector:       &metav1.LabelSelector{MatchLabels: service.Spec.Selector},
 				NamespaceSelector: egressNamespaceSelectorFor(service.Namespace, namespaceName),
 			}},
-			Ports: []networkingv1.NetworkPolicyPort{{
-				Protocol: &port.Protocol,
-				Port:     &port.TargetPort,
-			}},
+			Ports: []networkingv1.NetworkPolicyPort{port},
 		}}
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: matchLabels}
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
@@ -335,8 +329,8 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 	return err
 }
 
-func policyIDFor(serviceName string, port corev1.ServicePort) string {
-	return fmt.Sprintf("%s-%s-%s", serviceName, strings.ToLower(string(port.Protocol)), port.TargetPort.String())
+func policyIDFor(serviceName string, port networkingv1.NetworkPolicyPort) string {
+	return fmt.Sprintf("%s-%s-%s", serviceName, strings.ToLower(string(*port.Protocol)), port.Port.String())
 }
 
 func matchLabelsForServiceAndNamespace(policyID string, service *corev1.Service, namespaceName string) map[string]string {
