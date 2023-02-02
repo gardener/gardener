@@ -82,7 +82,7 @@ var _ = Describe("operation", func() {
 			"fooShoot",
 			"barProject",
 			"ingress.seed.example.com",
-			Equal("t-barProject--fooShoot.ingress.seed.example.com"),
+			Equal("t--barProject--fooShoot.ingress.seed.example.com"),
 		),
 	)
 

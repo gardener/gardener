@@ -108,8 +108,7 @@ allow-to-dns                      networking.gardener.cloud/to-dns=allowed
 allow-to-loki                     networking.gardener.cloud/to-loki=allowed                       
 allow-to-private-networks         networking.gardener.cloud/to-private-networks=allowed                    
 allow-to-public-networks          networking.gardener.cloud/to-public-networks=allowed                     
-allow-to-runtime-apiserver        networking.gardener.cloud/to-runtime-apiserver=allowed                      
-deny-all                          networking.gardener.cloud/to-all=disallowed                              
+allow-to-runtime-apiserver        networking.gardener.cloud/to-runtime-apiserver=allowed                                                    
 ```
 
 This section describes the network policies that are unique to the `garden` namespace.

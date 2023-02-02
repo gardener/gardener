@@ -15,15 +15,8 @@
 package botanist
 
 import (
-	"fmt"
-	"net"
-
-	"k8s.io/utils/pointer"
-
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // NewNetworkPoliciesDeployer is an alias for networkpolicies.New. Exposed for testing.
@@ -31,60 +24,9 @@ var NewNetworkPoliciesDeployer = networkpolicies.New
 
 // DefaultNetworkPolicies returns a deployer for the network policies that deny all traffic and allow certain components
 // to use annotations to declare their desire to transmit/receive traffic to/from other Pods/IP addresses.
-func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.Deployer, error) {
-	var shootCIDRNetworks []string
-	if v := b.Shoot.GetInfo().Spec.Networking.Nodes; v != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *v)
-	}
-	if v := b.Shoot.GetInfo().Spec.Networking.Pods; v != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *v)
-	}
-	if v := b.Shoot.GetInfo().Spec.Networking.Services; v != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *v)
-	}
-
-	shootNetworkPeers, err := networkpolicies.NetworkPolicyPeersWithExceptions(shootCIDRNetworks, b.Seed.GetInfo().Spec.Networks.BlockCIDRs...)
-	if err != nil {
-		return nil, err
-	}
-
-	seedCIDRNetworks := []string{b.Seed.GetInfo().Spec.Networks.Pods, b.Seed.GetInfo().Spec.Networks.Services}
-	if v := b.Seed.GetInfo().Spec.Networks.Nodes; v != nil {
-		seedCIDRNetworks = append(seedCIDRNetworks, *v)
-	}
-
-	allCIDRNetworks := append(seedCIDRNetworks, b.Seed.GetInfo().Spec.Networks.BlockCIDRs...)
-
-	privateNetworkPeers, err := networkpolicies.ToNetworkPolicyPeersWithExceptions(networkpolicies.AllPrivateNetworkBlocks(), allCIDRNetworks...)
-	if err != nil {
-		return nil, err
-	}
-
-	_, seedServiceCIDR, err := net.ParseCIDR(b.Seed.GetInfo().Spec.Networks.Services)
-	if err != nil {
-		return nil, err
-	}
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
-	}
-
+func (b *Botanist) DefaultNetworkPolicies() component.Deployer {
 	return NewNetworkPoliciesDeployer(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
-		networkpolicies.Values{
-			ShootNetworkPeers: shootNetworkPeers,
-			GlobalValues: networkpolicies.GlobalValues{
-				// Enable network policies for SNI
-				// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
-				// it needs to be ensured that the traffic from old clients can still reach the API server.
-				SNIEnabled:           sniPhase == component.PhaseEnabled || sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling,
-				BlockedAddresses:     b.Seed.GetInfo().Spec.Networks.BlockCIDRs,
-				PrivateNetworkPeers:  privateNetworkPeers,
-				DenyAllTraffic:       true,
-				NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
-				DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
-			},
-		},
-	), nil
+	)
 }

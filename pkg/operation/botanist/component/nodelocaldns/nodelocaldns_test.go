@@ -1283,14 +1283,14 @@ ip6.arpa:53 {
 
 func bindIP(values Values) string {
 	if values.DNSServer != "" {
-		return IPVSAddress + " " + values.DNSServer
+		return "169.254.20.10 " + values.DNSServer
 	}
-	return IPVSAddress
+	return "169.254.20.10"
 }
 
 func containerArg(values Values) string {
 	if values.DNSServer != "" {
-		return IPVSAddress + "," + values.DNSServer
+		return "169.254.20.10," + values.DNSServer
 	}
-	return IPVSAddress
+	return "169.254.20.10"
 }

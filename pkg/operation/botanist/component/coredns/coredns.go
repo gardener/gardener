@@ -42,6 +42,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -49,20 +50,11 @@ import (
 )
 
 const (
-	// LabelKey is the key of a label used for the identification of CoreDNS pods.
-	LabelKey = "k8s-app"
-	// LabelValue is the value of a label used for the identification of CoreDNS pods (it's 'kube-dns' for legacy
-	// reasons).
-	LabelValue = "kube-dns"
 	// clusterProportionalDNSAutoscalerLabelValue is the value of a label used for the identification of the
 	// cluster proportional DNS autoscaler.
 	clusterProportionalDNSAutoscalerLabelValue = "coredns-autoscaler"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-coredns"
-	// PortServiceServer is the service port used for the DNS server.
-	PortServiceServer = 53
-	// PortServer is the target port used for the DNS server.
-	PortServer = 8053
 	// DeploymentName is the name of the coredns Deployment.
 	DeploymentName = "coredns"
 	// clusterProportionalAutoscalerDeploymentName is the name of the cluster proportional autoscaler deployment.
@@ -172,7 +164,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 	var (
 		portAPIServer       = intstr.FromInt(kubeapiserver.Port)
 		portDNSServerHost   = intstr.FromInt(53)
-		portDNSServer       = intstr.FromInt(PortServer)
+		portDNSServer       = intstr.FromInt(corednsconstants.PortServer)
 		portMetricsEndpoint = intstr.FromInt(portMetrics)
 		protocolTCP         = corev1.ProtocolTCP
 		protocolUDP         = corev1.ProtocolUDP
@@ -240,7 +232,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				configDataKey: `.:` + strconv.Itoa(PortServer) + ` {
+				configDataKey: `.:` + strconv.Itoa(corednsconstants.PortServer) + ` {
   errors
   log . {
       class error
@@ -284,25 +276,25 @@ import custom/*.server
 				Name:      serviceName,
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					LabelKey:                        LabelValue,
+					corednsconstants.LabelKey:       corednsconstants.LabelValue,
 					"kubernetes.io/cluster-service": "true",
 					"kubernetes.io/name":            "CoreDNS",
 				},
 			},
 			Spec: corev1.ServiceSpec{
 				ClusterIP: c.values.ClusterIP,
-				Selector:  map[string]string{LabelKey: LabelValue},
+				Selector:  map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 				Ports: []corev1.ServicePort{
 					{
 						Name:       "dns",
-						Port:       int32(PortServiceServer),
-						TargetPort: intstr.FromInt(PortServer),
+						Port:       int32(corednsconstants.PortServiceServer),
+						TargetPort: intstr.FromInt(corednsconstants.PortServer),
 						Protocol:   corev1.ProtocolUDP,
 					},
 					{
 						Name:       "dns-tcp",
-						Port:       int32(PortServiceServer),
-						TargetPort: intstr.FromInt(PortServer),
+						Port:       int32(corednsconstants.PortServiceServer),
+						TargetPort: intstr.FromInt(corednsconstants.PortServer),
 						Protocol:   corev1.ProtocolTCP,
 					},
 					{
@@ -326,9 +318,9 @@ import custom/*.server
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      LabelKey,
+						Key:      corednsconstants.LabelKey,
 						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{LabelValue},
+						Values:   []string{corednsconstants.LabelValue},
 					}},
 				},
 				Egress: []networkingv1.NetworkPolicyEgressRule{{
@@ -372,7 +364,7 @@ import custom/*.server
 					},
 				},
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{LabelKey: LabelValue},
+					MatchLabels: map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -404,12 +396,12 @@ import custom/*.server
 								{
 									Name:          "dns-udp",
 									Protocol:      protocolUDP,
-									ContainerPort: PortServer,
+									ContainerPort: corednsconstants.PortServer,
 								},
 								{
 									Name:          "dns-tcp",
 									Protocol:      protocolTCP,
-									ContainerPort: PortServer,
+									ContainerPort: corednsconstants.PortServer,
 								},
 								{
 									Name:          portNameMetrics,
@@ -568,7 +560,7 @@ import custom/*.server
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{LabelKey: clusterProportionalDNSAutoscalerLabelValue},
+					MatchLabels: map[string]string{corednsconstants.LabelKey: clusterProportionalDNSAutoscalerLabelValue},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -656,7 +648,7 @@ import custom/*.server
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
-				Labels:    map[string]string{LabelKey: LabelValue},
+				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &intStrOne,
@@ -668,7 +660,7 @@ import custom/*.server
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
-				Labels:    map[string]string{LabelKey: LabelValue},
+				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1beta1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &intStrOne,
@@ -787,7 +779,7 @@ func getLabels() map[string]string {
 	return map[string]string{
 		"origin":                    "gardener",
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent,
-		LabelKey:                    LabelValue,
+		corednsconstants.LabelKey:   corednsconstants.LabelValue,
 	}
 }
 
@@ -795,7 +787,7 @@ func getClusterProportionalDNSAutoscalerLabels() map[string]string {
 	return map[string]string{
 		"origin":                        "gardener",
 		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-		LabelKey:                        clusterProportionalDNSAutoscalerLabelValue,
+		corednsconstants.LabelKey:       clusterProportionalDNSAutoscalerLabelValue,
 		"kubernetes.io/cluster-service": "true",
 	}
 }

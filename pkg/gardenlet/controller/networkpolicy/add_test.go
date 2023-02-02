@@ -36,9 +36,7 @@ import (
 )
 
 var _ = Describe("Add", func() {
-	var (
-		reconciler *Reconciler
-	)
+	var reconciler *Reconciler
 
 	BeforeEach(func() {
 		reconciler = &Reconciler{}

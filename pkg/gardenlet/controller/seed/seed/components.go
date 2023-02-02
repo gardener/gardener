@@ -16,8 +16,6 @@ package seed
 
 import (
 	"context"
-	"fmt"
-	"net"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -43,11 +41,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -237,25 +233,13 @@ func defaultIstio(
 		istioProxyGateway = nil
 	}
 
-	_, seedServiceCIDR, err := net.ParseCIDR(gardenSeed.Spec.Networks.Services)
-	if err != nil {
-		return nil, err
-	}
-
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
-	}
-
 	return istio.NewIstio(
 		seedClient,
 		chartRenderer,
 		istio.IstiodValues{
-			TrustDomain:          gardencorev1beta1.DefaultDomain,
-			Image:                istiodImage.String(),
-			DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
-			NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
-			Zones:                gardenSeed.Spec.Provider.Zones,
+			TrustDomain: gardencorev1beta1.DefaultDomain,
+			Image:       istiodImage.String(),
+			Zones:       gardenSeed.Spec.Provider.Zones,
 		},
 		v1beta1constants.IstioSystemNamespace,
 		istioIngressGateway,
@@ -272,30 +256,8 @@ func defaultNetworkPolicies(
 	component.DeployWaiter,
 	error,
 ) {
-	networks := []string{seed.Spec.Networks.Pods, seed.Spec.Networks.Services}
-	if v := seed.Spec.Networks.Nodes; v != nil {
-		networks = append(networks, *v)
-	}
-	privateNetworkPeers, err := networkpolicies.ToNetworkPolicyPeersWithExceptions(networkpolicies.AllPrivateNetworkBlocks(), networks...)
-	if err != nil {
-		return nil, err
-	}
-
-	_, seedServiceCIDR, err := net.ParseCIDR(seed.Spec.Networks.Services)
-	if err != nil {
-		return nil, err
-	}
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
-	}
-
 	return networkpolicies.NewBootstrapper(c, gardenNamespaceName, networkpolicies.GlobalValues{
-		SNIEnabled:           sniEnabled,
-		DenyAllTraffic:       false,
-		PrivateNetworkPeers:  privateNetworkPeers,
-		NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
-		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
+		SNIEnabled: sniEnabled,
 	}), nil
 }
 
