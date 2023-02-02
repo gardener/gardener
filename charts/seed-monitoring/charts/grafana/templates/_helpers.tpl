@@ -69,7 +69,7 @@ grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 
 {{- end }}
 {{- end }}
 {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
-{{ if not (and (eq $name "dashboards/owners/shoot-vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
+{{ if not (and (eq $name "dashboards/owners/vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
 {{ base $name }}: |-
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{ end }}
