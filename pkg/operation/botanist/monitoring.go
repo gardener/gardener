@@ -459,11 +459,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	if err := b.deployGrafanaCharts(ctx, credentialsSecret, grafanaOperatorsRole, operatorsDashboards.String(), common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
-		return err
-	}
-
-	if err := b.deployGrafanaCharts(ctx, credentialsUsersSecret, grafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
+	if err := b.deployGrafanaCharts(ctx, credentialsUsersSecret, dashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
@@ -553,7 +549,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	return configs, nil
 }
 
-func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, role, dashboards, subDomain, ingressTLSSecretName string) error {
+func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, dashboards, subDomain, ingressTLSSecretName string) error {
 	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
@@ -571,7 +567,6 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 			},
 		},
 		"replicas": b.Shoot.GetReplicas(1),
-		"role":     role,
 		"extensions": map[string]interface{}{
 			"dashboards": dashboards,
 		},
