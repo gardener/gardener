@@ -577,13 +577,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
 }
 
-// DeleteGrafana will delete all grafana instances from the seed cluster.
+// DeleteGrafana will delete all grafana resources from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
-	if err := common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
-		return err
-	}
-
-	return common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaUsersRole)
+	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
 }
 
 // DeleteDeprecatedGrafana will delete all deprecated grafana instances from the seed cluster.
