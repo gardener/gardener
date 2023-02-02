@@ -69,9 +69,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenCtx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	gardenCtx, cancel := context.WithTimeout(ctx, 2*controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
-	seedCtx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout/2)
+	seedCtx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
 	backupBucket := &gardencorev1beta1.BackupBucket{}
