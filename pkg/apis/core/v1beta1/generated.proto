@@ -706,6 +706,45 @@ message ExpirableVersion {
   optional string classification = 3;
 }
 
+// ExposureClass represents a control plane endpoint exposure strategy.
+message ExposureClass {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Handler is the name of the handler which applies the control plane endpoint exposure strategy.
+  // This field is immutable.
+  optional string handler = 2;
+
+  // Scheduling holds information how to select applicable Seed's for ExposureClass usage.
+  // This field is immutable.
+  // +optional
+  optional ExposureClassScheduling scheduling = 3;
+}
+
+// ExposureClassList is a collection of ExposureClass.
+message ExposureClassList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of ExposureClasses.
+  repeated ExposureClass items = 2;
+}
+
+// ExposureClassScheduling holds information to select applicable Seed's for ExposureClass usage.
+message ExposureClassScheduling {
+  // SeedSelector is an optional label selector for Seed's which are suitable to use the ExposureClass.
+  // +optional
+  optional SeedSelector seedSelector = 1;
+
+  // Tolerations contains the tolerations for taints on Seed clusters.
+  // +patchMergeKey=key
+  // +patchStrategy=merge
+  // +optional
+  repeated Toleration tolerations = 2;
+}
+
 // Extension contains type and provider information for Shoot extensions.
 message Extension {
   // Type is the type of the extension resource.
@@ -718,6 +757,29 @@ message Extension {
   // Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
   // +optional
   optional bool disabled = 3;
+}
+
+// ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's
+// namespace on the Seed cluster.
+message ExtensionResourceState {
+  // Kind (type) of the extension custom resource
+  optional string kind = 1;
+
+  // Name of the extension custom resource
+  // +optional
+  optional string name = 2;
+
+  // Purpose of the extension custom resource
+  // +optional
+  optional string purpose = 3;
+
+  // State of the extension resource
+  // +optional
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension state = 4;
+
+  // Resources holds a list of named resource references that can be referred to in the state by their names.
+  // +optional
+  repeated NamedResourceReference resources = 5;
 }
 
 // FailureTolerance describes information about failure tolerance level of a highly available resource.
@@ -736,6 +798,22 @@ message Gardener {
 
   // Version is the version of the Gardener which last acted on a resource.
   optional string version = 3;
+}
+
+// GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot's control plane.
+message GardenerResourceData {
+  // Name of the object required to generate resources
+  optional string name = 1;
+
+  // Type of the object
+  optional string type = 2;
+
+  // Data contains the payload required to generate resources
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension data = 3;
+
+  // Labels are labels of the object
+  // +optional
+  map<string, string> labels = 4;
 }
 
 // Hibernation contains information whether the Shoot is suspended or not.
@@ -1839,6 +1917,14 @@ message Region {
   map<string, string> labels = 3;
 }
 
+// ResourceData holds the data of a resource referred to by an extension controller state.
+message ResourceData {
+  optional k8s.io.api.autoscaling.v1.CrossVersionObjectReference ref = 1;
+
+  // Data of the resource
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension data = 2;
+}
+
 // ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.
 message ResourceWatchCacheSize {
   // APIGroup is the API group of the resource for which the watch cache size should be configured.
@@ -2560,6 +2646,44 @@ message ShootSpec {
   // ControlPlane contains general settings for the control plane of the shoot.
   // +optional
   optional ControlPlane controlPlane = 20;
+}
+
+// ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.
+message ShootState {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Specification of the ShootState.
+  // +optional
+  optional ShootStateSpec spec = 2;
+}
+
+// ShootStateList is a list of ShootState objects.
+message ShootStateList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of ShootStates.
+  repeated ShootState items = 2;
+}
+
+// ShootStateSpec is the specification of the ShootState.
+message ShootStateSpec {
+  // Gardener holds the data required to generate resources deployed by the gardenlet
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated GardenerResourceData gardener = 1;
+
+  // Extensions holds the state of custom resources reconciled by extension controllers in the seed
+  // +optional
+  repeated ExtensionResourceState extensions = 2;
+
+  // Resources holds the data of resources referred to by extension controller states
+  // +optional
+  repeated ResourceData resources = 3;
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

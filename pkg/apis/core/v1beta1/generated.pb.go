@@ -1338,10 +1338,94 @@ func (m *ExpirableVersion) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ExpirableVersion proto.InternalMessageInfo
 
+func (m *ExposureClass) Reset()      { *m = ExposureClass{} }
+func (*ExposureClass) ProtoMessage() {}
+func (*ExposureClass) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{46}
+}
+func (m *ExposureClass) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ExposureClass) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ExposureClass) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExposureClass.Merge(m, src)
+}
+func (m *ExposureClass) XXX_Size() int {
+	return m.Size()
+}
+func (m *ExposureClass) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExposureClass.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExposureClass proto.InternalMessageInfo
+
+func (m *ExposureClassList) Reset()      { *m = ExposureClassList{} }
+func (*ExposureClassList) ProtoMessage() {}
+func (*ExposureClassList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{47}
+}
+func (m *ExposureClassList) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ExposureClassList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ExposureClassList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExposureClassList.Merge(m, src)
+}
+func (m *ExposureClassList) XXX_Size() int {
+	return m.Size()
+}
+func (m *ExposureClassList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExposureClassList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExposureClassList proto.InternalMessageInfo
+
+func (m *ExposureClassScheduling) Reset()      { *m = ExposureClassScheduling{} }
+func (*ExposureClassScheduling) ProtoMessage() {}
+func (*ExposureClassScheduling) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{48}
+}
+func (m *ExposureClassScheduling) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ExposureClassScheduling) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ExposureClassScheduling) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExposureClassScheduling.Merge(m, src)
+}
+func (m *ExposureClassScheduling) XXX_Size() int {
+	return m.Size()
+}
+func (m *ExposureClassScheduling) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExposureClassScheduling.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExposureClassScheduling proto.InternalMessageInfo
+
 func (m *Extension) Reset()      { *m = Extension{} }
 func (*Extension) ProtoMessage() {}
 func (*Extension) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{46}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{49}
 }
 func (m *Extension) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1366,10 +1450,38 @@ func (m *Extension) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Extension proto.InternalMessageInfo
 
+func (m *ExtensionResourceState) Reset()      { *m = ExtensionResourceState{} }
+func (*ExtensionResourceState) ProtoMessage() {}
+func (*ExtensionResourceState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{50}
+}
+func (m *ExtensionResourceState) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ExtensionResourceState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ExtensionResourceState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExtensionResourceState.Merge(m, src)
+}
+func (m *ExtensionResourceState) XXX_Size() int {
+	return m.Size()
+}
+func (m *ExtensionResourceState) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExtensionResourceState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExtensionResourceState proto.InternalMessageInfo
+
 func (m *FailureTolerance) Reset()      { *m = FailureTolerance{} }
 func (*FailureTolerance) ProtoMessage() {}
 func (*FailureTolerance) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{47}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{51}
 }
 func (m *FailureTolerance) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1397,7 +1509,7 @@ var xxx_messageInfo_FailureTolerance proto.InternalMessageInfo
 func (m *Gardener) Reset()      { *m = Gardener{} }
 func (*Gardener) ProtoMessage() {}
 func (*Gardener) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{48}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{52}
 }
 func (m *Gardener) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1422,10 +1534,38 @@ func (m *Gardener) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Gardener proto.InternalMessageInfo
 
+func (m *GardenerResourceData) Reset()      { *m = GardenerResourceData{} }
+func (*GardenerResourceData) ProtoMessage() {}
+func (*GardenerResourceData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{53}
+}
+func (m *GardenerResourceData) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GardenerResourceData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *GardenerResourceData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GardenerResourceData.Merge(m, src)
+}
+func (m *GardenerResourceData) XXX_Size() int {
+	return m.Size()
+}
+func (m *GardenerResourceData) XXX_DiscardUnknown() {
+	xxx_messageInfo_GardenerResourceData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GardenerResourceData proto.InternalMessageInfo
+
 func (m *Hibernation) Reset()      { *m = Hibernation{} }
 func (*Hibernation) ProtoMessage() {}
 func (*Hibernation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{49}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{54}
 }
 func (m *Hibernation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1453,7 +1593,7 @@ var xxx_messageInfo_Hibernation proto.InternalMessageInfo
 func (m *HibernationSchedule) Reset()      { *m = HibernationSchedule{} }
 func (*HibernationSchedule) ProtoMessage() {}
 func (*HibernationSchedule) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{50}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{55}
 }
 func (m *HibernationSchedule) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1481,7 +1621,7 @@ var xxx_messageInfo_HibernationSchedule proto.InternalMessageInfo
 func (m *HighAvailability) Reset()      { *m = HighAvailability{} }
 func (*HighAvailability) ProtoMessage() {}
 func (*HighAvailability) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{51}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{56}
 }
 func (m *HighAvailability) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1509,7 +1649,7 @@ var xxx_messageInfo_HighAvailability proto.InternalMessageInfo
 func (m *HorizontalPodAutoscalerConfig) Reset()      { *m = HorizontalPodAutoscalerConfig{} }
 func (*HorizontalPodAutoscalerConfig) ProtoMessage() {}
 func (*HorizontalPodAutoscalerConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{52}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{57}
 }
 func (m *HorizontalPodAutoscalerConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1537,7 +1677,7 @@ var xxx_messageInfo_HorizontalPodAutoscalerConfig proto.InternalMessageInfo
 func (m *Ingress) Reset()      { *m = Ingress{} }
 func (*Ingress) ProtoMessage() {}
 func (*Ingress) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{53}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{58}
 }
 func (m *Ingress) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1565,7 +1705,7 @@ var xxx_messageInfo_Ingress proto.InternalMessageInfo
 func (m *IngressController) Reset()      { *m = IngressController{} }
 func (*IngressController) ProtoMessage() {}
 func (*IngressController) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{54}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{59}
 }
 func (m *IngressController) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1593,7 +1733,7 @@ var xxx_messageInfo_IngressController proto.InternalMessageInfo
 func (m *KubeAPIServerConfig) Reset()      { *m = KubeAPIServerConfig{} }
 func (*KubeAPIServerConfig) ProtoMessage() {}
 func (*KubeAPIServerConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{55}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{60}
 }
 func (m *KubeAPIServerConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1621,7 +1761,7 @@ var xxx_messageInfo_KubeAPIServerConfig proto.InternalMessageInfo
 func (m *KubeAPIServerLogging) Reset()      { *m = KubeAPIServerLogging{} }
 func (*KubeAPIServerLogging) ProtoMessage() {}
 func (*KubeAPIServerLogging) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{56}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{61}
 }
 func (m *KubeAPIServerLogging) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1649,7 +1789,7 @@ var xxx_messageInfo_KubeAPIServerLogging proto.InternalMessageInfo
 func (m *KubeAPIServerRequests) Reset()      { *m = KubeAPIServerRequests{} }
 func (*KubeAPIServerRequests) ProtoMessage() {}
 func (*KubeAPIServerRequests) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{57}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{62}
 }
 func (m *KubeAPIServerRequests) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1677,7 +1817,7 @@ var xxx_messageInfo_KubeAPIServerRequests proto.InternalMessageInfo
 func (m *KubeControllerManagerConfig) Reset()      { *m = KubeControllerManagerConfig{} }
 func (*KubeControllerManagerConfig) ProtoMessage() {}
 func (*KubeControllerManagerConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{58}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{63}
 }
 func (m *KubeControllerManagerConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1705,7 +1845,7 @@ var xxx_messageInfo_KubeControllerManagerConfig proto.InternalMessageInfo
 func (m *KubeProxyConfig) Reset()      { *m = KubeProxyConfig{} }
 func (*KubeProxyConfig) ProtoMessage() {}
 func (*KubeProxyConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{59}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{64}
 }
 func (m *KubeProxyConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1733,7 +1873,7 @@ var xxx_messageInfo_KubeProxyConfig proto.InternalMessageInfo
 func (m *KubeSchedulerConfig) Reset()      { *m = KubeSchedulerConfig{} }
 func (*KubeSchedulerConfig) ProtoMessage() {}
 func (*KubeSchedulerConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{60}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{65}
 }
 func (m *KubeSchedulerConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1761,7 +1901,7 @@ var xxx_messageInfo_KubeSchedulerConfig proto.InternalMessageInfo
 func (m *KubeletConfig) Reset()      { *m = KubeletConfig{} }
 func (*KubeletConfig) ProtoMessage() {}
 func (*KubeletConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{61}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{66}
 }
 func (m *KubeletConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1789,7 +1929,7 @@ var xxx_messageInfo_KubeletConfig proto.InternalMessageInfo
 func (m *KubeletConfigEviction) Reset()      { *m = KubeletConfigEviction{} }
 func (*KubeletConfigEviction) ProtoMessage() {}
 func (*KubeletConfigEviction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{62}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{67}
 }
 func (m *KubeletConfigEviction) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1817,7 +1957,7 @@ var xxx_messageInfo_KubeletConfigEviction proto.InternalMessageInfo
 func (m *KubeletConfigEvictionMinimumReclaim) Reset()      { *m = KubeletConfigEvictionMinimumReclaim{} }
 func (*KubeletConfigEvictionMinimumReclaim) ProtoMessage() {}
 func (*KubeletConfigEvictionMinimumReclaim) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{63}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{68}
 }
 func (m *KubeletConfigEvictionMinimumReclaim) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1845,7 +1985,7 @@ var xxx_messageInfo_KubeletConfigEvictionMinimumReclaim proto.InternalMessageInf
 func (m *KubeletConfigEvictionSoftGracePeriod) Reset()      { *m = KubeletConfigEvictionSoftGracePeriod{} }
 func (*KubeletConfigEvictionSoftGracePeriod) ProtoMessage() {}
 func (*KubeletConfigEvictionSoftGracePeriod) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{64}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{69}
 }
 func (m *KubeletConfigEvictionSoftGracePeriod) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1873,7 +2013,7 @@ var xxx_messageInfo_KubeletConfigEvictionSoftGracePeriod proto.InternalMessageIn
 func (m *KubeletConfigReserved) Reset()      { *m = KubeletConfigReserved{} }
 func (*KubeletConfigReserved) ProtoMessage() {}
 func (*KubeletConfigReserved) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{65}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{70}
 }
 func (m *KubeletConfigReserved) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1901,7 +2041,7 @@ var xxx_messageInfo_KubeletConfigReserved proto.InternalMessageInfo
 func (m *Kubernetes) Reset()      { *m = Kubernetes{} }
 func (*Kubernetes) ProtoMessage() {}
 func (*Kubernetes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{66}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{71}
 }
 func (m *Kubernetes) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1929,7 +2069,7 @@ var xxx_messageInfo_Kubernetes proto.InternalMessageInfo
 func (m *KubernetesConfig) Reset()      { *m = KubernetesConfig{} }
 func (*KubernetesConfig) ProtoMessage() {}
 func (*KubernetesConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{67}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{72}
 }
 func (m *KubernetesConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1957,7 +2097,7 @@ var xxx_messageInfo_KubernetesConfig proto.InternalMessageInfo
 func (m *KubernetesDashboard) Reset()      { *m = KubernetesDashboard{} }
 func (*KubernetesDashboard) ProtoMessage() {}
 func (*KubernetesDashboard) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{68}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{73}
 }
 func (m *KubernetesDashboard) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1985,7 +2125,7 @@ var xxx_messageInfo_KubernetesDashboard proto.InternalMessageInfo
 func (m *KubernetesSettings) Reset()      { *m = KubernetesSettings{} }
 func (*KubernetesSettings) ProtoMessage() {}
 func (*KubernetesSettings) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{69}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{74}
 }
 func (m *KubernetesSettings) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2013,7 +2153,7 @@ var xxx_messageInfo_KubernetesSettings proto.InternalMessageInfo
 func (m *LastError) Reset()      { *m = LastError{} }
 func (*LastError) ProtoMessage() {}
 func (*LastError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{70}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{75}
 }
 func (m *LastError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2041,7 +2181,7 @@ var xxx_messageInfo_LastError proto.InternalMessageInfo
 func (m *LastMaintenance) Reset()      { *m = LastMaintenance{} }
 func (*LastMaintenance) ProtoMessage() {}
 func (*LastMaintenance) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{71}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{76}
 }
 func (m *LastMaintenance) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2069,7 +2209,7 @@ var xxx_messageInfo_LastMaintenance proto.InternalMessageInfo
 func (m *LastOperation) Reset()      { *m = LastOperation{} }
 func (*LastOperation) ProtoMessage() {}
 func (*LastOperation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{72}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{77}
 }
 func (m *LastOperation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2097,7 +2237,7 @@ var xxx_messageInfo_LastOperation proto.InternalMessageInfo
 func (m *Machine) Reset()      { *m = Machine{} }
 func (*Machine) ProtoMessage() {}
 func (*Machine) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{73}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{78}
 }
 func (m *Machine) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2125,7 +2265,7 @@ var xxx_messageInfo_Machine proto.InternalMessageInfo
 func (m *MachineControllerManagerSettings) Reset()      { *m = MachineControllerManagerSettings{} }
 func (*MachineControllerManagerSettings) ProtoMessage() {}
 func (*MachineControllerManagerSettings) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{74}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{79}
 }
 func (m *MachineControllerManagerSettings) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2153,7 +2293,7 @@ var xxx_messageInfo_MachineControllerManagerSettings proto.InternalMessageInfo
 func (m *MachineImage) Reset()      { *m = MachineImage{} }
 func (*MachineImage) ProtoMessage() {}
 func (*MachineImage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{75}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{80}
 }
 func (m *MachineImage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2181,7 +2321,7 @@ var xxx_messageInfo_MachineImage proto.InternalMessageInfo
 func (m *MachineImageVersion) Reset()      { *m = MachineImageVersion{} }
 func (*MachineImageVersion) ProtoMessage() {}
 func (*MachineImageVersion) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{76}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{81}
 }
 func (m *MachineImageVersion) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2209,7 +2349,7 @@ var xxx_messageInfo_MachineImageVersion proto.InternalMessageInfo
 func (m *MachineType) Reset()      { *m = MachineType{} }
 func (*MachineType) ProtoMessage() {}
 func (*MachineType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{77}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{82}
 }
 func (m *MachineType) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2237,7 +2377,7 @@ var xxx_messageInfo_MachineType proto.InternalMessageInfo
 func (m *MachineTypeStorage) Reset()      { *m = MachineTypeStorage{} }
 func (*MachineTypeStorage) ProtoMessage() {}
 func (*MachineTypeStorage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{78}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{83}
 }
 func (m *MachineTypeStorage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2265,7 +2405,7 @@ var xxx_messageInfo_MachineTypeStorage proto.InternalMessageInfo
 func (m *Maintenance) Reset()      { *m = Maintenance{} }
 func (*Maintenance) ProtoMessage() {}
 func (*Maintenance) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{79}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{84}
 }
 func (m *Maintenance) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2293,7 +2433,7 @@ var xxx_messageInfo_Maintenance proto.InternalMessageInfo
 func (m *MaintenanceAutoUpdate) Reset()      { *m = MaintenanceAutoUpdate{} }
 func (*MaintenanceAutoUpdate) ProtoMessage() {}
 func (*MaintenanceAutoUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{80}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{85}
 }
 func (m *MaintenanceAutoUpdate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2321,7 +2461,7 @@ var xxx_messageInfo_MaintenanceAutoUpdate proto.InternalMessageInfo
 func (m *MaintenanceTimeWindow) Reset()      { *m = MaintenanceTimeWindow{} }
 func (*MaintenanceTimeWindow) ProtoMessage() {}
 func (*MaintenanceTimeWindow) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{81}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{86}
 }
 func (m *MaintenanceTimeWindow) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2349,7 +2489,7 @@ var xxx_messageInfo_MaintenanceTimeWindow proto.InternalMessageInfo
 func (m *Monitoring) Reset()      { *m = Monitoring{} }
 func (*Monitoring) ProtoMessage() {}
 func (*Monitoring) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{82}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{87}
 }
 func (m *Monitoring) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2377,7 +2517,7 @@ var xxx_messageInfo_Monitoring proto.InternalMessageInfo
 func (m *NamedResourceReference) Reset()      { *m = NamedResourceReference{} }
 func (*NamedResourceReference) ProtoMessage() {}
 func (*NamedResourceReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{83}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{88}
 }
 func (m *NamedResourceReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2405,7 +2545,7 @@ var xxx_messageInfo_NamedResourceReference proto.InternalMessageInfo
 func (m *Networking) Reset()      { *m = Networking{} }
 func (*Networking) ProtoMessage() {}
 func (*Networking) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{84}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{89}
 }
 func (m *Networking) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2433,7 +2573,7 @@ var xxx_messageInfo_Networking proto.InternalMessageInfo
 func (m *NginxIngress) Reset()      { *m = NginxIngress{} }
 func (*NginxIngress) ProtoMessage() {}
 func (*NginxIngress) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{85}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{90}
 }
 func (m *NginxIngress) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2461,7 +2601,7 @@ var xxx_messageInfo_NginxIngress proto.InternalMessageInfo
 func (m *NodeLocalDNS) Reset()      { *m = NodeLocalDNS{} }
 func (*NodeLocalDNS) ProtoMessage() {}
 func (*NodeLocalDNS) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{86}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{91}
 }
 func (m *NodeLocalDNS) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2489,7 +2629,7 @@ var xxx_messageInfo_NodeLocalDNS proto.InternalMessageInfo
 func (m *OIDCConfig) Reset()      { *m = OIDCConfig{} }
 func (*OIDCConfig) ProtoMessage() {}
 func (*OIDCConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{87}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{92}
 }
 func (m *OIDCConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2517,7 +2657,7 @@ var xxx_messageInfo_OIDCConfig proto.InternalMessageInfo
 func (m *OpenIDConnectClientAuthentication) Reset()      { *m = OpenIDConnectClientAuthentication{} }
 func (*OpenIDConnectClientAuthentication) ProtoMessage() {}
 func (*OpenIDConnectClientAuthentication) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{88}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{93}
 }
 func (m *OpenIDConnectClientAuthentication) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2545,7 +2685,7 @@ var xxx_messageInfo_OpenIDConnectClientAuthentication proto.InternalMessageInfo
 func (m *Project) Reset()      { *m = Project{} }
 func (*Project) ProtoMessage() {}
 func (*Project) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{89}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{94}
 }
 func (m *Project) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2573,7 +2713,7 @@ var xxx_messageInfo_Project proto.InternalMessageInfo
 func (m *ProjectList) Reset()      { *m = ProjectList{} }
 func (*ProjectList) ProtoMessage() {}
 func (*ProjectList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{90}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{95}
 }
 func (m *ProjectList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2601,7 +2741,7 @@ var xxx_messageInfo_ProjectList proto.InternalMessageInfo
 func (m *ProjectMember) Reset()      { *m = ProjectMember{} }
 func (*ProjectMember) ProtoMessage() {}
 func (*ProjectMember) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{91}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{96}
 }
 func (m *ProjectMember) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2629,7 +2769,7 @@ var xxx_messageInfo_ProjectMember proto.InternalMessageInfo
 func (m *ProjectSpec) Reset()      { *m = ProjectSpec{} }
 func (*ProjectSpec) ProtoMessage() {}
 func (*ProjectSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{92}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{97}
 }
 func (m *ProjectSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2657,7 +2797,7 @@ var xxx_messageInfo_ProjectSpec proto.InternalMessageInfo
 func (m *ProjectStatus) Reset()      { *m = ProjectStatus{} }
 func (*ProjectStatus) ProtoMessage() {}
 func (*ProjectStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{93}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{98}
 }
 func (m *ProjectStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2685,7 +2825,7 @@ var xxx_messageInfo_ProjectStatus proto.InternalMessageInfo
 func (m *ProjectTolerations) Reset()      { *m = ProjectTolerations{} }
 func (*ProjectTolerations) ProtoMessage() {}
 func (*ProjectTolerations) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{94}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{99}
 }
 func (m *ProjectTolerations) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2713,7 +2853,7 @@ var xxx_messageInfo_ProjectTolerations proto.InternalMessageInfo
 func (m *Provider) Reset()      { *m = Provider{} }
 func (*Provider) ProtoMessage() {}
 func (*Provider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{95}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{100}
 }
 func (m *Provider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2741,7 +2881,7 @@ var xxx_messageInfo_Provider proto.InternalMessageInfo
 func (m *Quota) Reset()      { *m = Quota{} }
 func (*Quota) ProtoMessage() {}
 func (*Quota) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{96}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{101}
 }
 func (m *Quota) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2769,7 +2909,7 @@ var xxx_messageInfo_Quota proto.InternalMessageInfo
 func (m *QuotaList) Reset()      { *m = QuotaList{} }
 func (*QuotaList) ProtoMessage() {}
 func (*QuotaList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{97}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{102}
 }
 func (m *QuotaList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2797,7 +2937,7 @@ var xxx_messageInfo_QuotaList proto.InternalMessageInfo
 func (m *QuotaSpec) Reset()      { *m = QuotaSpec{} }
 func (*QuotaSpec) ProtoMessage() {}
 func (*QuotaSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{98}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{103}
 }
 func (m *QuotaSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2825,7 +2965,7 @@ var xxx_messageInfo_QuotaSpec proto.InternalMessageInfo
 func (m *Region) Reset()      { *m = Region{} }
 func (*Region) ProtoMessage() {}
 func (*Region) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{99}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{104}
 }
 func (m *Region) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2850,10 +2990,38 @@ func (m *Region) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Region proto.InternalMessageInfo
 
+func (m *ResourceData) Reset()      { *m = ResourceData{} }
+func (*ResourceData) ProtoMessage() {}
+func (*ResourceData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{105}
+}
+func (m *ResourceData) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ResourceData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ResourceData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResourceData.Merge(m, src)
+}
+func (m *ResourceData) XXX_Size() int {
+	return m.Size()
+}
+func (m *ResourceData) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResourceData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResourceData proto.InternalMessageInfo
+
 func (m *ResourceWatchCacheSize) Reset()      { *m = ResourceWatchCacheSize{} }
 func (*ResourceWatchCacheSize) ProtoMessage() {}
 func (*ResourceWatchCacheSize) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{100}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{106}
 }
 func (m *ResourceWatchCacheSize) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2881,7 +3049,7 @@ var xxx_messageInfo_ResourceWatchCacheSize proto.InternalMessageInfo
 func (m *SSHAccess) Reset()      { *m = SSHAccess{} }
 func (*SSHAccess) ProtoMessage() {}
 func (*SSHAccess) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{101}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{107}
 }
 func (m *SSHAccess) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2909,7 +3077,7 @@ var xxx_messageInfo_SSHAccess proto.InternalMessageInfo
 func (m *SecretBinding) Reset()      { *m = SecretBinding{} }
 func (*SecretBinding) ProtoMessage() {}
 func (*SecretBinding) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{102}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{108}
 }
 func (m *SecretBinding) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2937,7 +3105,7 @@ var xxx_messageInfo_SecretBinding proto.InternalMessageInfo
 func (m *SecretBindingList) Reset()      { *m = SecretBindingList{} }
 func (*SecretBindingList) ProtoMessage() {}
 func (*SecretBindingList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{103}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{109}
 }
 func (m *SecretBindingList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2965,7 +3133,7 @@ var xxx_messageInfo_SecretBindingList proto.InternalMessageInfo
 func (m *SecretBindingProvider) Reset()      { *m = SecretBindingProvider{} }
 func (*SecretBindingProvider) ProtoMessage() {}
 func (*SecretBindingProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{104}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{110}
 }
 func (m *SecretBindingProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2993,7 +3161,7 @@ var xxx_messageInfo_SecretBindingProvider proto.InternalMessageInfo
 func (m *Seed) Reset()      { *m = Seed{} }
 func (*Seed) ProtoMessage() {}
 func (*Seed) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{105}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{111}
 }
 func (m *Seed) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3021,7 +3189,7 @@ var xxx_messageInfo_Seed proto.InternalMessageInfo
 func (m *SeedBackup) Reset()      { *m = SeedBackup{} }
 func (*SeedBackup) ProtoMessage() {}
 func (*SeedBackup) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{106}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{112}
 }
 func (m *SeedBackup) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3049,7 +3217,7 @@ var xxx_messageInfo_SeedBackup proto.InternalMessageInfo
 func (m *SeedDNS) Reset()      { *m = SeedDNS{} }
 func (*SeedDNS) ProtoMessage() {}
 func (*SeedDNS) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{107}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{113}
 }
 func (m *SeedDNS) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3077,7 +3245,7 @@ var xxx_messageInfo_SeedDNS proto.InternalMessageInfo
 func (m *SeedDNSProvider) Reset()      { *m = SeedDNSProvider{} }
 func (*SeedDNSProvider) ProtoMessage() {}
 func (*SeedDNSProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{108}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{114}
 }
 func (m *SeedDNSProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3105,7 +3273,7 @@ var xxx_messageInfo_SeedDNSProvider proto.InternalMessageInfo
 func (m *SeedList) Reset()      { *m = SeedList{} }
 func (*SeedList) ProtoMessage() {}
 func (*SeedList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{109}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{115}
 }
 func (m *SeedList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3133,7 +3301,7 @@ var xxx_messageInfo_SeedList proto.InternalMessageInfo
 func (m *SeedNetworks) Reset()      { *m = SeedNetworks{} }
 func (*SeedNetworks) ProtoMessage() {}
 func (*SeedNetworks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{110}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{116}
 }
 func (m *SeedNetworks) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3161,7 +3329,7 @@ var xxx_messageInfo_SeedNetworks proto.InternalMessageInfo
 func (m *SeedProvider) Reset()      { *m = SeedProvider{} }
 func (*SeedProvider) ProtoMessage() {}
 func (*SeedProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{111}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{117}
 }
 func (m *SeedProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3189,7 +3357,7 @@ var xxx_messageInfo_SeedProvider proto.InternalMessageInfo
 func (m *SeedSelector) Reset()      { *m = SeedSelector{} }
 func (*SeedSelector) ProtoMessage() {}
 func (*SeedSelector) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{112}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{118}
 }
 func (m *SeedSelector) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3217,7 +3385,7 @@ var xxx_messageInfo_SeedSelector proto.InternalMessageInfo
 func (m *SeedSettingDependencyWatchdog) Reset()      { *m = SeedSettingDependencyWatchdog{} }
 func (*SeedSettingDependencyWatchdog) ProtoMessage() {}
 func (*SeedSettingDependencyWatchdog) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{113}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{119}
 }
 func (m *SeedSettingDependencyWatchdog) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3245,7 +3413,7 @@ var xxx_messageInfo_SeedSettingDependencyWatchdog proto.InternalMessageInfo
 func (m *SeedSettingDependencyWatchdogEndpoint) Reset()      { *m = SeedSettingDependencyWatchdogEndpoint{} }
 func (*SeedSettingDependencyWatchdogEndpoint) ProtoMessage() {}
 func (*SeedSettingDependencyWatchdogEndpoint) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{114}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{120}
 }
 func (m *SeedSettingDependencyWatchdogEndpoint) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3273,7 +3441,7 @@ var xxx_messageInfo_SeedSettingDependencyWatchdogEndpoint proto.InternalMessageI
 func (m *SeedSettingDependencyWatchdogProbe) Reset()      { *m = SeedSettingDependencyWatchdogProbe{} }
 func (*SeedSettingDependencyWatchdogProbe) ProtoMessage() {}
 func (*SeedSettingDependencyWatchdogProbe) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{115}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{121}
 }
 func (m *SeedSettingDependencyWatchdogProbe) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3301,7 +3469,7 @@ var xxx_messageInfo_SeedSettingDependencyWatchdogProbe proto.InternalMessageInfo
 func (m *SeedSettingExcessCapacityReservation) Reset()      { *m = SeedSettingExcessCapacityReservation{} }
 func (*SeedSettingExcessCapacityReservation) ProtoMessage() {}
 func (*SeedSettingExcessCapacityReservation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{116}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{122}
 }
 func (m *SeedSettingExcessCapacityReservation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3329,7 +3497,7 @@ var xxx_messageInfo_SeedSettingExcessCapacityReservation proto.InternalMessageIn
 func (m *SeedSettingLoadBalancerServices) Reset()      { *m = SeedSettingLoadBalancerServices{} }
 func (*SeedSettingLoadBalancerServices) ProtoMessage() {}
 func (*SeedSettingLoadBalancerServices) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{117}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{123}
 }
 func (m *SeedSettingLoadBalancerServices) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3357,7 +3525,7 @@ var xxx_messageInfo_SeedSettingLoadBalancerServices proto.InternalMessageInfo
 func (m *SeedSettingLoadBalancerServicesZones) Reset()      { *m = SeedSettingLoadBalancerServicesZones{} }
 func (*SeedSettingLoadBalancerServicesZones) ProtoMessage() {}
 func (*SeedSettingLoadBalancerServicesZones) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{118}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{124}
 }
 func (m *SeedSettingLoadBalancerServicesZones) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3385,7 +3553,7 @@ var xxx_messageInfo_SeedSettingLoadBalancerServicesZones proto.InternalMessageIn
 func (m *SeedSettingOwnerChecks) Reset()      { *m = SeedSettingOwnerChecks{} }
 func (*SeedSettingOwnerChecks) ProtoMessage() {}
 func (*SeedSettingOwnerChecks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{119}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{125}
 }
 func (m *SeedSettingOwnerChecks) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3413,7 +3581,7 @@ var xxx_messageInfo_SeedSettingOwnerChecks proto.InternalMessageInfo
 func (m *SeedSettingScheduling) Reset()      { *m = SeedSettingScheduling{} }
 func (*SeedSettingScheduling) ProtoMessage() {}
 func (*SeedSettingScheduling) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{120}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{126}
 }
 func (m *SeedSettingScheduling) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4054,6 +4222,90 @@ func (m *ShootSpec) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ShootSpec proto.InternalMessageInfo
 
+func (m *ShootState) Reset()      { *m = ShootState{} }
+func (*ShootState) ProtoMessage() {}
+func (*ShootState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{150}
+}
+func (m *ShootState) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ShootState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ShootState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ShootState.Merge(m, src)
+}
+func (m *ShootState) XXX_Size() int {
+	return m.Size()
+}
+func (m *ShootState) XXX_DiscardUnknown() {
+	xxx_messageInfo_ShootState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ShootState proto.InternalMessageInfo
+
+func (m *ShootStateList) Reset()      { *m = ShootStateList{} }
+func (*ShootStateList) ProtoMessage() {}
+func (*ShootStateList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{151}
+}
+func (m *ShootStateList) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ShootStateList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ShootStateList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ShootStateList.Merge(m, src)
+}
+func (m *ShootStateList) XXX_Size() int {
+	return m.Size()
+}
+func (m *ShootStateList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ShootStateList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ShootStateList proto.InternalMessageInfo
+
+func (m *ShootStateSpec) Reset()      { *m = ShootStateSpec{} }
+func (*ShootStateSpec) ProtoMessage() {}
+func (*ShootStateSpec) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{152}
+}
+func (m *ShootStateSpec) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ShootStateSpec) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ShootStateSpec) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ShootStateSpec.Merge(m, src)
+}
+func (m *ShootStateSpec) XXX_Size() int {
+	return m.Size()
+}
+func (m *ShootStateSpec) XXX_DiscardUnknown() {
+	xxx_messageInfo_ShootStateSpec.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ShootStateSpec proto.InternalMessageInfo
+
 func (m *ShootStatus) Reset()      { *m = ShootStatus{} }
 func (*ShootStatus) ProtoMessage() {}
 func (*ShootStatus) Descriptor() ([]byte, []int) {
@@ -4437,9 +4689,15 @@ func init() {
 	proto.RegisterType((*DataVolume)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.DataVolume")
 	proto.RegisterType((*DeploymentRef)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.DeploymentRef")
 	proto.RegisterType((*ExpirableVersion)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExpirableVersion")
+	proto.RegisterType((*ExposureClass)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExposureClass")
+	proto.RegisterType((*ExposureClassList)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExposureClassList")
+	proto.RegisterType((*ExposureClassScheduling)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExposureClassScheduling")
 	proto.RegisterType((*Extension)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Extension")
+	proto.RegisterType((*ExtensionResourceState)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExtensionResourceState")
 	proto.RegisterType((*FailureTolerance)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.FailureTolerance")
 	proto.RegisterType((*Gardener)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Gardener")
+	proto.RegisterType((*GardenerResourceData)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.GardenerResourceData")
+	proto.RegisterMapType((map[string]string)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.GardenerResourceData.LabelsEntry")
 	proto.RegisterType((*Hibernation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Hibernation")
 	proto.RegisterType((*HibernationSchedule)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.HibernationSchedule")
 	proto.RegisterType((*HighAvailability)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.HighAvailability")
@@ -4498,6 +4756,7 @@ func init() {
 	proto.RegisterMapType((k8s_io_api_core_v1.ResourceList)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.QuotaSpec.MetricsEntry")
 	proto.RegisterType((*Region)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Region")
 	proto.RegisterMapType((map[string]string)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Region.LabelsEntry")
+	proto.RegisterType((*ResourceData)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ResourceData")
 	proto.RegisterType((*ResourceWatchCacheSize)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ResourceWatchCacheSize")
 	proto.RegisterType((*SSHAccess)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.SSHAccess")
 	proto.RegisterType((*SecretBinding)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.SecretBinding")
@@ -4545,6 +4804,9 @@ func init() {
 	proto.RegisterType((*ShootSSHKeypairRotation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootSSHKeypairRotation")
 	proto.RegisterType((*ShootServiceAccountKeyRotation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootServiceAccountKeyRotation")
 	proto.RegisterType((*ShootSpec)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootSpec")
+	proto.RegisterType((*ShootState)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootState")
+	proto.RegisterType((*ShootStateList)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootStateList")
+	proto.RegisterType((*ShootStateSpec)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootStateSpec")
 	proto.RegisterType((*ShootStatus)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootStatus")
 	proto.RegisterType((*ShootTemplate)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate")
 	proto.RegisterType((*SystemComponents)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.SystemComponents")
@@ -7620,6 +7882,152 @@ func (m *ExpirableVersion) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ExposureClass) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ExposureClass) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExposureClass) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Scheduling != nil {
+		{
+			size, err := m.Scheduling.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	i -= len(m.Handler)
+	copy(dAtA[i:], m.Handler)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Handler)))
+	i--
+	dAtA[i] = 0x12
+	{
+		size, err := m.ObjectMeta.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ExposureClassList) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ExposureClassList) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExposureClassList) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Items) > 0 {
+		for iNdEx := len(m.Items) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Items[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.ListMeta.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ExposureClassScheduling) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ExposureClassScheduling) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExposureClassScheduling) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Tolerations) > 0 {
+		for iNdEx := len(m.Tolerations) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Tolerations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if m.SeedSelector != nil {
+		{
+			size, err := m.SeedSelector.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *Extension) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -7665,6 +8073,74 @@ func (m *Extension) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i -= len(m.Type)
 	copy(dAtA[i:], m.Type)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Type)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ExtensionResourceState) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ExtensionResourceState) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExtensionResourceState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Resources) > 0 {
+		for iNdEx := len(m.Resources) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Resources[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
+	if m.State != nil {
+		{
+			size, err := m.State.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.Purpose != nil {
+		i -= len(*m.Purpose)
+		copy(dAtA[i:], *m.Purpose)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Purpose)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Name != nil {
+		i -= len(*m.Name)
+		copy(dAtA[i:], *m.Name)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Name)))
+		i--
+		dAtA[i] = 0x12
+	}
+	i -= len(m.Kind)
+	copy(dAtA[i:], m.Kind)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Kind)))
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -7731,6 +8207,73 @@ func (m *Gardener) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i -= len(m.ID)
 	copy(dAtA[i:], m.ID)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ID)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *GardenerResourceData) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GardenerResourceData) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GardenerResourceData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Labels) > 0 {
+		keysForLabels := make([]string, 0, len(m.Labels))
+		for k := range m.Labels {
+			keysForLabels = append(keysForLabels, string(k))
+		}
+		github_com_gogo_protobuf_sortkeys.Strings(keysForLabels)
+		for iNdEx := len(keysForLabels) - 1; iNdEx >= 0; iNdEx-- {
+			v := m.Labels[string(keysForLabels[iNdEx])]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintGenerated(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(keysForLabels[iNdEx])
+			copy(dAtA[i:], keysForLabels[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(keysForLabels[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintGenerated(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	{
+		size, err := m.Data.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x1a
+	i -= len(m.Type)
+	copy(dAtA[i:], m.Type)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Type)))
+	i--
+	dAtA[i] = 0x12
+	i -= len(m.Name)
+	copy(dAtA[i:], m.Name)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Name)))
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -11036,6 +11579,49 @@ func (m *Region) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ResourceData) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ResourceData) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ResourceData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	{
+		size, err := m.Data.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	{
+		size, err := m.CrossVersionObjectReference.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
 func (m *ResourceWatchCacheSize) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -13492,6 +14078,161 @@ func (m *ShootSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ShootState) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ShootState) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ShootState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	{
+		size, err := m.Spec.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	{
+		size, err := m.ObjectMeta.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ShootStateList) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ShootStateList) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ShootStateList) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Items) > 0 {
+		for iNdEx := len(m.Items) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Items[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.ListMeta.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ShootStateSpec) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ShootStateSpec) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ShootStateSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Resources) > 0 {
+		for iNdEx := len(m.Resources) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Resources[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Extensions) > 0 {
+		for iNdEx := len(m.Extensions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Extensions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Gardener) > 0 {
+		for iNdEx := len(m.Gardener) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Gardener[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *ShootStatus) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -15304,6 +16045,59 @@ func (m *ExpirableVersion) Size() (n int) {
 	return n
 }
 
+func (m *ExposureClass) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ObjectMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	l = len(m.Handler)
+	n += 1 + l + sovGenerated(uint64(l))
+	if m.Scheduling != nil {
+		l = m.Scheduling.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	return n
+}
+
+func (m *ExposureClassList) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ListMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.Items) > 0 {
+		for _, e := range m.Items {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ExposureClassScheduling) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SeedSelector != nil {
+		l = m.SeedSelector.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if len(m.Tolerations) > 0 {
+		for _, e := range m.Tolerations {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *Extension) Size() (n int) {
 	if m == nil {
 		return 0
@@ -15318,6 +16112,35 @@ func (m *Extension) Size() (n int) {
 	}
 	if m.Disabled != nil {
 		n += 2
+	}
+	return n
+}
+
+func (m *ExtensionResourceState) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Kind)
+	n += 1 + l + sovGenerated(uint64(l))
+	if m.Name != nil {
+		l = len(*m.Name)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.Purpose != nil {
+		l = len(*m.Purpose)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.State != nil {
+		l = m.State.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if len(m.Resources) > 0 {
+		for _, e := range m.Resources {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
 	}
 	return n
 }
@@ -15345,6 +16168,29 @@ func (m *Gardener) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.Version)
 	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
+func (m *GardenerResourceData) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Name)
+	n += 1 + l + sovGenerated(uint64(l))
+	l = len(m.Type)
+	n += 1 + l + sovGenerated(uint64(l))
+	l = m.Data.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.Labels) > 0 {
+		for k, v := range m.Labels {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovGenerated(uint64(len(k))) + 1 + len(v) + sovGenerated(uint64(len(v)))
+			n += mapEntrySize + 1 + sovGenerated(uint64(mapEntrySize))
+		}
+	}
 	return n
 }
 
@@ -16589,6 +17435,19 @@ func (m *Region) Size() (n int) {
 	return n
 }
 
+func (m *ResourceData) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.CrossVersionObjectReference.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	l = m.Data.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
 func (m *ResourceWatchCacheSize) Size() (n int) {
 	if m == nil {
 		return 0
@@ -17478,6 +18337,63 @@ func (m *ShootSpec) Size() (n int) {
 	if m.ControlPlane != nil {
 		l = m.ControlPlane.Size()
 		n += 2 + l + sovGenerated(uint64(l))
+	}
+	return n
+}
+
+func (m *ShootState) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ObjectMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	l = m.Spec.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
+func (m *ShootStateList) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ListMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.Items) > 0 {
+		for _, e := range m.Items {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ShootStateSpec) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Gardener) > 0 {
+		for _, e := range m.Gardener {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	if len(m.Extensions) > 0 {
+		for _, e := range m.Extensions {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	if len(m.Resources) > 0 {
+		for _, e := range m.Resources {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
 	}
 	return n
 }
@@ -18452,6 +19368,50 @@ func (this *ExpirableVersion) String() string {
 	}, "")
 	return s
 }
+func (this *ExposureClass) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ExposureClass{`,
+		`ObjectMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ObjectMeta), "ObjectMeta", "v11.ObjectMeta", 1), `&`, ``, 1) + `,`,
+		`Handler:` + fmt.Sprintf("%v", this.Handler) + `,`,
+		`Scheduling:` + strings.Replace(this.Scheduling.String(), "ExposureClassScheduling", "ExposureClassScheduling", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ExposureClassList) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForItems := "[]ExposureClass{"
+	for _, f := range this.Items {
+		repeatedStringForItems += strings.Replace(strings.Replace(f.String(), "ExposureClass", "ExposureClass", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForItems += "}"
+	s := strings.Join([]string{`&ExposureClassList{`,
+		`ListMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ListMeta), "ListMeta", "v11.ListMeta", 1), `&`, ``, 1) + `,`,
+		`Items:` + repeatedStringForItems + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ExposureClassScheduling) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForTolerations := "[]Toleration{"
+	for _, f := range this.Tolerations {
+		repeatedStringForTolerations += strings.Replace(strings.Replace(f.String(), "Toleration", "Toleration", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForTolerations += "}"
+	s := strings.Join([]string{`&ExposureClassScheduling{`,
+		`SeedSelector:` + strings.Replace(this.SeedSelector.String(), "SeedSelector", "SeedSelector", 1) + `,`,
+		`Tolerations:` + repeatedStringForTolerations + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *Extension) String() string {
 	if this == nil {
 		return "nil"
@@ -18460,6 +19420,25 @@ func (this *Extension) String() string {
 		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
 		`ProviderConfig:` + strings.Replace(fmt.Sprintf("%v", this.ProviderConfig), "RawExtension", "runtime.RawExtension", 1) + `,`,
 		`Disabled:` + valueToStringGenerated(this.Disabled) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ExtensionResourceState) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForResources := "[]NamedResourceReference{"
+	for _, f := range this.Resources {
+		repeatedStringForResources += strings.Replace(strings.Replace(f.String(), "NamedResourceReference", "NamedResourceReference", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForResources += "}"
+	s := strings.Join([]string{`&ExtensionResourceState{`,
+		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Name:` + valueToStringGenerated(this.Name) + `,`,
+		`Purpose:` + valueToStringGenerated(this.Purpose) + `,`,
+		`State:` + strings.Replace(fmt.Sprintf("%v", this.State), "RawExtension", "runtime.RawExtension", 1) + `,`,
+		`Resources:` + repeatedStringForResources + `,`,
 		`}`,
 	}, "")
 	return s
@@ -18482,6 +19461,29 @@ func (this *Gardener) String() string {
 		`ID:` + fmt.Sprintf("%v", this.ID) + `,`,
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *GardenerResourceData) String() string {
+	if this == nil {
+		return "nil"
+	}
+	keysForLabels := make([]string, 0, len(this.Labels))
+	for k := range this.Labels {
+		keysForLabels = append(keysForLabels, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForLabels)
+	mapStringForLabels := "map[string]string{"
+	for _, k := range keysForLabels {
+		mapStringForLabels += fmt.Sprintf("%v: %v,", k, this.Labels[k])
+	}
+	mapStringForLabels += "}"
+	s := strings.Join([]string{`&GardenerResourceData{`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
+		`Data:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.Data), "RawExtension", "runtime.RawExtension", 1), `&`, ``, 1) + `,`,
+		`Labels:` + mapStringForLabels + `,`,
 		`}`,
 	}, "")
 	return s
@@ -19289,6 +20291,17 @@ func (this *Region) String() string {
 	}, "")
 	return s
 }
+func (this *ResourceData) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ResourceData{`,
+		`CrossVersionObjectReference:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.CrossVersionObjectReference), "CrossVersionObjectReference", "v12.CrossVersionObjectReference", 1), `&`, ``, 1) + `,`,
+		`Data:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.Data), "RawExtension", "runtime.RawExtension", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *ResourceWatchCacheSize) String() string {
 	if this == nil {
 		return "nil"
@@ -19909,6 +20922,60 @@ func (this *ShootSpec) String() string {
 		`ExposureClassName:` + valueToStringGenerated(this.ExposureClassName) + `,`,
 		`SystemComponents:` + strings.Replace(this.SystemComponents.String(), "SystemComponents", "SystemComponents", 1) + `,`,
 		`ControlPlane:` + strings.Replace(this.ControlPlane.String(), "ControlPlane", "ControlPlane", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ShootState) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ShootState{`,
+		`ObjectMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ObjectMeta), "ObjectMeta", "v11.ObjectMeta", 1), `&`, ``, 1) + `,`,
+		`Spec:` + strings.Replace(strings.Replace(this.Spec.String(), "ShootStateSpec", "ShootStateSpec", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ShootStateList) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForItems := "[]ShootState{"
+	for _, f := range this.Items {
+		repeatedStringForItems += strings.Replace(strings.Replace(f.String(), "ShootState", "ShootState", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForItems += "}"
+	s := strings.Join([]string{`&ShootStateList{`,
+		`ListMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ListMeta), "ListMeta", "v11.ListMeta", 1), `&`, ``, 1) + `,`,
+		`Items:` + repeatedStringForItems + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ShootStateSpec) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForGardener := "[]GardenerResourceData{"
+	for _, f := range this.Gardener {
+		repeatedStringForGardener += strings.Replace(strings.Replace(f.String(), "GardenerResourceData", "GardenerResourceData", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForGardener += "}"
+	repeatedStringForExtensions := "[]ExtensionResourceState{"
+	for _, f := range this.Extensions {
+		repeatedStringForExtensions += strings.Replace(strings.Replace(f.String(), "ExtensionResourceState", "ExtensionResourceState", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForExtensions += "}"
+	repeatedStringForResources := "[]ResourceData{"
+	for _, f := range this.Resources {
+		repeatedStringForResources += strings.Replace(strings.Replace(f.String(), "ResourceData", "ResourceData", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForResources += "}"
+	s := strings.Join([]string{`&ShootStateSpec{`,
+		`Gardener:` + repeatedStringForGardener + `,`,
+		`Extensions:` + repeatedStringForExtensions + `,`,
+		`Resources:` + repeatedStringForResources + `,`,
 		`}`,
 	}, "")
 	return s
@@ -26835,6 +27902,394 @@ func (m *ExpirableVersion) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *ExposureClass) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ExposureClass: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ExposureClass: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ObjectMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Handler", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Handler = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Scheduling", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Scheduling == nil {
+				m.Scheduling = &ExposureClassScheduling{}
+			}
+			if err := m.Scheduling.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ExposureClassList) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ExposureClassList: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ExposureClassList: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ListMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ListMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Items", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Items = append(m.Items, ExposureClass{})
+			if err := m.Items[len(m.Items)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ExposureClassScheduling) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ExposureClassScheduling: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ExposureClassScheduling: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SeedSelector", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.SeedSelector == nil {
+				m.SeedSelector = &SeedSelector{}
+			}
+			if err := m.SeedSelector.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Tolerations", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Tolerations = append(m.Tolerations, Toleration{})
+			if err := m.Tolerations[len(m.Tolerations)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *Extension) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -26953,6 +28408,224 @@ func (m *Extension) Unmarshal(dAtA []byte) error {
 			}
 			b := bool(v != 0)
 			m.Disabled = &b
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ExtensionResourceState) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ExtensionResourceState: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ExtensionResourceState: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Kind = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := string(dAtA[iNdEx:postIndex])
+			m.Name = &s
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Purpose", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := string(dAtA[iNdEx:postIndex])
+			m.Purpose = &s
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field State", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.State == nil {
+				m.State = &runtime.RawExtension{}
+			}
+			if err := m.State.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Resources", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Resources = append(m.Resources, NamedResourceReference{})
+			if err := m.Resources[len(m.Resources)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
@@ -27180,6 +28853,280 @@ func (m *Gardener) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Version = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GardenerResourceData) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GardenerResourceData: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GardenerResourceData: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Type = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Data.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Labels", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Labels == nil {
+				m.Labels = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowGenerated
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipGenerated(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Labels[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -37135,6 +39082,122 @@ func (m *Region) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *ResourceData) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ResourceData: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ResourceData: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CrossVersionObjectReference", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.CrossVersionObjectReference.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Data.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *ResourceWatchCacheSize) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -44344,6 +46407,391 @@ func (m *ShootSpec) Unmarshal(dAtA []byte) error {
 				m.ControlPlane = &ControlPlane{}
 			}
 			if err := m.ControlPlane.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ShootState) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ShootState: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ShootState: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ObjectMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Spec", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Spec.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ShootStateList) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ShootStateList: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ShootStateList: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ListMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ListMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Items", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Items = append(m.Items, ShootState{})
+			if err := m.Items[len(m.Items)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ShootStateSpec) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ShootStateSpec: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ShootStateSpec: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Gardener", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Gardener = append(m.Gardener, GardenerResourceData{})
+			if err := m.Gardener[len(m.Gardener)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Extensions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Extensions = append(m.Extensions, ExtensionResourceState{})
+			if err := m.Extensions[len(m.Extensions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Resources", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Resources = append(m.Resources, ResourceData{})
+			if err := m.Resources[len(m.Resources)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

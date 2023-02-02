@@ -637,7 +637,7 @@ The contract between Gardener and those controllers is: **Every controller must 
 
 ```yaml
 ---
-apiVersion: gardener.cloud/v1alpha1
+apiVersion: gardener.cloud/v1beta1
 kind: ShootState
 metadata:
   name: shoot--core--aws-01

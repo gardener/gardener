@@ -53,6 +53,10 @@ func (c *FakeCoreV1beta1) ControllerRegistrations() v1beta1.ControllerRegistrati
 	return &FakeControllerRegistrations{c}
 }
 
+func (c *FakeCoreV1beta1) ExposureClasses() v1beta1.ExposureClassInterface {
+	return &FakeExposureClasses{c}
+}
+
 func (c *FakeCoreV1beta1) Projects() v1beta1.ProjectInterface {
 	return &FakeProjects{c}
 }
@@ -71,6 +75,10 @@ func (c *FakeCoreV1beta1) Seeds() v1beta1.SeedInterface {
 
 func (c *FakeCoreV1beta1) Shoots(namespace string) v1beta1.ShootInterface {
 	return &FakeShoots{c, namespace}
+}
+
+func (c *FakeCoreV1beta1) ShootStates(namespace string) v1beta1.ShootStateInterface {
+	return &FakeShootStates{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

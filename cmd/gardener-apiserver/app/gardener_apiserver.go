@@ -49,7 +49,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/pkg/api"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -411,11 +410,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	}
 
 	resourceEncodingConfig := serverstorage.NewDefaultResourceEncodingConfig(api.Scheme)
-	// TODO: `ShootState` is not yet promoted to `core.gardener.cloud/v1beta1` - this can be removed once `ShootState` got promoted.
-	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootstates"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
 	resourceEncodingConfig.SetResourceEncoding(operations.Resource("bastions"), operationsv1alpha1.SchemeGroupVersion, operations.SchemeGroupVersion)
-	// TODO: `ExposureClass` is not yet promoted to `core.gardener.cloud/v1beta1` - this can be removed once `ExposureClass` got promoted.
-	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("exposureclasses"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
 
 	storageFactory := &storage.GardenerStorageFactory{
 		DefaultStorageFactory: serverstorage.NewDefaultStorageFactory(

@@ -244,9 +244,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                              schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                           schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                        schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                           schema_pkg_apis_core_v1beta1_ExposureClass(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassList":                       schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassScheduling":                 schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension":                               schema_pkg_apis_core_v1beta1_Extension(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionResourceState":                  schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureTolerance":                        schema_pkg_apis_core_v1beta1_FailureTolerance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener":                                schema_pkg_apis_core_v1beta1_Gardener(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerResourceData":                    schema_pkg_apis_core_v1beta1_GardenerResourceData(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation":                             schema_pkg_apis_core_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                     schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability":                        schema_pkg_apis_core_v1beta1_HighAvailability(ref),
@@ -298,6 +303,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaList":                               schema_pkg_apis_core_v1beta1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                               schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Region":                                  schema_pkg_apis_core_v1beta1_Region(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceData":                            schema_pkg_apis_core_v1beta1_ResourceData(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize":                  schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess":                               schema_pkg_apis_core_v1beta1_SSHAccess(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding":                           schema_pkg_apis_core_v1beta1_SecretBinding(ref),
@@ -341,6 +347,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation":                 schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation":          schema_pkg_apis_core_v1beta1_ShootServiceAccountKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                               schema_pkg_apis_core_v1beta1_ShootSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState":                              schema_pkg_apis_core_v1beta1_ShootState(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateList":                          schema_pkg_apis_core_v1beta1_ShootStateList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateSpec":                          schema_pkg_apis_core_v1beta1_ShootStateSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                             schema_pkg_apis_core_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate":                           schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents":                        schema_pkg_apis_core_v1beta1_SystemComponents(ref),
@@ -10476,6 +10485,149 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ExposureClass(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExposureClass represents a control plane endpoint exposure strategy.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"handler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Handler is the name of the handler which applies the control plane endpoint exposure strategy. This field is immutable.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"scheduling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Scheduling holds information how to select applicable Seed's for ExposureClass usage. This field is immutable.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassScheduling"),
+						},
+					},
+				},
+				Required: []string{"handler"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassScheduling", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExposureClassList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExposureClassList is a collection of ExposureClass.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of ExposureClasses.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExposureClassScheduling holds information to select applicable Seed's for ExposureClass usage.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"seedSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSelector is an optional label selector for Seed's which are suitable to use the ExposureClass.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
+						},
+					},
+					"tolerations": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "key",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations contains the tolerations for taints on Seed clusters.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10510,6 +10662,64 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's namespace on the Seed cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind (type) of the extension custom resource",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the extension custom resource",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose of the extension custom resource",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"state": {
+						SchemaProps: spec.SchemaProps{
+							Description: "State of the extension resource",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources holds a list of named resource references that can be referred to in the state by their names.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"kind"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -10570,6 +10780,61 @@ func schema_pkg_apis_core_v1beta1_Gardener(ref common.ReferenceCallback) common.
 				Required: []string{"id", "name", "version"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_GardenerResourceData(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot's control plane.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the object required to generate resources",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type of the object",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"data": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Data contains the payload required to generate resources",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"labels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Labels are labels of the object",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name", "type", "data"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -13182,6 +13447,52 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ResourceData(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ResourceData holds the data of a resource referred to by an extension controller state.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "API version of the referent",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"data": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Data of the resource",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+				},
+				Required: []string{"kind", "name", "data"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -15066,6 +15377,163 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootState(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the ShootState.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootStateList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootStateList is a list of ShootState objects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of ShootStates.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootStateSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootStateSpec is the specification of the ShootState.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"gardener": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Gardener holds the data required to generate resources deployed by the gardenlet",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerResourceData"),
+									},
+								},
+							},
+						},
+					},
+					"extensions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extensions holds the state of custom resources reconciled by extension controllers in the seed",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionResourceState"),
+									},
+								},
+							},
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources holds the data of resources referred to by extension controller states",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceData"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionResourceState", "github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerResourceData", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceData"},
 	}
 }
 

@@ -42,7 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -134,7 +133,7 @@ var _ = Describe("handler", func() {
 				request.Namespace = namespace
 				request.UserInfo = seedUser
 				request.Resource = metav1.GroupVersionResource{
-					Group:    gardencorev1alpha1.SchemeGroupVersion.Group,
+					Group:    gardencorev1beta1.SchemeGroupVersion.Group,
 					Resource: "shootstates",
 				}
 			})

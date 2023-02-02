@@ -49,7 +49,6 @@ import (
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
@@ -282,8 +281,8 @@ func (g *garden) Start(ctx context.Context) error {
 		// gardenlet does not have the required RBAC permissions for listing/watching the following resources, so let's
 		// prevent any attempts to cache them.
 		opts.ClientDisableCacheFor = []client.Object{
-			&gardencorev1alpha1.ExposureClass{},
-			&gardencorev1alpha1.ShootState{},
+			&gardencorev1beta1.ExposureClass{},
+			&gardencorev1beta1.ShootState{},
 			&gardencorev1beta1.CloudProfile{},
 			&gardencorev1beta1.ControllerDeployment{},
 			&gardencorev1beta1.Project{},

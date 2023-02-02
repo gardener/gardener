@@ -32,7 +32,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -81,8 +80,8 @@ var (
 	seedResource                      = gardencorev1beta1.Resource("seeds")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
-	shootStateResource                = gardencorev1alpha1.Resource("shootstates")
-	exposureClassResource             = gardencorev1alpha1.Resource("exposureclasses")
+	shootStateResource                = gardencorev1beta1.Resource("shootstates")
+	exposureClassResource             = gardencorev1beta1.Resource("exposureclasses")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility

@@ -30,6 +30,8 @@ type ControllerInstallationExpansion interface{}
 
 type ControllerRegistrationExpansion interface{}
 
+type ExposureClassExpansion interface{}
+
 type ProjectExpansion interface{}
 
 type QuotaExpansion interface{}
@@ -39,3 +41,5 @@ type SecretBindingExpansion interface{}
 type SeedExpansion interface{}
 
 type ShootExpansion interface{}
+
+type ShootStateExpansion interface{}

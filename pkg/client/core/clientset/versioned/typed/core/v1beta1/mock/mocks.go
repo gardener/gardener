@@ -124,6 +124,20 @@ func (mr *MockCoreV1beta1InterfaceMockRecorder) ControllerRegistrations() *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ControllerRegistrations", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ControllerRegistrations))
 }
 
+// ExposureClasses mocks base method.
+func (m *MockCoreV1beta1Interface) ExposureClasses() v1beta10.ExposureClassInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExposureClasses")
+	ret0, _ := ret[0].(v1beta10.ExposureClassInterface)
+	return ret0
+}
+
+// ExposureClasses indicates an expected call of ExposureClasses.
+func (mr *MockCoreV1beta1InterfaceMockRecorder) ExposureClasses() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExposureClasses", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ExposureClasses))
+}
+
 // Projects mocks base method.
 func (m *MockCoreV1beta1Interface) Projects() v1beta10.ProjectInterface {
 	m.ctrl.T.Helper()
@@ -192,6 +206,20 @@ func (m *MockCoreV1beta1Interface) Seeds() v1beta10.SeedInterface {
 func (mr *MockCoreV1beta1InterfaceMockRecorder) Seeds() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Seeds", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).Seeds))
+}
+
+// ShootStates mocks base method.
+func (m *MockCoreV1beta1Interface) ShootStates(arg0 string) v1beta10.ShootStateInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShootStates", arg0)
+	ret0, _ := ret[0].(v1beta10.ShootStateInterface)
+	return ret0
+}
+
+// ShootStates indicates an expected call of ShootStates.
+func (mr *MockCoreV1beta1InterfaceMockRecorder) ShootStates(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShootStates", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ShootStates), arg0)
 }
 
 // Shoots mocks base method.

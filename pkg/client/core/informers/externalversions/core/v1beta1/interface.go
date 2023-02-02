@@ -36,6 +36,8 @@ type Interface interface {
 	ControllerInstallations() ControllerInstallationInformer
 	// ControllerRegistrations returns a ControllerRegistrationInformer.
 	ControllerRegistrations() ControllerRegistrationInformer
+	// ExposureClasses returns a ExposureClassInformer.
+	ExposureClasses() ExposureClassInformer
 	// Projects returns a ProjectInformer.
 	Projects() ProjectInformer
 	// Quotas returns a QuotaInformer.
@@ -46,6 +48,8 @@ type Interface interface {
 	Seeds() SeedInformer
 	// Shoots returns a ShootInformer.
 	Shoots() ShootInformer
+	// ShootStates returns a ShootStateInformer.
+	ShootStates() ShootStateInformer
 }
 
 type version struct {
@@ -89,6 +93,11 @@ func (v *version) ControllerRegistrations() ControllerRegistrationInformer {
 	return &controllerRegistrationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
+// ExposureClasses returns a ExposureClassInformer.
+func (v *version) ExposureClasses() ExposureClassInformer {
+	return &exposureClassInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // Projects returns a ProjectInformer.
 func (v *version) Projects() ProjectInformer {
 	return &projectInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
@@ -112,4 +121,9 @@ func (v *version) Seeds() SeedInformer {
 // Shoots returns a ShootInformer.
 func (v *version) Shoots() ShootInformer {
 	return &shootInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ShootStates returns a ShootStateInformer.
+func (v *version) ShootStates() ShootStateInformer {
+	return &shootStateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -22,6 +22,8 @@ Resource Types:
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.ControllerRegistration">ControllerRegistration</a>
 </li><li>
+<a href="#core.gardener.cloud/v1beta1.ExposureClass">ExposureClass</a>
+</li><li>
 <a href="#core.gardener.cloud/v1beta1.Project">Project</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.Quota">Quota</a>
@@ -31,6 +33,8 @@ Resource Types:
 <a href="#core.gardener.cloud/v1beta1.Seed">Seed</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.Shoot">Shoot</a>
+</li><li>
+<a href="#core.gardener.cloud/v1beta1.ShootState">ShootState</a>
 </li></ul>
 <h3 id="core.gardener.cloud/v1beta1.BackupBucket">BackupBucket
 </h3>
@@ -731,6 +735,81 @@ ControllerRegistrationDeployment
 </td>
 </tr>
 </table>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ExposureClass">ExposureClass
+</h3>
+<p>
+<p>ExposureClass represents a control plane endpoint exposure strategy.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1beta1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>ExposureClass</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>handler</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Handler is the name of the handler which applies the control plane endpoint exposure strategy.
+This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scheduling</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExposureClassScheduling">
+ExposureClassScheduling
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Scheduling holds information how to select applicable Seed&rsquo;s for ExposureClass usage.
+This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -1662,6 +1741,114 @@ ShootStatus
 <td>
 <em>(Optional)</em>
 <p>Most recently observed status of the Shoot cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootState">ShootState
+</h3>
+<p>
+<p>ShootState contains a snapshot of the Shoot&rsquo;s state required to migrate the Shoot&rsquo;s control plane to a new Seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1beta1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>ShootState</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootStateSpec">
+ShootStateSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Specification of the ShootState.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>gardener</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.GardenerResourceData">
+[]GardenerResourceData
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Gardener holds the data required to generate resources deployed by the gardenlet</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExtensionResourceState">
+[]ExtensionResourceState
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions holds the state of custom resources reconciled by extension controllers in the seed</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ResourceData">
+[]ResourceData
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds the data of resources referred to by extension controller states</p>
+</td>
+</tr>
+</table>
 </td>
 </tr>
 </tbody>
@@ -3810,6 +3997,53 @@ VersionClassification
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ExposureClassScheduling">ExposureClassScheduling
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ExposureClass">ExposureClass</a>)
+</p>
+<p>
+<p>ExposureClassScheduling holds information to select applicable Seed&rsquo;s for ExposureClass usage.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector is an optional label selector for Seed&rsquo;s which are suitable to use the ExposureClass.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Toleration">
+[]Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations contains the tolerations for taints on Seed clusters.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Extension">Extension
 </h3>
 <p>
@@ -3862,6 +4096,89 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Disabled allows to disable extensions that were marked as &lsquo;globally enabled&rsquo; by Gardener administrators.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ExtensionResourceState">ExtensionResourceState
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec</a>)
+</p>
+<p>
+<p>ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot&rsquo;s
+namespace on the Seed cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kind</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Kind (type) of the extension custom resource</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Name of the extension custom resource</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose of the extension custom resource</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>state</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>State of the extension resource</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
 </td>
 </tr>
 </tbody>
@@ -3957,6 +4274,72 @@ string
 </td>
 <td>
 <p>Version is the version of the Gardener which last acted on a resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.GardenerResourceData">GardenerResourceData
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec</a>)
+</p>
+<p>
+<p>GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot&rsquo;s control plane.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the object required to generate resources</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type of the object</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>data</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>Data contains the payload required to generate resources</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>labels</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Labels are labels of the object</p>
 </td>
 </tr>
 </tbody>
@@ -6681,6 +7064,7 @@ Alerting
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ExtensionResourceState">ExtensionResourceState</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
@@ -7689,6 +8073,53 @@ quality, reliability, access restrictions, etc.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ResourceData">ResourceData
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec</a>)
+</p>
+<p>
+<p>ResourceData holds the data of a resource referred to by an extension controller state.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>CrossVersionObjectReference</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#crossversionobjectreference-v1-autoscaling">
+Kubernetes autoscaling/v1.CrossVersionObjectReference
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>CrossVersionObjectReference</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>data</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>Data of the resource</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ResourceWatchCacheSize">ResourceWatchCacheSize
 </h3>
 <p>
@@ -8173,6 +8604,7 @@ string
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.ExposureClassScheduling">ExposureClassScheduling</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
@@ -10237,6 +10669,67 @@ ControlPlane
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootState">ShootState</a>)
+</p>
+<p>
+<p>ShootStateSpec is the specification of the ShootState.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>gardener</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.GardenerResourceData">
+[]GardenerResourceData
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Gardener holds the data required to generate resources deployed by the gardenlet</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExtensionResourceState">
+[]ExtensionResourceState
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions holds the state of custom resources reconciled by extension controllers in the seed</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ResourceData">
+[]ResourceData
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds the data of resources referred to by extension controller states</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStatus">ShootStatus
 </h3>
 <p>
@@ -10855,6 +11348,7 @@ NodeLocalDNS
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ExposureClassScheduling">ExposureClassScheduling</a>, 
 <a href="#core.gardener.cloud/v1beta1.ProjectTolerations">ProjectTolerations</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>

@@ -59,6 +59,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ControllerDeploymentList{},
 		&ControllerInstallation{},
 		&ControllerInstallationList{},
+		&ExposureClass{},
+		&ExposureClassList{},
 		&Project{},
 		&ProjectList{},
 		&Quota{},
@@ -69,6 +71,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SeedList{},
 		&Shoot{},
 		&ShootList{},
+		&ShootState{},
+		&ShootStateList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
