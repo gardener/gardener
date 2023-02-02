@@ -119,6 +119,10 @@ func (r *Reconciler) namespaceIsHandled(ctx context.Context, namespaceName strin
 		return false, fmt.Errorf("failed to get namespace %q: %w", namespaceName, err)
 	}
 
+	if len(r.selectors) == 0 {
+		return true, nil
+	}
+
 	for _, selector := range r.selectors {
 		if selector.Matches(labels.Set(namespace.GetLabels())) {
 			return true, nil
