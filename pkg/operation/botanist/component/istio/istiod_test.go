@@ -598,6 +598,9 @@ data:
     networks: {}
 
   mesh: |-
+    # TCP connection timeout between Envoy & the application, and between Envoys.
+    connectTimeout: 10s
+
     # Set enableTracing to false to disable request tracing.
     enableTracing: false
 
@@ -609,15 +612,6 @@ data:
     accessLogEncoding: 'TEXT'
 
     enableEnvoyAccessLogService: false
-    # reportBatchMaxEntries is the number of requests that are batched before telemetry data is sent to the mixer server
-    reportBatchMaxEntries: 100
-    # reportBatchMaxTime is the max waiting time before the telemetry data of a request is sent to the mixer server
-    reportBatchMaxTime: 1s
-    disableMixerHttpReports: false
-
-    # Set the following variable to true to disable policy checks by the Mixer.
-    # Note that metrics will still be reported to the Mixer.
-    disablePolicyChecks: true
 
     # Automatic protocol detection uses a set of heuristics to
     # determine whether the connection is using TLS or not (on the
@@ -639,9 +633,6 @@ data:
     # Refer to https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#21-trust-domain
     trustDomain: "foo.local"
 
-    # Used by pilot-agent
-    sdsUdsPath: "unix:/etc/istio/proxy/SDS"
-
     # If true, automatically configure client side mTLS settings to match the corresponding service's
     # server side mTLS authentication policy, when destination rule for that service does not specify
     # TLS settings.
@@ -655,6 +646,7 @@ data:
 
     # Configures DNS certificates provisioned through Chiron linked into Pilot.
     # The DNS certificate provisioning is enabled by default now so it get tested.
+    # deprecated
     certificates: []
 
     # Disable the advertisment of services and endpoints which are no explictly marked in
@@ -665,9 +657,6 @@ data:
     defaultDestinationRuleExportTo: ["-"]
 
     defaultConfig:
-      #
-      # TCP connection timeout between Envoy & the application, and between Envoys.
-      connectTimeout: 10s
       #
       ### ADVANCED SETTINGS #############
       # Where should envoy's configuration be stored in the istio-proxy container
@@ -696,7 +685,7 @@ data:
       controlPlaneAuthPolicy: NONE
       discoveryAddress: istiod.` + deployNS + `.svc:15012
 
-    rootNamespace: istio-system
+    rootNamespace: ` + deployNS + `
     enablePrometheusMerge: true
 `
 
@@ -731,7 +720,7 @@ spec:
         
       annotations:
         sidecar.istio.io/inject: "false"
-        checksum/istio-config: 8af0ee1ba7d53be8bcb9cda04e3f601a771448f2a460e6455dc5710c1e753f43
+        checksum/istio-config: d34796e6fc25a26d4a8a4cb3276e34961b18f867d70f5a1984255d57bfefb4c6
     spec:
       serviceAccountName: istiod
       securityContext:
@@ -748,7 +737,6 @@ spec:
         - --log_output_level=all:warn,ads:error
         - --domain
         - foo.local
-        - --plugins=authn,authz,health # remove mixer plugin
         - --keepaliveMaxServerConnectionAge
         - "30m"
         ports:
@@ -1606,15 +1594,8 @@ spec:
         - --proxyLogLevel=warning
         - --proxyComponentLogLevel=misc:error
         - --log_output_level=all:warn,ads:error
-        - --drainDuration=45s
-        - --parentShutdownDuration=1m0s
-        - --connectTimeout=10s
         - --serviceCluster=istio-ingressgateway
-        - --proxyAdminPort=15000
         - --concurrency=4
-        - --statusPort=15021
-        - --controlPlaneAuthPolicy=NONE
-        - --discoveryAddress=istiod.istio-test-system.svc:15012
         readinessProbe:
           failureThreshold: 30
           httpGet:

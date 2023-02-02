@@ -65,15 +65,8 @@ spec:
         - --proxyLogLevel=warning
         - --proxyComponentLogLevel=misc:error
         - --log_output_level=all:warn,ads:error
-        - --drainDuration=45s
-        - --parentShutdownDuration=1m0s
-        - --connectTimeout=10s
         - --serviceCluster=istio-ingressgateway
-        - --proxyAdminPort=15000
         - --concurrency=4
-        - --statusPort=15021
-        - --controlPlaneAuthPolicy=NONE
-        - --discoveryAddress=istiod.{{ .Values.istiodNamespace }}.svc:15012
         readinessProbe:
           failureThreshold: 30
           httpGet:
