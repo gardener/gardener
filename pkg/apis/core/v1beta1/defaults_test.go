@@ -267,6 +267,22 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
+		Context("default enforceNodeAllocatable", func() {
+			It("should default enforceNodeAllocatable setting to pods", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.EnforceNodeAllocatable).To(ConsistOf("pods"))
+			})
+
+			It("should not override enforceNodeAllocatable", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.EnforceNodeAllocatable = []string{"pods", "kube-reserved"}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.EnforceNodeAllocatable).To(ConsistOf("pods", "kube-reserved"))
+			})
+		})
+
 		Describe("kubeControllerManager settings", func() {
 			It("should not overwrite the kube-controller-manager's node monitor grace period", func() {
 				nodeMonitorGracePeriod := &metav1.Duration{Duration: time.Minute}

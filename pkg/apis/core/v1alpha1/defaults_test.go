@@ -356,6 +356,22 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
+		Context("default enforceNodeAllocatable", func() {
+			It("should default enforceNodeAllocatable setting to pods", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.EnforceNodeAllocatable).To(ConsistOf("pods"))
+			})
+
+			It("should not override enforceNodeAllocatable", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.EnforceNodeAllocatable = []string{"pods", "kube-reserved"}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.EnforceNodeAllocatable).To(ConsistOf("pods", "kube-reserved"))
+			})
+		})
+
 		It("should default ipFamilies setting to IPv4 single-stack", func() {
 			SetObjectDefaults_Shoot(obj)
 
