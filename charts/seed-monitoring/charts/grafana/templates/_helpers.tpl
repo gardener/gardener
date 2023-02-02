@@ -57,7 +57,7 @@ grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 
 
 {{- define "grafana.dashboards.data" -}}
 {{- if .Values.sni.enabled }}
-{{ range $name, $bytes := .Files.Glob "dashboards/operators/istio/**.json" }}
+{{ range $name, $bytes := .Files.Glob "dashboards/owners/istio/**.json" }}
 {{ base $name }}: |-
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{- end }}
@@ -68,19 +68,8 @@ grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{- end }}
 {{- end }}
-{{ if eq .Values.role "users" }}
 {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
 {{ if not (and (eq $name "dashboards/owners/shoot-vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{ end }}
-{{ end }}
-{{ else }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{ end }}
-{{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
 {{ base $name }}: |-
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{ end }}
