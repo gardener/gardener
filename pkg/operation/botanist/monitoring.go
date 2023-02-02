@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -45,8 +44,7 @@ import (
 )
 
 const (
-	secretNameIngressOperators = v1beta1constants.SecretNameObservabilityIngress
-	secretNameIngressUsers     = v1beta1constants.SecretNameObservabilityIngressUsers
+	secretNameIngressUsers = v1beta1constants.SecretNameObservabilityIngressUsers
 
 	grafanaOperatorsRole = "operators"
 	grafanaUsersRole     = "users"
@@ -66,11 +64,6 @@ func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfi
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if !b.IsShootMonitoringEnabled() {
 		return b.DeleteSeedMonitoring(ctx)
-	}
-
-	credentialsSecret, found := b.SecretsManager.Get(secretNameIngressOperators)
-	if !found {
-		return fmt.Errorf("secret %q not found", secretNameIngressOperators)
 	}
 
 	credentialsUsersSecret, found := b.SecretsManager.Get(secretNameIngressUsers)
@@ -396,14 +389,6 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 
 		secretName := gardenerutils.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gardenerutils.ShootProjectSecretSuffixMonitoring)
 		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
-	}
-
-	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators),
-		secretsmanager.Persist(),
-		secretsmanager.Validity(30*24*time.Hour),
-	)
-	if err != nil {
-		return err
 	}
 
 	credentialsUsersSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressUsers),
