@@ -13,7 +13,7 @@ default.yaml: |-
 {{- end -}}
 
 {{- define "grafana.providers.name" -}}
-grafana-{{ .Values.role }}-dashboard-providers-{{ include "grafana.providers.data" . | sha256sum | trunc 8 }}
+grafana-dashboard-providers-{{ include "grafana.providers.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
 {{- define "grafana.datasources.data" -}}
@@ -48,7 +48,7 @@ datasources.yaml: |-
 {{- end -}}
 
 {{- define "grafana.datasources.name" -}}
-grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 8 }}
+grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
 {{- define "grafana.toCompactedJson" -}}
@@ -91,5 +91,5 @@ grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . |
 {{- end -}}
 
 {{- define "grafana.dashboards.name" -}}
-grafana-{{ .Values.role }}-dashboards-{{ include "grafana.dashboards.data" . | sha256sum | trunc 8 }}
+grafana-dashboards-{{ include "grafana.dashboards.data" . | sha256sum | trunc 8 }}
 {{- end }}
