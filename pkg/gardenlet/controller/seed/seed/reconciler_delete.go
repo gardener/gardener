@@ -160,6 +160,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 		return err
 	}
 
+	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
+	if err != nil {
+		return err
+	}
+
 	secretData, err := getDNSProviderSecretData(ctx, r.GardenClient, seed.GetInfo())
 	if err != nil {
 		return err
@@ -195,7 +200,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		kubeStateMetrics   = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		nginxIngress       = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
 		networkPolicies    = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
-		clusterIdentity    = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
 		dwdEndpoint        = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe           = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		systemResources    = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
@@ -225,10 +229,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name:         "Ensuring no ControllerInstallations are left",
 			Fn:           ensureNoControllerInstallations(r.GardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
-		})
-		destroyClusterIdentity = g.Add(flow.Task{
-			Name: "Destroying cluster-identity",
-			Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
 		})
 		destroyClusterAutoscaler = g.Add(flow.Task{
 			Name: "Destroying cluster-autoscaler",
@@ -277,7 +277,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyNginxIngress,
-			destroyClusterIdentity,
 			destroyClusterAutoscaler,
 			destroyNetworkPolicies,
 			destroyDWDEndpoint,
@@ -295,6 +294,20 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
 		})
 	)
+
+	// Use the managed resource for cluster-identity only if there is no cluster-identity config map in kube-system namespace from a different origin than seed.
+	// This prevents gardenlet from deleting the config map accidently on seed deletion when it was created by a different party (gardener-apiserver or shoot).
+	if seedIsOriginOfClusterIdentity {
+		var (
+			clusterIdentity = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
+
+			destroyClusterIdentity = g.Add(flow.Task{
+				Name: "Destroying cluster-identity",
+				Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
+			})
+		)
+		syncPointCleanedUp.Insert(destroyClusterIdentity)
+	}
 
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 	if !seedIsGarden {

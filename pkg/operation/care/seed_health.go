@@ -47,7 +47,6 @@ import (
 var requiredManagedResourcesSeed = sets.NewString(
 	etcd.Druid,
 	networkpolicies.ManagedResourceControlName,
-	clusteridentity.ManagedResourceControlName,
 	clusterautoscaler.ManagedResourceControlName,
 	kubestatemetrics.ManagedResourceName,
 	seedsystem.ManagedResourceName,
@@ -101,6 +100,14 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	error,
 ) {
 	managedResources := requiredManagedResourcesSeed.List()
+
+	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, h.seedClient, v1beta1constants.ClusterIdentityOriginSeed)
+	if err != nil {
+		return nil, err
+	}
+	if seedIsOriginOfClusterIdentity {
+		managedResources = append(managedResources, clusteridentity.ManagedResourceControlName)
+	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
 		managedResources = append(managedResources, istio.ManagedResourceControlName)

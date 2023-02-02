@@ -28,9 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -47,11 +49,14 @@ var _ = Describe("ClusterIdentity", func() {
 		ctx       = context.TODO()
 		fakeErr   = fmt.Errorf("fake error")
 		identity  = "hugo"
+		origin    = "shoot"
 		namespace = "shoot--foo--bar"
 
 		configMapYAML = `apiVersion: v1
 data:
   cluster-identity: ` + identity + `
+  cluster-identity-origin: ` + origin + `
+immutable: true
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -282,6 +287,56 @@ metadata:
 			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 			Expect(clusterIdentity.WaitCleanup(ctx)).To(Succeed())
+		})
+	})
+
+	Describe("CheckNonSeedClusterIdentityExists", func() {
+		var (
+			seedClient client.Client
+
+			configMapSeed    *corev1.ConfigMap
+			configMapNonSeed *corev1.ConfigMap
+		)
+
+		BeforeEach(func() {
+			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+			configMapSeed = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-identity",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Immutable: pointer.Bool(true),
+				Data: map[string]string{
+					"cluster-identity":        "foo",
+					"cluster-identity-origin": "seed",
+				},
+			}
+			configMapNonSeed = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-identity",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Immutable: pointer.Bool(true),
+				Data: map[string]string{
+					"cluster-identity":        "foo",
+					"cluster-identity-origin": "bar",
+				},
+			}
+		})
+
+		It("should return true if there is no cluster-identity config map", func() {
+			Expect(IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, "seed")).To(BeTrue())
+		})
+
+		It("should return false if there is a cluster-identity config map with an origin not equal to seed", func() {
+			Expect(seedClient.Create(ctx, configMapNonSeed)).To(Succeed())
+			Expect(IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, "seed")).To(BeFalse())
+		})
+
+		It("should return true if there is a cluster-identity config map with an origin equal to seed", func() {
+			Expect(seedClient.Create(ctx, configMapSeed)).To(Succeed())
+			Expect(IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, "seed")).To(BeTrue())
 		})
 	})
 })

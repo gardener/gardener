@@ -777,6 +777,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 	sniEnabledOrInUse := anySNIInUse || gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI)
 
+	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
+	if err != nil {
+		return err
+	}
+
 	if err := cleanupOrphanExposureClassHandlerResources(ctx, log, seedClient, r.Config.ExposureClassHandlers, seed.GetInfo().Spec.Provider.Zones); err != nil {
 		return err
 	}
@@ -920,10 +925,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying cluster-identity",
-			Fn:   clusteridentity.NewForSeed(seedClient, r.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying cluster-autoscaler",
 			Fn:   clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace).Deploy,
 		})
@@ -948,6 +949,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:   systemResources.Deploy,
 		})
 	)
+
+	// Use the managed resource for cluster-identity only if there is no cluster-identity config map in kube-system namespace from a different origin than seed.
+	// This prevents gardenlet from deleting the config map accidently on seed deletion when it was created by a different party (gardener-apiserver or shoot).
+	if seedIsOriginOfClusterIdentity {
+		_ = g.Add(flow.Task{
+			Name: "Deploying cluster-identity",
+			Fn:   clusteridentity.NewForSeed(seedClient, r.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
+		})
+	}
 
 	// When the seed is the garden cluster then the VPA is reconciled by the gardener-operator
 	if !seedIsGarden {
