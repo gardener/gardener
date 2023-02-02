@@ -138,7 +138,7 @@ ginkgo build ./pkg/resourcemanager/controller/garbagecollector
 go test -c ./pkg/resourcemanager/controller/garbagecollector
 
 # run the test in parallel and report any failures
-$ stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollector.test -ginkgo.focus "should delete the unused resources"
+stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollector.test -ginkgo.focus "should delete the unused resources"
 5s: 1077 runs so far, 0 failures
 10s: 2160 runs so far, 0 failures
 ```
@@ -194,6 +194,8 @@ $ stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollecto
 
 Integration tests in Gardener use the `sigs.k8s.io/controller-runtime/pkg/envtest` package.
 It sets up a temporary control plane (etcd + kube-apiserver) and runs the test against it.
+The test suites start their individual `envtest` environment before running the tested controller/webhook and executing test cases.
+Before exiting, the test suites tear down the temporary test environment.
 
 Package `github.com/gardener/gardener/pkg/envtest` augments the controller-runtime's `envtest` package by starting and registering `gardener-apiserver`.
 This is used to test controllers that act on resources in the Gardener APIs (aggregated APIs).
@@ -204,7 +206,7 @@ Hence, we tried to sharpen the terminology that we use to distinguish between "r
 
 ### Running Integration Tests
 
-The `test-integration` make rule prepares the environment automatically by downloading the respective binaries (if not yet present) and sets the necessary environment variables.
+The `test-integration` make rule prepares the environment automatically by downloading the respective binaries (if not yet present) and setting the necessary environment variables.
 
 ```bash
 make test-integration
@@ -215,52 +217,70 @@ If you want to run a specific set of integration tests, you can also execute the
 ```bash
 export PATH="$PATH:$PWD/hack/tools/bin"
 
+source ./hack/test-integration.env
 ./hack/test-integration.sh ./test/integration/resourcemanager/tokenrequestor
 ```
 
 The script takes care of preparing the environment for you.
-If you want to execute the test suites directly via `go test` or `ginkgo`, you have to point the `KUBEBUILDER_ASSETS` environment variable to the path that contains the etcd and kube-apiserver binaries. Alternatively, you can install the binaries to `/usr/local/kubebuilder/bin`. Additionally the environment variables from `hack/test-integration.env` should be sourced.
+If you want to execute the test suites directly via `go test` or `ginkgo`, you have to point the `KUBEBUILDER_ASSETS` environment variable to the path that contains the etcd and kube-apiserver binaries. Alternatively, you can install the binaries to `/usr/local/kubebuilder/bin`. Additionally, the environment variables from `hack/test-integration.env` should be sourced.
 
 ### Debugging Integration Tests
 
-You can configure envtest to use an existing cluster instead of starting a temporary control plane for your test.
-This can be helpful for debugging integration tests because you can easily inspect what is going on in your test cluster with `kubectl`.
+You can configure `envtest` to use an existing cluster or control plane instead of starting a temporary control plane that is torn down immediately after executing the test.
+This can be helpful for debugging integration tests because you can easily inspect what is going on in your test environment with `kubectl`.
 
-Run an `envtest` suite (not using `gardener-apiserver`) against an existing cluster:
+While you can use an existing cluster (e.g., `kind`), some test suites expect that no controllers and no nodes are running in the test environment (as it is the case in `envtest` test environments).
+Hence, using a full-blown cluster with controllers and nodes might sometimes be impractical, as you would need to stop cluster components for the tests to work.
+
+You can use `make start-envtest` to start an `envtest` test environment that is managed separately from individual test suites.
+This allows you to keep the test environment running for as long as you want and debug integration tests by executing multiple test runs in parallel or inspecting test runs using `kubectl`.
+When you are finished, just hit `^C` for tearing down the test environment.
+The kubeconfig for the test environment is placed in `dev/envtest-kubeconfig.yaml`.
+
+`make start-envtest` brings up an `envtest` environment using the default configuration.
+If your test suite requires a different control plane configuration (e.g., disabled admission plugins or enabled feature gates), feel free to locally modify the configuration in [`test/start-envtest`](../../test/start-envtest) while debugging.
+
+Run an `envtest` suite (not using `gardener-apiserver`) against an existing test environment:
 
 ```bash
-make kind-up KIND_ENV=local
-export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
+make start-envtest
+
+# in another terminal session:
+export KUBECONFIG=$PWD/dev/envtest-kubeconfig.yaml
 export USE_EXISTING_CLUSTER=true
 
 # run test with verbose output
 ./hack/test-integration.sh -v ./test/integration/resourcemanager/health -ginkgo.v
 
+# in another terminal session:
+export KUBECONFIG=$PWD/dev/envtest-kubeconfig.yaml
 # watch test objects
 k get managedresource -A -w
 ```
 
-Run a `gardenerenvtest` suite (using `gardener-apiserver`) against an existing gardener setup:
+Run a `gardenerenvtest` suite (using `gardener-apiserver`) against an existing test environment:
 
 ```bash
-make kind-up KIND_ENV=local
-export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
-make dev-setup
-# you might need to disable some admission plugins in hack/local-development/start-apiserver
-# via --disable-admission-plugins depending on the test suite
-make start-apiserver
+# modify test/start-envtest to disable admission plugins and enable feature gates like in test suite...
+
+make start-envtest ENVTEST_TYPE=gardener
+
+# in another terminal session:
+export KUBECONFIG=$PWD/dev/envtest-kubeconfig.yaml
 export USE_EXISTING_GARDENER=true
 
 # run test with verbose output
 ./hack/test-integration.sh -v ./test/integration/controllermanager/bastion -ginkgo.v
 
+# in another terminal session:
+export KUBECONFIG=$PWD/dev/envtest-kubeconfig.yaml
 # watch test objects
 k get bastion -A -w
 ```
 
 Similar to [debugging unit tests](#debugging-unit-tests), the `stress` tool can help hunting flakes in integration tests.
 Though, you might need to run less tests in parallel though (specified via `-p`) and have a bit more patience.
-Generally, reproducing flakes in integration tests is easier when stress-testing against an existing cluster instead of starting temporary individual control planes per test run.
+Generally, reproducing flakes in integration tests is easier when stress-testing against an existing test environment instead of starting temporary individual control planes per test run.
 
 Stress-test an `envtest` suite (not using `gardener-apiserver`):
 
@@ -268,40 +288,47 @@ Stress-test an `envtest` suite (not using `gardener-apiserver`):
 # build a test binary
 ginkgo build ./test/integration/resourcemanager/health
 
-# prepare a cluster to run the test against
-make kind-up KIND_ENV=local
-export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
+# prepare a test environment to run the test against
+make start-envtest
+
+# in another terminal session:
+export KUBECONFIG=$PWD/dev/envtest-kubeconfig.yaml
 export USE_EXISTING_CLUSTER=true
 
 # use same timeout settings like in CI
 source ./hack/test-integration.env
 
+# switch to test package directory like `go test`
+cd ./test/integration/resourcemanager/health
+
 # run the test in parallel and report any failures
-$ stress -ignore "unable to grab random port" -p 16 ./test/integration/resourcemanager/health/health.test
+stress -ignore "unable to grab random port" -p 16 ./health.test
 ...
 ```
 
 Stress-test a `gardenerenvtest` suite (using `gardener-apiserver`):
 
 ```bash
+# modify test/start-envtest to disable admission plugins and enable feature gates like in test suite...
+
 # build a test binary
 ginkgo build ./test/integration/controllermanager/bastion
 
-# prepare a cluster including gardener-apiserver to run the test against
-make kind-up KIND_ENV=local
-export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
-make dev-setup
-# you might need to disable some admission plugins in hack/local-development/start-apiserver
-# via --disable-admission-plugins depending on the test suite
-# especially the ResourceQuota plugin can quickly lead to test failures when stress-testing
-make start-apiserver
+# prepare a test environment including gardener-apiserver to run the test against
+make start-envtest ENVTEST_TYPE=gardener
+
+# in another terminal session:
+export KUBECONFIG=$PWD/dev/envtest-kubeconfig.yaml
 export USE_EXISTING_GARDENER=true
 
 # use same timeout settings like in CI
 source ./hack/test-integration.env
 
+# switch to test package directory like `go test`
+cd ./test/integration/controllermanager/bastion
+
 # run the test in parallel and report any failures
-$ stress -ignore "unable to grab random port" -p 16 ./test/integration/controllermanager/bastion/bastion.test
+stress -ignore "unable to grab random port" -p 16 ./bastion.test
 ...
 ```
 
