@@ -20,12 +20,16 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -43,10 +47,12 @@ type Interface interface {
 }
 
 type clusterIdentity struct {
-	client                  client.Client
-	namespace               string
-	identity                string
-	identityType            string
+	client       client.Client
+	namespace    string
+	identity     string
+	identityType string
+	//TODO(oliver-goetz): Remove this migration scenario in a future release
+	ignoreManagedResource   bool
 	managedResourceRegistry *managedresources.Registry
 	managedResourceName     string
 	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error
@@ -57,6 +63,7 @@ func new(
 	namespace string,
 	identity string,
 	identityType string,
+	ignoreManagedResource bool,
 	managedResourceRegistry *managedresources.Registry,
 	managedResourceName string,
 	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error,
@@ -66,6 +73,7 @@ func new(
 		namespace:               namespace,
 		identity:                identity,
 		identityType:            identityType,
+		ignoreManagedResource:   ignoreManagedResource,
 		managedResourceRegistry: managedResourceRegistry,
 		managedResourceName:     managedResourceName,
 		managedResourceDeleteFn: managedResourceDeleteFn,
@@ -78,7 +86,24 @@ func NewForSeed(c client.Client, namespace, identity string) Interface {
 		c,
 		namespace,
 		identity,
-		"seed",
+		v1beta1constants.ClusterIdentityOriginSeed,
+		false,
+		managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer),
+		ManagedResourceControlName,
+		managedresources.DeleteForSeed,
+	)
+}
+
+// NewIgnoredManagedResourceForSeed creates new instance of Deployer for the seed's cluster identity for migration purposes.
+// The cluster-identity config map is annotated with "resources.gardener.cloud/mode: Ignore".
+// TODO(oliver-goetz): Remove this migration scenario in a future release
+func NewIgnoredManagedResourceForSeed(c client.Client, namespace, identity string) Interface {
+	return new(
+		c,
+		namespace,
+		identity,
+		v1beta1constants.ClusterIdentityOriginSeed,
+		true,
 		managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer),
 		ManagedResourceControlName,
 		managedresources.DeleteForSeed,
@@ -91,7 +116,8 @@ func NewForShoot(c client.Client, namespace, identity string) Interface {
 		c,
 		namespace,
 		identity,
-		"shoot",
+		v1beta1constants.ClusterIdentityOriginShoot,
+		false,
 		managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer),
 		ShootManagedResourceName,
 		managedresources.DeleteForShoot,
@@ -104,9 +130,22 @@ func (c *clusterIdentity) Deploy(ctx context.Context) error {
 			Name:      v1beta1constants.ClusterIdentity,
 			Namespace: metav1.NamespaceSystem,
 		},
+		Immutable: pointer.Bool(true),
 		Data: map[string]string{
-			v1beta1constants.ClusterIdentity: c.identity,
+			v1beta1constants.ClusterIdentity:       c.identity,
+			v1beta1constants.ClusterIdentityOrigin: c.identityType,
 		},
+	}
+
+	// TODO(oliver-goetz): Remove this migration scenario in a future release
+	if c.ignoreManagedResource {
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v1beta1constants.ClusterIdentity,
+				Namespace:   metav1.NamespaceSystem,
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
+			},
+		}
 	}
 
 	resources, err := c.managedResourceRegistry.AddAllAndSerialize(configMap)
@@ -115,9 +154,9 @@ func (c *clusterIdentity) Deploy(ctx context.Context) error {
 	}
 
 	switch c.identityType {
-	case "shoot":
+	case v1beta1constants.ClusterIdentityOriginShoot:
 		return managedresources.CreateForShoot(ctx, c.client, c.namespace, c.managedResourceName, managedresources.LabelValueGardener, false, resources)
-	case "seed":
+	case v1beta1constants.ClusterIdentityOriginSeed:
 		return managedresources.CreateForSeed(ctx, c.client, c.namespace, c.managedResourceName, false, resources)
 	default:
 		// this should never happen
@@ -149,4 +188,17 @@ func (c *clusterIdentity) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, c.managedResourceName)
+}
+
+// IsClusterIdentityEmptyOrFromOrigin checks if the cluster-identity config map does not exist or is from the same origin
+func IsClusterIdentityEmptyOrFromOrigin(ctx context.Context, c client.Client, origin string) (bool, error) {
+	clusterIdentity := &corev1.ConfigMap{}
+	if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), clusterIdentity); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+	// TODO(oliver-goetz): do not treat an empty origin as foreign origin anymore in a future release when shoot clusters have been reconciled at least once
+	return clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] == origin, nil
 }

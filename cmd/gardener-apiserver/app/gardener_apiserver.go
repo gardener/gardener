@@ -44,6 +44,7 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -332,6 +333,7 @@ func (o *Options) Run(ctx context.Context) error {
 		if _, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(ctx, v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {
+			// TODO(oliver-goetz): set immutable flag to true and origin to gardener-apiserver if the origin is empty in a future release when shoot clusters have been reconciled at least once
 			// Cluster identity ConfigMap already exists
 			return nil
 		}
@@ -341,8 +343,10 @@ func (o *Options) Run(ctx context.Context) error {
 				Name:      v1beta1constants.ClusterIdentity,
 				Namespace: metav1.NamespaceSystem,
 			},
+			Immutable: pointer.Bool(true),
 			Data: map[string]string{
-				v1beta1constants.ClusterIdentity: o.ExtraOptions.ClusterIdentity,
+				v1beta1constants.ClusterIdentity:       o.ExtraOptions.ClusterIdentity,
+				v1beta1constants.ClusterIdentityOrigin: v1beta1constants.ClusterIdentityOriginGardenerAPIServer,
 			},
 		}, kubernetesclient.DefaultCreateOptions())
 		return err
