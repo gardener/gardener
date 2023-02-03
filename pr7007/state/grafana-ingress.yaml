@@ -6,16 +6,15 @@ metadata:
     nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users-f27eb0bf
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/configuration-snippet: proxy_set_header X-Scope-OrgID
-      user;
-  creationTimestamp: "2023-02-02T16:37:31Z"
-  generation: 2
+      operator;
+  creationTimestamp: "2023-02-03T10:02:32Z"
+  generation: 1
   labels:
     component: grafana
-    role: users
-  name: grafana-users
+  name: grafana
   namespace: shoot--local--local
-  resourceVersion: "27165"
-  uid: 519f85fd-8b81-47a3-ba62-d31bf1033401
+  resourceVersion: "555715"
+  uid: 1b9935d6-3286-44bd-8b81-6e2ae64c3f75
 spec:
   ingressClassName: nginx-ingress-gardener
   rules:
@@ -24,7 +23,7 @@ spec:
       paths:
       - backend:
           service:
-            name: grafana-users
+            name: grafana
             port:
               number: 3000
         path: /
@@ -32,7 +31,7 @@ spec:
   tls:
   - hosts:
     - gu-local--local.ingress.local.seed.local.gardener.cloud
-    secretName: grafana-tls-fdf90952
+    secretName: grafana-tls-18361fcd
 status:
   loadBalancer:
     ingress:
