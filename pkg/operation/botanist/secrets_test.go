@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -102,7 +101,7 @@ var _ = Describe("Secrets", func() {
 				Namespace: gardenNamespace,
 			},
 		})
-		botanist.SetShootState(&gardencorev1alpha1.ShootState{})
+		botanist.SetShootState(&gardencorev1beta1.ShootState{})
 	})
 
 	Describe("#InitializeSecretsManagement", func() {
@@ -202,9 +201,9 @@ var _ = Describe("Secrets", func() {
 			})
 
 			It("should restore all secrets from the shootstate", func() {
-				botanist.SetShootState(&gardencorev1alpha1.ShootState{
-					Spec: gardencorev1alpha1.ShootStateSpec{
-						Gardener: []gardencorev1alpha1.GardenerResourceData{
+				botanist.SetShootState(&gardencorev1beta1.ShootState{
+					Spec: gardencorev1beta1.ShootStateSpec{
+						Gardener: []gardencorev1beta1.GardenerResourceData{
 							{
 								Name:   "ca",
 								Type:   "secret",

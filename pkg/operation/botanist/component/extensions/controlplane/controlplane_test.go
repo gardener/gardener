@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -387,13 +386,13 @@ var _ = Describe("ControlPlane", func() {
 	Describe("#Restore", func() {
 		var (
 			state      = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
-			shootState *gardencorev1alpha1.ShootState
+			shootState *gardencorev1beta1.ShootState
 		)
 
 		BeforeEach(func() {
-			shootState = &gardencorev1alpha1.ShootState{
-				Spec: gardencorev1alpha1.ShootStateSpec{
-					Extensions: []gardencorev1alpha1.ExtensionResourceState{
+			shootState = &gardencorev1beta1.ShootState{
+				Spec: gardencorev1beta1.ShootStateSpec{
+					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Name:    &name,
 							Kind:    extensionsv1alpha1.ControlPlaneResource,

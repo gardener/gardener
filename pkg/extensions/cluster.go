@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -193,14 +192,14 @@ func GenericTokenKubeconfigSecretNameFromCluster(cluster *Cluster) string {
 
 // GetShootStateForCluster retrieves the ShootState and the Shoot resources for a given Cluster name by first fetching
 // the *extensionsv1alpha1.Cluster object in the seed, extracting the Shoot resource from it and then fetching the
-// *gardencorev1alpha1.ShootState resource from the garden.
+// *gardencorev1beta1.ShootState resource from the garden.
 func GetShootStateForCluster(
 	ctx context.Context,
 	gardenClient client.Client,
 	seedClient client.Client,
 	clusterName string,
 ) (
-	*gardencorev1alpha1.ShootState,
+	*gardencorev1beta1.ShootState,
 	*gardencorev1beta1.Shoot,
 	error,
 ) {
@@ -218,7 +217,7 @@ func GetShootStateForCluster(
 		return nil, nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", cluster.Name)
 	}
 
-	shootState := &gardencorev1alpha1.ShootState{}
+	shootState := &gardencorev1beta1.ShootState{}
 	if err := gardenClient.Get(ctx, kubernetesutils.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
 		return nil, nil, err
 	}

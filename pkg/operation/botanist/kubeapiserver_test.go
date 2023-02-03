@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -164,7 +163,7 @@ var _ = Describe("KubeAPIServer", func() {
 				TechnicalID: seedNamespace,
 			},
 		})
-		botanist.SetShootState(&gardencorev1alpha1.ShootState{})
+		botanist.SetShootState(&gardencorev1beta1.ShootState{})
 	})
 
 	AfterEach(func() {

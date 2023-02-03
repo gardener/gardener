@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extension "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -149,7 +149,7 @@ func (mr *MockInterfaceMockRecorder) MigrateBeforeKubeAPIServer(arg0 interface{}
 }
 
 // RestoreAfterKubeAPIServer mocks base method.
-func (m *MockInterface) RestoreAfterKubeAPIServer(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
+func (m *MockInterface) RestoreAfterKubeAPIServer(arg0 context.Context, arg1 *v1beta1.ShootState) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RestoreAfterKubeAPIServer", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -163,7 +163,7 @@ func (mr *MockInterfaceMockRecorder) RestoreAfterKubeAPIServer(arg0, arg1 interf
 }
 
 // RestoreBeforeKubeAPIServer mocks base method.
-func (m *MockInterface) RestoreBeforeKubeAPIServer(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
+func (m *MockInterface) RestoreBeforeKubeAPIServer(arg0 context.Context, arg1 *v1beta1.ShootState) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RestoreBeforeKubeAPIServer", arg0, arg1)
 	ret0, _ := ret[0].(error)

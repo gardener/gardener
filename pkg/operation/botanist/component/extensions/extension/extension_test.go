@@ -34,7 +34,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -88,7 +87,7 @@ var _ = Describe("Extension", func() {
 		b                *botanist.Botanist
 		namespace        *corev1.Namespace
 		ctx              = context.TODO()
-		shootState       = &gardencorev1alpha1.ShootState{}
+		shootState       = &gardencorev1beta1.ShootState{}
 		log              logr.Logger
 
 		defaultExtension *extensionsv1alpha1.Extension
@@ -427,19 +426,19 @@ var _ = Describe("Extension", func() {
 	Describe("#RestoreBeforeKubeAPIServer", func() {
 		var (
 			state      = []byte(`{"dummy":"state"}`)
-			shootState *gardencorev1alpha1.ShootState
+			shootState *gardencorev1beta1.ShootState
 		)
 		BeforeEach(func() {
-			extensions := make([]gardencorev1alpha1.ExtensionResourceState, 0, len(requiredExtensions))
+			extensions := make([]gardencorev1beta1.ExtensionResourceState, 0, len(requiredExtensions))
 			for _, ext := range requiredExtensions {
-				extensions = append(extensions, gardencorev1alpha1.ExtensionResourceState{
+				extensions = append(extensions, gardencorev1beta1.ExtensionResourceState{
 					Name:  pointer.String(ext.Name),
 					Kind:  extensionsv1alpha1.ExtensionResource,
 					State: &runtime.RawExtension{Raw: state},
 				})
 			}
-			shootState = &gardencorev1alpha1.ShootState{
-				Spec: gardencorev1alpha1.ShootStateSpec{
+			shootState = &gardencorev1beta1.ShootState{
+				Spec: gardencorev1beta1.ShootStateSpec{
 					Extensions: extensions,
 				},
 			}

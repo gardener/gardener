@@ -50,7 +50,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		annotations          map[string]string
 		shootPurpose         = string(gardencorev1beta1.ShootPurposeProduction)
 		shootTechnicalID     string
-		shootState           *gardencorev1alpha1.ShootState
+		shootState           *gardencorev1beta1.ShootState
 		shoot                *gardencorev1beta1.Shoot
 		shootNamespace       *corev1.Namespace
 		cluster              *extensionsv1alpha1.Cluster
@@ -289,13 +289,13 @@ var _ = Describe("BackupEntry controller tests", func() {
 		})
 
 		By("Create Shoot state in project namespace")
-		shootState = &gardencorev1alpha1.ShootState{
+		shootState = &gardencorev1beta1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shoot.Name,
 				Namespace: testNamespace.Name,
 			},
-			Spec: gardencorev1alpha1.ShootStateSpec{
-				Gardener: []gardencorev1alpha1.GardenerResourceData{
+			Spec: gardencorev1beta1.ShootStateSpec{
+				Gardener: []gardencorev1beta1.GardenerResourceData{
 					{
 						Name: "data",
 					},

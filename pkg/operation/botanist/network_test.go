@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -38,7 +37,7 @@ var _ = Describe("Network", func() {
 
 		ctx        = context.TODO()
 		fakeErr    = fmt.Errorf("fake")
-		shootState = &gardencorev1alpha1.ShootState{}
+		shootState = &gardencorev1beta1.ShootState{}
 	)
 
 	BeforeEach(func() {

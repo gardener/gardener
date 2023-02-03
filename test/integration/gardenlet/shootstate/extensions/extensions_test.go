@@ -33,7 +33,7 @@ import (
 var _ = Describe("ShootState Extensions controller tests", func() {
 	var (
 		testNamespace  *corev1.Namespace
-		shootState     *gardencorev1alpha1.ShootState
+		shootState     *gardencorev1beta1.ShootState
 		cluster        *extensionsv1alpha1.Cluster
 		infrastructure *extensionsv1alpha1.Infrastructure
 	)
@@ -54,7 +54,7 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		shootState = &gardencorev1alpha1.ShootState{
+		shootState = &gardencorev1beta1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "shoot-",
 				Namespace:    testNamespace.Name,
@@ -199,12 +199,12 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 			By("Wait for ShootState to reflect new status")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-				g.Expect(shootState.Spec.Extensions).To(ConsistOf(gardencorev1alpha1.ExtensionResourceState{
+				g.Expect(shootState.Spec.Extensions).To(ConsistOf(gardencorev1beta1.ExtensionResourceState{
 					Kind:      "Infrastructure",
 					Name:      &infrastructure.Name,
 					Resources: infrastructure.Status.Resources,
 				}))
-				g.Expect(shootState.Spec.Resources).To(ConsistOf(gardencorev1alpha1.ResourceData{
+				g.Expect(shootState.Spec.Resources).To(ConsistOf(gardencorev1beta1.ResourceData{
 					CrossVersionObjectReference: infrastructure.Status.Resources[0].ResourceRef,
 					Data:                        runtime.RawExtension{Raw: []byte(`{"apiVersion":"v1","data":{"foo":"YmFy"},"kind":"Secret","metadata":{"labels":{"` + testID + `":"` + testRunID + `"},"name":"` + secret.Name + `","namespace":"` + secret.Namespace + `"},"type":"Opaque"}`)},
 				}))

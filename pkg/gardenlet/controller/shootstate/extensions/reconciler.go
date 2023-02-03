@@ -27,8 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -124,8 +122,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *gardencorev1alpha1.ShootState, namespace string, newResources []gardencorev1beta1.NamedResourceReference) (v1alpha1helper.ResourceDataList, error) {
-	var resourcesToAddUpdate v1alpha1helper.ResourceDataList
+func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *gardencorev1beta1.ShootState, namespace string, newResources []gardencorev1beta1.NamedResourceReference) (v1beta1helper.ResourceDataList, error) {
+	var resourcesToAddUpdate v1beta1helper.ResourceDataList
 
 	for _, newResource := range newResources {
 		obj, err := unstructuredutils.GetObjectByRef(ctx, r.SeedClient, &newResource.ResourceRef, namespace)
@@ -141,11 +139,11 @@ func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *garde
 			return nil, err
 		}
 
-		resourceList := v1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+		resourceList := v1beta1helper.ResourceDataList(shootState.Spec.Resources)
 		currentResource := resourceList.Get(&newResource.ResourceRef)
 
 		if currentResource == nil || !apiequality.Semantic.DeepEqual(currentResource.Data, newResource) {
-			resourcesToAddUpdate = append(resourcesToAddUpdate, gardencorev1alpha1.ResourceData{
+			resourcesToAddUpdate = append(resourcesToAddUpdate, gardencorev1beta1.ResourceData{
 				CrossVersionObjectReference: newResource.ResourceRef,
 				Data:                        *raw,
 			})
@@ -155,8 +153,8 @@ func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *garde
 	return resourcesToAddUpdate, nil
 }
 
-func getShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.ShootState, kind string, name, purpose *string) (*runtime.RawExtension, []gardencorev1beta1.NamedResourceReference) {
-	list := v1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+func getShootStateExtensionStateAndResources(shootState *gardencorev1beta1.ShootState, kind string, name, purpose *string) (*runtime.RawExtension, []gardencorev1beta1.NamedResourceReference) {
+	list := v1beta1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
 	s := list.Get(kind, name, purpose)
 	if s != nil {
 		return s.State, s.Resources
@@ -164,10 +162,10 @@ func getShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.Shoo
 	return nil, nil
 }
 
-func updateShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.ShootState, kind string, name, purpose *string, state *runtime.RawExtension, resources []gardencorev1beta1.NamedResourceReference) {
-	list := v1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+func updateShootStateExtensionStateAndResources(shootState *gardencorev1beta1.ShootState, kind string, name, purpose *string, state *runtime.RawExtension, resources []gardencorev1beta1.NamedResourceReference) {
+	list := v1beta1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
 	if state != nil || len(resources) > 0 {
-		list.Upsert(&gardencorev1alpha1.ExtensionResourceState{
+		list.Upsert(&gardencorev1beta1.ExtensionResourceState{
 			Kind:      kind,
 			Name:      name,
 			Purpose:   purpose,
@@ -180,10 +178,10 @@ func updateShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.S
 	shootState.Spec.Extensions = list
 }
 
-func updateShootStateResourceData(shootState *gardencorev1alpha1.ShootState, ref *autoscalingv1.CrossVersionObjectReference, data *runtime.RawExtension) {
-	list := v1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+func updateShootStateResourceData(shootState *gardencorev1beta1.ShootState, ref *autoscalingv1.CrossVersionObjectReference, data *runtime.RawExtension) {
+	list := v1beta1helper.ResourceDataList(shootState.Spec.Resources)
 	if data != nil {
-		list.Upsert(&gardencorev1alpha1.ResourceData{
+		list.Upsert(&gardencorev1beta1.ResourceData{
 			CrossVersionObjectReference: *ref,
 			Data:                        *data,
 		})

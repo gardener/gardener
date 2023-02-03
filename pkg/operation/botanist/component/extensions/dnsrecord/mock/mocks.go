@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	dnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -94,7 +94,7 @@ func (mr *MockInterfaceMockRecorder) Migrate(arg0 interface{}) *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
+func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1beta1.ShootState) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -108,7 +108,7 @@ func (mr *MockInterfaceMockRecorder) Restore(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // SetRecordType mocks base method.
-func (m *MockInterface) SetRecordType(arg0 v1alpha10.DNSRecordType) {
+func (m *MockInterface) SetRecordType(arg0 v1alpha1.DNSRecordType) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetRecordType", arg0)
 }

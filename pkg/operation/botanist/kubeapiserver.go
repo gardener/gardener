@@ -37,8 +37,6 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -669,8 +667,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
-		gardenerResourceDataList := v1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1beta1.GardenerResourceData) error {
+		gardenerResourceDataList := v1beta1helper.GardenerResourceDataList(*gardenerResourceData)
 		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
 		gardenerResourceDataList.Delete("service-account-key")
 		*gardenerResourceData = gardenerResourceDataList

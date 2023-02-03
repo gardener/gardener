@@ -29,7 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -449,7 +448,7 @@ func (o *Operation) InjectShootShootImages(values map[string]interface{}, names 
 func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	var (
 		err        error
-		shootState = &gardencorev1alpha1.ShootState{
+		shootState = &gardencorev1beta1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      o.Shoot.GetInfo().Name,
 				Namespace: o.Shoot.GetInfo().Namespace,
@@ -471,7 +470,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 
 // DeleteShootState deletes the ShootState resource for the corresponding shoot.
 func (o *Operation) DeleteShootState(ctx context.Context) error {
-	shootState := &gardencorev1alpha1.ShootState{
+	shootState := &gardencorev1beta1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      o.Shoot.GetInfo().Name,
 			Namespace: o.Shoot.GetInfo().Namespace,
@@ -492,8 +491,8 @@ func (o *Operation) DeleteShootState(ctx context.Context) error {
 // This method should be used only for reading the data of the returned shootstate resource. The returned shootstate
 // resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
 // To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (o *Operation) GetShootState() *gardencorev1alpha1.ShootState {
-	shootState, ok := o.shootState.Load().(*gardencorev1alpha1.ShootState)
+func (o *Operation) GetShootState() *gardencorev1beta1.ShootState {
+	shootState, ok := o.shootState.Load().(*gardencorev1beta1.ShootState)
 	if !ok {
 		return nil
 	}
@@ -505,7 +504,7 @@ func (o *Operation) GetShootState() *gardencorev1alpha1.ShootState {
 // should be used only in exceptional situations, or as a convenience in test code. The shootstate passed as a parameter
 // MUST NOT BE MODIFIED after the call to SetShootState (except in test code) since this might interfere with other concurrent reads and writes.
 // To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (o *Operation) SetShootState(shootState *gardencorev1alpha1.ShootState) {
+func (o *Operation) SetShootState(shootState *gardencorev1beta1.ShootState) {
 	o.shootState.Store(shootState)
 }
 
@@ -514,7 +513,7 @@ func (o *Operation) SetShootState(shootState *gardencorev1alpha1.ShootState) {
 // The mutate function should modify the passed GardenerResourceData so that changes are persisted.
 // This method is protected by a mutex, so only a single SaveGardenerResourceDataInShootState operation can be
 // executed at any point in time.
-func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f func(*[]gardencorev1alpha1.GardenerResourceData) error) error {
+func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f func(*[]gardencorev1beta1.GardenerResourceData) error) error {
 	o.shootStateMutex.Lock()
 	defer o.shootStateMutex.Unlock()
 

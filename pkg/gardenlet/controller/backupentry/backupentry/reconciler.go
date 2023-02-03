@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -643,7 +642,7 @@ func (r *Reconciler) reconcileBackupEntryExtension(ctx context.Context, backupBu
 	}
 
 	shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry)
-	shootState := &gardencorev1alpha1.ShootState{}
+	shootState := &gardencorev1beta1.ShootState{}
 	if err := r.GardenClient.Get(ctx, kubernetesutils.Key(backupEntry.Namespace, shootName), shootState); err != nil {
 		return err
 	}

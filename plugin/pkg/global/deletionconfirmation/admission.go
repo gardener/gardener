@@ -37,7 +37,7 @@ import (
 	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -63,7 +63,7 @@ type DeletionConfirmation struct {
 	gardenCoreClient         internalversion.Interface
 	gardenExternalCoreClient gardencoreversionedclientset.Interface
 	shootLister              gardencorelisters.ShootLister
-	shootStateLister         gardencorev1alpha1listers.ShootStateLister
+	shootStateLister         gardencorev1beta1listers.ShootStateLister
 	projectLister            gardencorelisters.ProjectLister
 	readyFunc                admission.ReadyFunc
 }
@@ -103,7 +103,7 @@ func (d *DeletionConfirmation) SetInternalCoreInformerFactory(f gardencoreinform
 
 // SetExternalCoreInformerFactory sets the external garden core informer factory.
 func (d *DeletionConfirmation) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
-	shootStateInformer := f.Core().V1alpha1().ShootStates()
+	shootStateInformer := f.Core().V1beta1().ShootStates()
 	d.shootStateLister = shootStateInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootStateInformer.Informer().HasSynced)
@@ -213,7 +213,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.shootStateLister.ShootStates(a.GetNamespace()).Get(a.GetName())
 		}
 		liveLookup = func() (client.Object, error) {
-			return d.gardenExternalCoreClient.CoreV1alpha1().ShootStates(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
+			return d.gardenExternalCoreClient.CoreV1beta1().ShootStates(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
 		checkFunc = gardenerutils.CheckIfDeletionIsConfirmed
 

@@ -17,7 +17,7 @@ package component
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // Deployer is used to control the life-cycle of a component.
@@ -38,7 +38,7 @@ type Waiter interface {
 
 // Migrator is used to control the control-plane migration operations of a component.
 type Migrator interface {
-	Restore(ctx context.Context, shootState *v1alpha1.ShootState) error
+	Restore(ctx context.Context, shootState *v1beta1.ShootState) error
 	Migrate(ctx context.Context) error
 }
 

@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "github.com/golang/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -66,10 +66,10 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockInterface) Get(arg0 context.Context) (*v1alpha10.Infrastructure, error) {
+func (m *MockInterface) Get(arg0 context.Context) (*v1alpha1.Infrastructure, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
-	ret0, _ := ret[0].(*v1alpha10.Infrastructure)
+	ret0, _ := ret[0].(*v1alpha1.Infrastructure)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -123,7 +123,7 @@ func (mr *MockInterfaceMockRecorder) ProviderStatus() *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
+func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1beta1.ShootState) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", arg0, arg1)
 	ret0, _ := ret[0].(error)
