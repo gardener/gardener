@@ -233,8 +233,8 @@ While you can use an existing cluster (e.g., `kind`), some test suites expect th
 Hence, using a full-blown cluster with controllers and nodes might sometimes be impractical, as you would need to stop cluster components for the tests to work.
 
 You can use `make start-envtest` to start an `envtest` test environment that is managed separately from individual test suites.
-This allows you to keep the test environment running for as long as you want and debug integration tests by executing multiple test runs in parallel or inspecting test runs using `kubectl`.
-When you are finished, just hit `^C` for tearing down the test environment.
+This allows you to keep the test environment running for as long as you want, and to debug integration tests by executing multiple test runs in parallel or inspecting test runs using `kubectl`.
+When you are finished, just hit `CTRL-C` for tearing down the test environment.
 The kubeconfig for the test environment is placed in `dev/envtest-kubeconfig.yaml`.
 
 `make start-envtest` brings up an `envtest` environment using the default configuration.
