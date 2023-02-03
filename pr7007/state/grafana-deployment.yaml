@@ -3,19 +3,18 @@ kind: Deployment
 metadata:
   annotations:
     deployment.kubernetes.io/revision: "1"
-    reference.resources.gardener.cloud/configmap-3ea280d6: grafana-users-datasources-2c9450c4
-    reference.resources.gardener.cloud/configmap-03f2decf: grafana-users-dashboard-providers-acaa2b61
-    reference.resources.gardener.cloud/configmap-839ab7b2: grafana-users-dashboards-897336e6
-  creationTimestamp: "2023-02-02T16:37:31Z"
-  generation: 8
+    reference.resources.gardener.cloud/configmap-7e515e00: grafana-datasources-2c9450c4
+    reference.resources.gardener.cloud/configmap-2600a75f: grafana-dashboards-ef1894f4
+    reference.resources.gardener.cloud/configmap-a84f06a9: grafana-dashboard-providers-acaa2b61
+  creationTimestamp: "2023-02-03T10:02:32Z"
+  generation: 2
   labels:
     component: grafana
     gardener.cloud/role: monitoring
-    role: users
-  name: grafana-users
+  name: grafana
   namespace: shoot--local--local
-  resourceVersion: "540681"
-  uid: 7e99b8cf-15a3-4085-8454-ae9228907523
+  resourceVersion: "555752"
+  uid: 8356e5eb-227e-45bd-a5ce-74e910d58d52
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
@@ -23,7 +22,6 @@ spec:
   selector:
     matchLabels:
       component: grafana
-      role: users
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -32,16 +30,15 @@ spec:
   template:
     metadata:
       annotations:
-        reference.resources.gardener.cloud/configmap-3ea280d6: grafana-users-datasources-2c9450c4
-        reference.resources.gardener.cloud/configmap-03f2decf: grafana-users-dashboard-providers-acaa2b61
-        reference.resources.gardener.cloud/configmap-839ab7b2: grafana-users-dashboards-897336e6
+        reference.resources.gardener.cloud/configmap-7e515e00: grafana-datasources-2c9450c4
+        reference.resources.gardener.cloud/configmap-2600a75f: grafana-dashboards-ef1894f4
+        reference.resources.gardener.cloud/configmap-a84f06a9: grafana-dashboard-providers-acaa2b61
       creationTimestamp: null
       labels:
         component: grafana
         gardener.cloud/role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-loki: allowed
-        role: users
     spec:
       affinity:
         nodeAffinity:
@@ -54,18 +51,22 @@ spec:
                 - "0"
       containers:
       - env:
+        - name: GF_ALERTING_ENABLED
+          value: "false"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
         - name: GF_AUTH_BASIC_ENABLED
           value: "false"
         - name: GF_AUTH_DISABLE_LOGIN_FORM
           value: "true"
-        - name: GF_AUTH_ANONYMOUS_ENABLED
+        - name: GF_AUTH_DISABLE_SIGNOUT_MENU
           value: "true"
-        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
-          value: "false"
-        - name: GF_ALERTING_ENABLED
-          value: "false"
         - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
           value: UTC
+        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
+          value: "false"
+        - name: GF_USERS_VIEWERS_CAN_EDIT
+          value: "true"
         image: grafana/grafana:7.5.17
         imagePullPolicy: IfNotPresent
         name: grafana
@@ -82,7 +83,7 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /var/grafana-storage
+        - mountPath: /var/lib/grafana
           name: grafana-storage
         - mountPath: /var/lib/grafana/dashboards
           name: grafana-dashboards
@@ -97,36 +98,37 @@ spec:
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
-      - emptyDir: {}
+      - emptyDir:
+          sizeLimit: 100Mi
         name: grafana-storage
       - configMap:
           defaultMode: 420
-          name: grafana-users-dashboards-897336e6
+          name: grafana-dashboards-ef1894f4
         name: grafana-dashboards
       - configMap:
           defaultMode: 420
-          name: grafana-users-datasources-2c9450c4
+          name: grafana-datasources-2c9450c4
         name: grafana-datasources
       - configMap:
           defaultMode: 420
-          name: grafana-users-dashboard-providers-acaa2b61
+          name: grafana-dashboard-providers-acaa2b61
         name: grafana-dashboard-providers
 status:
   availableReplicas: 1
   conditions:
-  - lastTransitionTime: "2023-02-02T16:37:40Z"
-    lastUpdateTime: "2023-02-02T16:37:40Z"
+  - lastTransitionTime: "2023-02-03T10:02:34Z"
+    lastUpdateTime: "2023-02-03T10:02:34Z"
     message: Deployment has minimum availability.
     reason: MinimumReplicasAvailable
     status: "True"
     type: Available
-  - lastTransitionTime: "2023-02-02T16:37:31Z"
-    lastUpdateTime: "2023-02-02T16:37:40Z"
-    message: ReplicaSet "grafana-users-7cf8859c64" has successfully progressed.
+  - lastTransitionTime: "2023-02-03T10:02:32Z"
+    lastUpdateTime: "2023-02-03T10:02:34Z"
+    message: ReplicaSet "grafana-66ccb77fd9" has successfully progressed.
     reason: NewReplicaSetAvailable
     status: "True"
     type: Progressing
-  observedGeneration: 8
+  observedGeneration: 2
   readyReplicas: 1
   replicas: 1
   updatedReplicas: 1
