@@ -94,12 +94,6 @@ Afterwards, the Gardener resources will be deployed into the cluster.
 
 ## Creating a `Shoot` Cluster
 
-You can wait for the `Seed` to be ready by running:
-
-```bash
-kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local --timeout=5m
-```
-
 Alternatively, you can run `kubectl get seed local` and wait for the `STATUS` to indicate readiness:
 
 ```bash
@@ -116,7 +110,11 @@ kubectl apply -f example/provider-local/shoot.yaml
 You can wait for the `Shoot` to be ready by running:
 
 ```bash
-kubectl wait --for=condition=apiserveravailable --for=condition=controlplanehealthy --for=condition=observabilitycomponentshealthy --for=condition=everynodeready --for=condition=systemcomponentshealthy shoot local -n garden-local --timeout=10m
+kubectl wait --for=condition=apiserveravailable shoot local -n garden-local --timeout=10m
+kubectl wait --for=condition=controlplanehealthy shoot local -n garden-local --timeout=10m
+kubectl wait --for=condition=observabilitycomponentshealthy shoot local -n garden-local --timeout=10m
+kubectl wait --for=condition=everynodeready shoot local -n garden-local --timeout=10m
+kubectl wait --for=condition=systemcomponentshealthy shoot local -n garden-local --timeout=10m
 ```
 
 Alternatively, you can run `kubectl -n garden-local get shoot local` and wait for the `LAST OPERATION` to reach `100%`:
@@ -189,12 +187,6 @@ make gardenlet-kind2-up
 ```
 
 The following steps assume that you are using the kubeconfig that points to the `gardener-local` cluster (first KinD cluster): `export KUBECONFIG=example/gardener-local/kind/local/kubeconfig`.
-
-You can wait for the `local2` `Seed` to be ready by running:
-
-```bash
-kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
-```
 
 Alternatively, you can run `kubectl get seed local2` and wait for the `STATUS` to indicate readiness:
 

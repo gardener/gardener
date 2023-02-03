@@ -171,9 +171,20 @@ function set_seed_name() {
 }
 
 function wait_until_seed_gets_upgraded() {
-  echo "Wait until seed gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  kubectl wait seed $1 --timeout=5m \
-    --for=jsonpath='{.status.gardener.version}'=$GARDENER_NEXT_RELEASE && condition=gardenletready && condition=extensionsready && condition=bootstrapped
+  echo "Wait until seed '$1' gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
+  for _ in $(seq 1 60); do
+    if [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}')" == "True" ] &&
+      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="Bootstrapped")].status}')" == "True" ] &&
+      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="SeedSystemComponentsHealthy")].status}')" == "True" ] &&
+      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="ExtensionsReady")].status}')" == "True" ] &&
+      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="BackupBucketsReady")].status}')" == "True" ]; then
+      echo "Seed has become ready!"
+      break
+    fi
+
+    echo "Wait until seed gets ready"
+    sleep 5
+  done
 }
 
 clamp_mss_to_pmtu
