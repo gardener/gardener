@@ -1,1 +1,0 @@
-                DNS:gu-local--local.ingress.local.seed.local.gardener.cloud
