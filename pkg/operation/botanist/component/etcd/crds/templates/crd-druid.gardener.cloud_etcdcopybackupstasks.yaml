@@ -1,9 +1,9 @@
-# Source: https://github.com/gardener/etcd-druid/blob/v0.15.0/charts/druid/charts/crds/templates/10-crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
+# Source: https://github.com/gardener/etcd-druid/blob/v0.15.3/charts/druid/charts/crds/templates/10-crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: etcdcopybackupstasks.druid.gardener.cloud
   labels:
@@ -73,14 +73,15 @@ spec:
                       to connect to the backup store.
                     properties:
                       name:
-                        description: Name is unique within a namespace to reference
+                        description: name is unique within a namespace to reference
                           a secret resource.
                         type: string
                       namespace:
-                        description: Namespace defines the space within which the
+                        description: namespace defines the space within which the
                           secret name must be unique.
                         type: string
                     type: object
+                    x-kubernetes-map-type: atomic
                 required:
                 - prefix
                 type: object
@@ -103,14 +104,15 @@ spec:
                       to connect to the backup store.
                     properties:
                       name:
-                        description: Name is unique within a namespace to reference
+                        description: name is unique within a namespace to reference
                           a secret resource.
                         type: string
                       namespace:
-                        description: Namespace defines the space within which the
+                        description: namespace defines the space within which the
                           secret name must be unique.
                         type: string
                     type: object
+                    x-kubernetes-map-type: atomic
                 required:
                 - prefix
                 type: object
