@@ -1120,16 +1120,21 @@ deploy:
           - -ec
           - |
             echo "Wait until seed is ready"
-            for i in `seq 1 30`;
-            do
-              if kubectl get seed local 2> /dev/null; then
+            for _ in $(seq 1 60); do
+              seed_name="local"
+
+              if [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}')" == "True" ] &&
+                [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="Bootstrapped")].status}')" == "True" ] &&
+                [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="SeedSystemComponentsHealthy")].status}')" == "True" ] &&
+                [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="ExtensionsReady")].status}')" == "True" ] &&
+                [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="BackupBucketsReady")].status}')" == "True" ]; then
+                echo "Seed has become ready!"
                 break
               fi
-              echo "Wait until seed gets created by gardenlet"
-              sleep 2
+
+              echo "Wait until seed gets ready"
+              sleep 5
             done
-            kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped \
-              --for=condition=seedsystemcomponentshealthy --for=condition=backupbucketsready seed local --timeout=5m
     releases:
     - name: gardener-gardenlet
       chartPath: charts/gardener/gardenlet
@@ -1167,15 +1172,21 @@ profiles:
     - -ec
     - |
       echo "Wait until seed is ready"
-      for i in `seq 1 30`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG get seed local2 2> /dev/null; then
+      for _ in $(seq 1 60); do
+        seed_name="local2"
+
+        if [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="Bootstrapped")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="SeedSystemComponentsHealthy")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="ExtensionsReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="BackupBucketsReady")].status}')" == "True" ]; then
+          echo "Seed has become ready!"
           break
         fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
+
+        echo "Wait until seed gets ready"
+        sleep 5
       done
-      kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind2.yaml
@@ -1198,15 +1209,19 @@ profiles:
     - -ec
     - |
       echo "Wait until seed is ready"
-      for i in `seq 1 60`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG get seed $SEED_NAME 2> /dev/null; then
+      for _ in $(seq 1 60); do
+        if [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$SEED_NAME" -o jsonpath='{.status.conditions[?(@.type=="Bootstrapped")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$SEED_NAME" -o jsonpath='{.status.conditions[?(@.type=="SeedSystemComponentsHealthy")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$SEED_NAME" -o jsonpath='{.status.conditions[?(@.type=="ExtensionsReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$SEED_NAME" -o jsonpath='{.status.conditions[?(@.type=="BackupBucketsReady")].status}')" == "True" ]; then
+          echo "Seed has become ready!"
           break
         fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
+
+        echo "Wait until seed gets ready"
+        sleep 5
       done
-      kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=bootstrapped seed $SEED_NAME --timeout=5m
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
@@ -1239,15 +1254,21 @@ profiles:
     - -ec
     - |
       echo "Wait until seed is ready"
-      for i in `seq 1 30`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG get seed local-ha-single-zone 2> /dev/null; then
+      for _ in $(seq 1 60); do
+        seed_name="local-ha-single-zone"
+
+        if [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="Bootstrapped")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="SeedSystemComponentsHealthy")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="ExtensionsReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="BackupBucketsReady")].status}')" == "True" ]; then
+          echo "Seed has become ready!"
           break
         fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
+
+        echo "Wait until seed gets ready"
+        sleep 5
       done
-      kubectl --kubeconfig=$GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local-ha-single-zone --timeout=5m
 
 - name: ha-multi-zone
   patches:
@@ -1261,12 +1282,18 @@ profiles:
     - -ec
     - |
       echo "Wait until seed is ready"
-      for i in `seq 1 30`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG get seed local-ha-multi-zone 2> /dev/null; then
+      for _ in $(seq 1 60); do
+        seed_name="local-ha-multi-zone"
+
+        if [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="Bootstrapped")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="SeedSystemComponentsHealthy")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="ExtensionsReady")].status}')" == "True" ] &&
+          [ "$(kubectl get seed "$seed_name" -o jsonpath='{.status.conditions[?(@.type=="BackupBucketsReady")].status}')" == "True" ]; then
+          echo "Seed has become ready!"
           break
         fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
+
+        echo "Wait until seed gets ready"
+        sleep 5
       done
-      kubectl --kubeconfig=$GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local-ha-multi-zone --timeout=5m
