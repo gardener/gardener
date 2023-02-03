@@ -595,6 +595,8 @@ spec:
 A component that initiates the connection to `gardener-resource-manager`'s `tcp/10250` port can now be labeled with `networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250=allowed`.
 That's all this component needs to do - it does not need to create any `NetworkPolicy`s itself.
 
+#### Cross-Namespace Communication
+
 Apart from this "simple" case where both communicating components run in the same namespace `a`, there is also the cross-namespace communication case.
 With above example, let's say there are components running in another namespace `b`, and they would like to initiate the communication with `gardener-resource-manager` in `a`.
 To cover this scenario, the `Service` can be annotated with `networking.resources.gardener.cloud/namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"b"}}]'`.
@@ -664,6 +666,8 @@ The components in namespace `b` now need to be labeled with `networking.resource
 > Obviously, this approach also works for namespace selectors different from `kubernetes.io/metadata.name` to cover scenarios where the namespace name is not known upfront or where multiple namespaces with a similar label are relevant.
 > The controller creates two dedicated policies for each namespace matching the selectors. 
 
+#### `Service` Targets In Multiple Namespaces
+
 Finally, let's say there is a `Service` called `example` which exists in different namespaces whose names are not static (e.g., `foo-1`, `foo-2`, etc.), and a component in namespace `bar` wants to initiate connections with all of them.
 
 The `example` `Service`s in these namespaces can now be annotated with `networking.resources.gardener.cloud/namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"bar"}}]'`.
@@ -678,6 +682,41 @@ Now the component in namespace `bar` only needs this single label and is able to
 
 > Real-world examples for this scenario are the `kube-apiserver` `Service` (which exists in all shoot namespaces), or the `istio-ingressgateway` `Service` (which exists in all `istio-ingress*` namespaces).
 > In both cases, the names of the namespaces are not statically known and depend on user input.
+
+#### Ingress From Everywhere
+
+All above scenarios are about components initiating connections to some targets.
+However, some components also receive incoming traffic from sources outside the cluster.
+This traffic requires adequate ingress policies so that it can be allowed.
+
+To cover this scenario, the `Service` can be annotated with `networking.resources.gardener.cloud/from-world-to-ports=[{"port":"10250","protocol":"TCP"}]`. 
+As a result, the controller creates the following `NetworkPolicy`:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-to-gardener-resource-manager-from-world
+  namespace: a
+spec:
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector: {}
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: gardener-resource-manager
+  policyTypes:
+  - Ingress
+```
+
+The respective pods don't need any additional labels.
+If the annotation's value is empty (`[]`) then all ports are allowed.
 
 ## Webhooks
 
