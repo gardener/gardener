@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "2"
+    reference.resources.gardener.cloud/configmap-80be4f35: grafana-operators-dashboard-providers-acaa2b61
+    reference.resources.gardener.cloud/configmap-3089e8be: grafana-operators-datasources-2c9450c4
+    reference.resources.gardener.cloud/configmap-3dd679b2: grafana-operators-dashboards-6f2d75a6
+  creationTimestamp: "2023-02-02T16:37:31Z"
+  generation: 8
+  labels:
+    component: grafana
+    gardener.cloud/role: monitoring
+    role: operators
+  name: grafana-operators
+  namespace: shoot--local--local
+  resourceVersion: "540676"
+  uid: bc598dbc-b4f6-4793-8a2d-2c323836da8f
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      component: grafana
+      role: operators
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        reference.resources.gardener.cloud/configmap-80be4f35: grafana-operators-dashboard-providers-acaa2b61
+        reference.resources.gardener.cloud/configmap-3089e8be: grafana-operators-datasources-2c9450c4
+        reference.resources.gardener.cloud/configmap-3dd679b2: grafana-operators-dashboards-6f2d75a6
+      creationTimestamp: null
+      labels:
+        component: grafana
+        gardener.cloud/role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-loki: allowed
+        role: operators
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: topology.kubernetes.io/zone
+                operator: In
+                values:
+                - "0"
+      containers:
+      - env:
+        - name: GF_AUTH_BASIC_ENABLED
+          value: "true"
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "false"
+        - name: GF_USERS_VIEWERS_CAN_EDIT
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
+          value: "false"
+        - name: GF_ALERTING_ENABLED
+          value: "false"
+        - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
+          value: UTC
+        image: grafana/grafana:7.5.17
+        imagePullPolicy: IfNotPresent
+        name: grafana
+        ports:
+        - containerPort: 3000
+          name: web
+          protocol: TCP
+        resources:
+          limits:
+            memory: 400Mi
+          requests:
+            cpu: 10m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/grafana-storage
+          name: grafana-storage
+        - mountPath: /var/lib/grafana/dashboards
+          name: grafana-dashboards
+        - mountPath: /etc/grafana/provisioning/datasources
+          name: grafana-datasources
+        - mountPath: /etc/grafana/provisioning/dashboards
+          name: grafana-dashboard-providers
+      dnsPolicy: ClusterFirst
+      priorityClassName: gardener-system-100
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: grafana-storage
+      - configMap:
+          defaultMode: 420
+          name: grafana-operators-dashboards-6f2d75a6
+        name: grafana-dashboards
+      - configMap:
+          defaultMode: 420
+          name: grafana-operators-datasources-2c9450c4
+        name: grafana-datasources
+      - configMap:
+          defaultMode: 420
+          name: grafana-operators-dashboard-providers-acaa2b61
+        name: grafana-dashboard-providers
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2023-02-02T16:37:40Z"
+    lastUpdateTime: "2023-02-02T16:37:40Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2023-02-02T16:37:31Z"
+    lastUpdateTime: "2023-02-02T16:38:40Z"
+    message: ReplicaSet "grafana-operators-7db75ffd5b" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 8
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1

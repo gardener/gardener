@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/auth-realm: Authentication Required
+    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-0da36eb1
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/configuration-snippet: proxy_set_header X-Scope-OrgID
+      operator;
+  creationTimestamp: "2023-02-02T16:37:31Z"
+  generation: 2
+  labels:
+    component: grafana
+    role: operators
+  name: grafana-operators
+  namespace: shoot--local--local
+  resourceVersion: "27154"
+  uid: 3f7a8a2d-720b-45e1-92bf-f0390a1336f8
+spec:
+  ingressClassName: nginx-ingress-gardener
+  rules:
+  - host: go-local--local.ingress.local.seed.local.gardener.cloud
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana-operators
+            port:
+              number: 3000
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - go-local--local.ingress.local.seed.local.gardener.cloud
+    secretName: grafana-tls-fdf90952
+status:
+  loadBalancer:
+    ingress:
+    - ip: 127.0.0.1
