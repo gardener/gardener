@@ -18,20 +18,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.26"}
-
-echo "> Installing envtest tools@${ENVTEST_K8S_VERSION} with setup-envtest if necessary"
-if ! command -v setup-envtest &> /dev/null ; then
-  >&2 echo "setup-envtest not available"
-  exit 1
-fi
-
-export KUBEBUILDER_ASSETS="$(setup-envtest use -p path ${ENVTEST_K8S_VERSION})"
-echo "using envtest tools installed at '$KUBEBUILDER_ASSETS'"
+source "$(dirname "$0")/prepare-envtest.sh"
 
 echo "> Integration Tests"
-
-source "$(dirname "$0")/test-integration.env"
 
 test_flags=
 # If running in Prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.

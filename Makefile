@@ -85,6 +85,12 @@ local-garden-up: $(HELM)
 local-garden-down:
 	@./hack/local-development/local-garden/stop.sh $(LOCAL_GARDEN_LABEL)
 
+ENVTEST_TYPE ?= kubernetes
+
+.PHONY: start-envtest
+start-envtest: $(SETUP_ENVTEST)
+	@./hack/start-envtest.sh --environment-type=$(ENVTEST_TYPE)
+
 .PHONY: remote-garden-up
 remote-garden-up: $(HELM)
 	@./hack/local-development/remote-garden/start.sh $(REMOTE_GARDEN_LABEL)
