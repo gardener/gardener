@@ -200,6 +200,5 @@ func IsClusterIdentityEmptyOrFromOrigin(ctx context.Context, c client.Client, or
 		return false, err
 	}
 	// TODO(oliver-goetz): do not treat an empty origin as foreign origin anymore in a future release when shoot clusters have been reconciled at least once
-	sameOrigin := clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] == origin
-	return sameOrigin, nil
+	return clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] == origin, nil
 }

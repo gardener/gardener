@@ -296,7 +296,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	)
 
 	// Use the managed resource for cluster-identity only if there is no cluster-identity config map in kube-system namespace from a different origin than seed.
-	// This prevents gardenlet from deleting the config map accidently on seed deletion when it was created by a different party (gardener-apiserver or shoot).
+	// This prevents gardenlet from deleting the config map accidentally on seed deletion when it was created by a different party (gardener-apiserver or shoot).
 	if seedIsOriginOfClusterIdentity {
 		var (
 			clusterIdentity = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")

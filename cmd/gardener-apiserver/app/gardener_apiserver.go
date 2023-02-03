@@ -346,7 +346,7 @@ func (o *Options) Run(ctx context.Context) error {
 			Immutable: pointer.Bool(true),
 			Data: map[string]string{
 				v1beta1constants.ClusterIdentity:       o.ExtraOptions.ClusterIdentity,
-				v1beta1constants.ClusterIdentityOrigin: v1beta1constants.ClusterIdentityOriginGardenerApiServer,
+				v1beta1constants.ClusterIdentityOrigin: v1beta1constants.ClusterIdentityOriginGardenerAPIServer,
 			},
 		}, kubernetesclient.DefaultCreateOptions())
 		return err

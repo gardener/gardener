@@ -649,9 +649,9 @@ const (
 	// ClusterIdentity is a constant equal to the name and data key (that stores the identity) of the cluster-identity ConfigMap
 	ClusterIdentity = "cluster-identity"
 	// ClusterIdentityOrigin is a constant equal to the data key that stores the identity origin of the cluster-identity ConfigMap
-	ClusterIdentityOrigin = "cluster-identity-origin"
-	// ClusterIdentityOriginGardenerApiServer defines a cluster-identity ConfigMap originated from gardener-apiserver
-	ClusterIdentityOriginGardenerApiServer = "gardener-apiserver"
+	ClusterIdentityOrigin = "origin"
+	// ClusterIdentityOriginGardenerAPIServer defines a cluster-identity ConfigMap originated from gardener-apiserver
+	ClusterIdentityOriginGardenerAPIServer = "gardener-apiserver"
 	// ClusterIdentityOriginSeed defines a cluster-identity ConfigMap originated from seed
 	ClusterIdentityOriginSeed = "seed"
 	// ClusterIdentityOriginShoot defines a cluster-identity ConfigMap originated from shoot

@@ -55,7 +55,7 @@ var _ = Describe("ClusterIdentity", func() {
 		configMapYAML = `apiVersion: v1
 data:
   cluster-identity: ` + identity + `
-  cluster-identity-origin: ` + origin + `
+  origin: ` + origin + `
 immutable: true
 kind: ConfigMap
 metadata:
@@ -290,7 +290,7 @@ metadata:
 		})
 	})
 
-	Describe("CheckNonSeedClusterIdentityExists", func() {
+	Describe("#IsClusterIdentityEmptyOrFromOrigin", func() {
 		var (
 			seedClient client.Client
 
@@ -308,8 +308,8 @@ metadata:
 				},
 				Immutable: pointer.Bool(true),
 				Data: map[string]string{
-					"cluster-identity":        "foo",
-					"cluster-identity-origin": "seed",
+					"cluster-identity": "foo",
+					"origin":           "seed",
 				},
 			}
 			configMapNonSeed = &corev1.ConfigMap{
@@ -319,8 +319,8 @@ metadata:
 				},
 				Immutable: pointer.Bool(true),
 				Data: map[string]string{
-					"cluster-identity":        "foo",
-					"cluster-identity-origin": "bar",
+					"cluster-identity": "foo",
+					"origin":           "bar",
 				},
 			}
 		})
