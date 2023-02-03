@@ -45,7 +45,7 @@ images:
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.12.0"
+  tag: "0.13.0"
 
 # Seed controlplane
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
