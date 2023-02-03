@@ -1710,18 +1710,53 @@ rules:
 				}))
 			})
 
-			It("should have the expected pod template labels", func() {
-				deployAndRead()
+			Context("expected pod template labels", func() {
+				var defaultLabels map[string]string
 
-				Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
-					"gardener.cloud/role":              "controlplane",
-					"app":                              "kubernetes",
-					"role":                             "apiserver",
-					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/to-private-networks": "allowed",
-					"networking.gardener.cloud/to-public-networks":  "allowed",
-					"networking.gardener.cloud/from-prometheus":     "allowed",
-				}))
+				BeforeEach(func() {
+					defaultLabels = map[string]string{
+						"gardener.cloud/role":              "controlplane",
+						"app":                              "kubernetes",
+						"role":                             "apiserver",
+						"networking.gardener.cloud/to-dns": "allowed",
+						"networking.gardener.cloud/to-private-networks": "allowed",
+						"networking.gardener.cloud/to-public-networks":  "allowed",
+						"networking.gardener.cloud/from-prometheus":     "allowed",
+					}
+				})
+
+				It("should have the expected pod template labels", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(defaultLabels))
+				})
+
+				It("should have the expected pod template labels with vpn enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(defaultLabels))
+				})
+
+				It("should have the expected pod template labels with ha vpn enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						IsNodeless:     true,
+						RuntimeVersion: runtimeVersion,
+						Version:        version,
+						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
+						"networking.gardener.cloud/to-shoot-networks":    "allowed",
+						"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+					})))
+				})
 			})
 
 			Context("expected pod template annotations", func() {
