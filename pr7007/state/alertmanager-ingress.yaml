@@ -5,11 +5,15 @@ metadata:
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
     nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users-f27eb0bf
     nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location /-/reload {
+        return 403;
+      }
   creationTimestamp: "2023-02-02T16:38:36Z"
   generation: 2
   name: alertmanager
   namespace: shoot--local--local
-  resourceVersion: "27458"
+  resourceVersion: "555743"
   uid: 0e56ad3f-4fc6-477a-9d62-dddc47fd56eb
 spec:
   ingressClassName: nginx-ingress-gardener
