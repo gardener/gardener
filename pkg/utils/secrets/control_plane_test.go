@@ -15,10 +15,10 @@
 package secrets
 
 import (
-	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"sigs.k8s.io/yaml"
 )
 
 var _ = Describe("utils", func() {
