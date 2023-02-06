@@ -683,6 +683,22 @@ Now the component in namespace `bar` only needs this single label and is able to
 > Real-world examples for this scenario are the `kube-apiserver` `Service` (which exists in all shoot namespaces), or the `istio-ingressgateway` `Service` (which exists in all `istio-ingress*` namespaces).
 > In both cases, the names of the namespaces are not statically known and depend on user input.
 
+#### Overwriting The Pod Selector Label
+
+For a component which initiates the connection to many other components, it's sometimes impractical to specify all the respective labels in its pod template.
+For example, let's say a component `foo` talks to `bar{0..9}` on ports `tcp/808{0..9}`.
+`foo` would need to have the ten `networking.resources.gardener.cloud/to-bar{0..9}-tcp-808{0..9}=allowed` labels.
+
+As an alternative and to simplify this, it is also possible to annotate the targeted `Service`s with `networking.resources.gardener.cloud/from-policy-pod-selector-label=<some-alias>`.
+For our example, `<some-alias>` could be `all-bars`.
+
+As a result, component `foo` just needs to have the label `networking.resources.gardener.cloud/to-all-bars=allowed` instead of all the other ten explicit labels.
+
+⚠️ Note that this also requires to specify the list of allowed container ports since the pod selector label will no longer be specific for a dedicated service/port.
+For our example, the `Service` for `barX` with `X` in `{0..9}` needs to be annotated with `networking.resources.gardener.cloud/from-policy-allowed-ports=[{"port":808X,"protocol":"TCP"}]` in addition.
+
+> Real-world examples for this scenario are the `Prometheis` in seed clusters which initiate the communication to a lot of components in order to scrape their metrics.
+
 #### Ingress From Everywhere
 
 All above scenarios are about components initiating connections to some targets.

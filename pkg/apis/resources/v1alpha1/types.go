@@ -158,6 +158,13 @@ const (
 	// NetworkingFromWorldToPorts is a constant for an annotation on a Service which contains a list of ports to which
 	// ingress traffic from everywhere shall be allowed.
 	NetworkingFromWorldToPorts = "networking.resources.gardener.cloud/from-world-to-ports"
+	// NetworkingFromPolicyPodLabelSelector is a constant for an annotation on a Service which contains the label
+	// selector which should be used for pods initiating the communication with this Service. Note that the ports must
+	// be container ports, not service ports.
+	NetworkingFromPolicyPodLabelSelector = "networking.resources.gardener.cloud/from-policy-pod-label-selector"
+	// NetworkingFromPolicyAllowedPorts is a constant for an annotation on a Service which contains a list of ports to
+	// which ingress traffic shall be allowed. Note that the ports must be container ports, not service ports.
+	NetworkingFromPolicyAllowedPorts = "networking.resources.gardener.cloud/from-policy-allowed-ports"
 	// NetworkingServiceName is a constant for a label on a NetworkPolicy which contains the name of the Service is has
 	// been created for.
 	NetworkingServiceName = "networking.resources.gardener.cloud/service-name"

@@ -36,7 +36,8 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		otherNamespace *corev1.Namespace
 		service        *corev1.Service
 
-		serviceSelector = map[string]string{"foo": "bar"}
+		serviceSelector        = map[string]string{"foo": "bar"}
+		customPodLabelSelector = "custom-selector"
 
 		port1Protocol   = corev1.ProtocolTCP
 		port1TargetPort = intstr.FromInt(5678)
@@ -45,6 +46,14 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		port2Protocol   = corev1.ProtocolUDP
 		port2TargetPort = intstr.FromString("testport")
 		port2Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port2Protocol)), port2TargetPort.String())
+
+		port3Protocol   = corev1.ProtocolUDP
+		port3TargetPort = intstr.FromString("testport2")
+		port3Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port3Protocol)), port3TargetPort.String())
+
+		port4Protocol   = corev1.ProtocolTCP
+		port4TargetPort = intstr.FromInt(9012)
+		port4Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port4Protocol)), port4TargetPort.String())
 
 		ensureNetworkPolicies = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
 			return func() {
@@ -113,6 +122,30 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		ensureCrossNamespaceNetworkPoliciesGetDeleted      = ensureCrossNamespaceNetworkPolicies(EventuallyWithOffset, false)
 		ensureCrossNamespaceNetworkPoliciesDoNotGetCreated = ensureCrossNamespaceNetworkPolicies(ConsistentlyWithOffset, false)
 
+		ensureNetworkPoliciesWithCustomPodLabelSelector = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
+			return func() {
+				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
+					networkPolicyList := &networkingv1.NetworkPolicyList{}
+					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
+					return networkPolicyList.Items
+				}
+				expectation := ContainElements(
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector)})}),
+				)
+
+				if should {
+					asyncAssertion(1, assertedFunc).Should(expectation)
+				} else {
+					asyncAssertion(1, assertedFunc).ShouldNot(expectation)
+				}
+			}
+		}
+		ensureNetworkPoliciesWithCustomPodLabelSelectorGetCreated = ensureNetworkPoliciesWithCustomPodLabelSelector(EventuallyWithOffset, true)
+		ensureNetworkPoliciesWithCustomPodLabelSelectorGetDeleted = ensureNetworkPoliciesWithCustomPodLabelSelector(EventuallyWithOffset, false)
+
 		ensureIngressFromWorldNetworkPolicy = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
 			return func() {
 				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
@@ -131,8 +164,9 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				}
 			}
 		}
-		ensureIngressFromWorldNetworkPolicyGetsCreated = ensureIngressFromWorldNetworkPolicy(EventuallyWithOffset, true)
-		ensureIngressFromWorldNetworkPolicyGetsDeleted = ensureIngressFromWorldNetworkPolicy(EventuallyWithOffset, false)
+		ensureIngressFromWorldNetworkPolicyGetsCreated       = ensureIngressFromWorldNetworkPolicy(EventuallyWithOffset, true)
+		ensureIngressFromWorldNetworkPolicyGetsDeleted       = ensureIngressFromWorldNetworkPolicy(EventuallyWithOffset, false)
+		ensureIngressFromWorldNetworkPolicyDoesNotGetCreated = ensureIngressFromWorldNetworkPolicy(ConsistentlyWithOffset, false)
 	)
 
 	BeforeEach(func() {
@@ -288,8 +322,9 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			}))
 		})
 
-		It("should not create any cross-namespace policies", func() {
+		It("should not create any cross-namespace policies or ingress-from-world policy", func() {
 			ensureCrossNamespaceNetworkPoliciesDoNotGetCreated()
+			ensureIngressFromWorldNetworkPolicyDoesNotGetCreated()
 		})
 
 		It("should reconcile the policies when the ports in service are changed", func() {
@@ -621,6 +656,154 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 					return networkPolicy.Spec.PodSelector
 				}).Should(Equal(metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + alias + "-" + service.Name + port2Suffix: "allowed"}}))
 			})
+		})
+	})
+
+	Context("service with custom pod label selector", func() {
+		BeforeEach(func() {
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.resources.gardener.cloud/from-policy-pod-label-selector", customPodLabelSelector)
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.resources.gardener.cloud/from-policy-allowed-ports", `[{"protocol":"`+string(port3Protocol)+`","port":"`+port3TargetPort.String()+`"},{"protocol":"`+string(port4Protocol)+`","port":`+port4TargetPort.String()+`}]`)
+		})
+
+		It("should create the expected network policies", func() {
+			By("Wait until ingress policy was created for first port")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector, Namespace: service.Namespace}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+				PodSelector: metav1.LabelSelector{MatchLabels: serviceSelector},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{{
+					From:  []networkingv1.NetworkPolicyPeer{{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + customPodLabelSelector: "allowed"}}}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port3Protocol, Port: &port3TargetPort}},
+				}},
+			}))
+
+			By("Wait until egress policy was created for first port")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector, Namespace: service.Namespace}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + customPodLabelSelector: "allowed"}},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					To:    []networkingv1.NetworkPolicyPeer{{PodSelector: &metav1.LabelSelector{MatchLabels: serviceSelector}}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port3Protocol, Port: &port3TargetPort}},
+				}},
+			}))
+
+			By("Wait until ingress policy was created for second port")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector, Namespace: service.Namespace}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+				PodSelector: metav1.LabelSelector{MatchLabels: serviceSelector},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{{
+					From:  []networkingv1.NetworkPolicyPeer{{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + customPodLabelSelector: "allowed"}}}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port4Protocol, Port: &port4TargetPort}},
+				}},
+			}))
+
+			By("Wait until egress policy was created for second port")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector, Namespace: service.Namespace}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + customPodLabelSelector: "allowed"}},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					To:    []networkingv1.NetworkPolicyPeer{{PodSelector: &metav1.LabelSelector{MatchLabels: serviceSelector}}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port4Protocol, Port: &port4TargetPort}},
+				}},
+			}))
+		})
+
+		It("should reconcile the policies when the allowed ports are changed", func() {
+			By("Wait until all policies are created")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetCreated()
+
+			By("Patch Service")
+			patch := client.MergeFrom(service.DeepCopy())
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.resources.gardener.cloud/from-policy-allowed-ports", `[{"protocol":"`+string(port4Protocol)+`","port":`+port4TargetPort.String()+`},{"protocol":"`+string(corev1.ProtocolUDP)+`","port":2468}]`)
+			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+			By("Wait until all policies were reconciled")
+			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+				networkPolicyList := &networkingv1.NetworkPolicyList{}
+				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
+				return networkPolicyList.Items
+			}).Should(And(
+				Not(ContainElements(
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector)})}),
+				)),
+				ContainElements(
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + "-udp-2468-via-" + customPodLabelSelector)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + "-udp-2468-via-" + customPodLabelSelector)})}),
+				),
+			))
+		})
+
+		It("should not create any cross-namespace policies or ingress-from-world policy", func() {
+			ensureCrossNamespaceNetworkPoliciesDoNotGetCreated()
+			ensureIngressFromWorldNetworkPolicyDoesNotGetCreated()
+		})
+
+		It("should delete the policies when the custom pod label selector in service annotations is removed", func() {
+			By("Wait until all policies are created")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetCreated()
+
+			By("Patch Service")
+			patch := client.MergeFrom(service.DeepCopy())
+			delete(service.Annotations, "networking.resources.gardener.cloud/from-policy-pod-label-selector")
+			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+			By("Wait until all policies are deleted")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetDeleted()
+		})
+
+		It("should delete the policies when the allowed ports in service annotations are removed", func() {
+			By("Wait until all policies are created")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetCreated()
+
+			By("Patch Service")
+			patch := client.MergeFrom(service.DeepCopy())
+			delete(service.Annotations, "networking.resources.gardener.cloud/from-policy-allowed-ports")
+			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+			By("Wait until all policies are deleted")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetDeleted()
+		})
+
+		It("should delete the policies when the service gets deleted", func() {
+			By("Wait until all policies are created")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetCreated()
+
+			By("Delete Service")
+			Expect(testClient.Delete(ctx, service)).To(Succeed())
+
+			By("Wait until all policies are deleted")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetDeleted()
+		})
+
+		It("should delete the policies when the namespace is no longer handled", func() {
+			By("Wait until all policies are created")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetCreated()
+
+			By("Patch Namespace and remove label")
+			patch := client.MergeFrom(namespace.DeepCopy())
+			namespace.Labels[testID] = "foo"
+			Expect(testClient.Patch(ctx, namespace, patch)).To(Succeed())
+
+			By("Wait until all policies are deleted")
+			ensureNetworkPoliciesWithCustomPodLabelSelectorGetDeleted()
 		})
 	})
 
