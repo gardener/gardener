@@ -1832,13 +1832,13 @@ func dropNetworkingLabels(labels map[string]string) {
 
 const (
 	crdVPACheckpoints = `---
-# Source: https://github.com/kubernetes/autoscaler/blob/vertical-pod-autoscaler-0.11.0/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+# Source: https://github.com/kubernetes/autoscaler/blob/vertical-pod-autoscaler-0.13.0/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
-    controller-gen.kubebuilder.io/version: v0.4.0
+    controller-gen.kubebuilder.io/version: v0.9.2
     resources.gardener.cloud/keep-object: "true"
   creationTimestamp: null
   labels:
@@ -1874,7 +1874,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: 'Specification of the checkpoint. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status.'
+            description: 'Specification of the checkpoint. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.'
             properties:
               containerName:
                 description: Name of the checkpointed container.
@@ -1967,7 +1967,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: 'Specification of the checkpoint. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status.'
+            description: 'Specification of the checkpoint. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.'
             properties:
               containerName:
                 description: Name of the checkpointed container.
@@ -2041,22 +2041,16 @@ spec:
         type: object
     served: true
     storage: false
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 `
 
 	crdVPA = `---
-# Source: https://github.com/kubernetes/autoscaler/blob/vertical-pod-autoscaler-0.11.0/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+# Source: https://github.com/kubernetes/autoscaler/blob/vertical-pod-autoscaler-0.13.0/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
-    controller-gen.kubebuilder.io/version: v0.4.0
+    controller-gen.kubebuilder.io/version: v0.9.2
     resources.gardener.cloud/keep-object: "true"
   creationTimestamp: null
   labels:
@@ -2110,7 +2104,7 @@ spec:
             type: object
           spec:
             description: 'Specification of the behavior of the autoscaler. More info:
-              https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status.'
+              https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.'
             properties:
               recommenders:
                 description: Recommender responsible for generating recommendation
@@ -2222,11 +2216,46 @@ spec:
                 - kind
                 - name
                 type: object
+                x-kubernetes-map-type: atomic
               updatePolicy:
                 description: Describes the rules on how changes are applied to the
-                  pods. If not specified, all fields in the ` + "`PodUpdatePolicy`" + ` are
+                  pods. If not specified, all fields in the ` + "`" + `PodUpdatePolicy` + "`" + ` are
                   set to their default values.
                 properties:
+                  evictionRequirements:
+                    description: EvictionRequirements is a list of EvictionRequirements
+                      that need to evaluate to true in order for a Pod to be evicted.
+                      If more than one EvictionRequirement is specified, they are
+                      combined with AND.
+                    items:
+                      description: EvictionRequirement defines a single condition
+                        which needs to be true in order to evict a Pod
+                      properties:
+                        changeRequirement:
+                          description: EvictionChangeRequirement refers to the relationship
+                            between the new target recommendation for a Pod and its
+                            current requests, what kind of change is necessary for
+                            the Pod to be evicted
+                          enum:
+                          - TargetHigherThanRequests
+                          - TargetHigherThanOrEqualToRequests
+                          - TargetLowerThanRequests
+                          - TargetLowerThanOrEqualToRequests
+                          type: string
+                        resource:
+                          description: Resources is a list of one or more resources
+                            that the condition applies to. If more than one resource
+                            is given, they are combined with OR, not with AND.
+                          items:
+                            description: ResourceName is the name identifying various
+                              resources in a ResourceList.
+                            type: string
+                          type: array
+                      required:
+                      - changeRequirement
+                      - resource
+                      type: object
+                    type: array
                   minReplicas:
                     description: Minimal number of replicas which need to be alive
                       for Updater to attempt pod eviction (pending other checks like
@@ -2294,7 +2323,7 @@ spec:
                         of resources computed by autoscaler for a specific container.
                         Respects the container resource policy if present in the spec.
                         In particular the recommendation is not produced for containers
-                        with ` + "`ContainerScalingMode`" + ` set to 'Off'.
+                        with ` + "`" + `ContainerScalingMode` + "`" + ` set to 'Off'.
                       properties:
                         containerName:
                           description: Name of the container.
@@ -2362,7 +2391,9 @@ spec:
     served: true
     storage: true
     subresources: {}
-  - name: v1beta2
+  - deprecated: true
+    deprecationWarning: autoscaling.k8s.io/v1beta2 API is deprecated
+    name: v1beta2
     schema:
       openAPIV3Schema:
         description: VerticalPodAutoscaler is the configuration for a vertical pod
@@ -2383,7 +2414,7 @@ spec:
             type: object
           spec:
             description: 'Specification of the behavior of the autoscaler. More info:
-              https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status.'
+              https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.'
             properties:
               resourcePolicy:
                 description: Controls how the autoscaler computes recommended resources.
@@ -2461,9 +2492,10 @@ spec:
                 - kind
                 - name
                 type: object
+                x-kubernetes-map-type: atomic
               updatePolicy:
                 description: Describes the rules on how changes are applied to the
-                  pods. If not specified, all fields in the ` + "`PodUpdatePolicy`" + ` are
+                  pods. If not specified, all fields in the ` + "`" + `PodUpdatePolicy` + "`" + ` are
                   set to their default values.
                 properties:
                   updateMode:
@@ -2526,7 +2558,7 @@ spec:
                         of resources computed by autoscaler for a specific container.
                         Respects the container resource policy if present in the spec.
                         In particular the recommendation is not produced for containers
-                        with ` + "`ContainerScalingMode`" + ` set to 'Off'.
+                        with ` + "`" + `ContainerScalingMode` + "`" + ` set to 'Off'.
                       properties:
                         containerName:
                           description: Name of the container.
@@ -2593,11 +2625,5 @@ spec:
         type: object
     served: true
     storage: false
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 `
 )
