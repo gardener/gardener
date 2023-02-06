@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	secretNameIngressUsers = v1beta1constants.SecretNameObservabilityIngressUsers
+	secretNameIngress = v1beta1constants.SecretNameObservabilityIngressUsers
 
 	grafanaOperatorsRole = "operators"
 	grafanaUsersRole     = "users"
@@ -66,9 +66,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return b.DeleteSeedMonitoring(ctx)
 	}
 
-	credentialsUsersSecret, found := b.SecretsManager.Get(secretNameIngressUsers)
+	credentialsSecret, found := b.SecretsManager.Get(secretNameIngress)
 	if !found {
-		return fmt.Errorf("secret %q not found", secretNameIngressUsers)
+		return fmt.Errorf("secret %q not found", secretNameIngress)
 	}
 
 	var (
@@ -198,7 +198,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,
-				"authSecretName": credentialsUsersSecret.Name,
+				"authSecretName": credentialsSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputePrometheusHost(),
@@ -357,7 +357,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,
-				"authSecretName": credentialsUsersSecret.Name,
+				"authSecretName": credentialsSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputeAlertManagerHost(),
@@ -395,7 +395,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return err
 	}
 
-	credentialsUsersSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressUsers),
+	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngress),
 		secretsmanager.Persist(),
 		secretsmanager.Rotate(secretsmanager.InPlace),
 	)
@@ -447,7 +447,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	if err := b.deployGrafanaCharts(ctx, credentialsUsersSecret, dashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
+	if err := b.deployGrafanaCharts(ctx, credentialsSecret, dashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
@@ -456,7 +456,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		gardenerutils.ShootProjectSecretSuffixMonitoring,
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
 		map[string]string{"url": "https://" + b.ComputeGrafanaHost()},
-		credentialsUsersSecret.Data,
+		credentialsSecret.Data,
 	)
 }
 
