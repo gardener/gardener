@@ -134,7 +134,7 @@ var _ = Describe("SecretReconciler", func() {
 		It("should do nothing if there is no MR which we are responsible for", func() {
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.StringPtr("other"),
+					Class: pointer.String("other"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: "foo",
 					}},
@@ -164,7 +164,7 @@ var _ = Describe("SecretReconciler", func() {
 		It("should do nothing if there is no MR referencing this secret", func() {
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.StringPtr(classFilter.ResourceClass()),
+					Class: pointer.String(classFilter.ResourceClass()),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: "foo",
 					}},
@@ -196,7 +196,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.StringPtr(classFilter.ResourceClass()),
+					Class: pointer.String(classFilter.ResourceClass()),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: secret.Name,
 					}},
@@ -224,7 +224,7 @@ var _ = Describe("SecretReconciler", func() {
 		It("should add finalizer to secret if referenced by MR", func() {
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.StringPtr(classFilter.ResourceClass()),
+					Class: pointer.String(classFilter.ResourceClass()),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: secret.Name,
 					}},
@@ -256,7 +256,7 @@ var _ = Describe("SecretReconciler", func() {
 		It("should do nothing if finalizer was already removed", func() {
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:      pointer.StringPtr(classFilter.ResourceClass()),
+					Class:      pointer.String(classFilter.ResourceClass()),
 					SecretRefs: []corev1.LocalObjectReference{},
 				},
 			}}
@@ -284,7 +284,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:      pointer.StringPtr(classFilter.ResourceClass()),
+					Class:      pointer.String(classFilter.ResourceClass()),
 					SecretRefs: []corev1.LocalObjectReference{},
 				},
 			}}
@@ -316,7 +316,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.StringPtr("other"),
+					Class: pointer.String("other"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: secret.Name,
 					}},
@@ -350,7 +350,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.StringPtr("other"),
+					Class: pointer.String("other"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: secret.Name,
 					}},

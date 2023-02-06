@@ -147,14 +147,14 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 					UpdateMode: &updateModeAuto,
 				},
-				StabilizationDuration: pointer.StringPtr("3m"),
+				StabilizationDuration: pointer.String("3m"),
 				MinChange: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
-						Value:      pointer.StringPtr("300m"),
+						Value:      pointer.String("300m"),
 						Percentage: pointer.Int32Ptr(80),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
-						Value:      pointer.StringPtr("200M"),
+						Value:      pointer.String("200M"),
 						Percentage: pointer.Int32Ptr(80),
 					},
 				},
@@ -163,25 +163,25 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 					UpdateMode: &scaleDownUpdateMode,
 				},
-				StabilizationDuration: pointer.StringPtr("15m"),
+				StabilizationDuration: pointer.String("15m"),
 				MinChange: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
-						Value:      pointer.StringPtr("300m"),
+						Value:      pointer.String("300m"),
 						Percentage: pointer.Int32Ptr(80),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
-						Value:      pointer.StringPtr("200M"),
+						Value:      pointer.String("200M"),
 						Percentage: pointer.Int32Ptr(80),
 					},
 				},
 			},
 			LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 				CPU: hvpav1alpha1.ChangeParams{
-					Value:      pointer.StringPtr("1"),
+					Value:      pointer.String("1"),
 					Percentage: pointer.Int32Ptr(70),
 				},
 				Memory: hvpav1alpha1.ChangeParams{
-					Value:      pointer.StringPtr("1G"),
+					Value:      pointer.String("1G"),
 					Percentage: pointer.Int32Ptr(70),
 				},
 			},

@@ -65,7 +65,7 @@ var _ = Describe("cleaner", func() {
 							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 								VolumeName:       "foo-pvc",
-								StorageClassName: pointer.StringPtr("ultra-fast"),
+								StorageClassName: pointer.String("ultra-fast"),
 							},
 						},
 					},
@@ -129,7 +129,7 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.StringPtr("ultra-fast"),
+									StorageClassName: pointer.String("ultra-fast"),
 								},
 							},
 						}
@@ -154,7 +154,7 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.StringPtr("ultra-fast"),
+									StorageClassName: pointer.String("ultra-fast"),
 								},
 							},
 						}

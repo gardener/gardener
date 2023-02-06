@@ -1730,9 +1730,9 @@ usernames: ["admin"]
 					func() {
 						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
-						botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("some-domain")
+						botanist.Shoot.ExternalClusterDomain = pointer.String("some-domain")
 						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
-							Domain:    pointer.StringPtr("some-domain"),
+							Domain:    pointer.String("some-domain"),
 							Providers: []gardencorev1beta1.DNSProvider{{}},
 						}
 					},

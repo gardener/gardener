@@ -40,7 +40,7 @@ var _ = Describe("#ConditionStatusChanged", func() {
 	BeforeEach(func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: pointer.StringPtr("shoot"),
+				Class: pointer.String("shoot"),
 			},
 		}
 		createEvent = event.CreateEvent{
