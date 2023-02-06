@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
@@ -54,8 +53,8 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 			if shoot.Spec.SecretBindingName == binding.Name && shoot.Namespace == binding.Namespace {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
-		case *gardencorev1alpha1.ExposureClass:
-			exposureClass := obj.(*gardencorev1alpha1.ExposureClass)
+		case *gardencorev1beta1.ExposureClass:
+			exposureClass := obj.(*gardencorev1beta1.ExposureClass)
 			if shoot.Spec.ExposureClassName != nil && *shoot.Spec.ExposureClassName == exposureClass.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}

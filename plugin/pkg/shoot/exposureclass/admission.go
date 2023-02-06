@@ -26,10 +26,10 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 const (
@@ -48,7 +48,7 @@ func Register(plugins *admission.Plugins) {
 type ExposureClass struct {
 	*admission.Handler
 
-	exposureClassLister gardencorev1alpha1listers.ExposureClassLister
+	exposureClassLister gardencorev1beta1listers.ExposureClassLister
 	readyFunc           admission.ReadyFunc
 }
 
@@ -73,7 +73,7 @@ func (e *ExposureClass) AssignReadyFunc(f admission.ReadyFunc) {
 
 // SetExternalCoreInformerFactory sets the external garden core informer factory.
 func (e *ExposureClass) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
-	exposureClassInformer := f.Core().V1alpha1().ExposureClasses()
+	exposureClassInformer := f.Core().V1beta1().ExposureClasses()
 	e.exposureClassLister = exposureClassInformer.Lister()
 
 	readyFuncs = append(readyFuncs, exposureClassInformer.Informer().HasSynced)
@@ -164,7 +164,7 @@ func (e *ExposureClass) admitShoot(shoot *core.Shoot) error {
 	return nil
 }
 
-func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedSelector *v1alpha1.SeedSelector) (*core.SeedSelector, error) {
+func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedSelector *v1beta1.SeedSelector) (*core.SeedSelector, error) {
 	if exposureClassSeedSelector == nil {
 		return shootSeedSelector, nil
 	}
@@ -190,8 +190,8 @@ func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedS
 	return shootSeedSelector, nil
 }
 
-func uniteTolerations(shootTolerations []core.Toleration, exposureClassTolerations []v1alpha1.Toleration) ([]core.Toleration, error) {
-	shootTolerationsKeys := sets.New[string]()
+func uniteTolerations(shootTolerations []core.Toleration, exposureClassTolerations []v1beta1.Toleration) ([]core.Toleration, error) {
+	shootTolerationsKeys := sets.NewString()
 	for _, toleration := range shootTolerations {
 		shootTolerationsKeys.Insert(toleration.Key)
 	}

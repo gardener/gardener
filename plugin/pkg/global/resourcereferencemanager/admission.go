@@ -51,7 +51,7 @@ import (
 	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -85,7 +85,7 @@ type ReferenceManager struct {
 	projectLister              gardencorelisters.ProjectLister
 	quotaLister                gardencorelisters.QuotaLister
 	controllerDeploymentLister gardencorelisters.ControllerDeploymentLister
-	exposureClassLister        gardencorev1alpha1listers.ExposureClassLister
+	exposureClassLister        gardencorev1beta1listers.ExposureClassLister
 	readyFunc                  admission.ReadyFunc
 }
 
@@ -162,7 +162,7 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f gardencoreinformers.
 
 // SetExternalCoreInformerFactory sets the external garden core informer factory.
 func (r *ReferenceManager) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
-	exposureClassInformer := f.Core().V1alpha1().ExposureClasses()
+	exposureClassInformer := f.Core().V1beta1().ExposureClasses()
 	r.exposureClassLister = exposureClassInformer.Lister()
 
 	readyFuncs = append(readyFuncs, exposureClassInformer.Informer().HasSynced)

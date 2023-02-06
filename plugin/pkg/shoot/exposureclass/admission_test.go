@@ -24,7 +24,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
 )
@@ -35,7 +35,7 @@ var _ = Describe("exposureclass", func() {
 			exposureClassName = "test"
 
 			shoot         *core.Shoot
-			exposureClass *gardencorev1alpha1.ExposureClass
+			exposureClass *gardencorev1beta1.ExposureClass
 
 			attrs            admission.Attributes
 			admissionHandler *ExposureClass
@@ -60,11 +60,11 @@ var _ = Describe("exposureclass", func() {
 				},
 			}
 
-			exposureClass = &gardencorev1alpha1.ExposureClass{
+			exposureClass = &gardencorev1beta1.ExposureClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: exposureClassName,
 				},
-				Scheduling: &gardencorev1alpha1.ExposureClassScheduling{},
+				Scheduling: &gardencorev1beta1.ExposureClassScheduling{},
 			}
 		})
 
@@ -93,7 +93,7 @@ var _ = Describe("exposureclass", func() {
 
 		It("should do nothing as referenced ExposureClass has no scheduling settings", func() {
 			exposureClass.Scheduling = nil
-			Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 			attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -103,14 +103,14 @@ var _ = Describe("exposureclass", func() {
 
 		Context("SeedSelector", func() {
 			BeforeEach(func() {
-				exposureClass.Scheduling.SeedSelector = &gardencorev1alpha1.SeedSelector{}
+				exposureClass.Scheduling.SeedSelector = &gardencorev1beta1.SeedSelector{}
 
 				shoot.Spec.SeedSelector = &core.SeedSelector{}
 			})
 
 			It("should do nothing as ExposureClass has no seed selector", func() {
 				exposureClass.Scheduling.SeedSelector = nil
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -121,7 +121,7 @@ var _ = Describe("exposureclass", func() {
 			It("should unite the matching labels of seed selector from Shoot and ExposureClass", func() {
 				shoot.Spec.SeedSelector.MatchLabels = map[string]string{"abc": "abc"}
 				exposureClass.Scheduling.SeedSelector.LabelSelector.MatchLabels = map[string]string{"xyz": "xyz"}
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -136,7 +136,7 @@ var _ = Describe("exposureclass", func() {
 			It("should fail as seed selector from Shoot and ExposureClass have conflicting labels", func() {
 				shoot.Spec.SeedSelector.MatchLabels = map[string]string{"abc": "abc"}
 				exposureClass.Scheduling.SeedSelector.LabelSelector.MatchLabels = map[string]string{"abc": "xyz"}
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -155,7 +155,7 @@ var _ = Describe("exposureclass", func() {
 					Operator: metav1.LabelSelectorOpIn,
 					Values:   []string{"xyz"},
 				}}
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -178,7 +178,7 @@ var _ = Describe("exposureclass", func() {
 			It("should unite the seedselector provider types from Shoot and ExposureClass", func() {
 				shoot.Spec.SeedSelector.ProviderTypes = []string{"aws", "gcp"}
 				exposureClass.Scheduling.SeedSelector.ProviderTypes = []string{"gcp"}
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -190,7 +190,7 @@ var _ = Describe("exposureclass", func() {
 
 		Context("Tolerations", func() {
 			BeforeEach(func() {
-				exposureClass.Scheduling.Tolerations = []gardencorev1alpha1.Toleration{{
+				exposureClass.Scheduling.Tolerations = []gardencorev1beta1.Toleration{{
 					Key:   "abc",
 					Value: pointer.String("def"),
 				}}
@@ -201,8 +201,8 @@ var _ = Describe("exposureclass", func() {
 			})
 
 			It("should do nothing as ExposureClass has no tolerations", func() {
-				exposureClass.Scheduling.Tolerations = []gardencorev1alpha1.Toleration{}
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				exposureClass.Scheduling.Tolerations = []gardencorev1beta1.Toleration{}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -214,7 +214,7 @@ var _ = Describe("exposureclass", func() {
 			})
 
 			It("should unite the tolerations from Shoot and ExposureClass", func() {
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -233,7 +233,7 @@ var _ = Describe("exposureclass", func() {
 
 			It("should fail as Shoot and ExposureClass tolerations have conflicting keys", func() {
 				shoot.Spec.Tolerations[0].Key = "abc"
-				Expect(gardenCoreInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)

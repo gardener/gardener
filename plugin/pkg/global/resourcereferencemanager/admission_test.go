@@ -38,7 +38,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -721,13 +721,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				It("should accept because the referenced exposure class exists", func() {
-					var exposureClass = gardencorev1alpha1.ExposureClass{
+					var exposureClass = gardencorev1beta1.ExposureClass{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: exposureClassName,
 						},
 					}
 
-					Expect(gardenCoreExternalInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(&exposureClass)).To(Succeed())
+					Expect(gardenCoreExternalInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(&exposureClass)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
