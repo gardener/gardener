@@ -17,7 +17,6 @@ package imagevector_test
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -274,13 +273,13 @@ images:
 
 		Describe("#Read", func() {
 			It("should successfully read a JSON image vector", func() {
-				vector, err := Read(strings.NewReader(image1Src1VectorJSON))
+				vector, err := Read([]byte(image1Src1VectorJSON))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})
 
 			It("should successfully read a YAML image vector", func() {
-				vector, err := Read(strings.NewReader(image1Src1VectorYAML))
+				vector, err := Read([]byte(image1Src1VectorYAML))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})

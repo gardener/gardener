@@ -15,8 +15,6 @@
 package imagevector
 
 import (
-	"strings"
-
 	"github.com/Masterminds/semver"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -87,7 +85,7 @@ func validateComponentImageVector(componentImageVector *ComponentImageVector, fl
 	}
 
 	// Read (and validate) imageVectorOverwrite as image vector
-	imageVector, err := Read(strings.NewReader(componentImageVector.ImageVectorOverwrite))
+	imageVector, err := Read([]byte(componentImageVector.ImageVectorOverwrite))
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("imageVectorOverwrite"), imageVector, err.Error()))
 	}

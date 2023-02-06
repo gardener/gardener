@@ -16,7 +16,6 @@ package imagevector_test
 
 import (
 	"fmt"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -63,13 +62,13 @@ components:
 
 		Describe("#ReadComponentOverwrite", func() {
 			It("should successfully read a JSON image vector", func() {
-				vector, err := ReadComponentOverwrite(strings.NewReader(componentImagesJSON))
+				vector, err := ReadComponentOverwrite([]byte(componentImagesJSON))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(componentImageVectors))
 			})
 
 			It("should successfully read a YAML image vector", func() {
-				vector, err := ReadComponentOverwrite(strings.NewReader(componentImagesYAML))
+				vector, err := ReadComponentOverwrite([]byte(componentImagesYAML))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(componentImageVectors))
 			})

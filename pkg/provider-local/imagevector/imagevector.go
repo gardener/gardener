@@ -17,7 +17,6 @@ package imagevector
 
 import (
 	_ "embed"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
 
@@ -33,7 +32,7 @@ var (
 func init() {
 	var err error
 
-	imageVector, err = imagevector.Read(strings.NewReader(imagesYAML))
+	imageVector, err = imagevector.Read([]byte(imagesYAML))
 	runtime.Must(err)
 
 	imageVector, err = imagevector.WithEnvOverride(imageVector)

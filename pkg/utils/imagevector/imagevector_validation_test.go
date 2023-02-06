@@ -15,15 +15,12 @@
 package imagevector_test
 
 import (
-	"bytes"
-	"io"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -48,12 +45,17 @@ var _ = Describe("validation", func() {
 		}
 
 		componentImageVectors = func(name string, imageVector ImageVector) ComponentImageVectors {
-			var buf bytes.Buffer
-			err := write(&buf, imageVector)
+			vector := struct {
+				Images ImageVector `json:"images" yaml:"images"`
+			}{
+				Images: imageVector,
+			}
+
+			buf, err := yaml.Marshal(vector)
 			Expect(err).NotTo(HaveOccurred())
 
 			return ComponentImageVectors{
-				name: buf.String(),
+				name: string(buf),
 			}
 		}
 	})
@@ -116,13 +118,3 @@ var _ = Describe("validation", func() {
 		})
 	})
 })
-
-func write(w io.Writer, imageVector ImageVector) error {
-	vector := struct {
-		Images ImageVector `json:"images" yaml:"images"`
-	}{
-		Images: imageVector,
-	}
-
-	return yaml.NewEncoder(w).Encode(&vector)
-}
