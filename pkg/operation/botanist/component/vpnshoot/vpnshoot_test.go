@@ -679,7 +679,7 @@ status: {}
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 					SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
-					KeepObjects:  pointer.BoolPtr(false),
+					KeepObjects:  pointer.Bool(false),
 				},
 			}))
 

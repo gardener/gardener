@@ -61,8 +61,8 @@ var _ = Describe("merger", func() {
 						Kind:               "Namespace",
 						Name:               "default",
 						UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
-						Controller:         pointer.BoolPtr(true),
-						BlockOwnerDeletion: pointer.BoolPtr(true),
+						Controller:         pointer.Bool(true),
+						BlockOwnerDeletion: pointer.Bool(true),
 					}},
 				},
 			}

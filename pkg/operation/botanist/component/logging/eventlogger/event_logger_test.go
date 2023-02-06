@@ -453,7 +453,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "generic-token-kubeconfig",
 														},
-														Optional: pointer.BoolPtr(false),
+														Optional: pointer.Bool(false),
 													},
 												},
 												{
@@ -467,7 +467,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "shoot-access-" + name,
 														},
-														Optional: pointer.BoolPtr(false),
+														Optional: pointer.Bool(false),
 													},
 												},
 											},
