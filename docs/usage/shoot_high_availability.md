@@ -20,7 +20,7 @@ Failure tolerance of `node` will have the following characteristics:
 
 Failure tolerance of `zone` will have the following characteristics:
 
-* Control plane components will be spread across different availability zones. There will at least be
+* Control plane components will be spread across different availability zones. There will be at least
   one replica per zone for each control plane component which has more than one replica.
 * Gardener scheduler will automatically select a `seed` which has a minimum of 3 zones to host the shoot control plane.
 * A multi-node etcd (quorum size of 3) will be provisioned offering zero-downtime capabilities with each member in a
