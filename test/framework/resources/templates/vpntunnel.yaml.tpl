@@ -29,9 +29,9 @@ spec:
       - name: logger
         image: registry.k8s.io/e2e-test-images/agnhost:2.40
         args:
-          - logs-generator 
-          - --logtostderr 
-          - --log-lines-total={{ .LogsCount }} 
+          - logs-generator
+          - --logtostderr
+          - --log-lines-total={{ .LogsCount }}
           - --run-duration={{ .LogsDuration }}
       securityContext:
         fsGroup: 65532
