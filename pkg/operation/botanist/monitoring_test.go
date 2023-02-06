@@ -42,7 +42,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockcoredns "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/mock"
 	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
-	mockhvpa "github.com/gardener/gardener/pkg/operation/botanist/component/hvpa/mock"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	mockkubecontrollermanager "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager/mock"
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
@@ -74,7 +73,6 @@ var _ = Describe("Monitoring", func() {
 		chartApplier kubernetes.ChartApplier
 		sm           secretsmanager.Interface
 
-		mockHVPA                  *mockhvpa.MockInterface
 		mockEtcdMain              *mocketcd.MockInterface
 		mockEtcdEvents            *mocketcd.MockInterface
 		mockKubeAPIServer         *mockkubeapiserver.MockInterface
@@ -116,7 +114,6 @@ var _ = Describe("Monitoring", func() {
 			Build()
 		sm = fakesecretsmanager.New(seedClient, seedNamespace)
 
-		mockHVPA = mockhvpa.NewMockInterface(ctrl)
 		mockEtcdMain = mocketcd.NewMockInterface(ctrl)
 		mockEtcdEvents = mocketcd.NewMockInterface(ctrl)
 		mockKubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
@@ -164,7 +161,6 @@ var _ = Describe("Monitoring", func() {
 							KubeProxy: mockKubeProxy,
 							VPNShoot:  mockVPNShoot,
 						},
-						HVPA: mockHVPA,
 					},
 				},
 				ImageVector: imagevector.ImageVector{

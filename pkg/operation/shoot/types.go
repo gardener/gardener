@@ -107,7 +107,6 @@ type Components struct {
 	Logging                  *Logging
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
-	HVPA                     component.MonitoringComponent
 	Addons                   *Addons
 }
 

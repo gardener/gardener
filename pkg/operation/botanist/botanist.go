@@ -31,7 +31,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/kuberbacproxy"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -198,7 +197,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 	o.Shoot.Components.NetworkPolicies = b.DefaultNetworkPolicies()
-	o.Shoot.Components.HVPA = hvpa.New(nil, b.Shoot.SeedNamespace, hvpa.Values{})
 
 	// Logging
 	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
