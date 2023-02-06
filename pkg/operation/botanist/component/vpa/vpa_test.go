@@ -2222,40 +2222,6 @@ spec:
                   pods. If not specified, all fields in the ` + "`" + `PodUpdatePolicy` + "`" + ` are
                   set to their default values.
                 properties:
-                  evictionRequirements:
-                    description: EvictionRequirements is a list of EvictionRequirements
-                      that need to evaluate to true in order for a Pod to be evicted.
-                      If more than one EvictionRequirement is specified, they are
-                      combined with AND.
-                    items:
-                      description: EvictionRequirement defines a single condition
-                        which needs to be true in order to evict a Pod
-                      properties:
-                        changeRequirement:
-                          description: EvictionChangeRequirement refers to the relationship
-                            between the new target recommendation for a Pod and its
-                            current requests, what kind of change is necessary for
-                            the Pod to be evicted
-                          enum:
-                          - TargetHigherThanRequests
-                          - TargetHigherThanOrEqualToRequests
-                          - TargetLowerThanRequests
-                          - TargetLowerThanOrEqualToRequests
-                          type: string
-                        resource:
-                          description: Resources is a list of one or more resources
-                            that the condition applies to. If more than one resource
-                            is given, they are combined with OR, not with AND.
-                          items:
-                            description: ResourceName is the name identifying various
-                              resources in a ResourceList.
-                            type: string
-                          type: array
-                      required:
-                      - changeRequirement
-                      - resource
-                      type: object
-                    type: array
                   minReplicas:
                     description: Minimal number of replicas which need to be alive
                       for Updater to attempt pod eviction (pending other checks like
