@@ -5529,20 +5529,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 	Describe("#ValidateHibernationCronSpec", func() {
 		DescribeTable("validate cron spec",
-			func(seenSpecs sets.String, spec string, matcher gomegatypes.GomegaMatcher) {
+			func(seenSpecs sets.Set[string], spec string, matcher gomegatypes.GomegaMatcher) {
 				Expect(ValidateHibernationCronSpec(seenSpecs, spec, nil)).To(matcher)
 			},
-			Entry("invalid spec", sets.NewString(), "foo", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid spec", sets.New[string](), "foo", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeInvalid),
 			})))),
-			Entry("duplicate spec", sets.NewString("* * * * *"), "* * * * *", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("duplicate spec", sets.New[string]("* * * * *"), "* * * * *", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeDuplicate),
 			})))),
 		)
 
 		It("should add the inspected cron spec to the set if there were no issues", func() {
 			var (
-				s    = sets.NewString()
+				s    = sets.New[string]()
 				spec = "* * * * *"
 			)
 			Expect(ValidateHibernationCronSpec(s, spec, nil)).To(BeEmpty())
@@ -5551,7 +5551,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should not add the inspected cron spec to the set if there were issues", func() {
 			var (
-				s    = sets.NewString()
+				s    = sets.New[string]()
 				spec = "foo"
 			)
 			Expect(ValidateHibernationCronSpec(s, spec, nil)).NotTo(BeEmpty())
@@ -5574,35 +5574,35 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 	Describe("#ValidateHibernationSchedule", func() {
 		DescribeTable("validate schedule",
-			func(seenSpecs sets.String, schedule *core.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
+			func(seenSpecs sets.Set[string], schedule *core.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
 				errList := ValidateHibernationSchedule(seenSpecs, schedule, nil)
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid schedule", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *")}, BeEmpty()),
-			Entry("invalid start value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String(""), End: pointer.String("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("valid schedule", sets.New[string](), &core.HibernationSchedule{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *")}, BeEmpty()),
+			Entry("invalid start value", sets.New[string](), &core.HibernationSchedule{Start: pointer.String(""), End: pointer.String("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("start").String()),
 			})))),
-			Entry("invalid end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("* * * * *"), End: pointer.String("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid end value", sets.New[string](), &core.HibernationSchedule{Start: pointer.String("* * * * *"), End: pointer.String("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("invalid location", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *"), Location: pointer.String("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid location", sets.New[string](), &core.HibernationSchedule{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *"), Location: pointer.String("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("location").String()),
 			})))),
-			Entry("equal start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("* * * * *"), End: pointer.String("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("equal start and end value", sets.New[string](), &core.HibernationSchedule{Start: pointer.String("* * * * *"), End: pointer.String("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("nil start", sets.NewString(), &core.HibernationSchedule{End: pointer.String("* * * * *")}, BeEmpty()),
-			Entry("nil end", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("* * * * *")}, BeEmpty()),
-			Entry("start and end nil", sets.NewString(), &core.HibernationSchedule{},
+			Entry("nil start", sets.New[string](), &core.HibernationSchedule{End: pointer.String("* * * * *")}, BeEmpty()),
+			Entry("nil end", sets.New[string](), &core.HibernationSchedule{Start: pointer.String("* * * * *")}, BeEmpty()),
+			Entry("start and end nil", sets.New[string](), &core.HibernationSchedule{},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeRequired),
 				})))),
-			Entry("invalid start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String(""), End: pointer.String("")},
+			Entry("invalid start and end value", sets.New[string](), &core.HibernationSchedule{Start: pointer.String(""), End: pointer.String("")},
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

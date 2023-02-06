@@ -95,7 +95,7 @@ func DeprecatedDetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var (
 		coder   Coder
 		message = err.Error()
-		codes   = sets.NewString()
+		codes   = sets.New[string]()
 
 		knownCodes = map[gardencorev1beta1.ErrorCode]func(string) bool{
 			gardencorev1beta1.ErrorInfraUnauthenticated:          unauthenticatedRegexp.MatchString,
@@ -128,7 +128,7 @@ func DeprecatedDetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 
 	// compute error code list based on code string set
 	var out []gardencorev1beta1.ErrorCode
-	for _, c := range codes.List() {
+	for _, c := range sets.List(codes) {
 		out = append(out, gardencorev1beta1.ErrorCode(c))
 	}
 	return out
@@ -159,7 +159,7 @@ type MultiErrorWithCodes struct {
 	errors      []error
 	errorFormat func(errs []error) string
 
-	errorCodeStr sets.String
+	errorCodeStr sets.Set[string]
 	codes        []gardencorev1beta1.ErrorCode
 }
 
@@ -167,7 +167,7 @@ type MultiErrorWithCodes struct {
 func NewMultiErrorWithCodes(errorFormat func(errs []error) string) *MultiErrorWithCodes {
 	return &MultiErrorWithCodes{
 		errorFormat:  errorFormat,
-		errorCodeStr: sets.NewString(),
+		errorCodeStr: sets.New[string](),
 	}
 }
 

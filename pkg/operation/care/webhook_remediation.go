@@ -297,7 +297,7 @@ func newNotInLabelSelectorRequirement(key, value string) metav1.LabelSelectorReq
 
 func removeDuplicateRequirements(requirements []metav1.LabelSelectorRequirement) []metav1.LabelSelectorRequirement {
 	var (
-		keyValues   = sets.NewString()
+		keyValues   = sets.New[string]()
 		keyValuesID = func(requirement metav1.LabelSelectorRequirement) string {
 			return requirement.Key + strings.Join(requirement.Values, "")
 		}

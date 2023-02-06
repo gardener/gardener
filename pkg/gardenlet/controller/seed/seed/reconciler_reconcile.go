@@ -1147,7 +1147,7 @@ func cleanupOrphanExposureClassHandlerResources(
 		return err
 	}
 
-	zoneSet := sets.NewString(zones...)
+	zoneSet := sets.New[string](zones...)
 	for _, namespace := range zonalExposureClassHandlerNamespaces.Items {
 		if ok, zone := operation.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, true, func() bool {

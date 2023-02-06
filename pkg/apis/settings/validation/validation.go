@@ -28,9 +28,9 @@ import (
 
 var (
 	// See https://tools.ietf.org/html/rfc7518#section-3.1 (without "none")
-	validSigningAlgs = sets.NewString("RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512")
+	validSigningAlgs = sets.New[string]("RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512")
 	// used by oidc-provider
-	forbiddenKeys = sets.NewString("idp-issuer-url", "client-id", "client-secret", "idp-certificate-authority", "idp-certificate-authority-data", "id-token", "refresh-token")
+	forbiddenKeys = sets.New[string]("idp-issuer-url", "client-id", "client-secret", "idp-certificate-authority", "idp-certificate-authority-data", "id-token", "refresh-token")
 )
 
 func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec, fldPath *field.Path) field.ErrorList {
@@ -82,11 +82,11 @@ func validateServer(server *settings.KubeAPIServerOpenIDConnect, fldPath *field.
 			allErrs = append(allErrs, field.Invalid(path, server.SigningAlgs, "must not be empty"))
 		}
 
-		existingAlgs := sets.String{}
+		existingAlgs := sets.Set[string]{}
 
 		for i, alg := range server.SigningAlgs {
 			if !validSigningAlgs.Has(alg) {
-				allErrs = append(allErrs, field.Invalid(path.Index(i), alg, fmt.Sprintf("must be one of: %v", validSigningAlgs.List())))
+				allErrs = append(allErrs, field.Invalid(path.Index(i), alg, fmt.Sprintf("must be one of: %v", sets.List(validSigningAlgs))))
 			}
 			if existingAlgs.Has(alg) {
 				allErrs = append(allErrs, field.Duplicate(path.Index(i), alg))
@@ -116,7 +116,7 @@ func validateClient(client *settings.OpenIDConnectClientAuthentication, fldPath 
 			allErrs = append(allErrs, field.Invalid(scopeFldPath.Key(key), val, "must not be empty"))
 		}
 		if forbiddenKeys.Has(key) {
-			allErrs = append(allErrs, field.Forbidden(scopeFldPath.Key(key), fmt.Sprintf("cannot be any of %v", forbiddenKeys.List())))
+			allErrs = append(allErrs, field.Forbidden(scopeFldPath.Key(key), fmt.Sprintf("cannot be any of %v", sets.List(forbiddenKeys))))
 		}
 	}
 

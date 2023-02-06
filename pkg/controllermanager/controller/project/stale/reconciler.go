@@ -204,14 +204,14 @@ func (r *Reconciler) relevantSecretBindingsInUse(ctx context.Context, isSecretBi
 		return false, err
 	}
 
-	namespaceToSecretBindingNames := make(map[string]sets.String)
+	namespaceToSecretBindingNames := make(map[string]sets.Set[string])
 	for _, secretBinding := range secretBindingList.Items {
 		if !isSecretBindingRelevantFunc(secretBinding) {
 			continue
 		}
 
 		if _, ok := namespaceToSecretBindingNames[secretBinding.Namespace]; !ok {
-			namespaceToSecretBindingNames[secretBinding.Namespace] = sets.NewString(secretBinding.Name)
+			namespaceToSecretBindingNames[secretBinding.Namespace] = sets.New[string](secretBinding.Name)
 		} else {
 			namespaceToSecretBindingNames[secretBinding.Namespace].Insert(secretBinding.Name)
 		}
@@ -255,7 +255,7 @@ func (r *Reconciler) markProjectAsStale(ctx context.Context, project *gardencore
 	return r.Client.Status().Patch(ctx, project, patch)
 }
 
-func (r *Reconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBindingNames map[string]sets.String) (bool, error) {
+func (r *Reconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBindingNames map[string]sets.Set[string]) (bool, error) {
 	if len(namespaceToSecretBindingNames) == 0 {
 		return false, nil
 	}
@@ -278,8 +278,8 @@ func (r *Reconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBi
 
 // computeSecretNames determines the names of Secrets that are of type Opaque and don't have owner references to a
 // Shoot.
-func computeSecretNames(secretList []corev1.Secret) sets.String {
-	names := sets.NewString()
+func computeSecretNames(secretList []corev1.Secret) sets.Set[string] {
+	names := sets.New[string]()
 
 	for _, secret := range secretList {
 		if secret.Type != corev1.SecretTypeOpaque {
@@ -304,8 +304,8 @@ func computeSecretNames(secretList []corev1.Secret) sets.String {
 }
 
 // computeQuotaNames determines the names of Quotas from the given slice.
-func computeQuotaNames(quotaList []metav1.PartialObjectMetadata) sets.String {
-	names := sets.NewString()
+func computeQuotaNames(quotaList []metav1.PartialObjectMetadata) sets.Set[string] {
+	names := sets.New[string]()
 
 	for _, quota := range quotaList {
 		names.Insert(quota.Name)

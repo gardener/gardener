@@ -191,7 +191,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 }
 
 func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {
-	types := sets.NewString()
+	types := sets.New[string]()
 	for _, healthCheck := range healthChecks {
 		types.Insert(healthCheck.ConditionType)
 	}

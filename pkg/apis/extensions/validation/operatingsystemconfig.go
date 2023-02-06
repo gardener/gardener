@@ -96,7 +96,7 @@ func ValidateUnits(units []extensionsv1alpha1.Unit, fldPath *field.Path) field.E
 func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	paths := sets.NewString()
+	paths := sets.New[string]()
 
 	for i, file := range files {
 		idxPath := fldPath.Index(i)

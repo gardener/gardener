@@ -74,13 +74,13 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 	}
 
 	if cfg.LogLevel != "" {
-		if !sets.NewString(logger.AllLogLevels...).Has(cfg.LogLevel) {
+		if !sets.New[string](logger.AllLogLevels...).Has(cfg.LogLevel) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), cfg.LogLevel, logger.AllLogLevels))
 		}
 	}
 
 	if cfg.LogFormat != "" {
-		if !sets.NewString(logger.AllLogFormats...).Has(cfg.LogFormat) {
+		if !sets.New[string](logger.AllLogFormats...).Has(cfg.LogFormat) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), cfg.LogFormat, logger.AllLogFormats))
 		}
 	}
@@ -228,7 +228,7 @@ func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	return allErrs
 }
 
-var availableShootPurposes = sets.NewString(
+var availableShootPurposes = sets.New[string](
 	string(gardencore.ShootPurposeEvaluation),
 	string(gardencore.ShootPurposeTesting),
 	string(gardencore.ShootPurposeDevelopment),
@@ -246,7 +246,7 @@ func ValidateBackupEntryControllerConfiguration(cfg *config.BackupEntryControlle
 
 	for i, purpose := range cfg.DeletionGracePeriodShootPurposes {
 		if !availableShootPurposes.Has(string(purpose)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("deletionGracePeriodShootPurposes").Index(i), purpose, availableShootPurposes.List()))
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("deletionGracePeriodShootPurposes").Index(i), purpose, sets.List(availableShootPurposes)))
 		}
 	}
 

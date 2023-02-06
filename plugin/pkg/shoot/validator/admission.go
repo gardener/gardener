@@ -440,7 +440,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			}
 
 			if seedSelector.ProviderTypes != nil {
-				if !sets.NewString(seedSelector.ProviderTypes...).HasAny(c.seed.Spec.Provider.Type, "*") {
+				if !sets.New[string](seedSelector.ProviderTypes...).HasAny(c.seed.Spec.Provider.Type, "*") {
 					return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", c.shoot.Name, c.seed.Name, c.cloudProfile.Name))
 				}
 			}
@@ -579,8 +579,8 @@ func (c *validationContext) validateDeletion(a admission.Attributes) error {
 
 	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
 	if len(c.shoot.Status.TechnicalID) > 0 && c.shoot.Status.LastOperation != nil {
-		oldFinalizers := sets.NewString(c.oldShoot.Finalizers...)
-		newFinalizers := sets.NewString(c.shoot.Finalizers...)
+		oldFinalizers := sets.New[string](c.oldShoot.Finalizers...)
+		newFinalizers := sets.New[string](c.shoot.Finalizers...)
 
 		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
 			lastOperation := c.shoot.Status.LastOperation
@@ -1242,7 +1242,7 @@ func validateZones(constraints []core.Region, region, oldRegion string, worker, 
 		return allErrs
 	}
 
-	usedZones := sets.NewString()
+	usedZones := sets.New[string]()
 	for j, zone := range worker.Zones {
 		jdxPath := fldPath.Child("zones").Index(j)
 		if ok, validZones := validateZone(constraints, region, zone); !ok {

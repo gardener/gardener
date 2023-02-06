@@ -49,7 +49,7 @@ func ParseConfigForFlags(configFilePath string, fs *flag.FlagSet) error {
 // Only flags are updated that are not defined by command line.
 func applyConfig(fs *flag.FlagSet) error {
 	var allErrs *multierror.Error
-	definedFlags := sets.String{}
+	definedFlags := sets.Set[string]{}
 
 	// get all flags that are defined by command line
 	fs.Visit(func(f *flag.Flag) {

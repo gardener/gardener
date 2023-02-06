@@ -48,7 +48,7 @@ func DetermineErrorCodes(err error, knownCodes map[gardencorev1beta1.ErrorCode]f
 	var (
 		coder   v1beta1helper.Coder
 		message = err.Error()
-		codes   = sets.NewString()
+		codes   = sets.New[string]()
 	)
 
 	if err == nil {
@@ -71,7 +71,7 @@ func DetermineErrorCodes(err error, knownCodes map[gardencorev1beta1.ErrorCode]f
 
 	// compute error code list based on code string set
 	var out []gardencorev1beta1.ErrorCode
-	for _, c := range codes.List() {
+	for _, c := range sets.List(codes) {
 		out = append(out, gardencorev1beta1.ErrorCode(c))
 	}
 	return out

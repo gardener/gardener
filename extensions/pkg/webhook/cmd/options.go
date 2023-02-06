@@ -130,7 +130,7 @@ func (w *SwitchOptions) AddFlags(fs *pflag.FlagSet) {
 
 // Complete implements Option.
 func (w *SwitchOptions) Complete() error {
-	disabled := sets.NewString()
+	disabled := sets.New[string]()
 	for _, disabledName := range w.Disabled {
 		if _, ok := w.nameToWebhookFactory[disabledName]; !ok {
 			return fmt.Errorf("cannot disable unknown webhook %q", disabledName)

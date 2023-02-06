@@ -467,7 +467,7 @@ var _ = Describe("shoot", func() {
 		It("should compute the correct list of required extensions", func() {
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.NewString(
+			Expect(result).To(Equal(sets.New[string](
 				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				extensions.Id(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -489,7 +489,7 @@ var _ = Describe("shoot", func() {
 
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.NewString(
+			Expect(result).To(Equal(sets.New[string](
 				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
 				extensions.Id(extensionsv1alpha1.ControlPlaneResource, shootProvider),
 				extensions.Id(extensionsv1alpha1.InfrastructureResource, shootProvider),
@@ -512,7 +512,7 @@ var _ = Describe("shoot", func() {
 
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.NewString(
+			Expect(result).To(Equal(sets.New[string](
 				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				extensions.Id(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),

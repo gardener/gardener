@@ -79,7 +79,7 @@ func NewAttributesWithName(a admission.Attributes, name string) admission.Attrib
 // ValidateZoneRemovalFromSeeds returns an error when zones are removed from the old seed while it is still in use by
 // shoots.
 func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorelisters.ShootLister, kind string) error {
-	if removedZones := sets.NewString(oldSeedSpec.Provider.Zones...).Difference(sets.NewString(newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
+	if removedZones := sets.New[string](oldSeedSpec.Provider.Zones...).Difference(sets.New[string](newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
 		shootList, err := GetFilteredShootList(shootLister, func(shoot *core.Shoot) bool {
 			return pointer.StringDeref(shoot.Spec.SeedName, "") == seedName
 		})
@@ -88,7 +88,7 @@ func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedN
 		}
 
 		if len(shootList) > 0 {
-			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are %d Shoots scheduled to this Seed", removedZones.List(), kind, seedName, len(shootList)))
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are %d Shoots scheduled to this Seed", sets.List(removedZones), kind, seedName, len(shootList)))
 		}
 	}
 

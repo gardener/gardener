@@ -104,7 +104,7 @@ func (o *Operation) singleZoneIfPinned() *string {
 		return nil
 	}
 	if v, ok := o.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
-		zones := sets.NewString(strings.Split(v, ",")...).Delete("").List()
+		zones := sets.List(sets.New[string](strings.Split(v, ",")...).Delete(""))
 		if len(zones) == 1 {
 			return &zones[0]
 		}

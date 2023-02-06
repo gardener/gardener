@@ -92,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 func (r *Reconciler) cleanupStaleSecrets(ctx context.Context, existingSecrets []string, namespace string) error {
 	var fns []flow.TaskFn
-	exclude := sets.NewString(existingSecrets...)
+	exclude := sets.New[string](existingSecrets...)
 
 	secretList := &corev1.SecretList{}
 	if err := r.Client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {

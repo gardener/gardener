@@ -164,7 +164,7 @@ func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
 		defaults = append(defaults, project.Spec.Tolerations.Defaults...)
 	}
 
-	existingKeys := sets.NewString()
+	existingKeys := sets.New[string]()
 	for _, toleration := range shoot.Spec.Tolerations {
 		existingKeys.Insert(toleration.Key)
 	}
@@ -233,7 +233,7 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 
 func getNewOrChangedTolerations(shoot, oldShoot *core.Shoot) []core.Toleration {
 	var (
-		oldTolerations          = sets.NewString()
+		oldTolerations          = sets.New[string]()
 		newOrChangedTolerations []core.Toleration
 	)
 

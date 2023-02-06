@@ -43,7 +43,7 @@ type Reconciler struct {
 	SeedName     string
 
 	Lock                *sync.RWMutex
-	KindToRequiredTypes map[string]sets.String
+	KindToRequiredTypes map[string]sets.Set[string]
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	var (
 		allKindsCalculated = true
 		required           *bool
-		requiredKindTypes  = sets.NewString()
+		requiredKindTypes  = sets.New[string]()
 		message            string
 	)
 

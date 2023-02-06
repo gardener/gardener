@@ -229,7 +229,7 @@ func (e *ExtensionValidator) Validate(ctx context.Context, a admission.Attribute
 	return nil
 }
 
-func (e *ExtensionValidator) validateBackupBucket(kindToTypesMap map[string]sets.String, spec core.BackupBucketSpec) error {
+func (e *ExtensionValidator) validateBackupBucket(kindToTypesMap map[string]sets.Set[string], spec core.BackupBucketSpec) error {
 	return isExtensionRegistered(
 		kindToTypesMap,
 		extensionsv1alpha1.BackupBucketResource,
@@ -238,7 +238,7 @@ func (e *ExtensionValidator) validateBackupBucket(kindToTypesMap map[string]sets
 	)
 }
 
-func (e *ExtensionValidator) validateBackupEntry(kindToTypesMap map[string]sets.String, bucketType string) error {
+func (e *ExtensionValidator) validateBackupEntry(kindToTypesMap map[string]sets.Set[string], bucketType string) error {
 	return isExtensionRegistered(
 		kindToTypesMap,
 		extensionsv1alpha1.BackupEntryResource,
@@ -247,7 +247,7 @@ func (e *ExtensionValidator) validateBackupEntry(kindToTypesMap map[string]sets.
 	)
 }
 
-func (e *ExtensionValidator) validateSeed(kindToTypesMap map[string]sets.String, spec core.SeedSpec) error {
+func (e *ExtensionValidator) validateSeed(kindToTypesMap map[string]sets.Set[string], spec core.SeedSpec) error {
 	var (
 		message = "given Seed uses non-registered"
 
@@ -273,7 +273,7 @@ func (e *ExtensionValidator) validateSeed(kindToTypesMap map[string]sets.String,
 	return requiredExtensions.areRegistered(kindToTypesMap)
 }
 
-func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.String, spec core.ShootSpec) error {
+func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[string], spec core.ShootSpec) error {
 	var (
 		message         = "given Shoot uses non-registered"
 		providerTypeMsg = fmt.Sprintf("%s provider type: %s", message, field.NewPath("spec", "provider", "type"))
@@ -329,7 +329,7 @@ type requiredExtension struct {
 
 type requiredExtensions []requiredExtension
 
-func (r requiredExtensions) areRegistered(kindToTypesMap map[string]sets.String) error {
+func (r requiredExtensions) areRegistered(kindToTypesMap map[string]sets.Set[string]) error {
 	var result error
 
 	for _, requiredExtension := range r {
@@ -343,7 +343,7 @@ func (r requiredExtensions) areRegistered(kindToTypesMap map[string]sets.String)
 
 // isExtensionRegistered takes a map of registered kinds to a set of types and a kind/type to verify. If the provided
 // kind/type combination is registered then it returns nil, otherwise it returns an error with the given message.
-func isExtensionRegistered(kindToTypesMap map[string]sets.String, extensionKind, extensionType, message string) error {
+func isExtensionRegistered(kindToTypesMap map[string]sets.Set[string], extensionKind, extensionType, message string) error {
 	if types, ok := kindToTypesMap[extensionKind]; !ok || !types.Has(extensionType) {
 		return fmt.Errorf("%s (%q)", message, extensionType)
 	}
@@ -352,8 +352,8 @@ func isExtensionRegistered(kindToTypesMap map[string]sets.String, extensionKind,
 
 // computeRegisteredPrimaryExtensionKindTypes computes a map that maps the extension kind to the set of types that are
 // registered (only if primary=true), e.g. {ControlPlane=>{foo,bar,baz}, Network=>{a,b,c}}.
-func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.String {
-	out := map[string]sets.String{}
+func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.Set[string] {
+	out := map[string]sets.Set[string]{}
 
 	for _, controllerRegistration := range controllerRegistrationList {
 		for _, resource := range controllerRegistration.Spec.Resources {
@@ -362,7 +362,7 @@ func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*ga
 			}
 
 			if _, ok := out[resource.Kind]; !ok {
-				out[resource.Kind] = sets.NewString()
+				out[resource.Kind] = sets.New[string]()
 			}
 
 			out[resource.Kind].Insert(resource.Type)

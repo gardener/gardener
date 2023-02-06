@@ -561,8 +561,8 @@ func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
 
 // ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
 // reconciliation flow.
-func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain) sets.String {
-	requiredExtensions := sets.NewString()
+func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain) sets.Set[string] {
+	requiredExtensions := sets.New[string]()
 
 	if seed.Spec.Backup != nil {
 		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
@@ -578,7 +578,7 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
 	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
 
-	disabledExtensions := sets.NewString()
+	disabledExtensions := sets.New[string]()
 	for _, extension := range shoot.Spec.Extensions {
 		id := gardenerextensions.Id(extensionsv1alpha1.ExtensionResource, extension.Type)
 

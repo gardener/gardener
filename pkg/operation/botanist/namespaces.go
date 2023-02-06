@@ -95,7 +95,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 				zonesToSelect = 3
 			}
 
-			chosenZones := sets.NewString()
+			chosenZones := sets.New[string]()
 
 			if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
 				chosenZones.Insert(strings.Split(zones, ",")...)
@@ -142,7 +142,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			for chosenZones.Len() < zonesToSelect {
 				chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
 			}
-			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(chosenZones.List(), ","))
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(sets.List(chosenZones), ","))
 		}
 
 		return nil
@@ -156,7 +156,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 // ExtractZonesFromNodeSelectorTerm extracts the zones from given term.
 func ExtractZonesFromNodeSelectorTerm(term corev1.NodeSelectorTerm) []string {
-	zones := sets.NewString()
+	zones := sets.New[string]()
 	for _, matchExpression := range term.MatchExpressions {
 		if matchExpression.Operator != corev1.NodeSelectorOpIn {
 			continue
@@ -211,13 +211,13 @@ func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.
 // The function considers only extensions of kind `Extension`.
-func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.String, error) {
+func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Set[string], error) {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
 		return nil, err
 	}
 
-	types := sets.String{}
+	types := sets.Set[string]{}
 	for _, reg := range controllerRegistrationList.Items {
 		for _, res := range reg.Spec.Resources {
 			if res.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(res.GloballyEnabled, false) {

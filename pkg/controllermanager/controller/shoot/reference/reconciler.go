@@ -243,7 +243,7 @@ func (r *Reconciler) getUnreferencedSecrets(ctx context.Context, shoot *gardenco
 		return nil, err
 	}
 
-	referencedSecrets := sets.NewString()
+	referencedSecrets := sets.New[string]()
 	for _, s := range shoots.Items {
 		// Ignore own references if shoot is in deletion and references are not needed any more by Gardener.
 		if s.Name == shoot.Name && shoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(&s, gardencorev1beta1.GardenerName) {
@@ -284,7 +284,7 @@ func (r *Reconciler) getUnreferencedConfigMaps(ctx context.Context, shoot *garde
 		return nil, err
 	}
 
-	referencedConfigMaps := sets.NewString()
+	referencedConfigMaps := sets.New[string]()
 	for _, s := range shoots.Items {
 		// Ignore own references if shoot is in deletion and references are not needed any more by Gardener.
 		if s.Name == shoot.Name && shoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(&s, gardencorev1beta1.GardenerName) {

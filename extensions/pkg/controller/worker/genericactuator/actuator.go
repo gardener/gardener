@@ -135,12 +135,12 @@ func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger 
 	return nil
 }
 
-func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string, machineClassList client.ObjectList) (sets.String, error) {
+func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string, machineClassList client.ObjectList) (sets.Set[string], error) {
 	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
-	classNames := sets.NewString()
+	classNames := sets.New[string]()
 
 	if err := meta.EachListItem(machineClassList, func(machineClass runtime.Object) error {
 		accessor, err := meta.Accessor(machineClass)

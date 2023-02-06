@@ -66,8 +66,8 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	var (
 		output = make(map[string]string)
 
-		wantedVariables = sets.NewString(variables...)
-		foundVariables  = sets.NewString()
+		wantedVariables = sets.New[string](variables...)
+		foundVariables  = sets.New[string]()
 	)
 
 	stateConfigMap, err := t.GetState(ctx)
@@ -76,7 +76,7 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	}
 
 	if len(stateConfigMap) == 0 {
-		return nil, &variablesNotFoundError{wantedVariables.List()}
+		return nil, &variablesNotFoundError{sets.List(wantedVariables)}
 	}
 
 	outputVariables, err := getOutputVariables(stateConfigMap)
@@ -92,7 +92,7 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	}
 
 	if wantedVariables.Len() != foundVariables.Len() {
-		return nil, &variablesNotFoundError{wantedVariables.Difference(foundVariables).List()}
+		return nil, &variablesNotFoundError{sets.List(wantedVariables.Difference(foundVariables))}
 	}
 
 	return output, nil

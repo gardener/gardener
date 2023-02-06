@@ -271,7 +271,7 @@ func GetAddedVersions(old, new []core.ExpirableVersion) map[string]int {
 // getVersionDiff gets versions that are in v1 but not in v2.
 // Returns versions mapped to their index in v1.
 func getVersionDiff(v1, v2 []core.ExpirableVersion) map[string]int {
-	v2Versions := sets.String{}
+	v2Versions := sets.Set[string]{}
 	for _, x := range v2 {
 		v2Versions.Insert(x.Version)
 	}
@@ -463,12 +463,12 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string
 		return false
 	}
 
-	return sets.NewString(types...).Has(providerType)
+	return sets.New[string](types...).Has(providerType)
 }
 
 // GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
-func GetAllZonesFromShoot(shoot *core.Shoot) sets.String {
-	out := sets.NewString()
+func GetAllZonesFromShoot(shoot *core.Shoot) sets.Set[string] {
+	out := sets.New[string]()
 	for _, worker := range shoot.Spec.Provider.Workers {
 		out.Insert(worker.Zones...)
 	}

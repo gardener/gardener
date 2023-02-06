@@ -44,7 +44,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var requiredManagedResourcesSeed = sets.NewString(
+var requiredManagedResourcesSeed = sets.New[string](
 	etcd.Druid,
 	networkpolicies.ManagedResourceControlName,
 	clusterautoscaler.ManagedResourceControlName,
@@ -99,7 +99,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	managedResources := requiredManagedResourcesSeed.List()
+	managedResources := sets.List(requiredManagedResourcesSeed)
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, h.seedClient, v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {

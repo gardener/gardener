@@ -113,7 +113,7 @@ func ValidateNetworkStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.Networ
 	return allErrs
 }
 
-var availableIPFamilies = sets.NewString(
+var availableIPFamilies = sets.New[string](
 	string(extensionsv1alpha1.IPFamilyIPv4),
 	string(extensionsv1alpha1.IPFamilyIPv6),
 )
@@ -122,11 +122,11 @@ var availableIPFamilies = sets.NewString(
 func ValidateIPFamilies(ipFamilies []extensionsv1alpha1.IPFamily, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	ipFamiliesSeen := sets.NewString()
+	ipFamiliesSeen := sets.New[string]()
 	for i, ipFamily := range ipFamilies {
 		// validate: only supported IP families
 		if !availableIPFamilies.Has(string(ipFamily)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), ipFamily, availableIPFamilies.List()))
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), ipFamily, sets.List(availableIPFamilies)))
 		}
 
 		// validate: no duplicate IP families
