@@ -60,9 +60,9 @@ require (
 	k8s.io/metrics v0.26.1
 	k8s.io/pod-security-admission v0.26.1
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
-	sigs.k8s.io/controller-runtime v0.14.1
+	sigs.k8s.io/controller-runtime v0.14.4
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20221212190805-d4f1e822ca11 // v0.14.1
-	sigs.k8s.io/controller-tools v0.11.1
+	sigs.k8s.io/controller-tools v0.11.3
 	sigs.k8s.io/yaml v1.3.0
 )
 
