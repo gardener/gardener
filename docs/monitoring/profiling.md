@@ -29,7 +29,7 @@ Entering interactive mode (type "help" for commands, "o" for options)
 
 ## gardener-apiserver
 
-gardener-apiserver provides the same flags as kube-apiserver for enabling profiling handlers (enabled by default):
+`gardener-apiserver` provides the same flags as `kube-apiserver` for enabling profiling handlers (enabled by default):
 
 ```
 --contention-profiling    Enable lock contention profiling, if profiling is enabled
@@ -37,7 +37,7 @@ gardener-apiserver provides the same flags as kube-apiserver for enabling profil
 ```
 
 The handlers are served on the same port as the API endpoints (configured via `--secure-port`).
-This means, you will also have to authenticate against the API server according to the configured authentication and authorization policy.
+This means that you will also have to authenticate against the API server according to the configured authentication and authorization policy.
 
 For example, in the [local-setup](../development/local_setup.md) you can use:
 
@@ -48,7 +48,7 @@ $ go tool pprof /tmp/heap
 
 ## gardener-{admission-controller,controller-manager,scheduler,resource-manager}, gardenlet
 
-gardener-controller-manager, gardener-admission-controller, gardener-scheduler, gardener-resource-manager and gardenlet also allow enabling profiling handlers via their respective component configs (currently disabled by default).
+`gardener-controller-manager`, `gardener-admission-controller`, `gardener-scheduler`, `gardener-resource-manager` and `gardenlet` also allow enabling profiling handlers via their respective component configs (currently disabled by default).
 Here is an example for the `gardener-admission-controller`'s configuration and how to enable it (it looks similar for the other components):
 
 ```yaml

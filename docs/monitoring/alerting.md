@@ -1,13 +1,13 @@
 # Alerting
 
-Gardener uses [Prometheus](https://prometheus.io/) to gather metrics from each component. A Prometheus is deployed in each shoot control plane (on the seed) which is responsible for gathering control plane and cluster metrics. Prometheus can be configured to fire alerts based on these metrics and send them to an [alertmanager](https://prometheus.io/docs/alerting/alertmanager/). The alertmanager is responsible for sending the alerts to users and operators. This document describes how to setup alerting for:
+Gardener uses [Prometheus](https://prometheus.io/) to gather metrics from each component. A Prometheus is deployed in each shoot control plane (on the seed) which is responsible for gathering control plane and cluster metrics. Prometheus can be configured to fire alerts based on these metrics and send them to an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/). The Alertmanager is responsible for sending the alerts to users and operators. This document describes how to setup alerting for:
 
 - [end-users/stakeholders/customers](#Alerting-for-Users)
 - [operators/administrators](#Alerting-for-Operators)
 
 # Alerting for Users
 
-To receive email alerts as a user set the following values in the shoot spec:
+To receive email alerts as a user, set the following values in the shoot spec:
 
 ```yaml
 spec:
@@ -16,24 +16,24 @@ spec:
       emailReceivers:
       - john.doe@example.com
 ```
-`emailReceivers` is a list of emails that will receive alerts if something is wrong with the shoot cluster. A list of alerts for users can be found [here](user_alerts.md).
+`emailReceivers` is a list of emails that will receive alerts if something is wrong with the shoot cluster. A list of alerts for users can be found in the [User Alerts](user_alerts.md) topic.
 
 # Alerting for Operators
 
 Currently, Gardener supports two options for alerting:
 
 - [Email Alerting](#Email-Alerting)
-- [Sending Alerts to an external alertmanager](#External-Alertmanager)
+- [Sending Alerts to an External Alertmanager](#External-Alertmanager)
 
-A list of operator alerts can be found [here](operator_alerts.md).
+A list of operator alerts can be found in the [Operator Alerts](operator_alerts.md) topic.
 
 ## Email Alerting
 
-Gardener provides the option to deploy an alertmanager into each seed. This alertmanager is responsible for sending out alerts to operators for each shoot cluster in the seed. Only email alerts are supported by the alertmanager managed by Gardener. This is configurable by setting the Gardener controller manager configuration values `alerting`. See [this](../usage/configuration.md) on how to configure the Gardener's SMTP secret. If the values are set, a secret with the label `gardener.cloud/role: alerting` will be created in the garden namespace of the garden cluster. This secret will be used by each alertmanager in each seed.
+Gardener provides the option to deploy an Alertmanager into each seed. This Alertmanager is responsible for sending out alerts to operators for each shoot cluster in the seed. Only email alerts are supported by the Alertmanager managed by Gardener. This is configurable by setting the Gardener controller manager configuration values `alerting`. See [Gardener Configuration and Usage](../usage/configuration.md) on how to configure the Gardener's SMTP secret. If the values are set, a secret with the label `gardener.cloud/role: alerting` will be created in the garden namespace of the garden cluster. This secret will be used by each Alertmanager in each seed.
 
 ## External Alertmanager
 
-The alertmanager supports different kinds of [alerting configurations](https://prometheus.io/docs/alerting/configuration/). The alertmanager provided by Gardener only supports email alerts. If email is not sufficient, then alerts can be sent to an external alertmanager. Prometheus will send alerts to a URL and then alerts will be handled by the external alertmanager. This external alertmanager is operated and configured by the operator (i.e. Gardener does not configure or deploy this alertmanager). To configure sending alerts to an external alertmanager, create a secret in the virtual garden cluster in the garden namespace with the label: `gardener.cloud/role: alerting`. This secret needs to contain a URL to the external alertmanager and information regarding authentication. Supported authentication types are:
+The Alertmanager supports different kinds of [alerting configurations](https://prometheus.io/docs/alerting/configuration/). The Alertmanager provided by Gardener only supports email alerts. If email is not sufficient, then alerts can be sent to an external Alertmanager. Prometheus will send alerts to a URL and then alerts will be handled by the external Alertmanager. This external Alertmanager is operated and configured by the operator (i.e. Gardener does not configure or deploy this Alertmanager). To configure sending alerts to an external Alertmanager, create a secret in the virtual garden cluster in the garden namespace with the label: `gardener.cloud/role: alerting`. This secret needs to contain a URL to the external Alertmanager and information regarding authentication. Supported authentication types are:
 
 - No Authentication (none)
 - Basic Authentication (basic)
@@ -41,7 +41,7 @@ The alertmanager supports different kinds of [alerting configurations](https://p
 
 ### Remote Alertmanager Examples
 
-Note: the `url` value cannot be prepended with `http` or `https`.
+> **Note:** The `url` value cannot be prepended with `http` or `https`.
 
 ```yaml
 # No Authentication
@@ -82,11 +82,11 @@ data:
 type: Opaque
 ```
 
-### Configuring your External Alertmanager
+### Configuring Your External Alertmanager
 
-Please refer to the [alertmanager](https://prometheus.io/docs/alerting/alertmanager/) documentation on how to configure an alertmanager.
+Please refer to the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) documentation on how to configure an Alertmanager.
 
-We recommend you use at least the following inhibition rules in your alertmanager configuration to prevent excessive alerts:
+We recommend you use at least the following inhibition rules in your Alertmanager configuration to prevent excessive alerts:
 ```yaml
 inhibit_rules:
 # Apply inhibition if the alert name is the same.
