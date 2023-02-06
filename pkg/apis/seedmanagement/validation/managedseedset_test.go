@@ -22,12 +22,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ManagedSeedSet Validation Tests", func() {
@@ -54,7 +57,8 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					Version: "1.18.14",
 				},
 				Networking: core.Networking{
-					Type: "foo",
+					Type:  "foo",
+					Nodes: pointer.String("10.181.0.0/18"),
 				},
 				Provider: core.Provider{
 					Type: "foo",
@@ -378,8 +382,10 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 
 		It("should forbid changes to immutable fields in shootTemplate", func() {
+			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.MutableShootSpecNetworkingNodes, true))
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.Region = "other-region"
+			shootCopy.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
 			newManagedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
@@ -388,6 +394,11 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shootTemplate.spec.region"),
+					"Detail": Equal("field is immutable"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shootTemplate.spec.networking.nodes"),
 					"Detail": Equal("field is immutable"),
 				})),
 			))
