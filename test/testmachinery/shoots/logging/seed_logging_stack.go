@@ -149,7 +149,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		)
 
 		ginkgo.By("Get Loki tenant IDs")
-		userID := "user" // TODO we have a single Grafana now, so the multi-tenancy feature in Loki shall be removed
+		userID := "user" // TODO(vlvasilev): we have a single Grafana now, so the multi-tenancy feature in Loki shall be removed
 		operatorID := getXScopeOrgID(grafanaIngress.GetAnnotations())
 
 		ginkgo.By("Deploy the garden Namespace")
