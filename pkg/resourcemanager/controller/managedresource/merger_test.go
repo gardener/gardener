@@ -302,7 +302,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.Int32(1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -320,7 +320,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			new.Spec.Replicas = pointer.Int32Ptr(2)
+			new.Spec.Replicas = pointer.Int32(2)
 
 			expected := old.DeepCopy()
 
@@ -329,7 +329,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			new.Spec.Replicas = pointer.Int32Ptr(2)
+			new.Spec.Replicas = pointer.Int32(2)
 
 			expected := new.DeepCopy()
 
@@ -377,7 +377,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.Int32(1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -387,7 +387,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserve-replicas is unset", func() {
-			new.Spec.Replicas = pointer.Int32Ptr(2)
+			new.Spec.Replicas = pointer.Int32(2)
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
 			Expect(s.Convert(new, desired, nil)).Should(Succeed())
@@ -399,7 +399,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserve-replicas is true", func() {
-			new.Spec.Replicas = pointer.Int32Ptr(2)
+			new.Spec.Replicas = pointer.Int32(2)
 			new.ObjectMeta.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
@@ -473,7 +473,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.Int32(1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -491,7 +491,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			new.Spec.Replicas = pointer.Int32Ptr(2)
+			new.Spec.Replicas = pointer.Int32(2)
 
 			expected := old.DeepCopy()
 
@@ -500,7 +500,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			new.Spec.Replicas = pointer.Int32Ptr(2)
+			new.Spec.Replicas = pointer.Int32(2)
 
 			expected := new.DeepCopy()
 

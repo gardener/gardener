@@ -59,7 +59,7 @@ var _ = Describe("cleaner", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"foo": "bar"},
 					},
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.Int32(1),
 					VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 						{
 							Spec: corev1.PersistentVolumeClaimSpec{

@@ -119,7 +119,7 @@ var _ = Describe("Reconcile", func() {
 					Generation: 2,
 				},
 				Spec: appsv1.StatefulSetSpec{
-					Replicas: pointer.Int32Ptr(0),
+					Replicas: pointer.Int32(0),
 				},
 				Status: appsv1.StatefulSetStatus{
 					ObservedGeneration: 2,
