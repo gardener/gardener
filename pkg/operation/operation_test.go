@@ -82,7 +82,40 @@ var _ = Describe("operation", func() {
 			"fooShoot",
 			"barProject",
 			"ingress.seed.example.com",
-			Equal("t--barProject--fooShoot.ingress.seed.example.com"),
+			Equal("t-barProject--fooShoot.ingress.seed.example.com"),
+		),
+	)
+
+	DescribeTable("#ComputeIngressHost", func(prefix, technicalID, domain string, matcher gomegatypes.GomegaMatcher) {
+		var (
+			seed = &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						IngressDomain: &domain,
+					},
+				},
+			}
+			shoot = &gardencorev1beta1.Shoot{}
+			o     = &Operation{
+				Seed:  &seedpkg.Seed{},
+				Shoot: &shootpkg.Shoot{},
+			}
+		)
+
+		shoot.Status = gardencorev1beta1.ShootStatus{
+			TechnicalID: technicalID,
+		}
+
+		o.Seed.SetInfo(seed)
+		o.Shoot.SetInfo(shoot)
+
+		Expect(o.ComputeIngressHost(prefix)).To(matcher)
+	},
+		Entry("ingress calculation with historic technical ID prefix 'shoot-'",
+			"t",
+			"shoot-barProject--fooShoot",
+			"ingress.seed.example.com",
+			Equal("t-barProject--fooShoot.ingress.seed.example.com"),
 		),
 	)
 
