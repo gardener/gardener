@@ -141,10 +141,7 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "prometheus"), newClass, kubernetesVersion); err != nil {
 			return err
 		}
-		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "grafana-operators"), newClass, kubernetesVersion); err != nil {
-			return err
-		}
-		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "grafana-users"), newClass, kubernetesVersion); err != nil {
+		if err := switchIngressClass(ctx, seedClient, kubernetesutils.Key(ns.Name, "grafana"), newClass, kubernetesVersion); err != nil {
 			return err
 		}
 	}
