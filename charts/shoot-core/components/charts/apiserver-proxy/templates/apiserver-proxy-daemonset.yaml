@@ -89,6 +89,7 @@ spec:
         - envoy
         - --concurrency
         - "2"
+        - --use-dynamic-base-id
         - -c
         - /etc/apiserver-proxy/envoy.yaml
         securityContext:
