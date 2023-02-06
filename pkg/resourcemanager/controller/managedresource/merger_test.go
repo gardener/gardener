@@ -55,7 +55,7 @@ var _ = Describe("merger", func() {
 					DeletionTimestamp:          &metav1.Time{Time: time.Now().Add(1 * time.Hour)},
 					UID:                        "8c3d49f6-e177-4938-8547-c61283a84876",
 					GenerateName:               "foo",
-					DeletionGracePeriodSeconds: pointer.Int64Ptr(30),
+					DeletionGracePeriodSeconds: pointer.Int64(30),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "v1",
 						Kind:               "Namespace",

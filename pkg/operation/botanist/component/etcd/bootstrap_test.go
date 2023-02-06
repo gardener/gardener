@@ -78,13 +78,13 @@ var _ = Describe("Etcd", func() {
 		c = mockclient.NewMockClient(ctrl)
 		etcdConfig = &config.ETCDConfig{
 			ETCDController: &config.ETCDController{
-				Workers: pointer.Int64Ptr(50),
+				Workers: pointer.Int64(50),
 			},
 			CustodianController: &config.CustodianController{
-				Workers: pointer.Int64Ptr(3),
+				Workers: pointer.Int64(3),
 			},
 			BackupCompactionController: &config.BackupCompactionController{
-				Workers:                pointer.Int64Ptr(3),
+				Workers:                pointer.Int64(3),
 				EnableBackupCompaction: pointer.Bool(true),
 				EventsThreshold:        pointer.Int64(1000000),
 				ActiveDeadlineDuration: &metav1.Duration{Duration: time.Hour * 3},
