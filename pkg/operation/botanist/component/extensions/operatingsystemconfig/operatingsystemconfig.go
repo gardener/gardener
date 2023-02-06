@@ -126,6 +126,8 @@ type OriginalValues struct {
 	PromtailEnabled bool
 	// LokiIngressHostName is the ingress host name of the shoot's Loki.
 	LokiIngressHostName string
+	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
+	NodeLocalDNSEnabled bool
 }
 
 // New creates a new instance of Interface.
@@ -518,6 +520,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		sshAccessEnabled:        o.values.SSHAccessEnabled,
 		lokiIngressHostName:     o.values.LokiIngressHostName,
 		promtailEnabled:         o.values.PromtailEnabled,
+		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
 	}, nil
 }
 
@@ -578,6 +581,7 @@ type deployer struct {
 	sshAccessEnabled        bool
 	lokiIngressHostName     string
 	promtailEnabled         bool
+	nodeLocalDNSEnabled     bool
 }
 
 // exposed for testing
@@ -617,6 +621,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			ClusterDomain:           d.clusterDomain,
 			CRIName:                 d.criName,
 			Images:                  d.images,
+			NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
 			KubeletCABundle:         d.kubeletCABundle,
 			KubeletConfigParameters: d.kubeletConfigParameters,
 			KubeletCLIFlags:         d.kubeletCLIFlags,

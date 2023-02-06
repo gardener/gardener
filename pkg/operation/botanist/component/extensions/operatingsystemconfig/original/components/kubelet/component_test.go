@@ -62,7 +62,12 @@ var _ = Describe("Component", func() {
 					Tag:        pointer.String(pauseContainerImageTag),
 				},
 			}
-			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.CRIName, ctx.Images[images.ImageNamePauseContainer], ctx.KubeletCLIFlags)
+			ctx.NodeLabels = map[string]string{
+				"test": "foo",
+				"blub": "bar",
+			}
+
+			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images[images.ImageNamePauseContainer], ctx.KubeletCLIFlags)
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())

@@ -40,7 +40,18 @@ var _ = Describe("CLIFlags", func() {
 	DescribeTable("#CLIFlags",
 		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags, matcher gomegatypes.GomegaMatcher) {
 			v := semver.MustParse(kubernetesVersion)
-			Expect(kubelet.CLIFlags(v, criName, image, cliFlags)).To(matcher)
+			nodeLabels := map[string]string{
+				"test":  "foo",
+				"test2": "bar",
+				// assert that we only pass allowed node labels to --node-labels
+				"kubernetes.io/arch":                            "amd64",  // allowed
+				"k8s.io/foo":                                    "bar",    // not allowed
+				"bar.k8s.io/foo":                                "bar",    // not allowed
+				"node-role.kubernetes.io/default":               "worker", // not allowed
+				"worker.gardener.cloud/pool":                    "worker", // allowed
+				"containerruntime.worker.gardener.cloud/gvisor": "true",   // allowed
+			}
+			Expect(kubelet.CLIFlags(v, nodeLabels, criName, image, cliFlags)).To(matcher)
 		},
 
 		Entry(
@@ -57,6 +68,11 @@ var _ = Describe("CLIFlags", func() {
 				"--image-pull-progress-deadline=2m0s",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.20.1",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
 				"--network-plugin=cni",
 				"--pod-infra-container-image=foo.io/hyperkube:version",
 				"--v=2",
@@ -73,6 +89,11 @@ var _ = Describe("CLIFlags", func() {
 				"--config=/var/lib/kubelet/config/kubelet",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.20.1",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
 				"--container-runtime=remote",
 				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
 				"--runtime-cgroups=/system.slice/containerd.service",
@@ -94,6 +115,11 @@ var _ = Describe("CLIFlags", func() {
 				"--image-pull-progress-deadline=2m0s",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.21.1",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
 				"--network-plugin=cni",
 				"--pod-infra-container-image=foo.io/hyperkube:version",
 				"--v=2",
@@ -110,6 +136,11 @@ var _ = Describe("CLIFlags", func() {
 				"--config=/var/lib/kubelet/config/kubelet",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.21.1",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
 				"--container-runtime=remote",
 				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
 				"--runtime-cgroups=/system.slice/containerd.service",
@@ -131,6 +162,11 @@ var _ = Describe("CLIFlags", func() {
 				"--image-pull-progress-deadline=2m0s",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.22.1",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
 				"--network-plugin=cni",
 				"--pod-infra-container-image=foo.io/hyperkube:version",
 				"--v=2",
@@ -147,6 +183,11 @@ var _ = Describe("CLIFlags", func() {
 				"--config=/var/lib/kubelet/config/kubelet",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
 				"--node-labels=worker.gardener.cloud/kubernetes-version=1.22.1",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
 				"--container-runtime=remote",
 				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
 				"--runtime-cgroups=/system.slice/containerd.service",

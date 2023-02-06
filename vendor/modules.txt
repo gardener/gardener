@@ -1588,6 +1588,7 @@ k8s.io/kube-proxy/config/v1alpha1
 # k8s.io/kubelet v0.26.1
 ## explicit; go 1.19
 k8s.io/kubelet/config/v1beta1
+k8s.io/kubelet/pkg/apis
 # k8s.io/metrics v0.26.1
 ## explicit; go 1.19
 k8s.io/metrics/pkg/apis/metrics

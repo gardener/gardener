@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -23,9 +24,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
@@ -66,6 +69,36 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+		}).Should(Succeed())
+
+		By("Verify worker node labels")
+		commonNodeLabels := utils.MergeStringMaps(f.Shoot.Spec.Provider.Workers[0].Labels)
+		commonNodeLabels["networking.gardener.cloud/node-local-dns-enabled"] = "false"
+		commonNodeLabels["node.kubernetes.io/role"] = "node"
+
+		Eventually(func(g Gomega) {
+			for _, workerPool := range f.Shoot.Spec.Provider.Workers {
+				expectedNodeLabels := utils.MergeStringMaps(commonNodeLabels)
+				expectedNodeLabels["worker.gardener.cloud/pool"] = workerPool.Name
+				expectedNodeLabels["worker.gardener.cloud/cri-name"] = string(workerPool.CRI.Name)
+				expectedNodeLabels["worker.gardener.cloud/system-components"] = strconv.FormatBool(workerPool.SystemComponents.Allow)
+
+				kubernetesVersion := f.Shoot.Spec.Kubernetes.Version
+				if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
+					kubernetesVersion = *workerPool.Kubernetes.Version
+				}
+				expectedNodeLabels["worker.gardener.cloud/kubernetes-version"] = kubernetesVersion
+
+				nodeList := &corev1.NodeList{}
+				g.Expect(shootClient.Client().List(ctx, nodeList, client.MatchingLabels{
+					"worker.gardener.cloud/pool": workerPool.Name,
+				})).To(Succeed())
+				g.Expect(nodeList.Items).To(HaveLen(1), "worker pool %s should have exactly one Node", workerPool.Name)
+
+				for key, value := range expectedNodeLabels {
+					g.Expect(nodeList.Items[0].Labels).To(HaveKeyWithValue(key, value), "worker pool %s should have expected labels", workerPool.Name)
+				}
+			}
 		}).Should(Succeed())
 
 		By("Update Shoot")
