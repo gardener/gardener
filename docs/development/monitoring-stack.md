@@ -26,7 +26,7 @@ Each Shoot cluster comes with its own monitoring stack. The following components
 
 In each Seed cluster there is a Prometheus in the `garden` namespace responsible for collecting metrics from the Seed kubelets and cAdvisors. These metrics are provided to each Shoot Prometheus via federation.
 
-The alerts for all Shoot clusters hosted on a Seed are routed to a central Alertmanger running in the `garden` namespace of the Seed. The purpose of this central alertmanager is to forward all important alerts to the operators of the Gardener setup.
+The alerts for all Shoot clusters hosted on a Seed are routed to a central Alertmanger running in the `garden` namespace of the Seed. The purpose of this central Alertmanager is to forward all important alerts to the operators of the Gardener setup.
 
 The Alertmanager in the Shoot namespace on the Seed is only responsible for forwarding alerts from its Shoot cluster to a cluster owner/cluster alert receiver via email. The Alertmanager is optional and the conditions for a deployment are already described in [Alerting](../monitoring/alerting.md).
 
