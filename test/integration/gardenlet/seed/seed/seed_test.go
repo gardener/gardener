@@ -66,10 +66,6 @@ var _ = Describe("Seed controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		// a lot of CPU-intensive stuff is happening in this test, so to
-		// prevent flakes we have to increase the timeout here manually
-		SetDefaultEventuallyTimeout(10 * time.Second)
-
 		By("Create test Namespace")
 		testNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
