@@ -15,6 +15,8 @@
 package garden_test
 
 import (
+	"context"
+	"path/filepath"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -25,9 +27,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -36,16 +43,23 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/operationannotation"
 )
 
 var _ = Describe("Garden controller tests", func() {
 	var (
 		loadBalancerServiceAnnotations = map[string]string{"foo": "bar"}
 		garden                         *operatorv1alpha1.Garden
+		testRunID                      string
+		testNamespace                  *corev1.Namespace
 	)
 
 	BeforeEach(func() {
@@ -58,6 +72,76 @@ var _ = Describe("Garden controller tests", func() {
 			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
 			&resourcemanager.SkipWebhookDeployment, true,
 		))
+
+		By("Create test Namespace")
+		testNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "garden-",
+			},
+		}
+		Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+		testRunID = testNamespace.Name
+
+		DeferCleanup(func() {
+			By("Delete test Namespace")
+			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		By("Setup manager")
+		mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		mgr, err := manager.New(restConfig, manager.Options{
+			Scheme:             operatorclient.RuntimeScheme,
+			MetricsBindAddress: "0",
+			NewCache: cache.BuilderWithOptions(cache.Options{
+				Mapper: mapper,
+				SelectorsByObject: map[client.Object]cache.ObjectSelector{
+					&operatorv1alpha1.Garden{}: {
+						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+					},
+				},
+			}),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		mgrClient = mgr.GetClient()
+
+		// The controller waits for the operation annotation to be removed from Etcd resources, so we need to add a
+		// reconciler for it since envtest does not run the responsible controller (etcd-druid).
+		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidv1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
+
+		By("Register controller")
+		chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
+		imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect((&gardencontroller.Reconciler{
+			Config: config.OperatorConfiguration{
+				Controllers: config.ControllerConfiguration{
+					Garden: config.GardenControllerConfig{
+						ConcurrentSyncs: pointer.Int(5),
+						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
+					},
+				},
+			},
+			ImageVector:     imageVector,
+			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
+			GardenNamespace: testNamespace.Name,
+		}).AddToManager(mgr)).To(Succeed())
+
+		By("Start manager")
+		mgrContext, mgrCancel := context.WithCancel(ctx)
+
+		go func() {
+			defer GinkgoRecover()
+			Expect(mgr.Start(mgrContext)).To(Succeed())
+		}()
+
+		DeferCleanup(func() {
+			By("Stop manager")
+			mgrCancel()
+		})
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
