@@ -510,13 +510,13 @@ var _ = Describe("Seed controller tests", func() {
 							managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 							g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 							return managedResourceList.Items
-						}).Should(BeEmpty())
+						}).WithTimeout(10 * time.Second).Should(BeEmpty())
 					} else {
 						By("Verify that gardener-resource-manager has been deleted")
 						Eventually(func(g Gomega) error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).Should(BeNotFoundError())
+						}).WithTimeout(10 * time.Second).Should(BeNotFoundError())
 
 						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 						// with other test cases.
