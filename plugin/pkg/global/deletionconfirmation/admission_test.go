@@ -27,11 +27,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	internalClientSet "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	externalClientSet "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -43,7 +42,7 @@ var _ = Describe("deleteconfirmation", func() {
 		var (
 			shoot      core.Shoot
 			project    core.Project
-			shootState v1beta1.ShootState
+			shootState core.ShootState
 
 			shootStore      cache.Store
 			projectStore    cache.Store
@@ -53,7 +52,6 @@ var _ = Describe("deleteconfirmation", func() {
 			admissionHandler *DeletionConfirmation
 
 			intCoreInformerFactory gardencoreinformers.SharedInformerFactory
-			extCoreInformerFactory gardencoreexternalinformers.SharedInformerFactory
 			intGardenClient        *internalClientSet.Clientset
 			extGardenClient        *externalClientSet.Clientset
 		)
@@ -64,8 +62,6 @@ var _ = Describe("deleteconfirmation", func() {
 
 			intCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(intCoreInformerFactory)
-			extCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(extCoreInformerFactory)
 
 			intGardenClient = &internalClientSet.Clientset{}
 			admissionHandler.SetInternalCoreClientset(intGardenClient)
@@ -74,7 +70,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			shootStore = intCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore()
 			projectStore = intCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore()
-			shootStateStore = extCoreInformerFactory.Core().V1beta1().ShootStates().Informer().GetStore()
+			shootStateStore = intCoreInformerFactory.Core().InternalVersion().ShootStates().Informer().GetStore()
 
 			shoot = core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -87,7 +83,7 @@ var _ = Describe("deleteconfirmation", func() {
 					Name: "dummy",
 				},
 			}
-			shootState = v1beta1.ShootState{
+			shootState = core.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "dummyName",
 					Namespace: "dummyNs",
@@ -333,7 +329,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 		Context("ShootState resources", func() {
 			It("should do nothing because the resource is already removed", func() {
-				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("v1beta1"), shootState.Namespace, shootState.Name, v1beta1.Resource("shootstates").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, gardencorev1beta1.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 				msg := `shoot.core.gardener.cloud "dummyName" not found`
 
 				extGardenClient.AddReactor("get", "shootstates", func(action testing.Action) (bool, runtime.Object, error) {
@@ -348,7 +344,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			Context("no annotation", func() {
 				It("should reject for nil annotation field", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("v1beta1"), shootState.Namespace, shootState.Name, v1beta1.Resource("shootstates").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, gardencorev1beta1.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					Expect(shootStateStore.Add(&shootState)).NotTo(HaveOccurred())
 
@@ -358,7 +354,7 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should reject for false annotation value", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("v1beta1"), shootState.Namespace, shootState.Name, v1beta1.Resource("shootstates").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, gardencorev1beta1.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shootState.Annotations = map[string]string{
 						gardenerutils.ConfirmationDeletion: "false",
@@ -371,7 +367,7 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should succeed for true annotation value (cache lookup)", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("v1beta1"), shootState.Namespace, shootState.Name, v1beta1.Resource("shootstates").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, gardencorev1beta1.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shootState.Annotations = map[string]string{
 						gardenerutils.ConfirmationDeletion: "true",
@@ -384,11 +380,11 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should succeed for true annotation value (live lookup)", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("v1beta1"), shootState.Namespace, shootState.Name, v1beta1.Resource("shootstates").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, gardencorev1beta1.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					Expect(shootStateStore.Add(&shootState)).NotTo(HaveOccurred())
 					extGardenClient.AddReactor("get", "shootstates", func(action testing.Action) (bool, runtime.Object, error) {
-						return true, &v1beta1.ShootState{
+						return true, &gardencorev1beta1.ShootState{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      shootState.Name,
 								Namespace: shootState.Namespace,
@@ -407,7 +403,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			Context("delete collection", func() {
 				It("should allow because all shootStates have the deletion confirmation annotation", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("v1beta1"), shootState.Namespace, "", v1beta1.Resource("shootstates").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, "", gardencorev1beta1.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shootState.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
 					shootState2 := shootState.DeepCopy()
@@ -422,7 +418,7 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should deny because at least one shoot does not have the deletion confirmation annotation", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("v1beta1"), shootState.Namespace, "", v1beta1.Resource("shootstates").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, "", gardencorev1beta1.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shootState2 := shootState.DeepCopy()
 					shootState2.Name = "dummyName2"
@@ -487,7 +483,6 @@ var _ = Describe("deleteconfirmation", func() {
 			dr.SetInternalCoreClientset(intGardenClient)
 			dr.SetExternalCoreClientset(extGardenClient)
 			dr.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			dr.SetExternalCoreInformerFactory(gardencoreexternalinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 

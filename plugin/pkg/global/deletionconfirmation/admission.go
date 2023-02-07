@@ -34,10 +34,8 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -63,7 +61,7 @@ type DeletionConfirmation struct {
 	gardenCoreClient         internalversion.Interface
 	gardenExternalCoreClient gardencoreversionedclientset.Interface
 	shootLister              gardencorelisters.ShootLister
-	shootStateLister         gardencorev1beta1listers.ShootStateLister
+	shootStateLister         gardencorelisters.ShootStateLister
 	projectLister            gardencorelisters.ProjectLister
 	readyFunc                admission.ReadyFunc
 }
@@ -71,7 +69,6 @@ type DeletionConfirmation struct {
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&DeletionConfirmation{})
 	_ = admissioninitializer.WantsInternalCoreClientset(&DeletionConfirmation{})
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&DeletionConfirmation{})
 	_ = admissioninitializer.WantsExternalCoreClientset(&DeletionConfirmation{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -98,15 +95,15 @@ func (d *DeletionConfirmation) SetInternalCoreInformerFactory(f gardencoreinform
 	projectInformer := f.Core().InternalVersion().Projects()
 	d.projectLister = projectInformer.Lister()
 
-	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
-}
-
-// SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (d *DeletionConfirmation) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
-	shootStateInformer := f.Core().V1beta1().ShootStates()
+	shootStateInformer := f.Core().InternalVersion().ShootStates()
 	d.shootStateLister = shootStateInformer.Lister()
 
-	readyFuncs = append(readyFuncs, shootStateInformer.Informer().HasSynced)
+	readyFuncs = append(
+		readyFuncs,
+		shootInformer.Informer().HasSynced,
+		projectInformer.Informer().HasSynced,
+		shootStateInformer.Informer().HasSynced,
+	)
 }
 
 // SetInternalCoreClientset gets the clientset from the Kubernetes client.
