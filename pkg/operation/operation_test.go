@@ -48,7 +48,7 @@ import (
 var _ = Describe("operation", func() {
 	ctx := context.TODO()
 
-	DescribeTable("#ComputeIngressHost", func(prefix, shootName, projectName, domain string, matcher gomegatypes.GomegaMatcher) {
+	DescribeTable("#ComputeIngressHost", func(prefix, shootName, projectName, storedTechnicalID, domain string, matcher gomegatypes.GomegaMatcher) {
 		var (
 			seed = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
@@ -69,21 +69,37 @@ var _ = Describe("operation", func() {
 		)
 
 		shoot.Status = gardencorev1beta1.ShootStatus{
-			TechnicalID: shootpkg.ComputeTechnicalID(projectName, shoot),
+			TechnicalID: storedTechnicalID,
 		}
+		shoot.Status.TechnicalID = shootpkg.ComputeTechnicalID(projectName, shoot)
 
 		o.Seed.SetInfo(seed)
 		o.Shoot.SetInfo(shoot)
 
 		Expect(o.ComputeIngressHost(prefix)).To(matcher)
 	},
-		Entry("ingress calculation",
+		Entry("ingress calculation (no stored technical ID)",
 			"t",
 			"fooShoot",
 			"barProject",
+			"",
 			"ingress.seed.example.com",
-			Equal("t--barProject--fooShoot.ingress.seed.example.com"),
+			Equal("t-barProject--fooShoot.ingress.seed.example.com"),
 		),
+		Entry("ingress calculation (historic stored technical ID with a single dash)",
+			"t",
+			"fooShoot",
+			"barProject",
+			"shoot-barProject--fooShoot",
+			"ingress.seed.example.com",
+			Equal("t-barProject--fooShoot.ingress.seed.example.com")),
+		Entry("ingress calculation (current stored technical ID with two dashes)",
+			"t",
+			"fooShoot",
+			"barProject",
+			"shoot--barProject--fooShoot",
+			"ingress.seed.example.com",
+			Equal("t-barProject--fooShoot.ingress.seed.example.com")),
 	)
 
 	Context("ShootState", func() {

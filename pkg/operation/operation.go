@@ -17,6 +17,7 @@ package operation
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -603,9 +604,12 @@ func (o *Operation) ComputeLokiHost() string {
 	return o.ComputeIngressHost(common.LokiPrefix)
 }
 
+// technicalIDPattern addresses the ambiguity that one or two dashes could follow the prefix "shoot" in the technical ID of the shoot.
+var technicalIDPattern = regexp.MustCompile(fmt.Sprintf("^%s-?", v1beta1constants.TechnicalIDPrefix))
+
 // ComputeIngressHost computes the host for a given prefix.
 func (o *Operation) ComputeIngressHost(prefix string) string {
-	shortID := strings.Replace(o.Shoot.GetInfo().Status.TechnicalID, v1beta1constants.TechnicalIDPrefix, "", 1)
+	shortID := technicalIDPattern.ReplaceAllString(o.Shoot.GetInfo().Status.TechnicalID, "")
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
 }
 
