@@ -17,7 +17,7 @@ package rotation
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -151,7 +151,7 @@ func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) (string
 		return "", err
 	}
 
-	result, err := ioutil.ReadAll(reader)
+	result, err := io.ReadAll(reader)
 	if err != nil {
 		return "", err
 	}
