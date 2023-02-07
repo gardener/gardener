@@ -182,7 +182,7 @@ export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener
 # test setup
 kind_up
 
-export all container logs and events after test execution
+# export all container logs and events after test execution
 trap "
 ( rm -rf $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases);
 ( export_logs '$CLUSTER_NAME'; export_events_for_kind '$CLUSTER_NAME'; export_events_for_shoots )
