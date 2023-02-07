@@ -53,8 +53,7 @@ var (
 	)
 
 	requiredMonitoringSeedDeployments = sets.New[string](
-		v1beta1constants.DeploymentNameGrafanaOperators,
-		v1beta1constants.DeploymentNameGrafanaUsers,
+		v1beta1constants.DeploymentNameGrafana,
 		v1beta1constants.DeploymentNameKubeStateMetrics,
 	)
 
