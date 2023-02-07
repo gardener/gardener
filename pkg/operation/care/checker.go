@@ -79,7 +79,7 @@ var versionConstraintLessThan164 *semver.Constraints
 func init() {
 	var err error
 
-	versionConstraintLessThan164, err = semver.NewConstraint("< 1.64")
+	versionConstraintLessThan164, err = semver.NewConstraint("< 1.64-0")
 	utilruntime.Must(err)
 }
 

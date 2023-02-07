@@ -813,7 +813,7 @@ var _ = Describe("health check", func() {
 		)
 	})
 
-	gardenerVersion163 := semver.MustParse("1.63.0")
+	gardenerVersion163 := semver.MustParse("1.63.0-mod1")
 	gardenerVersion164 := semver.MustParse("1.64.0")
 	DescribeTable("#CheckMonitoringControlPlane",
 		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsShootMonitoring, wantsAlertmanager bool, gardenerVersion *semver.Version, conditionMatcher types.GomegaMatcher) {
