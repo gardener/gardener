@@ -968,6 +968,7 @@ func (k *kubeAPIServer) handleVPNSettingsHAReversedVPN(
 ) {
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToShootNetworks] = v1beta1constants.LabelNetworkPolicyAllowed
+	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToSeedAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedClientContainer(i))
 	}
