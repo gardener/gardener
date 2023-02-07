@@ -66,6 +66,10 @@ var _ = Describe("Seed controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		// a lot of CPU-intensive stuff is happening in this test, so to
+		// prevent flakes we have to increase the timeout here manually
+		SetDefaultEventuallyTimeout(10 * time.Second)
+
 		By("Create test Namespace")
 		testNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -466,11 +470,7 @@ var _ = Describe("Seed controller tests", func() {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 						return managedResourceList.Items
-					}).
-						// a lot of CPU-intensive stuff is happening between GRM deployment and this assertion, so to
-						// prevent flakes we have to increase the timeout here manually
-						WithTimeout(10 * time.Second).
-						Should(ConsistOf(expectedManagedResources))
+					}).Should(ConsistOf(expectedManagedResources))
 
 					By("Verify that the fluent operator CRDs have been deployed")
 					expectedFluentOperatorCRDs := []gomegatypes.GomegaMatcher{
@@ -510,13 +510,13 @@ var _ = Describe("Seed controller tests", func() {
 							managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 							g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 							return managedResourceList.Items
-						}).WithTimeout(10 * time.Second).Should(BeEmpty())
+						}).Should(BeEmpty())
 					} else {
 						By("Verify that gardener-resource-manager has been deleted")
 						Eventually(func(g Gomega) error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).WithTimeout(10 * time.Second).Should(BeNotFoundError())
+						}).Should(BeNotFoundError())
 
 						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 						// with other test cases.
