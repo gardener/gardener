@@ -170,23 +170,6 @@ function set_seed_name() {
   esac
 }
 
-function wait_until_seed_gets_upgraded() {
-  echo "Wait until seed '$1' gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  for _ in $(seq 1 60); do
-    if [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}')" == "True" ] &&
-      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="Bootstrapped")].status}')" == "True" ] &&
-      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="SeedSystemComponentsHealthy")].status}')" == "True" ] &&
-      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="ExtensionsReady")].status}')" == "True" ] &&
-      [ "$(kubectl get seed "$1" -o jsonpath='{.status.conditions[?(@.type=="BackupBucketsReady")].status}')" == "True" ]; then
-      echo "Seed has become ready!"
-      break
-    fi
-
-    echo "Wait until seed gets ready"
-    sleep 5
-  done
-}
-
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 set_cluster_name
@@ -199,7 +182,7 @@ export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener
 # test setup
 kind_up
 
-# export all container logs and events after test execution
+export all container logs and events after test execution
 trap "
 ( rm -rf $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases);
 ( export_logs '$CLUSTER_NAME'; export_events_for_kind '$CLUSTER_NAME'; export_events_for_shoots )
@@ -214,7 +197,9 @@ make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDE
 
 echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
 upgrade_to_next_release
-wait_until_seed_gets_upgraded "$SEED_NAME"
+
+echo "Wait until seed '$SEED_NAME' gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
+./hack/usage/wait.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 echo "Running gardener post-upgrade tests"
 make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
