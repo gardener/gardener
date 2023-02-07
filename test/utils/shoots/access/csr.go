@@ -114,7 +114,7 @@ func CreateShootClientFromCSR(ctx context.Context, shootClient kubernetes.Interf
 			Message: "Auto approving test CertificateSigningRequest",
 			Status:  corev1.ConditionTrue,
 		})
-		_, err = shootClient.Kubernetes().CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, reqName, csr, metav1.UpdateOptions{})
+		err = shootClient.Client().SubResource("approval").Update(ctx, csr)
 		if err != nil {
 			return nil, err
 		}
