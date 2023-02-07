@@ -257,7 +257,7 @@ k port-forward deployment/remote-local-setup 3000
 The port forward in the remote-local-setup pod to the respective component:
 
 ```shell
-k port-forward -n shoot--local--local deployment/grafana-operators 3000
+k port-forward -n shoot--local--local deployment/grafana 3000
 ```
 
 ## Related Links

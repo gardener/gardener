@@ -205,13 +205,6 @@ var _ = Describe("Monitoring", func() {
 
 			secretList := &corev1.SecretList{}
 			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
-				"name":       "observability-ingress",
-				"managed-by": "secrets-manager",
-			})).To(Succeed())
-			Expect(secretList.Items).To(HaveLen(1))
-			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
-
-			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
 				"name":       "observability-ingress-users",
 				"managed-by": "secrets-manager",
 			})).To(Succeed())

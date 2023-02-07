@@ -13,7 +13,7 @@ default.yaml: |-
 {{- end -}}
 
 {{- define "grafana.providers.name" -}}
-grafana-{{ .Values.role }}-dashboard-providers-{{ include "grafana.providers.data" . | sha256sum | trunc 8 }}
+grafana-dashboard-providers-{{ include "grafana.providers.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
 {{- define "grafana.datasources.data" -}}
@@ -48,7 +48,7 @@ datasources.yaml: |-
 {{- end -}}
 
 {{- define "grafana.datasources.name" -}}
-grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 8 }}
+grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
 {{- define "grafana.toCompactedJson" -}}
@@ -57,7 +57,7 @@ grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . |
 
 {{- define "grafana.dashboards.data" -}}
 {{- if .Values.sni.enabled }}
-{{ range $name, $bytes := .Files.Glob "dashboards/operators/istio/**.json" }}
+{{ range $name, $bytes := .Files.Glob "dashboards/owners/istio/**.json" }}
 {{ base $name }}: |-
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{- end }}
@@ -68,19 +68,8 @@ grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . |
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{- end }}
 {{- end }}
-{{ if eq .Values.role "users" }}
 {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
-{{ if not (and (eq $name "dashboards/owners/shoot-vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{ end }}
-{{ end }}
-{{ else }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{ end }}
-{{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
+{{ if not (and (eq $name "dashboards/owners/vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
 {{ base $name }}: |-
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{ end }}
@@ -91,5 +80,5 @@ grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . |
 {{- end -}}
 
 {{- define "grafana.dashboards.name" -}}
-grafana-{{ .Values.role }}-dashboards-{{ include "grafana.dashboards.data" . | sha256sum | trunc 8 }}
+grafana-dashboards-{{ include "grafana.dashboards.data" . | sha256sum | trunc 8 }}
 {{- end }}

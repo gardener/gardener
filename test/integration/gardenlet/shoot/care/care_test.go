@@ -182,7 +182,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		By("Patch shoot status")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.Gardener.Version = "1.2.3"
+		shoot.Status.Gardener.Version = "1.64.0"
 		shoot.Status.TechnicalID = testNamespace.Name
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -316,7 +316,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 				}).Should(And(
 					ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
 					ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager kube-scheduler]")),
-					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [grafana-operators grafana-users kube-state-metrics]")),
+					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [grafana kube-state-metrics]")),
 					ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 				))
@@ -325,7 +325,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		Context("when some control plane deployments for the Shoot are present", func() {
 			JustBeforeEach(func() {
-				for _, name := range []string{"gardener-resource-manager", "kube-controller-manager", "kube-scheduler", "grafana-operators", "grafana-users"} {
+				for _, name := range []string{"gardener-resource-manager", "kube-controller-manager", "kube-scheduler", "grafana"} {
 					deployment := &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      name,
@@ -397,7 +397,7 @@ func getRole(name string) string {
 	switch name {
 	case "gardener-resource-manager", "kube-controller-manager", "kube-scheduler":
 		return v1beta1constants.GardenRoleControlPlane
-	case "grafana-operators", "grafana-users":
+	case "grafana":
 		return v1beta1constants.GardenRoleMonitoring
 	}
 	return ""

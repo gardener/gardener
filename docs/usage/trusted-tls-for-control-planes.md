@@ -5,7 +5,7 @@ Some components are exposed via `Ingress` resources which make them addressable 
 
 Examples:
 - Alertmanager
-- Grafana for operators and end-users
+- Grafana
 - Prometheus
 
 Gardener generates the backing TLS certificates which are signed by the shoot cluster's CA by default (self-signed).

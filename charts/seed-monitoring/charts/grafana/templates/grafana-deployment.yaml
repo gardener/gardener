@@ -7,12 +7,11 @@ reference.resources.gardener.cloud/configmap-{{ include "grafana.dashboards.name
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  name: grafana-{{ .Values.role }}
+  name: grafana
   namespace: {{ .Release.Namespace }}
   labels:
     gardener.cloud/role: monitoring
     component: grafana
-    role: {{ .Values.role }}
   annotations:
 {{ include "grafana.deployment.annotations" . | indent 4 }}
 spec:
@@ -21,7 +20,6 @@ spec:
   selector:
     matchLabels:
       component: grafana
-      role: {{ .Values.role }}
   template:
     metadata:
       annotations:
@@ -30,7 +28,6 @@ spec:
         gardener.cloud/role: monitoring
         component: grafana
         networking.gardener.cloud/to-dns: allowed
-        role: {{ .Values.role }}
         networking.gardener.cloud/to-loki: allowed
     spec:
       priorityClassName: gardener-system-100
@@ -39,30 +36,25 @@ spec:
         image: {{ index .Values.images "grafana" }}
         imagePullPolicy: IfNotPresent
         env:
-{{- if eq .Values.role "operators" }}
-        - name: GF_AUTH_BASIC_ENABLED
+        - name: GF_ALERTING_ENABLED
+          value: "false"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
+        - name: GF_AUTH_BASIC_ENABLED
+          value: "false"
         - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "true"
+        - name: GF_AUTH_DISABLE_SIGNOUT_MENU
+          value: "true"
+        - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
+          value: "UTC"
+        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
           value: "false"
         - name: GF_USERS_VIEWERS_CAN_EDIT
           value: "true"
-{{- else }}
-        - name: GF_AUTH_BASIC_ENABLED
-          value: "false"
-        - name: GF_AUTH_DISABLE_LOGIN_FORM
-          value: "true"
-{{- end }}
-        - name: GF_AUTH_ANONYMOUS_ENABLED
-          value: "true"
-        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
-          value: "false"
-        - name: GF_ALERTING_ENABLED
-          value: "false"
-        - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
-          value: "UTC"
         volumeMounts:
         - name: grafana-storage
-          mountPath: /var/grafana-storage
+          mountPath: /var/lib/grafana
         - name: grafana-dashboards
           mountPath: /var/lib/grafana/dashboards
         - name: grafana-datasources
@@ -80,7 +72,8 @@ spec:
             memory: 400Mi
       volumes:
       - name: grafana-storage
-        emptyDir: {}
+        emptyDir:
+          sizeLimit: 100Mi
       - name: grafana-dashboards
         configMap:
           name: {{ include "grafana.dashboards.name" . }}

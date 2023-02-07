@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,8 +54,7 @@ var (
 	)
 
 	requiredMonitoringSeedDeployments = sets.New[string](
-		v1beta1constants.DeploymentNameGrafanaOperators,
-		v1beta1constants.DeploymentNameGrafanaUsers,
+		v1beta1constants.DeploymentNameGrafana,
 		v1beta1constants.DeploymentNameKubeStateMetrics,
 	)
 
@@ -62,10 +62,26 @@ var (
 		v1beta1constants.StatefulSetNameLoki,
 	)
 
+	requiredMonitoringSeedDeploymentsBefore164 = sets.New[string](
+		v1beta1constants.DeploymentNameGrafanaOperators,
+		v1beta1constants.DeploymentNameGrafanaUsers,
+		v1beta1constants.DeploymentNameKubeStateMetrics,
+	)
+
 	requiredLoggingDeployments = sets.New[string](
 		v1beta1constants.DeploymentNameEventLogger,
 	)
 )
+
+// TODO (istvanballok): remove in a future release
+var versionConstraintLessThan164 *semver.Constraints
+
+func init() {
+	var err error
+
+	versionConstraintLessThan164, err = semver.NewConstraint("< 1.64-0")
+	utilruntime.Must(err)
+}
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 	if len(gardenRoles) == 1 {
@@ -504,9 +520,14 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return nil, err
 	}
 
-	if exitCondition := b.checkRequiredDeployments(condition, requiredMonitoringSeedDeployments, deploymentList.Items); exitCondition != nil {
+	requiredDeployments := requiredMonitoringSeedDeployments
+	if versionConstraintLessThan164.Check(b.gardenerVersion) {
+		requiredDeployments = requiredMonitoringSeedDeploymentsBefore164
+	}
+	if exitCondition := b.checkRequiredDeployments(condition, requiredDeployments, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
+
 	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
