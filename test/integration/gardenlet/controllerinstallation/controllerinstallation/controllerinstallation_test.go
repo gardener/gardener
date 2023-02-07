@@ -230,8 +230,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
           enabled: true
         scheduling:
           visible: true
-        shootDNS:
-          enabled: true
         verticalPodAutoscaler:
           enabled: true
     taints: null
