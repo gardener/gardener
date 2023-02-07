@@ -18,39 +18,20 @@ spec:
     spec:
       containers:
       - name: logger
-        image: registry.k8s.io/logs-generator:v0.1.1
+        image: registry.k8s.io/e2e-test-images/agnhost:2.40
+        command: ["/bin/sh"]
         args:
-          - /bin/sh
           - -c
           - |-
 {{ if .DeltaLogsCount }}
-            /logs-generator --logtostderr --log-lines-total=${DELTA_LOGS_GENERATOR_LINES_TOTAL} --run-duration=${DELTA_LOGS_GENERATOR_DURATION}
+            /agnhost logs-generator --log-lines-total={{ .DeltaLogsCount }} --run-duration={{ .DeltaLogsDuration }}
 {{- end }}
-            /logs-generator --logtostderr --log-lines-total=${LOGS_GENERATOR_LINES_TOTAL} --run-duration=${LOGS_GENERATOR_DURATION}
+            /agnhost logs-generator --log-lines-total={{ .LogsCount }} --run-duration={{ .LogsDuration }}
 
             # Sleep forever to prevent restarts
             while true; do
               sleep 3600;
             done
-        env:
-{{ if .DeltaLogsCount }}
-        - name: DELTA_LOGS_GENERATOR_LINES_TOTAL
-          value: "{{ .DeltaLogsCount }}"
-        - name: DELTA_LOGS_GENERATOR_DURATION
-{{ if .DeltaLogsDuration }}
-          value: "{{ .DeltaLogsDuration }}"
-{{ else }}
-          value: 0s
-{{- end }}
-{{- end }}
-        - name: LOGS_GENERATOR_LINES_TOTAL
-          value: "{{ .LogsCount }}"
-        - name: LOGS_GENERATOR_DURATION
-{{ if .LogsDuration }}
-          value: "{{ .LogsDuration }}"
-{{ else }}
-          value: 0s
-{{- end }}
         resources:
           limits:
             cpu: 8m
