@@ -8542,38 +8542,6 @@ are not considered by the scheduler.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingShootDNS">SeedSettingShootDNS
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
-</p>
-<p>
-<p>SeedSettingShootDNS controls the shoot DNS settings for the seed.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the
-seed won&rsquo;t get any DNS providers, DNS records, and no DNS extension controller is required to be installed here.
-This is useful for environments where DNS is not required.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingVerticalPodAutoscaler">SeedSettingVerticalPodAutoscaler
 </h3>
 <p>
@@ -8650,21 +8618,6 @@ SeedSettingScheduling
 <td>
 <em>(Optional)</em>
 <p>Scheduling controls settings for scheduling decisions for the seed.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>shootDNS</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingShootDNS">
-SeedSettingShootDNS
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ShootDNS controls the shoot DNS settings for the seed.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.</p>
 </td>
 </tr>
 <tr>
