@@ -13,8 +13,6 @@ if ! grep -q plugins.\"io.containerd.grpc.v1.cri\".registry.mirrors.\"localhost:
   endpoint = ["http://$cluster_name:5003"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
   endpoint = ["http://$cluster_name:5004"]
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.ipv6.docker.com"]
-  endpoint = ["http://$cluster_name:5004"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
   endpoint = ["http://$cluster_name:5005"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
