@@ -94,7 +94,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 
 	It("should do nothing, if there are no ManagedResources we are responsible for", func() {
 		mr := resourcesv1alpha1.ManagedResource{
-			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: pointer.StringPtr("other")},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: pointer.String("other")},
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
@@ -114,7 +114,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 				Namespace: secret.Namespace,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:      pointer.StringPtr(filter.ResourceClass()),
+				Class:      pointer.String(filter.ResourceClass()),
 				SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 			},
 		}

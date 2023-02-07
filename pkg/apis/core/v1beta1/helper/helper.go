@@ -976,8 +976,8 @@ func SeedBackupSecretRefEqual(oldBackup, newBackup *gardencorev1beta1.SeedBackup
 // same.
 func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) bool {
 	var (
-		oldNames = sets.NewString()
-		newNames = sets.NewString()
+		oldNames = sets.New[string]()
+		newNames = sets.New[string]()
 	)
 
 	if oldDNS != nil {
@@ -1003,8 +1003,8 @@ func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) boo
 // has been changed.
 func ShootSecretResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
 	var (
-		oldNames = sets.NewString()
-		newNames = sets.NewString()
+		oldNames = sets.New[string]()
+		newNames = sets.New[string]()
 	)
 
 	for _, resource := range oldResources {
@@ -1098,7 +1098,7 @@ func SecretBindingHasType(secretBinding *gardencorev1beta1.SecretBinding, provid
 		return false
 	}
 
-	return sets.NewString(types...).Has(providerType)
+	return sets.New[string](types...).Has(providerType)
 }
 
 // AddTypeToSecretBinding adds the given provider type to the SecretBinding.
@@ -1111,7 +1111,7 @@ func AddTypeToSecretBinding(secretBinding *gardencorev1beta1.SecretBinding, prov
 	}
 
 	types := GetSecretBindingTypes(secretBinding)
-	if !sets.NewString(types...).Has(providerType) {
+	if !sets.New[string](types...).Has(providerType) {
 		types = append(types, providerType)
 	}
 	secretBinding.Provider.Type = strings.Join(types, ",")

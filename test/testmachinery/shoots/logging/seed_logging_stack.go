@@ -424,6 +424,6 @@ func prepareClusterCRD(crd *apiextensionsv1.CustomResourceDefinition) *apiextens
 }
 
 func prepareFluentBitServiceAccount(serviceAccount *corev1.ServiceAccount) *corev1.ServiceAccount {
-	serviceAccount.AutomountServiceAccountToken = pointer.BoolPtr(true)
+	serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
 	return serviceAccount
 }

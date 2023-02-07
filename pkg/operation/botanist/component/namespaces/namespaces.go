@@ -86,7 +86,7 @@ func (n *namespaces) WaitCleanup(ctx context.Context) error {
 }
 
 func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
-	zones := sets.NewString()
+	zones := sets.New[string]()
 
 	for _, pool := range n.workerPools {
 		if v1beta1helper.SystemComponentsAllowed(&pool) {
@@ -105,7 +105,7 @@ func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 					resourcesv1alpha1.HighAvailabilityConfigConsider: "true",
 				},
 				Annotations: map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigZones: strings.Join(zones.List(), ","),
+					resourcesv1alpha1.HighAvailabilityConfigZones: strings.Join(sets.List(zones), ","),
 				},
 			},
 		}

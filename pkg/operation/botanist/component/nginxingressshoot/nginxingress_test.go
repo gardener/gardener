@@ -626,7 +626,7 @@ status: {}
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResourceSecret.Name,
 					}},
-					KeepObjects: pointer.BoolPtr(false),
+					KeepObjects: pointer.Bool(false),
 				},
 			}))
 

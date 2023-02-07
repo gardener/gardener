@@ -24,6 +24,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -736,11 +737,11 @@ var _ = Describe("helper", func() {
 
 	Describe("#GetAllZonesFromShoot", func() {
 		It("should return an empty list because there are no zones", func() {
-			Expect(GetAllZonesFromShoot(&core.Shoot{}).List()).To(BeEmpty())
+			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{}))).To(BeEmpty())
 		})
 
 		It("should return the expected list when there is only one pool", func() {
-			Expect(GetAllZonesFromShoot(&core.Shoot{
+			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{
 				Spec: core.ShootSpec{
 					Provider: core.Provider{
 						Workers: []core.Worker{
@@ -748,11 +749,11 @@ var _ = Describe("helper", func() {
 						},
 					},
 				},
-			}).List()).To(ConsistOf("a", "b"))
+			}))).To(ConsistOf("a", "b"))
 		})
 
 		It("should return the expected list when there are more than one pools", func() {
-			Expect(GetAllZonesFromShoot(&core.Shoot{
+			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{
 				Spec: core.ShootSpec{
 					Provider: core.Provider{
 						Workers: []core.Worker{
@@ -761,7 +762,7 @@ var _ = Describe("helper", func() {
 						},
 					},
 				},
-			}).List()).To(ConsistOf("a", "b", "c", "d"))
+			}))).To(ConsistOf("a", "b", "c", "d"))
 		})
 	})
 

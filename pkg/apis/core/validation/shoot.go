@@ -54,23 +54,23 @@ import (
 )
 
 var (
-	availableProxyModes = sets.NewString(
+	availableProxyModes = sets.New[string](
 		string(core.ProxyModeIPTables),
 		string(core.ProxyModeIPVS),
 	)
-	availableKubernetesDashboardAuthenticationModes = sets.NewString(
+	availableKubernetesDashboardAuthenticationModes = sets.New[string](
 		core.KubernetesDashboardAuthModeBasic,
 		core.KubernetesDashboardAuthModeToken,
 	)
-	availableNginxIngressExternalTrafficPolicies = sets.NewString(
+	availableNginxIngressExternalTrafficPolicies = sets.New[string](
 		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
-	availableShootOperations = sets.NewString(
+	availableShootOperations = sets.New[string](
 		v1beta1constants.ShootOperationMaintain,
 		v1beta1constants.ShootOperationRetry,
 	).Union(availableShootMaintenanceOperations)
-	availableShootMaintenanceOperations = sets.NewString(
+	availableShootMaintenanceOperations = sets.New[string](
 		v1beta1constants.GardenerOperationReconcile,
 		v1beta1constants.OperationRotateCAStart,
 		v1beta1constants.OperationRotateCAComplete,
@@ -78,7 +78,7 @@ var (
 		v1beta1constants.ShootOperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 	).Union(forbiddenShootOperationsWhenHibernated)
-	forbiddenShootOperationsWhenHibernated = sets.NewString(
+	forbiddenShootOperationsWhenHibernated = sets.New[string](
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsComplete,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -86,33 +86,33 @@ var (
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
-	availableShootPurposes = sets.NewString(
+	availableShootPurposes = sets.New[string](
 		string(core.ShootPurposeEvaluation),
 		string(core.ShootPurposeTesting),
 		string(core.ShootPurposeDevelopment),
 		string(core.ShootPurposeProduction),
 	)
-	availableWorkerCRINames = sets.NewString(
+	availableWorkerCRINames = sets.New[string](
 		string(core.CRINameContainerD),
 		string(core.CRINameDocker),
 	)
-	availableClusterAutoscalerExpanderModes = sets.NewString(
+	availableClusterAutoscalerExpanderModes = sets.New[string](
 		string(core.ClusterAutoscalerExpanderLeastWaste),
 		string(core.ClusterAutoscalerExpanderMostPods),
 		string(core.ClusterAutoscalerExpanderPriority),
 		string(core.ClusterAutoscalerExpanderRandom),
 	)
-	availableCoreDNSAutoscalingModes = sets.NewString(
+	availableCoreDNSAutoscalingModes = sets.New[string](
 		string(core.CoreDNSAutoscalingModeClusterProportional),
 		string(core.CoreDNSAutoscalingModeHorizontal),
 	)
-	availableSchedulingProfiles = sets.NewString(
+	availableSchedulingProfiles = sets.New[string](
 		string(core.SchedulingProfileBalanced),
 		string(core.SchedulingProfileBinPacking),
 	)
 
 	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
-	availableOIDCSigningAlgs = sets.NewString(
+	availableOIDCSigningAlgs = sets.New[string](
 		"RS256",
 		"RS384",
 		"RS512",
@@ -239,11 +239,11 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	if purpose := spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
 		if meta.Namespace == v1beta1constants.GardenNamespace || inTemplate {
-			allowedShootPurposes = sets.NewString(append(availableShootPurposes.List(), string(core.ShootPurposeInfrastructure))...)
+			allowedShootPurposes = sets.New[string](append(sets.List(availableShootPurposes), string(core.ShootPurposeInfrastructure))...)
 		}
 
 		if !allowedShootPurposes.Has(string(*purpose)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), *purpose, allowedShootPurposes.List()))
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), *purpose, sets.List(allowedShootPurposes)))
 		}
 	}
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
@@ -341,7 +341,7 @@ func ValidateShootStatusUpdate(newStatus, oldStatus core.ShootStatus) field.Erro
 // validateAdvertiseAddresses validates kube-apiserver addresses.
 func validateAdvertiseAddresses(addresses []core.ShootAdvertisedAddress, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	names := sets.NewString()
+	names := sets.New[string]()
 	for i, address := range addresses {
 		if address.Name == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
@@ -395,7 +395,7 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 	if helper.NginxIngressEnabled(addons) {
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
 			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, availableNginxIngressExternalTrafficPolicies.List()))
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableNginxIngressExternalTrafficPolicies)))
 			}
 		}
 	}
@@ -403,7 +403,7 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 	if helper.KubernetesDashboardEnabled(addons) {
 		if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
 			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, availableKubernetesDashboardAuthenticationModes.List()))
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, sets.List(availableKubernetesDashboardAuthenticationModes)))
 			}
 
 			if *authMode == core.KubernetesDashboardAuthModeBasic && !helper.ShootWantsBasicAuthentication(kubernetes.KubeAPIServer) {
@@ -661,7 +661,7 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	}
 
 	var (
-		names        = sets.NewString()
+		names        = sets.New[string]()
 		primaryFound bool
 	)
 	for i, provider := range dns.Providers {
@@ -783,7 +783,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, 
 			}
 			for i, alg := range oidc.SigningAlgs {
 				if !availableOIDCSigningAlgs.Has(alg) {
-					allErrs = append(allErrs, field.NotSupported(oidcPath.Child("signingAlgs").Index(i), alg, availableOIDCSigningAlgs.List()))
+					allErrs = append(allErrs, field.NotSupported(oidcPath.Child("signingAlgs").Index(i), alg, sets.List(availableOIDCSigningAlgs)))
 				}
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
@@ -993,7 +993,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, k8sVersion str
 	}
 
 	if expander := autoScaler.Expander; expander != nil && !availableClusterAutoscalerExpanderModes.Has(string(*expander)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, availableClusterAutoscalerExpanderModes.List()))
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, sets.List(availableClusterAutoscalerExpanderModes)))
 	}
 
 	if ignoreTaints := autoScaler.IgnoreTaints; ignoreTaints != nil {
@@ -1107,7 +1107,7 @@ func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath
 		profile := ks.Profile
 		if profile != nil {
 			if !availableSchedulingProfiles.Has(string(*profile)) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("profile"), *profile, availableSchedulingProfiles.List()))
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("profile"), *profile, sets.List(availableSchedulingProfiles)))
 			}
 		}
 
@@ -1123,7 +1123,7 @@ func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.
 		if kp.Mode == nil {
 			allErrs = append(allErrs, field.Required(fldPath.Child("mode"), "must be set when .spec.kubernetes.kubeProxy is set"))
 		} else if mode := *kp.Mode; !availableProxyModes.Has(string(mode)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyModes.List()))
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, sets.List(availableProxyModes)))
 		}
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
@@ -1512,7 +1512,7 @@ func validateClusterAutoscalerIgnoreTaints(ignoredTaints []string, fldPath *fiel
 func validateTaints(taints []corev1.Taint, fldPath *field.Path) field.ErrorList {
 	allErrors := field.ErrorList{}
 
-	uniqueTaints := map[corev1.TaintEffect]sets.String{}
+	uniqueTaints := map[corev1.TaintEffect]sets.Set[string]{}
 
 	for i, taint := range taints {
 		idxPath := fldPath.Index(i)
@@ -1535,7 +1535,7 @@ func validateTaints(taints []corev1.Taint, fldPath *field.Path) field.ErrorList 
 
 		// add taint to existingTaints for uniqueness check
 		if len(uniqueTaints[taint.Effect]) == 0 {
-			uniqueTaints[taint.Effect] = sets.String{}
+			uniqueTaints[taint.Effect] = sets.Set[string]{}
 		}
 		uniqueTaints[taint.Effect].Insert(taint.Key)
 	}
@@ -1653,7 +1653,7 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 func ValidateHibernationSchedules(schedules []core.HibernationSchedule, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
-		seen    = sets.NewString()
+		seen    = sets.New[string]()
 	)
 
 	for i, schedule := range schedules {
@@ -1664,7 +1664,7 @@ func ValidateHibernationSchedules(schedules []core.HibernationSchedule, fldPath 
 }
 
 // ValidateHibernationCronSpec validates a cron specification of a hibernation schedule.
-func ValidateHibernationCronSpec(seenSpecs sets.String, spec string, fldPath *field.Path) field.ErrorList {
+func ValidateHibernationCronSpec(seenSpecs sets.Set[string], spec string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	_, err := cron.ParseStandard(spec)
@@ -1693,7 +1693,7 @@ func ValidateHibernationScheduleLocation(location string, fldPath *field.Path) f
 
 // ValidateHibernationSchedule validates the correctness of a HibernationSchedule.
 // It checks whether the set start and end time are valid cron specs.
-func ValidateHibernationSchedule(seenSpecs sets.String, schedule *core.HibernationSchedule, fldPath *field.Path) field.ErrorList {
+func ValidateHibernationSchedule(seenSpecs sets.Set[string], schedule *core.HibernationSchedule, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if schedule.Start == nil && schedule.End == nil {
@@ -1798,7 +1798,7 @@ func ValidateCRI(CRI *core.CRI, kubernetesVersion string, fldPath *field.Path) f
 	}
 
 	if !availableWorkerCRINames.Has(string(CRI.Name)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, availableWorkerCRINames.List()))
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, sets.List(availableWorkerCRINames)))
 	}
 
 	if CRI.ContainerRuntimes != nil {
@@ -1858,7 +1858,7 @@ func validateCoreDNS(coreDNS *core.CoreDNS, fldPath *field.Path) field.ErrorList
 	}
 
 	if coreDNS.Autoscaling != nil && !availableCoreDNSAutoscalingModes.Has(string(coreDNS.Autoscaling.Mode)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("autoscaling").Child("mode"), coreDNS.Autoscaling.Mode, availableCoreDNSAutoscalingModes.List()))
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("autoscaling").Child("mode"), coreDNS.Autoscaling.Mode, sets.List(availableCoreDNSAutoscalingModes)))
 	}
 	if coreDNS.Rewriting != nil {
 		allErrs = append(allErrs, ValidateCoreDNSRewritingCommonSuffixes(coreDNS.Rewriting.CommonSuffixes, fldPath.Child("rewriting"))...)
@@ -1906,7 +1906,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 
 	if operation != "" {
 		if !availableShootOperations.Has(operation) {
-			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, availableShootOperations.List()))
+			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
 		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated"))
@@ -1915,7 +1915,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 
 	if maintenanceOperation != "" {
 		if !availableShootMaintenanceOperations.Has(maintenanceOperation) {
-			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, availableShootMaintenanceOperations.List()))
+			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
 		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated"))

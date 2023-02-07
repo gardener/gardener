@@ -183,15 +183,15 @@ func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedS
 	shootSeedSelector.MatchExpressions = append(shootSeedSelector.MatchExpressions, exposureClassSeedSelector.MatchExpressions...)
 
 	// Unite provider types.
-	shootProviderTypes := sets.NewString().Insert(shootSeedSelector.ProviderTypes...)
-	exposureclasssProviderTypes := sets.NewString().Insert(exposureClassSeedSelector.ProviderTypes...)
-	shootSeedSelector.ProviderTypes = shootProviderTypes.Union(exposureclasssProviderTypes).List()
+	shootProviderTypes := sets.New[string]().Insert(shootSeedSelector.ProviderTypes...)
+	exposureclasssProviderTypes := sets.New[string]().Insert(exposureClassSeedSelector.ProviderTypes...)
+	shootSeedSelector.ProviderTypes = sets.List(shootProviderTypes.Union(exposureclasssProviderTypes))
 
 	return shootSeedSelector, nil
 }
 
 func uniteTolerations(shootTolerations []core.Toleration, exposureClassTolerations []v1alpha1.Toleration) ([]core.Toleration, error) {
-	shootTolerationsKeys := sets.NewString()
+	shootTolerationsKeys := sets.New[string]()
 	for _, toleration := range shootTolerations {
 		shootTolerationsKeys.Insert(toleration.Key)
 	}

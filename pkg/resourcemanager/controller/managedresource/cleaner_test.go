@@ -59,13 +59,13 @@ var _ = Describe("cleaner", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"foo": "bar"},
 					},
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.Int32(1),
 					VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 						{
 							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 								VolumeName:       "foo-pvc",
-								StorageClassName: pointer.StringPtr("ultra-fast"),
+								StorageClassName: pointer.String("ultra-fast"),
 							},
 						},
 					},
@@ -129,7 +129,7 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.StringPtr("ultra-fast"),
+									StorageClassName: pointer.String("ultra-fast"),
 								},
 							},
 						}
@@ -154,7 +154,7 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.StringPtr("ultra-fast"),
+									StorageClassName: pointer.String("ultra-fast"),
 								},
 							},
 						}

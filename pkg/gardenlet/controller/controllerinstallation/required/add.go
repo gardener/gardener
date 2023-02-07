@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		r.Clock = clock.RealClock{}
 	}
 	r.Lock = &sync.RWMutex{}
-	r.KindToRequiredTypes = make(map[string]sets.String)
+	r.KindToRequiredTypes = make(map[string]sets.Set[string])
 
 	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
 	// Hence, we have to build up the controller manually.
@@ -167,7 +167,7 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(objectKind string, n
 		r.Lock.RLock()
 		oldRequiredTypes, kindCalculated := r.KindToRequiredTypes[objectKind]
 		r.Lock.RUnlock()
-		newRequiredTypes := sets.NewString()
+		newRequiredTypes := sets.New[string]()
 
 		if err := meta.EachListItem(listObj, func(o runtime.Object) error {
 			obj, err := extensions.Accessor(o)
@@ -200,7 +200,7 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(objectKind string, n
 			return nil
 		}
 
-		controllerRegistrationNamesForKind := sets.NewString()
+		controllerRegistrationNamesForKind := sets.New[string]()
 		for _, controllerRegistration := range controllerRegistrationList.Items {
 			for _, resource := range controllerRegistration.Spec.Resources {
 				if resource.Kind == objectKind {

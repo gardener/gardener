@@ -81,7 +81,7 @@ const (
 	typeGardener   = "gardener"
 )
 
-var supportedTypes = sets.NewString(typeKubernetes, typeGardener)
+var supportedTypes = sets.New[string](typeKubernetes, typeGardener)
 
 type options struct {
 	environmentType string
@@ -89,13 +89,13 @@ type options struct {
 }
 
 func (o *options) addFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.environmentType, "environment-type", typeKubernetes, fmt.Sprintf("Type of environment to start. Supported values: %s", strings.Join(supportedTypes.List(), ", ")))
+	fs.StringVar(&o.environmentType, "environment-type", typeKubernetes, fmt.Sprintf("Type of environment to start. Supported values: %s", strings.Join(sets.List(supportedTypes), ", ")))
 	fs.StringVar(&o.kubeconfig, "kubeconfig", path.Join("..", "..", "dev", "envtest-kubeconfig.yaml"), "File to place the environment's admin kubeconfig in.")
 }
 
 func (o *options) validate() error {
 	if !supportedTypes.Has(o.environmentType) {
-		return fmt.Errorf("unsupported environment type %q, supported types are: %s", o.environmentType, strings.Join(supportedTypes.List(), ", "))
+		return fmt.Errorf("unsupported environment type %q, supported types are: %s", o.environmentType, strings.Join(sets.List(supportedTypes), ", "))
 	}
 	return nil
 }

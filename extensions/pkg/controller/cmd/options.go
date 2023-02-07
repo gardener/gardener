@@ -230,11 +230,11 @@ func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 
 // Complete implements Completer.Complete.
 func (m *ManagerOptions) Complete() error {
-	if !sets.NewString(logger.AllLogLevels...).Has(m.LogLevel) {
+	if !sets.New[string](logger.AllLogLevels...).Has(m.LogLevel) {
 		return fmt.Errorf("invalid --%s: %s", LogLevelFlag, m.LogLevel)
 	}
 
-	if !sets.NewString(logger.AllLogFormats...).Has(m.LogFormat) {
+	if !sets.New[string](logger.AllLogFormats...).Has(m.LogFormat) {
 		return fmt.Errorf("invalid --%s: %s", LogFormatFlag, m.LogFormat)
 	}
 
@@ -463,7 +463,7 @@ func (d *SwitchOptions) AddFlags(fs *pflag.FlagSet) {
 
 // Complete implements Option.
 func (d *SwitchOptions) Complete() error {
-	disabled := sets.NewString()
+	disabled := sets.New[string]()
 	for _, disabledName := range d.Disabled {
 		if _, ok := d.nameToAddToManager[disabledName]; !ok {
 			return fmt.Errorf("cannot disable unknown controller %q", disabledName)

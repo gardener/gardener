@@ -133,7 +133,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		wantedKindTypeCombinationForSeed                   = computeKindTypesForSeed(seed)
 
 		wantedKindTypeCombinations = sets.
-						NewString().
+						New[string]().
 						Union(wantedKindTypeCombinationForBackupBuckets).
 						Union(wantedKindTypeCombinationForBackupEntries).
 						Union(wantedKindTypeCombinationForShoots).
@@ -166,11 +166,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func computeKindTypesForBackupBuckets(
 	backupBucketList *gardencorev1beta1.BackupBucketList,
 ) (
-	sets.String,
+	sets.Set[string],
 	map[string]gardencorev1beta1.BackupBucket,
 ) {
 	var (
-		wantedKindTypeCombinations = sets.NewString()
+		wantedKindTypeCombinations = sets.New[string]()
 		buckets                    = make(map[string]gardencorev1beta1.BackupBucket)
 	)
 
@@ -188,8 +188,8 @@ func computeKindTypesForBackupEntries(
 	log logr.Logger,
 	backupEntryList *gardencorev1beta1.BackupEntryList,
 	buckets map[string]gardencorev1beta1.BackupBucket,
-) sets.String {
-	wantedKindTypeCombinations := sets.NewString()
+) sets.Set[string] {
+	wantedKindTypeCombinations := sets.New[string]()
 
 	for _, backupEntry := range backupEntryList.Items {
 		bucket, ok := buckets[backupEntry.Spec.BucketName]
@@ -215,12 +215,12 @@ func computeKindTypesForShoots(
 	controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList,
 	internalDomain *gardenpkg.Domain,
 	defaultDomains []*gardenpkg.Domain,
-) sets.String {
+) sets.Set[string] {
 	var (
-		wantedKindTypeCombinations = sets.NewString()
+		wantedKindTypeCombinations = sets.New[string]()
 
 		wg  sync.WaitGroup
-		out = make(chan sets.String)
+		out = make(chan sets.Set[string])
 	)
 
 	for _, shoot := range shootList {
@@ -257,12 +257,12 @@ func computeKindTypesForShoots(
 // Seed configuration
 func computeKindTypesForSeed(
 	seed *gardencorev1beta1.Seed,
-) sets.String {
-	var wantedKindTypeCombinations = sets.NewString()
+) sets.Set[string] {
+	var wantedKindTypeCombinations = sets.New[string]()
 
 	// enable clean up of controller installations in case of seed deletion
 	if seed.DeletionTimestamp != nil {
-		return sets.NewString()
+		return sets.New[string]()
 	}
 
 	if seed.Spec.DNS.Provider != nil {
@@ -300,18 +300,18 @@ func computeControllerRegistrationMaps(
 // to existing ControllerRegistration objects. Additionally, all names in the alwaysPolicyControllerRegistrationNames list
 // will be returned and all currently installed and required installations.
 func computeWantedControllerRegistrationNames(
-	wantedKindTypeCombinations sets.String,
+	wantedKindTypeCombinations sets.Set[string],
 	controllerInstallationList *gardencorev1beta1.ControllerInstallationList,
 	controllerRegistrations map[string]controllerRegistration,
 	numberOfShoots int,
 	seedObjectMeta metav1.ObjectMeta,
 ) (
-	sets.String,
+	sets.Set[string],
 	error,
 ) {
 	var (
 		kindTypeToControllerRegistrationNames = make(map[string][]string)
-		wantedControllerRegistrationNames     = sets.NewString()
+		wantedControllerRegistrationNames     = sets.New[string]()
 	)
 
 	for name, controllerRegistration := range controllerRegistrations {
@@ -337,14 +337,14 @@ func computeWantedControllerRegistrationNames(
 		wantedControllerRegistrationNames.Insert(names...)
 	}
 
-	wantedControllerRegistrationNames.Insert(installedAndRequiredRegistrationNames(controllerInstallationList, seedObjectMeta.Name).List()...)
+	wantedControllerRegistrationNames.Insert(sets.List(installedAndRequiredRegistrationNames(controllerInstallationList, seedObjectMeta.Name))...)
 
 	// filter controller registrations with non-matching seed selector
 	return controllerRegistrationNamesWithMatchingSeedLabelSelector(wantedControllerRegistrationNames.UnsortedList(), controllerRegistrations, seedObjectMeta.Labels)
 }
 
-func installedAndRequiredRegistrationNames(controllerInstallationList *gardencorev1beta1.ControllerInstallationList, seedName string) sets.String {
-	requiredControllerRegistrationNames := sets.NewString()
+func installedAndRequiredRegistrationNames(controllerInstallationList *gardencorev1beta1.ControllerInstallationList, seedName string) sets.Set[string] {
+	requiredControllerRegistrationNames := sets.New[string]()
 	for _, controllerInstallation := range controllerInstallationList.Items {
 		if controllerInstallation.Spec.SeedRef.Name != seedName {
 			continue
@@ -393,7 +393,7 @@ func deployNeededInstallations(
 	log logr.Logger,
 	c client.Client,
 	seed *gardencorev1beta1.Seed,
-	wantedControllerRegistrations sets.String,
+	wantedControllerRegistrations sets.Set[string],
 	controllerRegistrations map[string]controllerRegistration,
 	registrationNameToInstallation map[string]*gardencorev1beta1.ControllerInstallation,
 ) error {
@@ -522,7 +522,7 @@ func deleteUnneededInstallations(
 	ctx context.Context,
 	log logr.Logger,
 	c client.Client,
-	wantedControllerRegistrationNames sets.String,
+	wantedControllerRegistrationNames sets.Set[string],
 	registrationNameToInstallation map[string]*gardencorev1beta1.ControllerInstallation,
 ) error {
 	for registrationName, installation := range registrationNameToInstallation {
@@ -571,8 +571,8 @@ func controllerRegistrationNamesWithMatchingSeedLabelSelector(
 	namesInQuestion []string,
 	controllerRegistrations map[string]controllerRegistration,
 	seedLabels map[string]string,
-) (sets.String, error) {
-	matchingNames := sets.NewString()
+) (sets.Set[string], error) {
+	matchingNames := sets.New[string]()
 
 	for _, name := range namesInQuestion {
 		controllerRegistration, ok := controllerRegistrations[name]

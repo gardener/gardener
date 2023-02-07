@@ -363,7 +363,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 		return err
 	}
 
-	undiscoverableGardenerAPIGroups := make(sets.String, len(apiserver.AllGardenerAPIGroupVersions))
+	undiscoverableGardenerAPIGroups := make(sets.Set[string], len(apiserver.AllGardenerAPIGroupVersions))
 	for _, gv := range apiserver.AllGardenerAPIGroupVersions {
 		undiscoverableGardenerAPIGroups.Insert(gv.String())
 	}
@@ -383,7 +383,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 			}
 		}
 		if undiscoverableGardenerAPIGroups.Len() > 0 {
-			return retry.MinorError(fmt.Errorf("the following Gardener API GroupVersions are not discoverable: %v", undiscoverableGardenerAPIGroups.List()))
+			return retry.MinorError(fmt.Errorf("the following Gardener API GroupVersions are not discoverable: %v", sets.List(undiscoverableGardenerAPIGroups)))
 		}
 		log.V(1).Info("All Gardener APIs discoverable")
 		return retry.Ok()

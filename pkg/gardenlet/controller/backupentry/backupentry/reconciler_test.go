@@ -71,8 +71,13 @@ var _ = Describe("Controller", func() {
 	BeforeEach(func() {
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
-		testScheme := kubernetes.SeedScheme
-		Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
+		testSchemeBuilder := runtime.NewSchemeBuilder(
+			kubernetes.AddSeedSchemeToScheme,
+			extensionsv1alpha1.AddToScheme,
+		)
+		testScheme := runtime.NewScheme()
+		Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
+
 		seedClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())

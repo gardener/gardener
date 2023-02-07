@@ -37,7 +37,7 @@ var _ = Describe("Predicate", func() {
 	BeforeEach(func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: pointer.StringPtr("shoot"),
+				Class: pointer.String("shoot"),
 			},
 		}
 		createEvent = event.CreateEvent{
@@ -111,7 +111,7 @@ var _ = Describe("Predicate", func() {
 
 		It("should match on update (class changed)", func() {
 			managedResourceNew := managedResource.DeepCopy()
-			managedResourceNew.Spec.Class = pointer.StringPtr("other")
+			managedResourceNew.Spec.Class = pointer.String("other")
 			updateEvent.ObjectNew = managedResourceNew
 
 			predicate := resourcemanagerpredicate.ClassChangedPredicate()

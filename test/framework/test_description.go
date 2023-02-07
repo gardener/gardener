@@ -25,13 +25,13 @@ import (
 
 // TestDescription labels tests according to the provided labels in the expected order.
 type TestDescription struct {
-	labels sets.String
+	labels sets.Set[string]
 }
 
 // NewTestDescription creates a new test description
 func NewTestDescription(baseLabel string) TestDescription {
 	return TestDescription{
-		labels: sets.NewString(baseLabel),
+		labels: sets.New[string](baseLabel),
 	}
 }
 
@@ -111,7 +111,7 @@ func (t TestDescription) FCIt(text string, body func(context.Context), timeout t
 
 // String returns the test description labels
 func (t TestDescription) String() string {
-	labelsList := t.labels.List()
+	labelsList := sets.List(t.labels)
 	testText := fmt.Sprintf("[%s]", labelsList[0])
 	for i := 1; i < len(labelsList); i++ {
 		testText = fmt.Sprintf("%s [%s]", testText, labelsList[i])

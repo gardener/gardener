@@ -16,6 +16,7 @@ package validation
 
 import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -58,7 +59,7 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)
 
 	if operation != "" && !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
-		allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, operatorv1alpha1.AvailableOperationAnnotations.List()))
+		allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(operatorv1alpha1.AvailableOperationAnnotations)))
 	}
 	allErrs = append(allErrs, validateOperationContext(operation, garden, fldPathOp)...)
 

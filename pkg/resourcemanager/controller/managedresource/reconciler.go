@@ -65,7 +65,7 @@ import (
 
 var (
 	deletePropagationForeground = metav1.DeletePropagationForeground
-	foregroundDeletionAPIGroups = sets.NewString(appsv1.GroupName, extensionsv1beta1.GroupName, batchv1.GroupName)
+	foregroundDeletionAPIGroups = sets.New[string](appsv1.GroupName, extensionsv1beta1.GroupName, batchv1.GroupName)
 )
 
 // Reconciler manages the resources reference by ManagedResources.
@@ -534,9 +534,9 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 // second one contains keys to objects that are vertically scaled by an HVPA.
 // VPAs are not checked, as they don't update the spec of Deployments/StatefulSets/... and only mutate resource
 // requirements via a MutatingWebhook. This way VPAs don't interfere with the resource manager and must not be considered.
-func computeAllScaledObjectKeys(ctx context.Context, c client.Client) (horizontallyScaledObjects, verticallyScaledObjects sets.String, err error) {
-	horizontallyScaledObjects = sets.NewString()
-	verticallyScaledObjects = sets.NewString()
+func computeAllScaledObjectKeys(ctx context.Context, c client.Client) (horizontallyScaledObjects, verticallyScaledObjects sets.Set[string], err error) {
+	horizontallyScaledObjects = sets.New[string]()
+	verticallyScaledObjects = sets.New[string]()
 
 	// get all HPAs' targets
 	hpaList := &autoscalingv1.HorizontalPodAutoscalerList{}
@@ -592,7 +592,7 @@ func targetObjectKeyFromHVPA(hvpa hvpav1alpha1.Hvpa) (string, error) {
 	return objectKey(targetGV.Group, hvpa.Spec.TargetRef.Kind, hvpa.Namespace, hvpa.Spec.TargetRef.Name), nil
 }
 
-func isScaled(obj *unstructured.Unstructured, scaledObjectKeys sets.String, equivalences Equivalences) bool {
+func isScaled(obj *unstructured.Unstructured, scaledObjectKeys sets.Set[string], equivalences Equivalences) bool {
 	key := objectKeyFromUnstructured(obj)
 
 	if scaledObjectKeys.Has(key) {
@@ -636,7 +636,7 @@ func keepObject(meta metav1.Object) bool {
 
 func isGarbageCollectableResource(obj *unstructured.Unstructured) bool {
 	return keyExistsAndValueTrue(obj.GetLabels(), references.LabelKeyGarbageCollectable) &&
-		obj.GetAPIVersion() == "v1" && sets.NewString("ConfigMap", "Secret").Has(obj.GetKind())
+		obj.GetAPIVersion() == "v1" && sets.New[string]("ConfigMap", "Secret").Has(obj.GetKind())
 }
 
 func keyExistsAndValueTrue(kv map[string]string, key string) bool {

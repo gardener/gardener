@@ -192,7 +192,7 @@ var _ = Describe("exposureclass", func() {
 			BeforeEach(func() {
 				exposureClass.Scheduling.Tolerations = []gardencorev1alpha1.Toleration{{
 					Key:   "abc",
-					Value: pointer.StringPtr("def"),
+					Value: pointer.String("def"),
 				}}
 
 				shoot.Spec.Tolerations = []core.Toleration{{
@@ -226,7 +226,7 @@ var _ = Describe("exposureclass", func() {
 					},
 					{
 						Key:   "abc",
-						Value: pointer.StringPtr("def"),
+						Value: pointer.String("def"),
 					},
 				}))
 			})

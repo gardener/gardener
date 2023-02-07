@@ -444,11 +444,11 @@ status:
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: pointer.StringPtr("seed"),
+						Class: pointer.String("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResourceSecret.Name,
 						}},
-						KeepObjects: pointer.BoolPtr(false),
+						KeepObjects: pointer.Bool(false),
 					},
 				}))
 

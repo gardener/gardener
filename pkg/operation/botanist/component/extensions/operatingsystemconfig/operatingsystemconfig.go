@@ -310,10 +310,10 @@ func (o *operatingSystemConfig) WaitMigrate(ctx context.Context) error {
 
 // Destroy deletes all the OperatingSystemConfig resources.
 func (o *operatingSystemConfig) Destroy(ctx context.Context) error {
-	return o.deleteOperatingSystemConfigResources(ctx, sets.NewString())
+	return o.deleteOperatingSystemConfigResources(ctx, sets.New[string]())
 }
 
-func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context.Context, wantedOSCNames sets.String) error {
+func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context.Context, wantedOSCNames sets.Set[string]) error {
 	return extensions.DeleteExtensionObjects(
 		ctx,
 		o.client,
@@ -327,7 +327,7 @@ func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context
 
 // WaitCleanup waits until all OperatingSystemConfig resources are cleaned up.
 func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
-	return o.waitCleanup(ctx, sets.NewString())
+	return o.waitCleanup(ctx, sets.New[string]())
 }
 
 // DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
@@ -348,7 +348,7 @@ func (o *operatingSystemConfig) WaitCleanupStaleResources(ctx context.Context) e
 	return o.waitCleanup(ctx, wantedOSCs)
 }
 
-func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames sets.String) error {
+func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames sets.Set[string]) error {
 	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		o.client,
@@ -366,8 +366,8 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 
 // getWantedOSCNames returns the names of all OSC resources, that are currently needed based
 // on the configured worker pools.
-func (o *operatingSystemConfig) getWantedOSCNames() (sets.String, error) {
-	wantedOSCNames := sets.NewString()
+func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
+	wantedOSCNames := sets.New[string]()
 
 	for _, worker := range o.values.Workers {
 		if worker.Machine.Image == nil {

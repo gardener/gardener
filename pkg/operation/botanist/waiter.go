@@ -122,7 +122,7 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 			return retry.SevereError(err)
 		}
 
-		epsNotReconciledByKCM := sets.NewString()
+		epsNotReconciledByKCM := sets.New[string]()
 		for _, service := range serviceList.Items {
 			// if service.Spec.Selector is empty or nil, kube-controller-manager will not reconcile Endpoints for this Service
 			if len(service.Spec.Selector) == 0 {

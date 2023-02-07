@@ -360,7 +360,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string) corev1.ResourceRequirements {
 	var (
-		validScalingClasses = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
+		validScalingClasses = sets.New[string]("small", "medium", "large", "xlarge", "2xlarge")
 		cpuRequest          string
 		memoryRequest       string
 	)

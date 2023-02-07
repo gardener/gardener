@@ -859,9 +859,9 @@ func ComputeExpectedGardenletConfiguration(
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
 		Logging: &gardenletv1alpha1.Logging{
-			Enabled: pointer.BoolPtr(false),
+			Enabled: pointer.Bool(false),
 			Loki: &gardenletv1alpha1.Loki{
-				Enabled: pointer.BoolPtr(false),
+				Enabled: pointer.Bool(false),
 				Garden: &gardenletv1alpha1.GardenLoki{
 					Storage: &defaultCentralLokiStorage,
 				},

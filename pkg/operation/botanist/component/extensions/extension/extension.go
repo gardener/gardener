@@ -386,8 +386,8 @@ func (e *extension) waitCleanup(ctx context.Context, predicate func(obj extensio
 
 // getWantedExtensionTypes returns the types of all extension resources, that are currently needed based
 // on the configured shoot settings and globally enabled extensions.
-func (e *extension) getWantedExtensionTypes() sets.String {
-	wantedExtensionTypes := sets.NewString()
+func (e *extension) getWantedExtensionTypes() sets.Set[string] {
+	wantedExtensionTypes := sets.New[string]()
 	for _, ext := range e.values.Extensions {
 		wantedExtensionTypes.Insert(ext.Spec.Type)
 	}

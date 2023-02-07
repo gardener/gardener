@@ -29,7 +29,7 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 
 	for _, subset := range subsets {
 		egressRule := networkingv1.NetworkPolicyEgressRule{}
-		existingIPs := sets.NewString()
+		existingIPs := sets.New[string]()
 
 		for _, address := range subset.Addresses {
 			if existingIPs.Has(address.IP) {

@@ -244,8 +244,8 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*core.C
 	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+shoot.Spec.Networking.Type, "true")
 }
 
-func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) sets.String {
-	enabledExtensions := sets.NewString()
+func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) sets.Set[string] {
+	enabledExtensions := sets.New[string]()
 
 	// add globally enabled extensions
 	for _, reg := range controllerRegistrations {

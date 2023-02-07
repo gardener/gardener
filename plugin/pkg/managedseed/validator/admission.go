@@ -361,9 +361,9 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
 	}
 	if shootZones := helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
-		spec.Provider.Zones = shootZones.List()
-	} else if len(spec.Provider.Zones) > 0 && !sets.NewString(spec.Provider.Zones...).Equal(shootZones) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "zones"), spec.Provider.Zones, fmt.Sprintf("seed provider zones must be equal to shoot zones (%v)", shootZones.List())))
+		spec.Provider.Zones = sets.List(shootZones)
+	} else if len(spec.Provider.Zones) > 0 && !sets.New[string](spec.Provider.Zones...).Equal(shootZones) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "zones"), spec.Provider.Zones, fmt.Sprintf("seed provider zones must be equal to shoot zones (%v)", sets.List(shootZones))))
 	}
 
 	// At this point the Shoot VPA should be already enabled (validated earlier). If the Seed does not specify VPA settings,

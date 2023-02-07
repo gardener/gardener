@@ -123,7 +123,7 @@ func (c *containerRuntime) deploy(ctx context.Context, cr *extensionsv1alpha1.Co
 
 // Destroy deletes the ContainerRuntime resources.
 func (c *containerRuntime) Destroy(ctx context.Context) error {
-	return c.deleteContainerRuntimeResources(ctx, sets.NewString())
+	return c.deleteContainerRuntimeResources(ctx, sets.New[string]())
 }
 
 // Wait waits until the ContainerRuntime resources are ready.
@@ -147,7 +147,7 @@ func (c *containerRuntime) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until all ContainerRuntime resources are cleaned up.
 func (c *containerRuntime) WaitCleanup(ctx context.Context) error {
-	return c.waitCleanup(ctx, sets.NewString())
+	return c.waitCleanup(ctx, sets.New[string]())
 }
 
 // Restore uses the seed client and the ShootState to create the ContainerRuntime resources and restore their state.
@@ -191,7 +191,7 @@ func (c *containerRuntime) DeleteStaleResources(ctx context.Context) error {
 	return c.deleteContainerRuntimeResources(ctx, c.getWantedContainerRuntimeNames())
 }
 
-func (c *containerRuntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeNames sets.String) error {
+func (c *containerRuntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeNames sets.Set[string]) error {
 	return extensions.DeleteExtensionObjects(
 		ctx,
 		c.client,
@@ -208,7 +208,7 @@ func (c *containerRuntime) WaitCleanupStaleResources(ctx context.Context) error 
 	return c.waitCleanup(ctx, c.getWantedContainerRuntimeNames())
 }
 
-func (c *containerRuntime) waitCleanup(ctx context.Context, wantedContainerRuntimeNames sets.String) error {
+func (c *containerRuntime) waitCleanup(ctx context.Context, wantedContainerRuntimeNames sets.Set[string]) error {
 	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		c.client,
@@ -226,8 +226,8 @@ func (c *containerRuntime) waitCleanup(ctx context.Context, wantedContainerRunti
 
 // getWantedContainerRuntimeNames returns the names of all container runtime resources, that are currently needed based
 // on the configured worker pools.
-func (c *containerRuntime) getWantedContainerRuntimeNames() sets.String {
-	wantedContainerRuntimeNames := sets.NewString()
+func (c *containerRuntime) getWantedContainerRuntimeNames() sets.Set[string] {
+	wantedContainerRuntimeNames := sets.New[string]()
 	for _, worker := range c.values.Workers {
 		if worker.CRI != nil {
 			for _, cr := range worker.CRI.ContainerRuntimes {

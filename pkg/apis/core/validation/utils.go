@@ -117,7 +117,7 @@ func getPercentValue(intOrStringValue intstr.IntOrString) (int, bool) {
 	return value, true
 }
 
-var availableFailureTolerance = sets.NewString(
+var availableFailureTolerance = sets.New[string](
 	string(core.FailureToleranceTypeNode),
 	string(core.FailureToleranceTypeZone),
 )
@@ -128,7 +128,7 @@ func ValidateFailureToleranceTypeValue(value core.FailureToleranceType, fldPath 
 
 	failureToleranceType := string(value)
 	if !availableFailureTolerance.Has(failureToleranceType) {
-		allErrs = append(allErrs, field.NotSupported(fldPath, failureToleranceType, availableFailureTolerance.List()))
+		allErrs = append(allErrs, field.NotSupported(fldPath, failureToleranceType, sets.List(availableFailureTolerance)))
 	}
 
 	return allErrs
@@ -156,7 +156,7 @@ func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
 	return false, fmt.Sprintf("last operation was %s, not Reconcile", shoot.Status.LastOperation.Type)
 }
 
-var availableIPFamilies = sets.NewString(
+var availableIPFamilies = sets.New[string](
 	string(core.IPFamilyIPv4),
 	string(core.IPFamilyIPv6),
 )
@@ -165,11 +165,11 @@ var availableIPFamilies = sets.NewString(
 func ValidateIPFamilies(ipFamilies []core.IPFamily, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	ipFamiliesSeen := sets.NewString()
+	ipFamiliesSeen := sets.New[string]()
 	for i, ipFamily := range ipFamilies {
 		// validate: only supported IP families
 		if !availableIPFamilies.Has(string(ipFamily)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), ipFamily, availableIPFamilies.List()))
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), ipFamily, sets.List(availableIPFamilies)))
 		}
 
 		// validate: no duplicate IP families

@@ -40,29 +40,29 @@ import (
 )
 
 var (
-	requiredControlPlaneDeployments = sets.NewString(
+	requiredControlPlaneDeployments = sets.New[string](
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		v1beta1constants.DeploymentNameKubeControllerManager,
 		v1beta1constants.DeploymentNameKubeScheduler,
 	)
 
-	requiredControlPlaneEtcds = sets.NewString(
+	requiredControlPlaneEtcds = sets.New[string](
 		v1beta1constants.ETCDMain,
 		v1beta1constants.ETCDEvents,
 	)
 
-	requiredMonitoringSeedDeployments = sets.NewString(
+	requiredMonitoringSeedDeployments = sets.New[string](
 		v1beta1constants.DeploymentNameGrafanaOperators,
 		v1beta1constants.DeploymentNameGrafanaUsers,
 		v1beta1constants.DeploymentNameKubeStateMetrics,
 	)
 
-	requiredLoggingStatefulSets = sets.NewString(
+	requiredLoggingStatefulSets = sets.New[string](
 		v1beta1constants.StatefulSetNameLoki,
 	)
 
-	requiredLoggingDeployments = sets.NewString(
+	requiredLoggingDeployments = sets.New[string](
 		v1beta1constants.DeploymentNameEventLogger,
 	)
 )
@@ -122,17 +122,17 @@ func NewHealthChecker(
 	}
 }
 
-func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.Condition, requiredNames, names sets.String, reason, message string) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.Condition, requiredNames, names sets.Set[string], reason, message string) *gardencorev1beta1.Condition {
 	if missingNames := requiredNames.Difference(names); missingNames.Len() != 0 {
-		c := b.FailedCondition(condition, reason, fmt.Sprintf("%s: %v", message, missingNames.List()))
+		c := b.FailedCondition(condition, reason, fmt.Sprintf("%s: %v", message, sets.List(missingNames)))
 		return &c
 	}
 
 	return nil
 }
 
-func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []appsv1.Deployment) *gardencorev1beta1.Condition {
-	actualNames := sets.NewString()
+func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Condition, requiredNames sets.Set[string], objects []appsv1.Deployment) *gardencorev1beta1.Condition {
+	actualNames := sets.New[string]()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
 	}
@@ -151,8 +151,8 @@ func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, 
 	return nil
 }
 
-func (b *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
-	actualNames := sets.NewString()
+func (b *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition, requiredNames sets.Set[string], objects []druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
+	actualNames := sets.New[string]()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
 	}
@@ -180,8 +180,8 @@ func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 	return nil
 }
 
-func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []appsv1.StatefulSet) *gardencorev1beta1.Condition {
-	actualNames := sets.NewString()
+func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Condition, requiredNames sets.Set[string], objects []appsv1.StatefulSet) *gardencorev1beta1.Condition {
+	actualNames := sets.New[string]()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
 	}
@@ -326,13 +326,13 @@ func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOpe
 }
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
-func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.String, error) {
+func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
 	shootWantsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shoot)
 	if err != nil {
 		return nil, err
 	}
 
-	requiredControlPlaneDeployments := sets.NewString(requiredControlPlaneDeployments.UnsortedList()...)
+	requiredControlPlaneDeployments := sets.New[string](requiredControlPlaneDeployments.UnsortedList()...)
 	if shootWantsClusterAutoscaler {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
 	}
@@ -348,8 +348,8 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 
 // computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
 // which should exist next to the control plane.
-func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
-	var requiredMonitoringStatefulSets = sets.NewString(v1beta1constants.StatefulSetNamePrometheus)
+func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
+	var requiredMonitoringStatefulSets = sets.New[string](v1beta1constants.StatefulSetNamePrometheus)
 	if wantsAlertmanager {
 		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
 	}

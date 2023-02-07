@@ -183,8 +183,8 @@ func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rb
 	return !oldHumanUsers.Equal(newHumanUsers)
 }
 
-func findHumanUsers(members []core.ProjectMember) sets.String {
-	result := sets.NewString()
+func findHumanUsers(members []core.ProjectMember) sets.Set[string] {
+	result := sets.New[string]()
 
 	for _, member := range members {
 		if isHumanUser(member.Subject) {
@@ -220,7 +220,7 @@ func userIsOwner(userInfo user.Info, owner *rbacv1.Subject) bool {
 		return owner.Name == userInfo.GetName()
 
 	case rbacv1.GroupKind:
-		return sets.NewString(userInfo.GetGroups()...).Has(owner.Name)
+		return sets.New[string](userInfo.GetGroups()...).Has(owner.Name)
 	}
 
 	return false

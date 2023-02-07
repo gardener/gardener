@@ -135,7 +135,7 @@ func (r *Reconciler) namespaceIsHandled(ctx context.Context, namespaceName strin
 	return false, nil
 }
 
-func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *corev1.Service) (sets.String, error) {
+func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *corev1.Service) (sets.Set[string], error) {
 	var namespaceSelectors []metav1.LabelSelector
 	if v, ok := service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors]; ok {
 		if err := json.Unmarshal([]byte(v), &namespaceSelectors); err != nil {
@@ -143,7 +143,7 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 		}
 	}
 
-	namespaceNames := sets.NewString(service.Namespace)
+	namespaceNames := sets.New[string](service.Namespace)
 
 	for _, n := range namespaceSelectors {
 		namespaceSelector := n
@@ -169,7 +169,7 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 	return namespaceNames, nil
 }
 
-func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespaceNames sets.String) ([]flow.TaskFn, []string, error) {
+func (r *Reconciler) reconcileDesiredPolicies(service *corev1.Service, namespaceNames sets.Set[string]) ([]flow.TaskFn, []string, error) {
 	var (
 		taskFns               []flow.TaskFn
 		desiredObjectMetaKeys []string

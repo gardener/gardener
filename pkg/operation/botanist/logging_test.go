@@ -93,9 +93,9 @@ var _ = Describe("Logging", func() {
 				SeedClientSet:  k8sSeedClient,
 				Config: &config.GardenletConfiguration{
 					Logging: &config.Logging{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 						Loki: &config.Loki{
-							Enabled: pointer.BoolPtr(true),
+							Enabled: pointer.Bool(true),
 						},
 						ShootNodeLogging: &config.ShootNodeLogging{
 							ShootPurposes: []gardencore.ShootPurpose{
@@ -103,7 +103,7 @@ var _ = Describe("Logging", func() {
 							},
 						},
 						ShootEventLogging: &config.ShootEventLogging{
-							Enabled: pointer.BoolPtr(true),
+							Enabled: pointer.Bool(true),
 						},
 					},
 				},

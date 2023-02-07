@@ -206,7 +206,7 @@ func (r *Reconciler) cleanupBastion(
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
-	if !sets.NewString(bastion.Finalizers...).Has(finalizerName) {
+	if !sets.New[string](bastion.Finalizers...).Has(finalizerName) {
 		return nil
 	}
 

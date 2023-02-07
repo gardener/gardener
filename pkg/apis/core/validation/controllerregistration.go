@@ -28,13 +28,13 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 )
 
-var availablePolicies = sets.NewString(
+var availablePolicies = sets.New[string](
 	string(core.ControllerDeploymentPolicyOnDemand),
 	string(core.ControllerDeploymentPolicyAlways),
 	string(core.ControllerDeploymentPolicyAlwaysExceptNoShoots),
 )
 
-var availableExtensionStrategies = sets.NewString(
+var availableExtensionStrategies = sets.New[string](
 	string(core.BeforeKubeAPIServer),
 	string(core.AfterKubeAPIServer),
 )
@@ -50,7 +50,7 @@ func ValidateControllerRegistration(controllerRegistration *core.ControllerRegis
 }
 
 // SupportedExtensionKinds contains all supported extension kinds.
-var SupportedExtensionKinds = sets.NewString(
+var SupportedExtensionKinds = sets.New[string](
 	extensionsv1alpha1.BackupBucketResource,
 	extensionsv1alpha1.BackupEntryResource,
 	extensionsv1alpha1.BastionResource,
@@ -108,13 +108,13 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.Lifecycle != nil {
 			lifecyclePath := idxPath.Child("lifecycle")
 			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Reconcile)) {
-				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, availableExtensionStrategies.List()))
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, sets.List(availableExtensionStrategies)))
 			}
 			if resource.Lifecycle.Delete != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Delete)) {
-				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("delete"), *resource.Lifecycle.Delete, availableExtensionStrategies.List()))
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("delete"), *resource.Lifecycle.Delete, sets.List(availableExtensionStrategies)))
 			}
 			if resource.Lifecycle.Migrate != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Migrate)) {
-				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, availableExtensionStrategies.List()))
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, sets.List(availableExtensionStrategies)))
 			}
 		}
 
@@ -126,7 +126,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 
 	if deployment := spec.Deployment; deployment != nil {
 		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(string(*policy)) {
-			allErrs = append(allErrs, field.NotSupported(deploymentPath.Child("policy"), *policy, availablePolicies.List()))
+			allErrs = append(allErrs, field.NotSupported(deploymentPath.Child("policy"), *policy, sets.List(availablePolicies)))
 		}
 
 		if deployment.SeedSelector != nil {

@@ -168,7 +168,7 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
 	}
 
-	versionsFound := sets.NewString()
+	versionsFound := sets.New[string]()
 	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
 	for i, version := range kubernetes.Versions {
 		idxPath := fldPath.Child("versions").Index(i)
@@ -185,12 +185,12 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 	return allErrs
 }
 
-var supportedVersionClassifications = sets.NewString(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
+var supportedVersionClassifications = sets.New[string](string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
 
 func validateExpirableVersion(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("classification"), *version.Classification, supportedVersionClassifications.List()))
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("classification"), *version.Classification, sets.List(supportedVersionClassifications)))
 	}
 
 	if version.Classification != nil && *version.Classification == core.ClassificationSupported {
@@ -291,8 +291,8 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, err.Error()))
 	}
 
-	duplicateNameVersion := sets.String{}
-	duplicateName := sets.String{}
+	duplicateNameVersion := sets.Set[string]{}
+	duplicateName := sets.Set[string]{}
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
 		if duplicateName.Has(image.Name) {
@@ -341,7 +341,7 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 
 func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	duplicateCRI := sets.String{}
+	duplicateCRI := sets.Set[string]{}
 	hasDocker := false
 
 	if len(cris) == 0 {
@@ -361,7 +361,7 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 		}
 
 		if !availableWorkerCRINames.Has(string(cri.Name)) {
-			allErrs = append(allErrs, field.NotSupported(criPath, cri, availableWorkerCRINames.List()))
+			allErrs = append(allErrs, field.NotSupported(criPath, cri, sets.List(availableWorkerCRINames)))
 		}
 		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
 	}
@@ -375,7 +375,7 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 
 func validateContainerRuntimes(containerRuntimes []core.ContainerRuntime, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	duplicateCR := sets.String{}
+	duplicateCR := sets.Set[string]{}
 
 	for i, cr := range containerRuntimes {
 		if duplicateCR.Has(cr.Type) {
@@ -447,7 +447,7 @@ func validateRegions(regions []core.Region, fldPath *field.Path) field.ErrorList
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one region"))
 	}
 
-	regionsFound := sets.NewString()
+	regionsFound := sets.New[string]()
 	for i, region := range regions {
 		idxPath := fldPath.Index(i)
 		namePath := idxPath.Child("name")
@@ -462,7 +462,7 @@ func validateRegions(regions []core.Region, fldPath *field.Path) field.ErrorList
 			regionsFound.Insert(region.Name)
 		}
 
-		zonesFound := sets.NewString()
+		zonesFound := sets.New[string]()
 		for j, zone := range region.Zones {
 			namePath := zonesPath.Index(j).Child("name")
 			if len(zone.Name) == 0 {

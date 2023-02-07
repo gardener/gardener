@@ -150,7 +150,7 @@ var _ = Describe("Builder", func() {
 			},
 				Entry("reason is not set", nil, initializedReason),
 				Entry("empty reason is set", pointer.String(""), unspecifiedReason),
-				Entry("reason is set", pointer.StringPtr(bazReason), bazReason),
+				Entry("reason is set", pointer.String(bazReason), bazReason),
 			)
 
 			DescribeTable("With old condition", func(reason *string, previousReason, expectedReason string) {
@@ -192,8 +192,8 @@ var _ = Describe("Builder", func() {
 				Entry("reason is not set", nil, bazReason, bazReason),
 				Entry("reason was previously empty", nil, "", initializedReason),
 				Entry("empty reason is set", pointer.String(""), bazReason, unspecifiedReason),
-				Entry("message is the same", pointer.StringPtr("ReasonA"), "ReasonA", "ReasonA"),
-				Entry("message changed", pointer.StringPtr("ReasonA"), bazReason, "ReasonA"),
+				Entry("message is the same", pointer.String("ReasonA"), "ReasonA", "ReasonA"),
+				Entry("message changed", pointer.String("ReasonA"), bazReason, "ReasonA"),
 			)
 		})
 
@@ -220,7 +220,7 @@ var _ = Describe("Builder", func() {
 			},
 				Entry("message is not set", nil, unitializedMessage),
 				Entry("empty message is set", pointer.String(""), unspecifiedMessage),
-				Entry("message is set", pointer.StringPtr(fubarMessage), fubarMessage),
+				Entry("message is set", pointer.String(fubarMessage), fubarMessage),
 			)
 
 			DescribeTable("With old condition", func(message *string, previousMessage, expectedMessage string) {
@@ -262,8 +262,8 @@ var _ = Describe("Builder", func() {
 				Entry("message is not set", nil, fubarMessage, fubarMessage),
 				Entry("message was previously empty", nil, "", unitializedMessage),
 				Entry("empty message is set", pointer.String(""), fubarMessage, unspecifiedMessage),
-				Entry("message is the same", pointer.StringPtr("another message"), "another message", "another message"),
-				Entry("message changed", pointer.StringPtr("another message"), fubarMessage, "another message"),
+				Entry("message is the same", pointer.String("another message"), "another message", "another message"),
+				Entry("message changed", pointer.String("another message"), fubarMessage, "another message"),
 			)
 		})
 

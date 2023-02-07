@@ -237,7 +237,7 @@ func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t timeutils.Ops) 
 		op.ApplyToDelete(deleteOp)
 	}
 
-	gracePeriod := time.Second * time.Duration(pointer.Int64PtrDerefOr(deleteOp.GracePeriodSeconds, 0))
+	gracePeriod := time.Second * time.Duration(pointer.Int64Deref(deleteOp.GracePeriodSeconds, 0))
 	return obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(t.Now())
 }
 

@@ -64,7 +64,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		return nil, fmt.Errorf("failed to initialized the command exector: %v", err)
 	}
 
-	err = executor.Stream(remotecommand.StreamOptions{
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  strings.NewReader(command),
 		Stdout: &stdout,
 		Stderr: &stderr,

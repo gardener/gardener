@@ -79,7 +79,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 		serviceAccountManagers []rbacv1.Subject
 
 		extensionRolesNameToSubjects = map[string][]rbacv1.Subject{}
-		extensionRolesNames          = sets.NewString()
+		extensionRolesNames          = sets.New[string]()
 	)
 
 	if p.project.Spec.Owner != nil {
@@ -220,7 +220,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 	}
 
 	// project extension roles resources
-	for _, roleName := range extensionRolesNames.List() {
+	for _, roleName := range sets.List(extensionRolesNames) {
 		var (
 			name            = fmt.Sprintf("%s%s:%s", namePrefixSpecificProjectExtensions, p.project.Name, roleName)
 			subjects        = extensionRolesNameToSubjects[roleName]
@@ -333,7 +333,7 @@ func (p *projectRBAC) reconcileServiceAccountManagerRoleBinding(ctx context.Cont
 }
 
 func (p *projectRBAC) Destroy(ctx context.Context) error {
-	if err := p.deleteExtensionRolesResources(ctx, sets.NewString()); err != nil {
+	if err := p.deleteExtensionRolesResources(ctx, sets.New[string]()); err != nil {
 		return err
 	}
 
@@ -357,7 +357,7 @@ func (p *projectRBAC) Destroy(ctx context.Context) error {
 }
 
 func (p *projectRBAC) DeleteStaleExtensionRolesResources(ctx context.Context) error {
-	wantedExtensionRolesNames := sets.NewString()
+	wantedExtensionRolesNames := sets.New[string]()
 
 	for _, member := range p.project.Spec.Members {
 		for _, role := range append([]string{member.Role}, member.Roles...) {
@@ -372,7 +372,7 @@ func (p *projectRBAC) DeleteStaleExtensionRolesResources(ctx context.Context) er
 	return p.deleteExtensionRolesResources(ctx, wantedExtensionRolesNames)
 }
 
-func (p *projectRBAC) deleteExtensionRolesResources(ctx context.Context, wantedExtensionRolesNames sets.String) error {
+func (p *projectRBAC) deleteExtensionRolesResources(ctx context.Context, wantedExtensionRolesNames sets.Set[string]) error {
 	for _, list := range []client.ObjectList{
 		&rbacv1.RoleBindingList{},
 		&rbacv1.ClusterRoleList{},
@@ -429,7 +429,7 @@ func removeDuplicateSubjects(subjects []rbacv1.Subject) []rbacv1.Subject {
 		key = func(subject rbacv1.Subject) string {
 			return fmt.Sprintf("%s_%s_%s_%s", subject.APIGroup, subject.Kind, subject.Namespace, subject.Name)
 		}
-		processed = sets.NewString()
+		processed = sets.New[string]()
 		out       []rbacv1.Subject
 	)
 
