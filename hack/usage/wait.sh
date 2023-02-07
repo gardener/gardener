@@ -20,8 +20,9 @@ set -euo pipefail
 
 if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <resource_type> <object_name> <condition_1> <condition_2> ... <condition_n>
-Note: Namespace will be used from the 'NAMESPACE' environment variable if set, otherwise it is optional.
-  "
+Note: Namespace/RETRY_LIMIT will be used from the 'NAMESPACE'/'RETRY_LIMIT' environment variable if set, otherwise it is optional.
+      RETRY_LIMIT: The operation will be retried a maximum of 120 times (default), with a 5 second sleep interval between each retry.
+"
   exit 1
 fi
 
@@ -32,7 +33,7 @@ CONDITIONS=("$@")
 NAMESPACE=${NAMESPACE:-}
 
 # The number of retries before failing
-RETRY_LIMIT=60
+RETRY_LIMIT=${RETRY_LIMIT:-120}
 
 # The interval between each retry in seconds
 SLEEP_INTERVAL=5
@@ -41,35 +42,38 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NO_COLOR='\033[0m'
 
-echo "Checking conditions for ${RESOURCE_TYPE}/${OBJECT_NAME}..."
+echo "⏳ Checking conditions for ${RESOURCE_TYPE}/${OBJECT_NAME}..."
 retries=0
 while [ "${retries}" -lt "${RETRY_LIMIT}" ]; do
   if [ -z "$NAMESPACE" ]; then
-    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -o jsonpath='{.status.conditions}')
+    # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
+    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -o json | yq '.status.conditions')
   else
-    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" -o jsonpath='{.status.conditions}')
+    # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
+    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" -o json | yq '.status.conditions')
   fi
-  ALL_PASSED=true
 
+  # A flag to indicate if all conditions have passed
+  ALL_PASSED=true
+  # Iterate through each condition
   for condition in "${CONDITIONS[@]}"; do
-    if ! echo "${CONDITION_STATES}" | jq -e '.[] | select(.type == "'"${condition}"'").status == "True"' > /dev/null; then
-      echo -e "${RED}Condition: ${condition} not met for ${RESOURCE_TYPE}/${OBJECT_NAME}${NO_COLOR}"
+    if ! echo "${CONDITION_STATES}" | yq -e '.[] | select(.type == "'"${condition}"'").status == "True"' &>/dev/null; then
       ALL_PASSED=false
       break
     fi
   done
 
+  # If all conditions have passed, break the loop
   if [ "${ALL_PASSED}" = true ]; then
-    echo -e "${GREEN}✅All conditions passed for ${RESOURCE_TYPE}/${OBJECT_NAME}.${NO_COLOR}"
+    echo -e "${GREEN}✅ All conditions passed for ${RESOURCE_TYPE}/${OBJECT_NAME}.${NO_COLOR}"
     break
   fi
 
-  echo "⏳ Waiting for all conditions to pass. Retry $retries/$RETRY_LIMIT"
-  ((retries++))
+  retries=$((retries + 1))
   sleep "${SLEEP_INTERVAL}"
 done
 
 if [ "${retries}" -eq "${RETRY_LIMIT}" ]; then
-  echo -e "${RED}❌ ERROR: Not all conditions were met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${RETRY_LIMIT} retries"
+  echo -e "${RED}❌ ERROR: ${condition} not met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${RETRY_LIMIT} retries"
   exit 1
 fi
