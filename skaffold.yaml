@@ -1166,7 +1166,7 @@ profiles:
     value:
     - bash
     - -ec
-    - hack/usage/wait.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind2.yaml
@@ -1187,7 +1187,7 @@ profiles:
     value:
     - bash
     - -ec
-    - hack/usage/wait.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
@@ -1229,4 +1229,5 @@ profiles:
     path: /deploy/helm/hooks/after/0/host/command
     value:
     - bash
-    - hack/usage/wait.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - -ec
+    - RETRY_LIMIT=180 hack/usage/wait.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
