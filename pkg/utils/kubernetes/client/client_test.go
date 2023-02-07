@@ -33,7 +33,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -195,8 +194,8 @@ var _ = Describe("Cleaner", func() {
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(60, 0)
-					nsInterface       = mockcorev1.NewMockNamespaceInterface(ctrl)
-					finalizer         = NewNamespaceFinalizer(nsInterface)
+					sw                = mockclient.NewMockSubResourceClient(ctrl)
+					finalizer         = NewNamespaceFinalizer()
 					cleaner           = NewCleaner(timeOps, finalizer)
 				)
 
@@ -206,7 +205,8 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, nsKey, &nsWithFinalizer),
 					timeOps.EXPECT().Now().Return(now),
-					nsInterface.EXPECT().Finalize(ctx, &ns, metav1.UpdateOptions{}).Return(&ns, nil),
+					c.EXPECT().SubResource("finalize").Return(sw),
+					sw.EXPECT().Update(ctx, &ns).Return(nil),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &nsWithFinalizer, FinalizeGracePeriodSeconds(20))).To(Succeed())
