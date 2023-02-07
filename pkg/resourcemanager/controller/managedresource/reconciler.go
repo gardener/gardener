@@ -24,6 +24,7 @@ import (
 	"io"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -515,12 +517,27 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 				return err
 			}
 
-			if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated && deleteOnInvalidUpdate(current) {
-				if deleteErr := r.TargetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
-					return fmt.Errorf("error deleting object %q after 'invalid' update error: %s", resource, deleteErr)
+			if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated {
+				if current.GetAPIVersion() == "v1" && sets.New[string]("ConfigMap", "Secret").Has(current.GetKind()) {
+					cause, ok := apierrors.StatusCause(err, metav1.CauseType(field.ErrorTypeForbidden))
+					if !ok || !strings.Contains(cause.Message, "field is immutable when `immutable` is set") {
+						continue
+					}
+
+					if deleteErr := r.TargetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
+						return fmt.Errorf("error deleting immutable object %q after 'invalid' update error: %s", resource, deleteErr)
+					}
+					// return error directly, so that the create after delete will be retried
+					return fmt.Errorf("deleted immutable object %q because of 'invalid' update error: %s", resource, err)
 				}
-				// return error directly, so that the create after delete will be retried
-				return fmt.Errorf("deleted object %q because of 'invalid' update error and 'delete-on-invalid-update' annotation on object (%s)", resource, err)
+
+				if deleteOnInvalidUpdate(current) {
+					if deleteErr := r.TargetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
+						return fmt.Errorf("error deleting object %q after 'invalid' update error: %s", resource, deleteErr)
+					}
+					// return error directly, so that the create after delete will be retried
+					return fmt.Errorf("deleted object %q because of 'invalid' update error and 'delete-on-invalid-update' annotation on object (%s)", resource, err)
+				}
 			}
 
 			return fmt.Errorf("error during apply of object %q: %s", resource, err)
