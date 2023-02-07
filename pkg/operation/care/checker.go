@@ -293,10 +293,22 @@ func (b *HealthChecker) checkManagedResourceConditions(
 ) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
+
+		// check if MangedResource `ResourcesApplied` condition is in failed state
+		for _, mrCondition := range mr.Status.Conditions {
+			if mrCondition.Type == resourcesv1alpha1.ResourcesApplied && mrCondition.Status == gardencorev1beta1.ConditionFalse && mrCondition.Reason == resourcesv1alpha1.ConditionApplyFailed {
+				c = b.FailedCondition(condition, mrCondition.Reason, mrCondition.Message)
+			}
+		}
+
 		return &c
 	}
 
-	for _, cond := range mr.Status.Conditions {
+	mrConditions := make([]gardencorev1beta1.Condition, len(mr.Status.Conditions))
+	copy(mrConditions, mr.Status.Conditions)
+	sortConditions(mrConditions)
+
+	for _, cond := range mrConditions {
 		checkConditionStatus, ok := conditionsToCheck[cond.Type]
 		if !ok {
 			continue
@@ -654,4 +666,22 @@ func PardonConditions(clock clock.Clock, conditions []gardencorev1beta1.Conditio
 		pardoningConditions = append(pardoningConditions, cond)
 	}
 	return pardoningConditions
+}
+
+// sortConditions sort Conditions in such a way that `ResourcesApplied` condition is always in start.
+func sortConditions(conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	index := -1
+	for i := range conditions {
+		if conditions[i].Type == resourcesv1alpha1.ResourcesApplied {
+			index = i
+			break
+		}
+	}
+
+	if index != -1 && len(conditions) > 1 {
+		condition := conditions[0]
+		conditions[0] = conditions[index]
+		conditions[index] = condition
+	}
+	return conditions
 }
