@@ -57,7 +57,7 @@ github.com/dsnet/compress/bzip2/internal/sais
 github.com/dsnet/compress/internal
 github.com/dsnet/compress/internal/errors
 github.com/dsnet/compress/internal/prefix
-# github.com/emicklei/go-restful/v3 v3.9.0 => github.com/emicklei/go-restful/v3 v3.9.0
+# github.com/emicklei/go-restful/v3 v3.9.0
 ## explicit; go 1.13
 github.com/emicklei/go-restful/v3
 github.com/emicklei/go-restful/v3/log
@@ -96,7 +96,7 @@ github.com/gardener/dependency-watchdog/pkg/scaler/api
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
 github.com/gardener/etcd-druid/pkg/utils
-# github.com/gardener/hvpa-controller/api v0.5.0 => github.com/gardener/hvpa-controller/api v0.5.0
+# github.com/gardener/hvpa-controller/api v0.5.0
 ## explicit; go 1.15
 github.com/gardener/hvpa-controller/api/v1alpha1
 # github.com/gardener/machine-controller-manager v0.45.0
@@ -214,7 +214,7 @@ github.com/google/cel-go/interpreter
 github.com/google/cel-go/interpreter/functions
 github.com/google/cel-go/parser
 github.com/google/cel-go/parser/gen
-# github.com/google/gnostic v0.5.7-v3refs => github.com/google/gnostic v0.5.7-v3refs
+# github.com/google/gnostic v0.5.7-v3refs
 ## explicit; go 1.12
 github.com/google/gnostic/compiler
 github.com/google/gnostic/extensions
@@ -384,7 +384,7 @@ github.com/pierrec/lz4/internal/xxh32
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/prometheus/client_golang v1.14.0 => github.com/prometheus/client_golang v1.14.0
+# github.com/prometheus/client_golang v1.14.0
 ## explicit; go 1.17
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/collectors
@@ -723,7 +723,7 @@ google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.49.0 => google.golang.org/grpc v1.49.0
+# google.golang.org/grpc v1.49.0
 ## explicit; go 1.17
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -840,7 +840,7 @@ istio.io/api/type/v1beta1
 ## explicit; go 1.17
 istio.io/client-go/pkg/apis/networking/v1alpha3
 istio.io/client-go/pkg/apis/networking/v1beta1
-# k8s.io/api v0.26.1 => k8s.io/api v0.26.1
+# k8s.io/api v0.26.1
 ## explicit; go 1.19
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1
@@ -895,7 +895,7 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apiextensions-apiserver v0.26.1 => k8s.io/apiextensions-apiserver v0.26.1
+# k8s.io/apiextensions-apiserver v0.26.1
 ## explicit; go 1.19
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install
@@ -905,7 +905,7 @@ k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1
-# k8s.io/apimachinery v0.26.1 => k8s.io/apimachinery v0.26.1
+# k8s.io/apimachinery v0.26.1
 ## explicit; go 1.19
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
@@ -965,7 +965,7 @@ k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/apiserver v0.26.1 => k8s.io/apiserver v0.26.1
+# k8s.io/apiserver v0.26.1
 ## explicit; go 1.19
 k8s.io/apiserver/pkg/admission
 k8s.io/apiserver/pkg/admission/cel
@@ -1425,11 +1425,11 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/cluster-bootstrap v0.26.1 => k8s.io/cluster-bootstrap v0.26.1
+# k8s.io/cluster-bootstrap v0.26.1
 ## explicit; go 1.19
 k8s.io/cluster-bootstrap/token/api
 k8s.io/cluster-bootstrap/token/util
-# k8s.io/code-generator v0.26.1 => k8s.io/code-generator v0.26.1
+# k8s.io/code-generator v0.26.1
 ## explicit; go 1.19
 k8s.io/code-generator
 k8s.io/code-generator/cmd/client-gen
@@ -1465,7 +1465,7 @@ k8s.io/code-generator/cmd/set-gen
 k8s.io/code-generator/pkg/namer
 k8s.io/code-generator/pkg/util
 k8s.io/code-generator/third_party/forked/golang/reflect
-# k8s.io/component-base v0.26.1 => k8s.io/component-base v0.26.1
+# k8s.io/component-base v0.26.1
 ## explicit; go 1.19
 k8s.io/component-base/cli/flag
 k8s.io/component-base/config
@@ -1504,7 +1504,7 @@ k8s.io/gengo/generator
 k8s.io/gengo/namer
 k8s.io/gengo/parser
 k8s.io/gengo/types
-# k8s.io/helm v2.16.1+incompatible => k8s.io/helm v2.16.1+incompatible
+# k8s.io/helm v2.16.1+incompatible
 ## explicit
 k8s.io/helm/internal/third_party/dep/fs
 k8s.io/helm/pkg/chartutil
@@ -1543,7 +1543,7 @@ k8s.io/klog/v2/internal/severity
 ## explicit; go 1.19
 k8s.io/kms/apis/v1beta1
 k8s.io/kms/apis/v2alpha1
-# k8s.io/kube-aggregator v0.26.1 => k8s.io/kube-aggregator v0.26.1
+# k8s.io/kube-aggregator v0.26.1
 ## explicit; go 1.19
 k8s.io/kube-aggregator/pkg/apis/apiregistration
 k8s.io/kube-aggregator/pkg/apis/apiregistration/install
@@ -1582,7 +1582,7 @@ k8s.io/kube-openapi/pkg/util
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
 k8s.io/kube-openapi/pkg/validation/spec
-# k8s.io/kube-proxy v0.26.1 => k8s.io/kube-proxy v0.26.1
+# k8s.io/kube-proxy v0.26.1
 ## explicit; go 1.19
 k8s.io/kube-proxy/config/v1alpha1
 # k8s.io/kubelet v0.26.1
@@ -1711,23 +1711,5 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/emicklei/go-restful/v3 => github.com/emicklei/go-restful/v3 v3.9.0
-# github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
-# github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
-# github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
-# github.com/google/gnostic => github.com/google/gnostic v0.5.7-v3refs
-# github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.14.0
 # golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
-# google.golang.org/grpc => google.golang.org/grpc v1.49.0
-# k8s.io/api => k8s.io/api v0.26.1
-# k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.26.1
-# k8s.io/apimachinery => k8s.io/apimachinery v0.26.1
-# k8s.io/apiserver => k8s.io/apiserver v0.26.1
-# k8s.io/autoscaler => k8s.io/autoscaler v0.0.0-20230202024129-233501343d65
 # k8s.io/client-go => k8s.io/client-go v0.26.1
-# k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.26.1
-# k8s.io/code-generator => k8s.io/code-generator v0.26.1
-# k8s.io/component-base => k8s.io/component-base v0.26.1
-# k8s.io/helm => k8s.io/helm v2.16.1+incompatible
-# k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.26.1
-# k8s.io/kube-proxy => k8s.io/kube-proxy v0.26.1
