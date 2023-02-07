@@ -48,7 +48,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // Health contains information needed to execute shoot health checks.
@@ -399,7 +398,7 @@ func (h *Health) checkSystemComponents(
 	error,
 ) {
 	mrList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := h.seedClient.Client().List(ctx, mrList, client.InNamespace(h.shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener}); err != nil {
+	if err := h.seedClient.Client().List(ctx, mrList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
 		return nil, err
 	}
 
