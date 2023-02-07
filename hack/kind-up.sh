@@ -53,8 +53,12 @@ setup_loopback_device() {
     return
   fi
   LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
+  LOOPBACK_IP_ADDRESSES=(127.0.0.10 127.0.0.11 127.0.0.12)
+  if [[ "$IPFAMILY" == "ipv6" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
+  fi
   echo "Checking loopback device ${LOOPBACK_DEVICE}..."
-  for address in 127.0.0.10 127.0.0.11 127.0.0.12 ::10 ::11 ::12; do
+  for address in ${LOOPBACK_IP_ADDRESSES[@]}; do
     if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address; then
       echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
     else
