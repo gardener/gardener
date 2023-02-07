@@ -28,7 +28,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 )
@@ -97,13 +96,11 @@ func (f *finalizer) HasFinalizers(obj client.Object) (bool, error) {
 	return len(obj.GetFinalizers()) > 0, nil
 }
 
-type namespaceFinalizer struct {
-	namespaceInterface typedcorev1.NamespaceInterface
-}
+type namespaceFinalizer struct{}
 
 // NewNamespaceFinalizer instantiates a namespace finalizer.
-func NewNamespaceFinalizer(namespaceInterface typedcorev1.NamespaceInterface) Finalizer {
-	return &namespaceFinalizer{namespaceInterface}
+func NewNamespaceFinalizer() Finalizer {
+	return &namespaceFinalizer{}
 }
 
 // Finalize removes the finalizers of given namespace resource.
@@ -118,10 +115,7 @@ func (f *namespaceFinalizer) Finalize(ctx context.Context, c client.Client, obj 
 	namespace.SetFinalizers(nil)
 	namespace.Spec.Finalizers = nil
 
-	// TODO (ialidzhikov): Use controller-runtime client once subresources are
-	// supported - https://github.com/kubernetes-sigs/controller-runtime/issues/172.
-	_, err := f.namespaceInterface.Finalize(ctx, namespace, kubernetes.DefaultUpdateOptions())
-	return err
+	return c.SubResource("finalize").Update(ctx, namespace)
 }
 
 // HasFinalizers checks whether the given namespace has finalizers
@@ -154,7 +148,7 @@ func DefaultCleaner() Cleaner {
 
 // NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
 func NewNamespaceCleaner(namespaceInterface typedcorev1.NamespaceInterface) Cleaner {
-	return NewCleaner(timeutils.DefaultOps(), NewNamespaceFinalizer(namespaceInterface))
+	return NewCleaner(timeutils.DefaultOps(), NewNamespaceFinalizer())
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.

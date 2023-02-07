@@ -20,7 +20,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,11 +47,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Client = mgr.GetClient()
 	}
 	if r.NamespaceFinalizer == nil {
-		coreClient, err := corev1client.NewForConfig(mgr.GetConfig())
-		if err != nil {
-			return err
-		}
-		r.NamespaceFinalizer = utilclient.NewNamespaceFinalizer(coreClient.Namespaces())
+		r.NamespaceFinalizer = utilclient.NewNamespaceFinalizer()
 	}
 
 	return builder.ControllerManagedBy(mgr).
