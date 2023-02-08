@@ -169,12 +169,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 EOF
 ```
 
-Now you can access it by running:
-
-```bash
-kubectl -n garden-local get secret local.kubeconfig -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/kubeconfig-shoot-local.yaml
-kubectl --kubeconfig=/tmp/kubeconfig-shoot-local.yaml get nodes
-```
+To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
 
 ## (Optional): Setting Up a Second Seed Cluster
 

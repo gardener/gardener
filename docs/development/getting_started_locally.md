@@ -177,12 +177,7 @@ local   local          local      local    1.21.0        Awake         Create Pr
 make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/local/kubeconfig"
 ```
 
-When the shoot got successfully created you can access it as follows:
-
-```bash
-kubectl -n garden-local get secret local.kubeconfig -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/kubeconfig-shoot-local.yaml
-kubectl --kubeconfig=/tmp/kubeconfig-shoot-local.yaml get nodes
-```
+When the `Shoot` got created successfully, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource) to access the cluster.
 
 ## (Optional): Setting Up a Second Seed Cluster
 
