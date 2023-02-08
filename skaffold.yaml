@@ -1118,7 +1118,7 @@ deploy:
           command:
           - bash
           - -ec
-          - hack/usage/wait.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+          - hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
     releases:
     - name: gardener-gardenlet
       chartPath: charts/gardener/gardenlet
@@ -1154,7 +1154,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind2.yaml
@@ -1175,7 +1175,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
@@ -1206,7 +1206,7 @@ profiles:
     value:
     - bash
     - -ec
-    - hack/usage/wait.sh seed local-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - hack/usage/wait-for.sh seed local-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 - name: ha-multi-zone
   patches:
@@ -1218,4 +1218,4 @@ profiles:
     value:
     - bash
     - -ec
-    - RETRY_LIMIT=180 hack/usage/wait.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - RETRY_LIMIT=180 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
