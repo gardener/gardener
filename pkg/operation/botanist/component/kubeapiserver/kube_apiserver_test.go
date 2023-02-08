@@ -28,6 +28,7 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -1700,6 +1701,45 @@ rules:
 					"networking.gardener.cloud/to-public-networks":  "allowed",
 					"networking.gardener.cloud/from-prometheus":     "allowed",
 				}))
+			})
+
+			Context("expected pod template labels", func() {
+				var defaultLabels map[string]string
+
+				BeforeEach(func() {
+					defaultLabels = map[string]string{
+						"gardener.cloud/role":              "controlplane",
+						"app":                              "kubernetes",
+						"role":                             "apiserver",
+						"networking.gardener.cloud/to-dns": "allowed",
+						"networking.gardener.cloud/to-private-networks": "allowed",
+						"networking.gardener.cloud/to-public-networks":  "allowed",
+						"networking.gardener.cloud/from-prometheus":     "allowed",
+					}
+				})
+
+				It("should have the expected pod template labels with vpn enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Version: version,
+						VPN:     VPNConfig{ReversedVPNEnabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(defaultLabels))
+				})
+
+				It("should have the expected pod template labels with ha vpn enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Version: version,
+						VPN:     VPNConfig{ReversedVPNEnabled: true, HighAvailabilityEnabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
+						"networking.gardener.cloud/to-shoot-networks": "allowed",
+						"networking.gardener.cloud/to-seed-apiserver": "allowed",
+					})))
+				})
 			})
 
 			It("should have the expected pod settings", func() {
