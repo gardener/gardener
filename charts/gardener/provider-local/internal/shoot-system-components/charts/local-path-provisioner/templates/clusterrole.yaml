@@ -36,3 +36,12 @@ rules:
     - get
     - list
     - watch
+- apiGroups:
+  - policy
+  - extensions
+  resourceNames:
+  - gardener.kube-system.local-path-provisioner
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
