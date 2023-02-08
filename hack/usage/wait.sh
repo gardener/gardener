@@ -20,7 +20,7 @@ set -euo pipefail
 
 if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <resource_type> <object_name> <condition_1> <condition_2> ... <condition_n>
-Note: Namespace/RETRY_LIMIT will be used from the 'NAMESPACE'/'RETRY_LIMIT' environment variable if set, otherwise it is optional.
+Note: Namespace/RETRY_LIMIT will be used from the 'NAMESPACE'/'RETRY_LIMIT' environment variables if set, otherwise it is optional.
       RETRY_LIMIT: The operation will be retried a maximum of 120 times (default), with a 5 second sleep interval between each retry.
 "
   exit 1
