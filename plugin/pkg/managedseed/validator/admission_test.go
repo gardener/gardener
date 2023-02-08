@@ -16,7 +16,6 @@ package validator_test
 
 import (
 	"context"
-	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -472,10 +471,6 @@ var _ = Describe("ManagedSeed", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.gardenlet.config.seedConfig.spec.settings.verticalPodAutoscaler.enabled"),
 					})),
 				))
@@ -516,62 +511,6 @@ var _ = Describe("ManagedSeed", func() {
 						"Field": Equal("spec.gardenlet.config.seedConfig.spec.ingress.domain"),
 					})),
 				))
-			})
-		})
-
-		Context("ManagedSeed Update", func() {
-			var (
-				ctx                            = context.Background()
-				oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed
-			)
-
-			BeforeEach(func() {
-				oldManagedSeed = managedSeed.DeepCopy()
-				newManagedSeed = managedSeed.DeepCopy()
-
-				gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "GardenletConfiguration",
-					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
-						SeedTemplate: gardencorev1beta1.SeedTemplate{
-							Spec: gardencorev1beta1.SeedSpec{
-								Provider: gardencorev1beta1.SeedProvider{
-									Zones: []string{zone1, zone2},
-								},
-							},
-						},
-					},
-				}
-				oldManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{Config: gardenletConfig}
-
-				shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
-				newGardenletConfig := gardenletConfig.DeepCopy()
-				newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
-				newManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{Config: newGardenletConfig}
-			})
-
-			It("should allow zone removal there are no shoots", func() {
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
-				Expect(admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(oldManagedSeed, newManagedSeed), nil)).To(Succeed())
-			})
-
-			It("should forbid zone removal there are shoots", func() {
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
-
-				shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-
-				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(oldManagedSeed, newManagedSeed), nil)
-				statusError, ok := err.(*apierrors.StatusError)
-				Expect(ok).To(BeTrue())
-				Expect(statusError.Status().Code).To(Equal(int32(http.StatusForbidden)))
-				Expect(statusError.Status().Status).To(Equal(metav1.StatusFailure))
 			})
 		})
 	})
