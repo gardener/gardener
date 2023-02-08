@@ -322,6 +322,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{
 								"NET_ADMIN",
+								"NET_RAW",
 							},
 						},
 					},
