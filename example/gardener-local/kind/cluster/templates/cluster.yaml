@@ -1,6 +1,9 @@
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
 featureGates:
+# Introudced due to https://github.com/gardener/gardener/issues/7297#issuecomment-1377515385.
+# Feature gate 'ExpandedDNSConfig' will be true by default from k8s version 1.26.
+# Remove this once kind cluster upgraded to k8s version 1.26
   ExpandedDNSConfig: true
 nodes:
 - role: control-plane
