@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
@@ -112,6 +113,157 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list: [SecurityContextDeny]"),
 			})))),
+			Entry("adding v1 PodSecurityConfiguration for v1.25 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1"),
+				},
+				"1.25.4",
+				BeEmpty(),
+			),
+			Entry("adding v1 PodSecurityConfiguration for > v1.25 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1"),
+				},
+				"1.26.0",
+				BeEmpty(),
+			),
+			Entry("adding v1beta1 PodSecurityConfiguration for v1.24 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1beta1"),
+				},
+				"1.24.9",
+				BeEmpty(),
+			),
+			Entry("adding v1beta1 PodSecurityConfiguration for v1.23 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1beta1"),
+				},
+				"1.23.12",
+				BeEmpty(),
+			),
+			Entry("adding v1alpha1 PodSecurityConfiguration for v1.22 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1alpha1"),
+				},
+				"1.22.13",
+				BeEmpty(),
+			),
+			Entry("adding v1beta1 PodSecurityConfiguration for v1.25 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1beta1"),
+				},
+				"1.25.4",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+					"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", "1.25.4", "pod-security.admission.config.k8s.io/v1", "pod-security.admission.config.k8s.io/v1beta1"),
+				}))),
+			),
+			Entry("adding v1 PodSecurityConfiguration for v1.24 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1"),
+				},
+				"1.24.9",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+					"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", "1.24.9", "pod-security.admission.config.k8s.io/v1beta1", "pod-security.admission.config.k8s.io/v1"),
+				}))),
+			),
+			Entry("adding v1 PodSecurityConfiguration for v1.23 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1"),
+				},
+				"1.23.12",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+					"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", "1.23.12", "pod-security.admission.config.k8s.io/v1beta1", "pod-security.admission.config.k8s.io/v1"),
+				}))),
+			),
+			Entry("adding v1beta1 PodSecurityConfiguration for v1.22 cluster",
+				[]core.AdmissionPlugin{
+					getPodSecurityPluginForConfigVersion("v1beta1"),
+				},
+				"1.22.13",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+					"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", "1.22.13", "pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1beta1"),
+				}))),
+			),
+			Entry("adding invalid PodSecurityConfiguration",
+				[]core.AdmissionPlugin{
+					{
+						Name: "PodSecurity",
+						Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
+kind: PodSecurityConfiguration-bar
+defaults:
+   enforce-error: "privileged"
+ enforce-version: "latest"
+ exemptions:
+usernames: "admin"
+`),
+						},
+					},
+				},
+				"1.22.13",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+					"Detail": ContainSubstring("cannot decode the given config: yaml: line 4: did not find expected key"),
+				}))),
+			),
+			Entry("adding invalid PodSecurityConfigurationr",
+				[]core.AdmissionPlugin{
+					{
+						Name: "PodSecurity",
+						Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
+kind: PodSecurityConfiguration-bar
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+`),
+						},
+					},
+				},
+				"1.22.13",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+					"Detail": ContainSubstring("expected pod-security.admission.config.k8s.io/v1alpha1.PodSecurityConfiguration, pod-security.admission.config.k8s.io/v1beta1.PodSecurityConfiguration or pod-security.admission.config.k8s.io/v1.PodSecurityConfiguration"),
+				}))),
+			),
 		)
 	})
 })
+
+func getPodSecurityPluginForConfigVersion(version string) core.AdmissionPlugin {
+	apiVersion := "pod-security.admission.config.k8s.io/v1alpha1"
+
+	if version == "v1beta1" {
+		apiVersion = "pod-security.admission.config.k8s.io/v1beta1"
+	} else if version == "v1" {
+		apiVersion = "pod-security.admission.config.k8s.io/v1"
+	}
+
+	return core.AdmissionPlugin{
+		Name: "PodSecurity",
+		Config: &runtime.RawExtension{Raw: []byte(`apiVersion: ` + apiVersion + `
+kind: PodSecurityConfiguration
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+  warn-version: "v1.22"
+exemptions:
+  usernames: ["admin"]
+  runtimeClasses: ["random"]
+  namespaces: ["random"]
+`),
+		},
+	}
+}
