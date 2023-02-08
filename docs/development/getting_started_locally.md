@@ -117,7 +117,7 @@ make start-extension-provider-local                                           # 
 You can wait for the `Seed` to become ready by running:
 
 ```bash
-./hack/usage/wait.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
+./hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
 ```
 
 Alternatively, you can run `kubectl get seed local` and wait for the `STATUS` to indicate readiness:
@@ -136,7 +136,7 @@ kubectl apply -f example/provider-local/shoot.yaml
 You can wait for the `Shoot` to be ready by running:
 
 ```bash
-NAMESPACE=garden-local ./hack/usage/wait.sh shoot local APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
+NAMESPACE=garden-local ./hack/usage/wait-for.sh shoot local APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
 ```
 
 Alternatively, you can run `kubectl -n garden-local get shoot local` and wait for the `LAST OPERATION` to reach `100%`:
