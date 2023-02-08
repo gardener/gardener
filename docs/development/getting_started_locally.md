@@ -177,7 +177,7 @@ local   local          local      local    1.21.0        Awake         Create Pr
 make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/local/kubeconfig"
 ```
 
-When the shoot got successfully created to access the `Shoot` you can get the shoot `kubeconfig` by following [Accessing Shoot Clusters](../usage/shoot_access.md).
+When the `Shoot` got created successfully, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource) to access the cluster.
 
 ## (Optional): Setting Up a Second Seed Cluster
 

@@ -169,7 +169,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 EOF
 ```
 
-To access the `Shoot` you can get the shoot `kubeconfig` by following [Accessing Shoot Clusters](../usage/shoot_access.md).
+To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
 
 ## (Optional): Setting Up a Second Seed Cluster
 
