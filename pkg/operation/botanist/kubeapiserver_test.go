@@ -604,7 +604,7 @@ exemptions:
 					})
 				})
 
-				Context("PodSecurity admission config is neither v1alpha1 nor v1beta1", func() {
+				Context("PodSecurity admission config is neither v1alpha1 nor v1beta1 nor v1", func() {
 					BeforeEach(func() {
 						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 							{
@@ -612,10 +612,10 @@ exemptions:
 								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
 kind: PodSecurityConfiguration-bar
 defaults:
-enforce: "privileged"
-enforce-version: "latest"
+  enforce: "privileged"
+  enforce-version: "latest"
 exemptions:
-usernames: ["admin"]
+  usernames: ["admin"]
 `),
 								},
 							},
