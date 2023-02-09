@@ -115,6 +115,14 @@ data:
         namespaceSelectors:
 {{ toYaml .Values.global.config.controllers.networkPolicy.namespaceSelectors | indent 8 }}
         {{- end }}
+      node:
+        enabled: {{ .Values.global.config.controllers.node.enabled }}
+        {{- if .Values.global.config.controllers.node.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.node.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.node.backoff }}
+        backoff: {{ .Values.global.config.controllers.node.backoff }}
+        {{- end }}
       secret:
         {{- if .Values.global.config.controllers.secret.concurrentSyncs }}
         concurrentSyncs: {{ .Values.global.config.controllers.secret.concurrentSyncs }}

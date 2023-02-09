@@ -92,6 +92,10 @@ global:
       # namespaceSelectors:
       # - matchLabels:
       #     foo: bar
+      node:
+        enabled: false
+      # concurrentSyncs: 5
+      # backoff: 10s
       secret:
         concurrentSyncs: 5
       tokenInvalidator:
