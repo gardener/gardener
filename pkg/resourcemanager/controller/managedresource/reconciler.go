@@ -486,9 +486,11 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 			scaledVertically   = isScaled(obj.obj, verticallyScaledObjects, equivalences)
 		)
 
-		log.Info("Applying", "resource", resource)
+		resourceLogger := log.WithValues("resource", resource)
 
-		if operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.TargetClient, r.TargetScheme, current, pointer.BoolDeref(r.Config.AlwaysUpdate, false), func() error {
+		resourceLogger.V(1).Info("Applying")
+
+		operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.TargetClient, r.TargetScheme, current, pointer.BoolDeref(r.Config.AlwaysUpdate, false), func() error {
 			metadata, err := meta.Accessor(obj.obj)
 			if err != nil {
 				return fmt.Errorf("error getting metadata of object %q: %s", resource, err)
@@ -507,10 +509,9 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 			}
 
 			return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
-		}); err != nil {
+		})
+		if err != nil {
 			if apierrors.IsConflict(err) {
-				log.Info("Conflict while applying object", "object", resource, "err", err)
-				// return conflict error directly, so that the update will be retried
 				return err
 			}
 
@@ -523,6 +524,15 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 			}
 
 			return fmt.Errorf("error during apply of object %q: %s", resource, err)
+		}
+
+		switch operationResult {
+		case controllerutil.OperationResultCreated:
+			resourceLogger.Info("Created resource because it was not existing before")
+		case controllerutil.OperationResultUpdated:
+			resourceLogger.Info("Updated resource because its actual state differed from the desired state")
+		case controllerutil.OperationResultNone:
+			resourceLogger.V(1).Info("Resource was neither created nor updated because its actual state matches with the desired state")
 		}
 	}
 
