@@ -297,6 +297,7 @@ admin:
 								Capabilities: &corev1.Capabilities{
 									Add: []corev1.Capability{
 										"NET_ADMIN",
+										"NET_RAW",
 									},
 								},
 							},
