@@ -532,7 +532,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 		case controllerutil.OperationResultUpdated:
 			resourceLogger.Info("Updated resource because its actual state differed from the desired state")
 		case controllerutil.OperationResultNone:
-			resourceLogger.V(1).Info("Resource was neither created or updated because its actual state matches with the desired state")
+			resourceLogger.V(1).Info("Resource was neither created nor updated because its actual state matches with the desired state")
 		}
 	}
 
