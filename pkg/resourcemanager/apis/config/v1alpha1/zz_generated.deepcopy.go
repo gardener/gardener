@@ -363,15 +363,15 @@ func (in *ResourceManagerControllerConfiguration) DeepCopyInto(out *ResourceMana
 		*out = new(string)
 		**out = **in
 	}
-	in.KubeletCSRApprover.DeepCopyInto(&out.KubeletCSRApprover)
 	in.GarbageCollector.DeepCopyInto(&out.GarbageCollector)
 	in.Health.DeepCopyInto(&out.Health)
+	in.KubeletCSRApprover.DeepCopyInto(&out.KubeletCSRApprover)
 	in.ManagedResource.DeepCopyInto(&out.ManagedResource)
 	in.NetworkPolicy.DeepCopyInto(&out.NetworkPolicy)
+	in.Node.DeepCopyInto(&out.Node)
 	in.Secret.DeepCopyInto(&out.Secret)
 	in.TokenInvalidator.DeepCopyInto(&out.TokenInvalidator)
 	in.TokenRequestor.DeepCopyInto(&out.TokenRequestor)
-	in.Node.DeepCopyInto(&out.Node)
 	return
 }
 

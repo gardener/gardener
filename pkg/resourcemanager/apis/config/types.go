@@ -110,24 +110,24 @@ type ResourceManagerControllerConfiguration struct {
 	// ResourceClass is the name of the class in ManagedResources to filter for.
 	ResourceClass *string
 
-	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
-	KubeletCSRApprover KubeletCSRApproverControllerConfig
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig
 	// Health is the configuration for the health controller.
 	Health HealthControllerConfig
+	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
+	KubeletCSRApprover KubeletCSRApproverControllerConfig
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig
 	// NetworkPolicy is the configuration for the networkpolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfig
+	// Node is the configuration for the node controller.
+	Node NodeControllerConfig
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig
 	// TokenInvalidator is the configuration for the token-invalidator controller.
 	TokenInvalidator TokenInvalidatorControllerConfig
 	// TokenRequestor is the configuration for the token-requestor controller.
 	TokenRequestor TokenRequestorControllerConfig
-	// Node is the configuration for the node controller.
-	Node NodeControllerConfig
 }
 
 // KubeletCSRApproverControllerConfig is the configuration for the kubelet-csr-approver controller.

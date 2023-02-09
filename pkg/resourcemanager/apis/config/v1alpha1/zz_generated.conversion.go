@@ -699,19 +699,22 @@ func Convert_config_ResourceManagerConfiguration_To_v1alpha1_ResourceManagerConf
 func autoConvert_v1alpha1_ResourceManagerControllerConfiguration_To_config_ResourceManagerControllerConfiguration(in *ResourceManagerControllerConfiguration, out *config.ResourceManagerControllerConfiguration, s conversion.Scope) error {
 	out.ClusterID = (*string)(unsafe.Pointer(in.ClusterID))
 	out.ResourceClass = (*string)(unsafe.Pointer(in.ResourceClass))
-	if err := Convert_v1alpha1_KubeletCSRApproverControllerConfig_To_config_KubeletCSRApproverControllerConfig(&in.KubeletCSRApprover, &out.KubeletCSRApprover, s); err != nil {
-		return err
-	}
 	if err := Convert_v1alpha1_GarbageCollectorControllerConfig_To_config_GarbageCollectorControllerConfig(&in.GarbageCollector, &out.GarbageCollector, s); err != nil {
 		return err
 	}
 	if err := Convert_v1alpha1_HealthControllerConfig_To_config_HealthControllerConfig(&in.Health, &out.Health, s); err != nil {
 		return err
 	}
+	if err := Convert_v1alpha1_KubeletCSRApproverControllerConfig_To_config_KubeletCSRApproverControllerConfig(&in.KubeletCSRApprover, &out.KubeletCSRApprover, s); err != nil {
+		return err
+	}
 	if err := Convert_v1alpha1_ManagedResourceControllerConfig_To_config_ManagedResourceControllerConfig(&in.ManagedResource, &out.ManagedResource, s); err != nil {
 		return err
 	}
 	if err := Convert_v1alpha1_NetworkPolicyControllerConfig_To_config_NetworkPolicyControllerConfig(&in.NetworkPolicy, &out.NetworkPolicy, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_NodeControllerConfig_To_config_NodeControllerConfig(&in.Node, &out.Node, s); err != nil {
 		return err
 	}
 	if err := Convert_v1alpha1_SecretControllerConfig_To_config_SecretControllerConfig(&in.Secret, &out.Secret, s); err != nil {
@@ -721,9 +724,6 @@ func autoConvert_v1alpha1_ResourceManagerControllerConfiguration_To_config_Resou
 		return err
 	}
 	if err := Convert_v1alpha1_TokenRequestorControllerConfig_To_config_TokenRequestorControllerConfig(&in.TokenRequestor, &out.TokenRequestor, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_NodeControllerConfig_To_config_NodeControllerConfig(&in.Node, &out.Node, s); err != nil {
 		return err
 	}
 	return nil
@@ -737,19 +737,22 @@ func Convert_v1alpha1_ResourceManagerControllerConfiguration_To_config_ResourceM
 func autoConvert_config_ResourceManagerControllerConfiguration_To_v1alpha1_ResourceManagerControllerConfiguration(in *config.ResourceManagerControllerConfiguration, out *ResourceManagerControllerConfiguration, s conversion.Scope) error {
 	out.ClusterID = (*string)(unsafe.Pointer(in.ClusterID))
 	out.ResourceClass = (*string)(unsafe.Pointer(in.ResourceClass))
-	if err := Convert_config_KubeletCSRApproverControllerConfig_To_v1alpha1_KubeletCSRApproverControllerConfig(&in.KubeletCSRApprover, &out.KubeletCSRApprover, s); err != nil {
-		return err
-	}
 	if err := Convert_config_GarbageCollectorControllerConfig_To_v1alpha1_GarbageCollectorControllerConfig(&in.GarbageCollector, &out.GarbageCollector, s); err != nil {
 		return err
 	}
 	if err := Convert_config_HealthControllerConfig_To_v1alpha1_HealthControllerConfig(&in.Health, &out.Health, s); err != nil {
 		return err
 	}
+	if err := Convert_config_KubeletCSRApproverControllerConfig_To_v1alpha1_KubeletCSRApproverControllerConfig(&in.KubeletCSRApprover, &out.KubeletCSRApprover, s); err != nil {
+		return err
+	}
 	if err := Convert_config_ManagedResourceControllerConfig_To_v1alpha1_ManagedResourceControllerConfig(&in.ManagedResource, &out.ManagedResource, s); err != nil {
 		return err
 	}
 	if err := Convert_config_NetworkPolicyControllerConfig_To_v1alpha1_NetworkPolicyControllerConfig(&in.NetworkPolicy, &out.NetworkPolicy, s); err != nil {
+		return err
+	}
+	if err := Convert_config_NodeControllerConfig_To_v1alpha1_NodeControllerConfig(&in.Node, &out.Node, s); err != nil {
 		return err
 	}
 	if err := Convert_config_SecretControllerConfig_To_v1alpha1_SecretControllerConfig(&in.Secret, &out.Secret, s); err != nil {
@@ -759,9 +762,6 @@ func autoConvert_config_ResourceManagerControllerConfiguration_To_v1alpha1_Resou
 		return err
 	}
 	if err := Convert_config_TokenRequestorControllerConfig_To_v1alpha1_TokenRequestorControllerConfig(&in.TokenRequestor, &out.TokenRequestor, s); err != nil {
-		return err
-	}
-	if err := Convert_config_NodeControllerConfig_To_v1alpha1_NodeControllerConfig(&in.Node, &out.Node, s); err != nil {
 		return err
 	}
 	return nil

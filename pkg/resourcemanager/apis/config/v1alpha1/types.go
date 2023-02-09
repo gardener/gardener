@@ -122,24 +122,24 @@ type ResourceManagerControllerConfiguration struct {
 	// +optional
 	ResourceClass *string `json:"resourceClass,omitempty"`
 
-	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
-	KubeletCSRApprover KubeletCSRApproverControllerConfig `json:"kubeletCSRApprover"`
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig `json:"garbageCollector"`
 	// Health is the configuration for the health controller.
 	Health HealthControllerConfig `json:"health"`
+	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
+	KubeletCSRApprover KubeletCSRApproverControllerConfig `json:"kubeletCSRApprover"`
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig `json:"managedResource"`
 	// NetworkPolicy is the configuration for the networkpolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
+	// Node is the configuration for the node controller.
+	Node NodeControllerConfig `json:"node"`
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig `json:"secret"`
 	// TokenInvalidator is the configuration for the token-invalidator controller.
 	TokenInvalidator TokenInvalidatorControllerConfig `json:"tokenInvalidator"`
 	// TokenRequestor is the configuration for the token-requestor controller.
 	TokenRequestor TokenRequestorControllerConfig `json:"tokenRequestor"`
-	// Node is the configuration for the node controller.
-	Node NodeControllerConfig `json:"node"`
 }
 
 // KubeletCSRApproverControllerConfig is the configuration for the kubelet-csr-approver controller.
