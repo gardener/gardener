@@ -87,8 +87,7 @@ In case the feature is enabled in the Gardenlet it can be disabled per shoot clu
 `alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled` to any value.
 
 This will automatically rewrite requests like `service.namespace.svc.cluster.local.other-namespace.svc.cluster.local` to
-`service.namespace.svc.cluster.local`. The same holds true for `service.namespace.svc.other-namespace.svc.cluster.local`,
-which will also be rewritten to `service.namespace.svc.cluster.local`.
+`service.namespace.svc.cluster.local`.
 
 In case applications also target services for name resolution, which are outside of the cluster and have less than `ndots` dots,
 it might be helpful to prevent search path application for them as well. One way to achieve it is by adding them to the
@@ -103,14 +102,20 @@ spec:
       rewriting:
         commonSuffixes:
         - gardener.cloud
-        - github.com
+        - example.com
 ...
 ```
 
-DNS requests containing a common suffix and ending in `<namespace>.svc.cluster.local` are assumed to be incorrect application of the
-DNS search path. Therefore, they are rewritten to everything ending in the common suffix. For example, `www.gardener.cloud.namespace.svc.cluster.local` would be rewritten to `www.gardener.cloud`.
+DNS requests containing a common suffix and ending in `.svc.cluster.local` are assumed to be incorrect application of the DNS
+search path. Therefore, they are rewritten to everything ending in the common suffix. For example, `www.gardener.cloud.svc.cluster.local`
+would be rewritten to `www.gardener.cloud`.
 
 Please note that the common suffixes should be long enough and include enough dots (`.`) to prevent random overlap with
 other DNS queries. For example, it would be a bad idea to simply put `com` on the list of common suffixes as there may be
-services/namespaces, which have `com` as part of their name. The effect would be seemingly random DNS requests. Gardener
-enforces at least two dots (`.`) in the common suffixes.
+services/namespaces, which have `com` as part of their name. The effect would be seemingly random DNS requests. Gardener 
+requires that common suffixes contain at least one dot (.) and adds a second dot at the beginning. For instance, a common
+suffix of `example.com` in the configuration would match `*.example.com`.
+
+Since some clients verify the host in the response of a DNS query, the host must also be rewritten.
+For that reason we can't rewrite `www.example.com.default.svc.cluster.local`, as for a rewrite the namespace would not be known.
+
