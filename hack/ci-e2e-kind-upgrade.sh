@@ -200,7 +200,10 @@ upgrade_to_next_release
 
 echo "Wait until seed '$SEED_NAME' gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
 kubectl wait seed $SEED_NAME --timeout=5m --for=jsonpath="{.status.gardener.version}=$GARDENER_NEXT_RELEASE"
-./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+# RETRY_LIMIT has been increased to 240 (20 minutes) due to the upgrading of Gardener for seed.
+# In a single-zone setup, 3 istio-ingressgateway pods will be running, and it will take 9 minutes to complete the rollout.
+# In a multi-zone setup, 6 istio-ingressgateway pods will be running, and it will take 18 minutes to complete the rollout.
+RETRY_LIMIT=240 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 echo "Running gardener post-upgrade tests"
 make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
