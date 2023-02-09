@@ -18,3 +18,4 @@ If you're on a different OS or don't have IPv6 connectivity in your office envir
 
 If you plan on using custom images, make sure your registry supports IPv6 access.
 The `docker.io` registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
+Use the [Google Mirror](https://cloud.google.com/container-registry/docs/pulling-cached-images) of Docker Hub instead which supports dual-stack network access.

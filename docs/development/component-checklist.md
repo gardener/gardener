@@ -27,8 +27,8 @@ This document provides a checklist for them that you can walk through.
 4. **Do not use `docker.io` container registry**
 
    The `docker.io` registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
-   There is also a strict [rate-limit](https://docs.docker.com/docker-hub/download-rate-limit/#:~:text=Docker%20Hub%20limits%20the%20number,pulls%20per%206%20hour%20period.) that applies to the Docker Hub registry.
-   If you need to an image from `docker.io`, please use the Google Mirror (`mirror.gcr.io`) instead.
+   There is also a strict [rate-limit](https://docs.docker.com/docker-hub/download-rate-limit/) that applies to the Docker Hub registry.
+   If you need an image from `docker.io`, please use the [Google Mirror](https://cloud.google.com/container-registry/docs/pulling-cached-images) (`mirror.gcr.io`) instead to circumvent these issues.
 
 5. **Use unique `ConfigMap`s/`Secret`s** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L181-L188), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/kubescheduler/kube_scheduler.go#L347))
 
