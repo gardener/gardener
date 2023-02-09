@@ -295,25 +295,28 @@ func (b *HealthChecker) checkManagedResourceConditions(
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 
 		// check if MangedResource `ResourcesApplied` condition is in failed state
-		for _, mrCondition := range mr.Status.Conditions {
-			if mrCondition.Type == resourcesv1alpha1.ResourcesApplied && mrCondition.Status == gardencorev1beta1.ConditionFalse && mrCondition.Reason == resourcesv1alpha1.ConditionApplyFailed {
-				c = b.FailedCondition(condition, mrCondition.Reason, mrCondition.Message)
-			}
+		conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+		if conditionResourcesApplied != nil && conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse && conditionResourcesApplied.Reason == resourcesv1alpha1.ConditionApplyFailed {
+			c = b.FailedCondition(condition, conditionResourcesApplied.Reason, conditionResourcesApplied.Message)
 		}
 
 		return &c
 	}
 
-	mrConditions := make([]gardencorev1beta1.Condition, len(mr.Status.Conditions))
-	copy(mrConditions, mr.Status.Conditions)
-	sortConditions(mrConditions)
+	for _, condType := range []gardencorev1beta1.ConditionType{
+		resourcesv1alpha1.ResourcesApplied,
+		resourcesv1alpha1.ResourcesHealthy,
+		resourcesv1alpha1.ResourcesProgressing} {
+		cond := v1beta1helper.GetCondition(mr.Status.Conditions, condType)
+		if cond == nil {
+			continue
+		}
 
-	for _, cond := range mrConditions {
 		checkConditionStatus, ok := conditionsToCheck[cond.Type]
 		if !ok {
 			continue
 		}
-		if !checkConditionStatus(cond) {
+		if !checkConditionStatus(*cond) {
 			c := b.FailedCondition(condition, cond.Reason, cond.Message)
 			if cond.Type == resourcesv1alpha1.ResourcesProgressing && b.managedResourceProgressingThreshold != nil {
 				c = b.FailedCondition(condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, b.managedResourceProgressingThreshold.Duration))
@@ -666,22 +669,4 @@ func PardonConditions(clock clock.Clock, conditions []gardencorev1beta1.Conditio
 		pardoningConditions = append(pardoningConditions, cond)
 	}
 	return pardoningConditions
-}
-
-// sortConditions sort Conditions in such a way that `ResourcesApplied` condition is always in start.
-func sortConditions(conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-	index := -1
-	for i := range conditions {
-		if conditions[i].Type == resourcesv1alpha1.ResourcesApplied {
-			index = i
-			break
-		}
-	}
-
-	if index != -1 && len(conditions) > 1 {
-		condition := conditions[0]
-		conditions[0] = conditions[index]
-		conditions[index] = condition
-	}
-	return conditions
 }
