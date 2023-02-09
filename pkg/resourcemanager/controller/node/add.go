@@ -58,6 +58,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 	return c.Watch(
 		source.NewKindWithCache(&corev1.Node{}, targetCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
+		r.NodePredicate(),
+	)
+}
+
+// NodePredicate returns a predicate that filters for Node objects that are created with the taint.
+func (r *Reconciler) NodePredicate() predicate.Predicate {
+	return predicate.And(
 		predicateutils.ForEventTypes(predicateutils.Create),
 		predicate.NewPredicateFuncs(func(obj client.Object) bool {
 			return NodeHasCriticalComponentsNotReadyTaint(obj)
