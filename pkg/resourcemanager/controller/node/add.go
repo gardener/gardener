@@ -34,8 +34,8 @@ const ControllerName = "node"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
-	if r.Client == nil {
-		r.Client = targetCluster.GetClient()
+	if r.TargetClient == nil {
+		r.TargetClient = targetCluster.GetClient()
 	}
 	if r.Recorder == nil {
 		r.Recorder = targetCluster.GetEventRecorderFor("gardener-" + ControllerName + "-controller") // node-controller is ambiguous

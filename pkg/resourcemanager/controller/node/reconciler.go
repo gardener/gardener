@@ -42,9 +42,9 @@ import (
 // Reconciler manages taints on new Node objects to block scheduling of user workload pods until all node critical
 // components are ready.
 type Reconciler struct {
-	Client   client.Client
-	Config   config.NodeControllerConfig
-	Recorder record.EventRecorder
+	TargetClient client.Client
+	Config       config.NodeControllerConfig
+	Recorder     record.EventRecorder
 }
 
 // Reconcile checks if the critical components not ready taint can be removed from the Node object.
@@ -55,7 +55,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	defer cancel()
 
 	node := &corev1.Node{}
-	if err := r.Client.Get(ctx, req.NamespacedName, node); err != nil {
+	if err := r.TargetClient.Get(ctx, req.NamespacedName, node); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -69,19 +69,19 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// prep for checks: list all DaemonSets and all node-critical pods on the given node
 	daemonSetList := &appsv1.DaemonSetList{}
-	if err := r.Client.List(ctx, daemonSetList); err != nil {
+	if err := r.TargetClient.List(ctx, daemonSetList); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed listing node-critical DaemonSets on node: %w", err)
 	}
 
-	nodeCriticalPodList := &corev1.PodList{}
-	if err := r.Client.List(ctx, nodeCriticalPodList, client.MatchingFields{indexer.PodNodeName: node.Name}, client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
+	podList := &corev1.PodList{}
+	if err := r.TargetClient.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}, client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed listing node-critical Pods on node: %w", err)
 	}
 
 	// - for all node-critical DaemonSets: check whether a daemon pod has already been scheduled to the node
 	// - for all scheduled node-critical Pods on the node: check their readiness
-	if !(AllNodeCriticalDaemonPodsAreScheduled(log, r.Recorder, node, daemonSetList.Items, nodeCriticalPodList.Items) &&
-		AllNodeCriticalPodsAreReady(log, r.Recorder, node, nodeCriticalPodList.Items)) {
+	if !(AllNodeCriticalDaemonPodsAreScheduled(log, r.Recorder, node, daemonSetList.Items, podList.Items) &&
+		AllNodeCriticalPodsAreReady(log, r.Recorder, node, podList.Items)) {
 		backoff := r.Config.Backoff.Duration
 		log.V(1).Info("Checking node again after backoff", "backoff", backoff)
 		return reconcile.Result{RequeueAfter: backoff}, nil
@@ -89,7 +89,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	log.Info("All node-critical components got ready, removing taint")
 	r.Recorder.Event(node, corev1.EventTypeNormal, "NodeCriticalComponentsReady", "All node-critical components got ready, removing taint")
-	return reconcile.Result{}, RemoveTaint(ctx, r.Client, node)
+	return reconcile.Result{}, RemoveTaint(ctx, r.TargetClient, node)
 }
 
 var daemonSetGVK = appsv1.SchemeGroupVersion.WithKind("DaemonSet")
