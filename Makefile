@@ -316,11 +316,7 @@ kind2-down: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-local2 --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig --keep-backupbuckets-dir
 
 kind-extensions-up: $(KIND) $(KUBECTL)
-ifneq ($(shell docker ps -aq -f name=gardener-extensions-control-plane), $(nullstring))
-	docker start gardener-extensions-control-plane
-else
-	./hack/kind-up.sh --cluster-name gardener-extensions --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/extensions/values.yaml
-endif
+	KIND_ENV=$(KIND_ENV) REPO_ROOT=$(REPO_ROOT) ./hack/kind-extensions-up.sh
 kind-extensions-down: $(KIND)
 	docker stop gardener-extensions-control-plane
 kind-extensions-clean:
