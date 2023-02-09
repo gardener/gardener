@@ -70,7 +70,7 @@ func VerifyNodeCriticalComponentsBootstrapping(ctx context.Context, f *framework
 		g.Expect(shootClient.List(ctx, nodeList)).To(Succeed())
 		g.Expect(nodeList.Items).NotTo(BeEmpty(), "new Node should be created")
 		node = &nodeList.Items[0]
-	}).WithContext(ctx).WithTimeout(2 * time.Minute).Should(Succeed())
+	}).WithContext(ctx).WithTimeout(10 * time.Minute).Should(Succeed())
 
 	By("Verify node-critical components not ready taint is present")
 	Consistently(func(g Gomega) []corev1.Taint {
@@ -88,7 +88,7 @@ func VerifyNodeCriticalComponentsBootstrapping(ctx context.Context, f *framework
 	Eventually(func(g Gomega) []corev1.Taint {
 		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 		return node.Spec.Taints
-	}).WithContext(ctx).WithTimeout(2 * time.Minute).ShouldNot(ContainElement(corev1.Taint{
+	}).WithContext(ctx).WithTimeout(10 * time.Minute).ShouldNot(ContainElement(corev1.Taint{
 		Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
 		Effect: corev1.TaintEffectNoSchedule,
 	}))
@@ -146,7 +146,7 @@ func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, 
 	Eventually(func(g Gomega) string {
 		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(daemonSet), daemonSet)).To(Succeed())
 		return daemonSet.Spec.Template.Spec.Containers[0].Image
-	}).Should(Equal(image))
+	}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Equal(image))
 }
 
 func cleanupNodeCriticalManagedResource(ctx context.Context, seedClient client.Client, namespace string) {

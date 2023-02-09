@@ -36,6 +36,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
+		By("Verify Bootstrapping of Nodes with node-critical components")
+		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+		defer cancel()
 		node.VerifyNodeCriticalComponentsBootstrapping(ctx, f.ShootFramework)
 
 		By("Hibernate Shoot")
