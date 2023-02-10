@@ -16,7 +16,6 @@ package admissionplugins
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -211,35 +210,23 @@ func validateAdmissionPluginConfig(plugin core.AdmissionPlugin, version string, 
 			return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf("cannot decode the given config: %s", err.Error()))
 		}
 
-		var errorString = "PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q"
+		var (
+			apiGroup    = config.GetObjectKind().GroupVersionKind().Group
+			apiVersion  = config.GetObjectKind().GroupVersionKind().Version
+			errorString = "PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q"
+		)
 
-		switch admissionConfigType := config.(type) {
-		case *admissionapiv1alpha1.PodSecurityConfiguration:
-			if !versionutils.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
-				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, strings.Join(getPodSecurityConfigAPIVersionForKubernetesVersion(kubernetesVersion), " or "), admissionConfigType.APIVersion))
+		switch {
+		case versionutils.ConstraintK8sLess123.Check(kubernetesVersion):
+			if apiVersion != admissionapiv1alpha1.SchemeGroupVersion.Version {
+				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, "pod-security.admission.config.k8s.io/v1alpha1", apiGroup+"/"+apiVersion))
 			}
-		case *admissionapiv1beta1.PodSecurityConfiguration:
-			if !versionutils.ConstraintK8sGreaterEqual123.Check(kubernetesVersion) {
-				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, strings.Join(getPodSecurityConfigAPIVersionForKubernetesVersion(kubernetesVersion), " or "), admissionConfigType.APIVersion))
-			}
-		case *admissionapiv1.PodSecurityConfiguration:
-			if !versionutils.ConstraintK8sGreaterEqual125.Check(kubernetesVersion) {
-				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, strings.Join(getPodSecurityConfigAPIVersionForKubernetesVersion(kubernetesVersion), " or "), admissionConfigType.APIVersion))
+		case versionutils.ConstraintK8sLess125.Check(kubernetesVersion):
+			if apiVersion != admissionapiv1beta1.SchemeGroupVersion.Version && apiVersion != admissionapiv1alpha1.SchemeGroupVersion.Version {
+				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, "pod-security.admission.config.k8s.io/v1beta1 or pod-security.admission.config.k8s.io/v1alpha1", apiGroup+"/"+apiVersion))
 			}
 		}
 	}
 
-	return nil
-}
-
-func getPodSecurityConfigAPIVersionForKubernetesVersion(version *semver.Version) []string {
-	switch {
-	case versionutils.ConstraintK8sGreaterEqual125.Check(version):
-		return []string{"pod-security.admission.config.k8s.io/v1", "pod-security.admission.config.k8s.io/v1beta1", "pod-security.admission.config.k8s.io/v1alpha1"}
-	case versionutils.ConstraintK8sGreaterEqual123.Check(version):
-		return []string{"pod-security.admission.config.k8s.io/v1beta1", "pod-security.admission.config.k8s.io/v1alpha1"}
-	case versionutils.ConstraintK8sGreaterEqual122.Check(version):
-		return []string{"pod-security.admission.config.k8s.io/v1alpha1"}
-	}
 	return nil
 }
