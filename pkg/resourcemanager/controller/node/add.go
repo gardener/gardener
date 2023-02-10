@@ -17,6 +17,7 @@ package node
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,25 +42,18 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.Recorder = targetCluster.GetEventRecorderFor("gardener-" + ControllerName + "-controller") // node-controller is ambiguous
 	}
 
-	// It's not possible to use the target cluster with For when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&corev1.Node{}, targetCluster.GetCache()),
-		&handler.EnqueueRequestForObject{},
-		r.NodePredicate(),
-	)
+		}).
+		Watches(
+			source.NewKindWithCache(&corev1.Node{}, targetCluster.GetCache()),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(r.NodePredicate()),
+		).
+		Complete(r)
 }
 
 // NodePredicate returns a predicate that filters for Node objects that are created with the taint.
