@@ -9,3 +9,6 @@ ports:
 portsNames:
   metrics: metrics
 serviceName: istiod
+
+# TODO(timuthy): To be removed in a future release. Only required to move objects to a new ManagedResource.
+ignoreMode: false

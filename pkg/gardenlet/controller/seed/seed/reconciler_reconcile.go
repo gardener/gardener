@@ -388,7 +388,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		istioCRDs := istio.NewIstioCRD(chartApplier, seedClient)
+		istioCRDs := istio.NewCRD(chartApplier, seedClient)
 		if err := istioCRDs.Deploy(ctx); err != nil {
 			return err
 		}

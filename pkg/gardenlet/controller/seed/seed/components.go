@@ -84,6 +84,12 @@ func defaultIstio(
 	component.DeployWaiter,
 	error,
 ) {
+	var (
+		minReplicas *int
+		maxReplicas *int
+		seedObj     = seed.GetInfo()
+	)
+
 	istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
@@ -94,22 +100,18 @@ func defaultIstio(
 		return nil, err
 	}
 
-	gardenSeed := seed.GetInfo()
-
-	var minReplicas *int
-	var maxReplicas *int
-	if len(gardenSeed.Spec.Provider.Zones) > 1 {
+	if len(seedObj.Spec.Provider.Zones) > 1 {
 		// Each availability zone should have at least 2 replicas as on some infrastructures each
 		// zonal load balancer is exposed individually via its own IP address. Therefore, having
 		// just one replica may negatively affect availability.
-		minReplicas = pointer.Int(len(gardenSeed.Spec.Provider.Zones) * 2)
+		minReplicas = pointer.Int(len(seedObj.Spec.Provider.Zones) * 2)
 		// The default configuration without availability zones has 5 as the maximum amount of
 		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
 		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
-		maxReplicas = pointer.Int(len(gardenSeed.Spec.Provider.Zones) * 4)
+		maxReplicas = pointer.Int(len(seedObj.Spec.Provider.Zones) * 4)
 	}
 
-	defaultIngressGatewayConfig := istio.IngressValues{
+	defaultIngressGatewayConfig := istio.IngressGatewayValues{
 		TrustDomain:           gardencorev1beta1.DefaultDomain,
 		Image:                 igwImage.String(),
 		IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
@@ -120,6 +122,9 @@ func defaultIstio(
 		Ports:                 []corev1.ServicePort{},
 		LoadBalancerIP:        conf.SNI.Ingress.ServiceExternalIP,
 		Labels:                operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
+		Namespace:             *conf.SNI.Ingress.Namespace,
+		ProxyProtocolEnabled:  gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+		VPNEnabled:            true,
 	}
 
 	// even if SNI is being disabled, the existing ports must stay the same
@@ -133,117 +138,86 @@ func defaultIstio(
 		)
 	}
 
-	istioIngressGateway := []istio.IngressGateway{{
-		Values:    defaultIngressGatewayConfig,
-		Namespace: *conf.SNI.Ingress.Namespace,
-	}}
-
-	istioProxyGateway := []istio.ProxyProtocol{{
-		Values: istio.ProxyValues{
-			Labels: operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
-		},
-		Namespace: *conf.SNI.Ingress.Namespace,
-	}}
+	istioIngressGateway := []istio.IngressGatewayValues{
+		defaultIngressGatewayConfig,
+	}
 
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
-	if len(gardenSeed.Spec.Provider.Zones) > 1 {
-		for _, zone := range gardenSeed.Spec.Provider.Zones {
+	if len(seedObj.Spec.Provider.Zones) > 1 {
+		for _, zone := range seedObj.Spec.Provider.Zones {
 			namespace := operation.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
 
-			istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
-				Values: istio.IngressValues{
-					TrustDomain:           gardencorev1beta1.DefaultDomain,
-					Image:                 igwImage.String(),
-					IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-					Annotations:           seed.GetZonalLoadBalancerServiceAnnotations(zone),
-					ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
-					Ports:                 defaultIngressGatewayConfig.Ports,
-					// LoadBalancerIP can currently not be provided for automatic ingress gateways
-					Labels: operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
-					Zones:  []string{zone},
-				},
-				Namespace: namespace,
-			})
-
-			istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
-				Values: istio.ProxyValues{
-					Labels: operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
-				},
-				Namespace: namespace,
+			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
+				TrustDomain:           gardencorev1beta1.DefaultDomain,
+				Image:                 igwImage.String(),
+				IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
+				Annotations:           seed.GetZonalLoadBalancerServiceAnnotations(zone),
+				ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
+				Ports:                 defaultIngressGatewayConfig.Ports,
+				// LoadBalancerIP can currently not be provided for automatic ingress gateways
+				Labels:               operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
+				Zones:                []string{zone},
+				Namespace:            namespace,
+				ProxyProtocolEnabled: gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+				VPNEnabled:           true,
 			})
 		}
 	}
 
 	// Add for each ExposureClass handler in the config an own Ingress Gateway and Proxy Gateway.
 	for _, handler := range conf.ExposureClassHandlers {
-		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
-			Values: istio.IngressValues{
-				TrustDomain:           gardencorev1beta1.DefaultDomain,
-				Image:                 igwImage.String(),
-				IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-				Annotations:           utils.MergeStringMaps(seed.GetLoadBalancerServiceAnnotations(), handler.LoadBalancerService.Annotations),
-				ExternalTrafficPolicy: seed.GetLoadBalancerServiceExternalTrafficPolicy(),
-				MinReplicas:           minReplicas,
-				MaxReplicas:           maxReplicas,
-				Ports:                 defaultIngressGatewayConfig.Ports,
-				LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
-				Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
-			},
-			Namespace: *handler.SNI.Ingress.Namespace,
-		})
-
-		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
-			Values: istio.ProxyValues{
-				Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
-			},
-			Namespace: *handler.SNI.Ingress.Namespace,
+		istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
+			TrustDomain:           gardencorev1beta1.DefaultDomain,
+			Image:                 igwImage.String(),
+			IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
+			Annotations:           utils.MergeStringMaps(seed.GetLoadBalancerServiceAnnotations(), handler.LoadBalancerService.Annotations),
+			ExternalTrafficPolicy: seed.GetLoadBalancerServiceExternalTrafficPolicy(),
+			MinReplicas:           minReplicas,
+			MaxReplicas:           maxReplicas,
+			Ports:                 defaultIngressGatewayConfig.Ports,
+			LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
+			Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+			Namespace:             *handler.SNI.Ingress.Namespace,
+			ProxyProtocolEnabled:  gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+			VPNEnabled:            true,
 		})
 
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
-		if len(gardenSeed.Spec.Provider.Zones) > 1 {
-			for _, zone := range gardenSeed.Spec.Provider.Zones {
+		if len(seedObj.Spec.Provider.Zones) > 1 {
+			for _, zone := range seedObj.Spec.Provider.Zones {
 				namespace := operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
 
-				istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
-					Values: istio.IngressValues{
-						TrustDomain:           gardencorev1beta1.DefaultDomain,
-						Image:                 igwImage.String(),
-						IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-						Annotations:           utils.MergeStringMaps(handler.LoadBalancerService.Annotations, seed.GetZonalLoadBalancerServiceAnnotations(zone)),
-						ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
-						Ports:                 defaultIngressGatewayConfig.Ports,
-						// LoadBalancerIP can currently not be provided for automatic ingress gateways
-						Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
-						Zones:  []string{zone},
-					},
-					Namespace: namespace,
-				})
-
-				istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
-					Values: istio.ProxyValues{
-						Labels: operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
-					},
-					Namespace: namespace,
+				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
+					TrustDomain:           gardencorev1beta1.DefaultDomain,
+					Image:                 igwImage.String(),
+					IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
+					Annotations:           utils.MergeStringMaps(handler.LoadBalancerService.Annotations, seed.GetZonalLoadBalancerServiceAnnotations(zone)),
+					ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
+					Ports:                 defaultIngressGatewayConfig.Ports,
+					// LoadBalancerIP can currently not be provided for automatic ingress gateways
+					Labels:               operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+					Zones:                []string{zone},
+					Namespace:            namespace,
+					ProxyProtocolEnabled: gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+					VPNEnabled:           true,
 				})
 			}
 		}
 	}
 
-	if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		istioProxyGateway = nil
-	}
-
 	return istio.NewIstio(
 		seedClient,
 		chartRenderer,
-		istio.IstiodValues{
-			TrustDomain: gardencorev1beta1.DefaultDomain,
-			Image:       istiodImage.String(),
-			Zones:       gardenSeed.Spec.Provider.Zones,
+		istio.Values{
+			Istiod: istio.IstiodValues{
+				Enabled:     true,
+				Image:       istiodImage.String(),
+				Namespace:   v1beta1constants.IstioSystemNamespace,
+				TrustDomain: gardencorev1beta1.DefaultDomain,
+				Zones:       seedObj.Spec.Provider.Zones,
+			},
+			IngressGateway: istioIngressGateway,
 		},
-		v1beta1constants.IstioSystemNamespace,
-		istioIngressGateway,
-		istioProxyGateway,
 	), nil
 }
 

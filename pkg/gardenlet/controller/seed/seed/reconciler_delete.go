@@ -170,18 +170,18 @@ func (r *Reconciler) runDeleteSeedFlow(
 		return err
 	}
 
-	istioIngressGateway := []istio.IngressGateway{{Namespace: *r.Config.SNI.Ingress.Namespace}}
+	istioIngressGateway := []istio.IngressGatewayValues{{Namespace: *r.Config.SNI.Ingress.Namespace}}
 	if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 		for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-			istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: operation.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
+			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: operation.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
 		}
 	}
 	// Add for each ExposureClass handler in the config an own Ingress Gateway.
 	for _, handler := range r.Config.ExposureClassHandlers {
-		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: *handler.SNI.Ingress.Namespace})
+		istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: *handler.SNI.Ingress.Namespace})
 		if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 			for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-				istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{Namespace: operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
+				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
 			}
 		}
 	}
@@ -195,17 +195,23 @@ func (r *Reconciler) runDeleteSeedFlow(
 
 	// setup for flow graph
 	var (
-		dnsRecord          = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
-		autoscaler         = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
-		kubeStateMetrics   = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-		nginxIngress       = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		networkPolicies    = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
-		dwdEndpoint        = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe           = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
-		systemResources    = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
-		vpnAuthzServer     = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
-		istioCRDs          = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
-		istio              = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
+		dnsRecord        = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
+		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
+		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
+		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
+		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
+		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		systemResources  = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
+		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
+		istioCRDs        = istio.NewCRD(r.SeedClientSet.ChartApplier(), seedClient)
+		istio            = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
+			Istiod: istio.IstiodValues{
+				Enabled:   true,
+				Namespace: v1beta1constants.IstioSystemNamespace,
+			},
+			IngressGateway: istioIngressGateway,
+		})
 		fluentOperatorCRDs = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
 	)
 

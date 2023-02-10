@@ -36,8 +36,8 @@ type crds struct {
 	client crclient.Client
 }
 
-// NewIstioCRD can be used to deploy istio CRDs.
-func NewIstioCRD(
+// NewCRD can be used to deploy istio CRDs.
+func NewCRD(
 	applier kubernetes.ChartApplier,
 	client crclient.Client,
 ) component.DeployWaiter {

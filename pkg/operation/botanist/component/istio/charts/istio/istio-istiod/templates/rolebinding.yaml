@@ -3,6 +3,10 @@ kind: RoleBinding
 metadata:
   name: istiod
   namespace: {{ .Release.Namespace }}
+{{- if .Values.ignoreMode }}
+  annotations:
+    resources.gardener.cloud/mode: Ignore
+{{- end }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 roleRef:

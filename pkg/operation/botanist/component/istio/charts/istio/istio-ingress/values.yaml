@@ -21,3 +21,7 @@ ingressVersion: "1.15.3"
 #externalTrafficPolicy: Cluster
 minReplicas: 2
 maxReplicas: 5
+
+# Istio Ingress Configuration Resources
+proxyProtocolEnabled: false
+vpnEnabled: false
