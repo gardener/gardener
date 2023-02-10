@@ -465,6 +465,7 @@ metadata:
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
+    node.gardener.cloud/critical-component: "true"
     origin: gardener
   name: ` + daemonSetNameFor(pool) + `
   namespace: kube-system

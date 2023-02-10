@@ -246,9 +246,10 @@ ip6.arpa:53 {
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					labelKey:                        nodelocaldnsconstants.LabelValue,
-					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+					labelKey:                                    nodelocaldnsconstants.LabelValue,
+					v1beta1constants.GardenRole:                 v1beta1constants.GardenRoleSystemComponent,
+					managedresources.LabelKeyOrigin:             managedresources.LabelValueGardener,
+					v1beta1constants.LabelNodeCriticalComponent: "true",
 				},
 			},
 			Spec: appsv1.DaemonSetSpec{

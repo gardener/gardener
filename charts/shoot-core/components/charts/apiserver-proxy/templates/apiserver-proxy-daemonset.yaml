@@ -10,6 +10,7 @@ metadata:
   labels:
     gardener.cloud/role: system-component
     origin: gardener
+    node.gardener.cloud/critical-component: "true"
   annotations:
 {{ include "apiserver-proxy.daemonset.annotations" . | indent 4 }}
 spec:
