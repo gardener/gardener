@@ -15,7 +15,7 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 
 ## Prerequisites
 
-- Make sure that you have prepared your setup and checked out Gardener sources as described in the [Local Setup guide](../development/local_setup.md).
+- Make sure that you have followed the [Local Setup guide](../development/local_setup.md) up until the [Get the sources](../development/local_setup.md#get-the-sources) step.
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see the [Docker documentation](https://docs.docker.com/desktop/settings/mac/) for how to configure the resources for Docker for Mac).
   > Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: You can clean up unused data with `docker system df` and `docker system prune -a`.
@@ -53,7 +53,7 @@ Using a Gardener cluster as seed simplifies the process, because some configurat
 However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `./example/provider-extensions/gardenlet/values.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up`, which is explained later, will pause and tell you what to do.
 
 ### External Controllers
-You might plan to deploy and register external controllers for networking, operating system, providers, etc. Please put `ControllerDeployment`s and `ControllerRegistration`s into the S`./example/provider-extensions/garden/controllerregistrations` directory. The whole content of this folder will be applied to your KinD cluster.
+You might plan to deploy and register external controllers for networking, operating system, providers, etc. Please put `ControllerDeployment`s and `ControllerRegistration`s into the `./example/provider-extensions/garden/controllerregistrations` directory. The whole content of this folder will be applied to your KinD cluster.
 
 ### `CloudProfile`s
 There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from another landscape to the `./example/provider-extensions/garden/cloudprofiles` directory or create your own `CloudProfiles` based on the [gardener examples](../../example/30-cloudprofile.yaml). Please check the GitHub repository of your desired provider-extension. Most of them include example `CloudProfile`s. All files you place in this folder will be applied to your KinD cluster.
