@@ -87,6 +87,9 @@ var _ = Describe("Reconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "critical1",
 						Namespace: "kube-system",
+						Labels: map[string]string{
+							"node.gardener.cloud/critical-component": "true",
+						},
 					},
 					Spec: appsv1.DaemonSetSpec{
 						Template: corev1.PodTemplateSpec{
@@ -102,6 +105,9 @@ var _ = Describe("Reconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "critical2",
 						Namespace: "default",
+						Labels: map[string]string{
+							"node.gardener.cloud/critical-component": "true",
+						},
 					},
 					Spec: appsv1.DaemonSetSpec{
 						Template: corev1.PodTemplateSpec{
@@ -119,6 +125,9 @@ var _ = Describe("Reconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "non-critical1",
 						Namespace: "kube-system",
+						Labels: map[string]string{
+							"node.gardener.cloud/critical-component": "false",
+						},
 					},
 					Spec: appsv1.DaemonSetSpec{
 						Template: corev1.PodTemplateSpec{

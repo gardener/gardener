@@ -160,6 +160,7 @@ var _ = Describe("Node tests", func() {
 
 	Context("node-critical DaemonSets", func() {
 		BeforeEach(func() {
+			metav1.SetMetaDataLabel(&daemonSet.ObjectMeta, "node.gardener.cloud/critical-component", "true")
 			daemonSet.Spec.Template.Labels["node.gardener.cloud/critical-component"] = "true"
 		})
 

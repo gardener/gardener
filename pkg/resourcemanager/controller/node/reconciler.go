@@ -70,7 +70,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// prep for checks: list all DaemonSets and all node-critical pods on the given node
 	daemonSetList := &appsv1.DaemonSetList{}
-	if err := r.TargetClient.List(ctx, daemonSetList); err != nil {
+	if err := r.TargetClient.List(ctx, daemonSetList, client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed listing node-critical DaemonSets on node: %w", err)
 	}
 

@@ -123,7 +123,8 @@ This document provides a checklist for them that you can walk through.
 
 5. **Mark node-critical components** ([example](https://github.com/gardener/gardener/blob/release-v1.64/pkg/operation/botanist/component/kubeproxy/resources.go#L325))
 
-   To ensure user workload pods are only scheduled to `Nodes` where all node-critical components are ready, these components need to tolerate the `node.gardener.cloud/critical-components-not-ready` taint (`NoSchedule` effect) and be labelled with `node.gardener.cloud/critical-component=true`.
+   To ensure user workload pods are only scheduled to `Nodes` where all node-critical components are ready, these components need to tolerate the `node.gardener.cloud/critical-components-not-ready` taint (`NoSchedule` effect). 
+   Also, such `DaemonSets` and the included `PodTemplates` need to be labelled with `node.gardener.cloud/critical-component=true`.
    For more information, see [Readiness of Shoot Worker Nodes](../usage/node-readiness.md).
 
 ## Scalability
