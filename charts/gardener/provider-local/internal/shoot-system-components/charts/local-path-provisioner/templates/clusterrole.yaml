@@ -36,6 +36,7 @@ rules:
     - get
     - list
     - watch
+{{- if not .Values.pspDisabled }}
 - apiGroups:
   - policy
   - extensions
@@ -45,3 +46,4 @@ rules:
   - podsecuritypolicies
   verbs:
   - use
+{{- end }}
