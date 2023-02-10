@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,14 +99,14 @@ var daemonSetGVK = appsv1.SchemeGroupVersion.WithKind("DaemonSet")
 // given node have been scheduled. It uses ownerReferences of the given node-critical pods on the node for this check.
 func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.EventRecorder, node *corev1.Node, daemonSets []appsv1.DaemonSet, nodeCriticalPods []corev1.Pod) bool {
 	// collect a set of all scheduled DaemonSets on the node
-	scheduledDaemonSets := sets.NewString()
+	scheduledDaemonSets := sets.New[types.UID]()
 	for _, pod := range nodeCriticalPods {
 		controllerRef := metav1.GetControllerOf(&pod)
 		if controllerRef == nil || schema.FromAPIVersionAndKind(controllerRef.APIVersion, controllerRef.Kind) != daemonSetGVK {
 			continue
 		}
 
-		scheduledDaemonSets.Insert(string(controllerRef.UID))
+		scheduledDaemonSets.Insert(controllerRef.UID)
 	}
 
 	// filter for DaemonSets that were not scheduled to the node yet
@@ -122,7 +123,7 @@ func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.Even
 
 		// check whether DaemonSet has corresponding daemon pod on the node
 		key := client.ObjectKeyFromObject(&daemonSet)
-		if !scheduledDaemonSets.Has(string(daemonSet.UID)) {
+		if !scheduledDaemonSets.Has(daemonSet.UID) {
 			unscheduledDaemonSets = append(unscheduledDaemonSets, key)
 		}
 	}
@@ -157,14 +158,13 @@ func AllNodeCriticalPodsAreReady(log logr.Logger, recorder record.EventRecorder,
 // RemoveTaint removes the taint managed by this controller from the given node object
 func RemoveTaint(ctx context.Context, w client.Writer, node *corev1.Node) error {
 	patch := client.MergeFromWithOptions(node.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	taints := node.Spec.Taints
-	for i := 0; i < len(taints); i++ {
-		if taints[i].Key == v1beta1constants.TaintNodeCriticalComponentsNotReady {
-			taints = append(taints[:i], taints[i+1:]...)
-			i--
+	var newTaints []corev1.Taint
+	for _, taint := range node.Spec.Taints {
+		if taint.Key != v1beta1constants.TaintNodeCriticalComponentsNotReady {
+			newTaints = append(newTaints, taint)
 		}
 	}
-	node.Spec.Taints = taints
+	node.Spec.Taints = newTaints
 
 	// Always try to patch the node object even if we did not modify it.
 	// Optimistic locking will cause the patch to fail if we operate on an old version of the object.

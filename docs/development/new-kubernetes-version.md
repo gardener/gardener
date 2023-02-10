@@ -13,7 +13,7 @@ For example, [#5102](https://github.com/gardener/gardener/issues/5102) can be us
 As you can see, the task of supporting a new Kubernetes version also includes the provider extensions maintained in the `gardener` GitHub organization and is not restricted to `gardener/gardener` only.
 
 Generally, the work items can be split into two groups:
-The first group contains Kubernetes release-independent tasks, the second group contains tasks specific to the changes in the given Kubernetes release.
+The first group contains tasks specific to the changes in the given Kubernetes release, the second group contains Kubernetes release-independent tasks.
 
 > ℹ️ Upgrading the `k8s.io/*` and `sigs.k8s.io/controller-runtime` Golang dependencies is typically tracked and worked on separately (see e.g. [#4772](https://github.com/gardener/gardener/issues/4772) or [#5282](https://github.com/gardener/gardener/issues/5282)).
 
@@ -76,6 +76,9 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](https://github.com/gardener/gardener/blob/master/docs/development/getting_started_locally.md).
   - If it appears, add all added controllers to the list based on the Kubernetes version ([example](https://github.com/gardener/gardener/blob/5f87b18b951e104c2c25a7145548c8a2d08adefc/pkg/operation/botanist/component/shootsystem/shootsystem.go#L170-L174)).
   - For any removed controllers, add them only to the Kubernetes version if it is low enough.
+- Maintain copies of the `DaemonSet` controller's scheduling logic:
+  - `gardener-resource-manager`'s [`Node` controller](../concepts/resource-manager.md#node-controllerpkgresourcemanagercontrollernode) uses a copy of parts of the `DaemonSet` controller's logic for determining whether a specific `Node` should run a daemon pod of a given `DaemonSet`: see [this file](https://github.com/gardener/gardener/v1.65.0/master/pkg/resourcemanager/controller/node/helper/daemon_controller.go).
+  - Check the referenced upstream files for changes to the `DaemonSet` controller's logic and adapt our copies accordingly. This might include introducing version-specific checks in our codebase to handle different shoot cluster versions.
 - Bump the used Kubernetes version for local `Shoot` and local e2e test.
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/5707c4c7a4fd265b176387178b755cabeea89ffe) example commit.
 
