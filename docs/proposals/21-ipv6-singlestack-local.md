@@ -261,7 +261,7 @@ Hence, gardenlet explicitly enables the corresponding kernel setting for shoot w
 
 The `docker.io` registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
 
-Container images from `docker.io` used on shoots and seeds are rewritten to `registry.ipv6.docker.com` if the corresponding `ipFamilies` field specifies IPv6 singe-stack.
+Container images from `docker.io` used in shoots, seeds, and extensions are hard-coded to `mirror.gcr.io` in all respective `images.yaml`. The [Google Mirror](https://cloud.google.com/container-registry/docs/pulling-cached-images) of Docker Hub supports dual-stack access and has no rate limit.
 
 #### E2E Tests
 
