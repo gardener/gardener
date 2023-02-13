@@ -67,4 +67,4 @@ if [[ "$1" != "operator" ]]; then
   fi
 fi
 
-GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags --v --progress "$@"
+GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags --v --show-node-events "$@"
