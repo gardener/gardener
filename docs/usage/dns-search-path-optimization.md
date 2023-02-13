@@ -86,7 +86,7 @@ featureGates:
 In case the feature is enabled in the Gardenlet it can be disabled per shoot cluster by setting the annotation
 `alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled` to any value.
 
-This will automatically rewrite requests like `service.namespace.svc.cluster.local.other-namespace.svc.cluster.local` to
+This will automatically rewrite requests like `service.namespace.svc.cluster.local.svc.cluster.local` to
 `service.namespace.svc.cluster.local`.
 
 In case applications also target services for name resolution, which are outside of the cluster and have less than `ndots` dots,
@@ -117,5 +117,6 @@ requires that common suffixes contain at least one dot (.) and adds a second dot
 suffix of `example.com` in the configuration would match `*.example.com`.
 
 Since some clients verify the host in the response of a DNS query, the host must also be rewritten.
-For that reason we can't rewrite `www.example.com.default.svc.cluster.local`, as for a rewrite the namespace would not be known.
+For that reason we can't rewrite a query for `service.dst-namespace.svc.cluster.local.src-namespace.svc.cluster.local` or
+`www.example.com.src-namespace.svc.cluster.local` as for an answer rewrite `src-namespace` would not be known.
 
