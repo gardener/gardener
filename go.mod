@@ -177,7 +177,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace (
-	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
-	k8s.io/client-go => k8s.io/client-go v0.26.1
-)
+replace k8s.io/client-go => k8s.io/client-go v0.26.1
