@@ -25,6 +25,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/apiserverproxy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
@@ -146,6 +147,7 @@ type Extensions struct {
 
 // SystemComponents contains references to system components.
 type SystemComponents struct {
+	APIServerProxy      apiserverproxy.Interface
 	ClusterIdentity     clusteridentity.Interface
 	CoreDNS             coredns.Interface
 	KubeProxy           kubeproxy.Interface
