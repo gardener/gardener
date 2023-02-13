@@ -177,25 +177,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace (
-	github.com/emicklei/go-restful/v3 => github.com/emicklei/go-restful/v3 v3.9.0 // keep this value in sync with k8s.io/apiserver
-	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
-	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
-	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
-	github.com/google/gnostic => github.com/google/gnostic v0.5.7-v3refs // keep this value in sync with k8s.io/apiserver
-	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.14.0 // keep this value in sync with sigs.k8s.io/controller-runtime
-	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
-	google.golang.org/grpc => google.golang.org/grpc v1.49.0 // keep this value in sync with k8s.io/apiserver
-	k8s.io/api => k8s.io/api v0.26.1
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.26.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.26.1
-	k8s.io/apiserver => k8s.io/apiserver v0.26.1
-	k8s.io/autoscaler => k8s.io/autoscaler v0.0.0-20230202024129-233501343d65 // translates to k8s.io/autoscaler/vertical-pod-autoscaler@v0.13.0
-	k8s.io/client-go => k8s.io/client-go v0.26.1
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.26.1
-	k8s.io/code-generator => k8s.io/code-generator v0.26.1
-	k8s.io/component-base => k8s.io/component-base v0.26.1
-	k8s.io/helm => k8s.io/helm v2.16.1+incompatible
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.26.1
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.26.1
-)
+replace k8s.io/client-go => k8s.io/client-go v0.26.1
