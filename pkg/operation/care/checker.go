@@ -293,15 +293,31 @@ func (b *HealthChecker) checkManagedResourceConditions(
 ) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
+
+		// check if MangedResource `ResourcesApplied` condition is in failed state
+		conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+		if conditionResourcesApplied != nil && conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse && conditionResourcesApplied.Reason == resourcesv1alpha1.ConditionApplyFailed {
+			c = b.FailedCondition(condition, conditionResourcesApplied.Reason, conditionResourcesApplied.Message)
+		}
+
 		return &c
 	}
 
-	for _, cond := range mr.Status.Conditions {
+	for _, condType := range []gardencorev1beta1.ConditionType{
+		resourcesv1alpha1.ResourcesApplied,
+		resourcesv1alpha1.ResourcesHealthy,
+		resourcesv1alpha1.ResourcesProgressing,
+	} {
+		cond := v1beta1helper.GetCondition(mr.Status.Conditions, condType)
+		if cond == nil {
+			continue
+		}
+
 		checkConditionStatus, ok := conditionsToCheck[cond.Type]
 		if !ok {
 			continue
 		}
-		if !checkConditionStatus(cond) {
+		if !checkConditionStatus(*cond) {
 			c := b.FailedCondition(condition, cond.Reason, cond.Message)
 			if cond.Type == resourcesv1alpha1.ResourcesProgressing && b.managedResourceProgressingThreshold != nil {
 				c = b.FailedCondition(condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, b.managedResourceProgressingThreshold.Duration))
