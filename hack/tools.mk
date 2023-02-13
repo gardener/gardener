@@ -19,7 +19,7 @@
 # as needed. If the required tool (version) is not built/installed yet, make will make sure to build/install it.
 # The *_VERSION variables in this file contain the "default" values, but can be overwritten in the top level make file.
 
-ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
 TOOLS_PKG_PATH             := ./hack/tools
 else
 # dependency on github.com/gardener/gardener/hack/tools is optional and only needed if other projects want to reuse
@@ -122,7 +122,7 @@ $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERS
 	@# see https://github.com/golangci/golangci-lint/issues/1276
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
 $(GOMEGACHECK): $(TOOLS_PKG_PATH)/gomegacheck/go.* $(shell find $(TOOLS_PKG_PATH)/gomegacheck -type f -name '*.go')
 	cd $(TOOLS_PKG_PATH)/gomegacheck; CGO_ENABLED=1 go build -o $(abspath $(GOMEGACHECK)) -buildmode=plugin ./plugin
 else
@@ -153,7 +153,7 @@ $(KUBECTL): $(call tool_version_file,$(KUBECTL),$(KUBECTL_VERSION))
 	curl -Lo $(KUBECTL) https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(shell uname -s | tr '[:upper:]' '[:lower:]')/$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')/kubectl
 	chmod +x $(KUBECTL)
 
-ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
 $(LOGCHECK): $(TOOLS_PKG_PATH)/logcheck/go.* $(shell find $(TOOLS_PKG_PATH)/logcheck -type f -name '*.go')
 	cd $(TOOLS_PKG_PATH)/logcheck; CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
@@ -173,7 +173,7 @@ $(PROMTOOL): $(TOOLS_PKG_PATH)/install-promtool.sh
 $(PROTOC_GEN_GOGO): go.mod
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
 
-ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
 $(REPORT_COLLECTOR): $(TOOLS_PKG_PATH)/report-collector/*.go
 	go build -o $(REPORT_COLLECTOR) $(TOOLS_PKG_PATH)/report-collector
 else
