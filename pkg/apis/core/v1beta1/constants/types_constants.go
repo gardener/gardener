@@ -467,6 +467,10 @@ const (
 	LabelNetworkPolicyFromShootAPIServer = "networking.gardener.cloud/from-shoot-apiserver"
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
+	// Deprecated: This label is deprecated and will be removed in a future version. Components in shoot namespaces
+	//  which need to be scraped by Prometheus need to annotate their Services with
+	//  `networking.resources.gardener.cloud/from-policy-pod-label-selector=all-scrape-targets` and
+	//  `networking.resources.gardener.cloud/from-policy-allowed-ports=[{"protocol":<protocol>,"port":<port>}]`.
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
 	// LabelNetworkPolicyToAggregatePrometheus allows Egress traffic to the aggregate Prometheus.
 	LabelNetworkPolicyToAggregatePrometheus = "networking.gardener.cloud/to-aggregate-prometheus"
@@ -481,6 +485,10 @@ const (
 	LabelNetworkPolicyShootToKubelet = "networking.gardener.cloud/to-kubelet"
 	// LabelNetworkPolicyAllowed is a constant for allowing a network policy.
 	LabelNetworkPolicyAllowed = "allowed"
+	// LabelNetworkPolicyScrapeTargets is a constant for pod selector label which can be used on Services for components
+	// which should be scraped by Prometheus.
+	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
+	LabelNetworkPolicyScrapeTargets = "all-scrape-targets"
 
 	// LabelApp is a constant for a label key.
 	LabelApp = "app"

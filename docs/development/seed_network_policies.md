@@ -63,22 +63,29 @@ allow-kube-apiserver              app=kubernetes,gardener.cloud/role=controlplan
 ### Network Policies for Logging & Monitoring
 
 Gardener currently introduces a logging stack based on [Loki](https://github.com/grafana/loki). So this section is subject to change. 
-For more information, see the [Loki Gardener Community Meeting ](https://www.youtube.com/watch?v=345b8xCcB-U&t=1166s).
+For more information, see the [Loki Gardener Community Meeting](https://www.youtube.com/watch?v=345b8xCcB-U&t=1166s).
 
 These are the logging and monitoring related network policies:
 ```
-NAME                              POD-SELECTOR                                                             
-allow-from-prometheus             networking.gardener.cloud/from-prometheus=allowed
-allow-grafana                     component=grafana,gardener.cloud/role=monitoring
-allow-prometheus                  app=prometheus,gardener.cloud/role=monitoring,role=monitoring
-allow-to-aggregate-prometheus     networking.gardener.cloud/to-aggregate-prometheus=allowed
-allow-to-loki                     networking.gardener.cloud/to-loki=allowed
+NAME                                POD-SELECTOR                                                             
+allow-from-prometheus (deprecated!) networking.gardener.cloud/from-prometheus=allowed
+allow-grafana                       component=grafana,gardener.cloud/role=monitoring
+allow-prometheus                    app=prometheus,gardener.cloud/role=monitoring,role=monitoring
+allow-to-aggregate-prometheus       networking.gardener.cloud/to-aggregate-prometheus=allowed
+allow-to-loki                       networking.gardener.cloud/to-loki=allowed
 ```
 
-For instance, let's take a look at the network policy `from-prometheus`.
 As part of the shoot reconciliation flow, Gardener deploys a shoot-specific Prometheus into the shoot namespace. 
-Each pod that should be scraped for metrics must be labeled with `networking.gardener.cloud/from-prometheus=allowed` to allow incoming network requests by the Prometheus pod.
-Most components of the Shoot cluster's control plane expose metrics and are therefore labeled appropriately. 
+Each pod that should be scraped for metrics must have a `Service` which is annotated with
+
+```yaml
+annotations:
+  networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
+  networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":<metrics-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
+```
+
+This automatically allows the needed network traffic from the Prometheus pod.
+For more information, see take a look at [this document](../concepts/resource-manager.md#networkpolicy-controllerpkgresourcemanagercontrollernetworkpolicy).
 
 ### Implications for Gardener Extensions
 
