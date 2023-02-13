@@ -306,7 +306,8 @@ func (b *HealthChecker) checkManagedResourceConditions(
 	for _, condType := range []gardencorev1beta1.ConditionType{
 		resourcesv1alpha1.ResourcesApplied,
 		resourcesv1alpha1.ResourcesHealthy,
-		resourcesv1alpha1.ResourcesProgressing} {
+		resourcesv1alpha1.ResourcesProgressing,
+	} {
 		cond := v1beta1helper.GetCondition(mr.Status.Conditions, condType)
 		if cond == nil {
 			continue
