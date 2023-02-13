@@ -15,11 +15,15 @@
 package controlplane
 
 import (
+	"context"
 	"path/filepath"
 	"time"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -99,3 +103,18 @@ var (
 		Path: filepath.Join(local.InternalChartsPath, "shoot-storageclasses"),
 	}
 )
+
+// GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
+func (vp *valuesProvider) GetControlPlaneShootChartValues(
+	_ context.Context,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+	secretsReader secretsmanager.Reader,
+	_ map[string]string,
+) (map[string]interface{}, error) {
+	return map[string]interface{}{
+		"local-path-provisioner": map[string]interface{}{
+			"pspDisabled": v1beta1helper.IsPSPDisabled(cluster.Shoot),
+		},
+	}, nil
+}
