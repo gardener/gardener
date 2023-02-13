@@ -741,7 +741,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						Spec: policyv1beta1.PodDisruptionBudgetSpec{
-							MaxUnavailable: intOrStrPtr(intstr.FromInt(1)),
+							MaxUnavailable: utils.IntStrPtrFromInt(1),
 							Selector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									"app":  "kubernetes",
@@ -777,7 +777,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: intOrStrPtr(intstr.FromInt(1)),
+							MaxUnavailable: utils.IntStrPtrFromInt(1),
 							Selector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									"app":  "kubernetes",
@@ -3413,10 +3413,6 @@ rules:
 		})
 	})
 })
-
-func intOrStrPtr(intOrStr intstr.IntOrString) *intstr.IntOrString {
-	return &intOrStr
-}
 
 func egressSelectorConfigFor(controlPlaneName string) string {
 	return `apiVersion: apiserver.k8s.io/v1alpha1

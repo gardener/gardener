@@ -17,6 +17,10 @@ package utils_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/pkg/utils"
@@ -107,4 +111,28 @@ baz`, spaces)).To(Equal(`foo
 		Entry("condition is true", true, "true"),
 		Entry("condition is false", false, "false"),
 	)
+
+	Describe("#QuantityPtr", func() {
+		It("should return a pointer", func() {
+			Expect(QuantityPtr(resource.MustParse("64Gi"))).Should(Equal(resource.NewQuantity(68719476736, resource.BinarySI)))
+		})
+	})
+
+	Describe("#ProtocolPtr", func() {
+		It("should return a pointer", func() {
+			Expect(ProtocolPtr(corev1.ProtocolTCP)).Should(gstruct.PointTo(Equal(corev1.ProtocolTCP)))
+		})
+	})
+
+	Describe("#IntStrPtrFromInt", func() {
+		It("should return a pointer", func() {
+			Expect(IntStrPtrFromInt(1234)).Should(gstruct.PointTo(Equal(intstr.FromInt(1234))))
+		})
+	})
+
+	Describe("#IntStrPtrFromString", func() {
+		It("should return a pointer", func() {
+			Expect(IntStrPtrFromString("foo")).Should(gstruct.PointTo(Equal(intstr.FromString("foo"))))
+		})
+	})
 })
