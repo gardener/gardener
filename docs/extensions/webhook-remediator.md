@@ -41,4 +41,4 @@ However, some other resources might still trigger the remediator, namely:
 
 In these cases, please make sure that your `rules` don't overlap with one of those resources (and their subresources).
 
-You can also find help from the kubernetes documentation: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings
+You can also find help from the [kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings)
