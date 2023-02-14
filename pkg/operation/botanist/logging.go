@@ -67,8 +67,9 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	lokiValues := map[string]interface{}{
-		"global":   seedImages,
-		"replicas": b.Shoot.GetReplicas(1),
+		"global":      seedImages,
+		"replicas":    b.Shoot.GetReplicas(1),
+		"clusterType": "shoot",
 	}
 
 	// check if loki is enabled in gardenlet config, default is true
@@ -152,7 +153,12 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues))
+	if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues)); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove this in a future version.
+	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}})
 }
 
 func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
