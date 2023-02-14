@@ -3017,14 +3017,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				Entry("should allow no common suffixes", nil, BeEmpty()),
 				Entry("should allow empty common suffixes", []string{}, BeEmpty()),
-				Entry("should allow normal common suffixes", []string{"gardener.cloud", "github.com"}, BeEmpty()),
-				Entry("should not start with a dot", []string{".gardener.cloud"}, ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":     Equal(field.ErrorTypeInvalid),
-						"BadValue": Equal(".gardener.cloud"),
-						"Detail":   ContainSubstring("should not start with"),
-					})),
-				)),
+				Entry("should allow normal common suffixes", []string{"gardener.cloud", "github.com", ".example.com"}, BeEmpty()),
 				Entry("should not allow too few dots", []string{"foo", "foo.bar"}, ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
@@ -3032,7 +3025,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail":   ContainSubstring("not enough dots"),
 					})),
 				)),
-				Entry("should not allow duplicate entries", []string{"foo.bar.", "foo.bar."}, ConsistOf(
+				Entry("should not allow duplicate entries", []string{"foo.bar.", ".foo.bar."}, ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeDuplicate),
 						"BadValue": Equal("foo.bar."),
