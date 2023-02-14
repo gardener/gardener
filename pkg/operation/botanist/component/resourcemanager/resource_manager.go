@@ -662,6 +662,12 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 	service := r.emptyService()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
 		service.Labels = r.getLabels()
+
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     utils.IntStrPtrFromInt(metricsPort),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		}))
+
 		service.Spec.Selector = appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		desiredPorts := []corev1.ServicePort{
@@ -1837,13 +1843,10 @@ func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyFromPrometheus:     v1beta1constants.LabelNetworkPolicyAllowed,
 		}
 	}
 
-	return map[string]string{
-		v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
-	}
+	return nil
 }
 
 func appLabel() map[string]string {

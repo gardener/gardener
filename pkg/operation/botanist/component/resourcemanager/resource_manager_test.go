@@ -270,7 +270,12 @@ var _ = Describe("ResourceManager", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-resource-manager",
 				Namespace: deployNamespace,
-				Labels:    defaultLabels},
+				Labels:    defaultLabels,
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":8080}]`,
+				},
+			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
 					"app": "gardener-resource-manager"},
@@ -500,7 +505,6 @@ var _ = Describe("ResourceManager", func() {
 								"projected-token-mount.resources.gardener.cloud/skip": "true",
 								"networking.gardener.cloud/to-dns":                    "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver":      "allowed",
-								"networking.gardener.cloud/from-prometheus":           "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
 								"networking.gardener.cloud/from-shoot-apiserver":      "allowed",
 								v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
