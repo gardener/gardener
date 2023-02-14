@@ -1877,8 +1877,8 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 
 	suffixes := map[string]struct{}{}
 	for i, s := range commonSuffixes {
-		if strings.Count(s, ".") < 1 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("commonSuffixes").Index(i), s, "not enough dots ('.'), at least one dot required"))
+		if strings.Count(s, ".") < 1 || (s[0] == '.' && strings.Count(s, ".") < 2) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("commonSuffixes").Index(i), s, "must contain at least one non-leading dot ('.')"))
 		}
 		s = strings.TrimPrefix(s, ".")
 		if _, found := suffixes[s]; found {

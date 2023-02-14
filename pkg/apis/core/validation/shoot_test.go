@@ -3022,7 +3022,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
 						"BadValue": Equal("foo"),
-						"Detail":   ContainSubstring("not enough dots"),
+						"Detail":   ContainSubstring("must contain at least one non-leading dot"),
 					})),
 				)),
 				Entry("should not allow duplicate entries", []string{"foo.bar.", ".foo.bar."}, ConsistOf(

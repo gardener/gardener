@@ -47,7 +47,7 @@ var _ = Describe("Validation", func() {
 		})
 
 		It("should forbid invalid suffixes", func() {
-			config.CommonSuffixes = []string{"foo", ".foo.bar", "foo.bar"}
+			config.CommonSuffixes = []string{"foo", ".foo", ".foo.bar", "foo.bar"}
 
 			errorList := ValidateConfiguration(config)
 
@@ -55,12 +55,23 @@ var _ = Describe("Validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("commonSuffixes[0]"),
-					"Detail":   Equal("not enough dots ('.'), at least one dot required"),
+					"Detail":   Equal("must contain at least one non-leading dot ('.')"),
+					"BadValue": Equal("foo"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("commonSuffixes[1]"),
+					"Detail":   Equal("must contain at least one non-leading dot ('.')"),
+					"BadValue": Equal(".foo"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeDuplicate),
+					"Field":    Equal("commonSuffixes[1]"),
 					"BadValue": Equal("foo"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeDuplicate),
-					"Field":    Equal("commonSuffixes[2]"),
+					"Field":    Equal("commonSuffixes[3]"),
 					"BadValue": Equal("foo.bar"),
 				})),
 			))
