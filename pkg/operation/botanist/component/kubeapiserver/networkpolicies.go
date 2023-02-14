@@ -26,7 +26,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 )
 
@@ -108,7 +107,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 		protocol               = corev1.ProtocolTCP
 		portAPIServer          = intstr.FromInt(Port)
 		portEtcd               = intstr.FromInt(int(etcd.PortEtcdClient))
-		portBlackboxExporter   = intstr.FromInt(monitoring.BlackboxExporterPort)
 		portVPNSeedServerNonHA = intstr.FromInt(vpnseedserver.EnvoyPort)
 		portVPNSeedServerHA    = intstr.FromInt(vpnseedserver.OpenVPNPort)
 	)
@@ -151,23 +149,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 						Protocol: &protocol,
 						Port:     &portAPIServer,
 					}},
-				},
-				{
-					From: []networkingv1.NetworkPolicyPeer{{
-						PodSelector: &metav1.LabelSelector{
-							MatchLabels: monitoring.GetPrometheusLabels(),
-						},
-					}},
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Protocol: &protocol,
-							Port:     &portBlackboxExporter,
-						},
-						{
-							Protocol: &protocol,
-							Port:     &portAPIServer,
-						},
-					},
 				},
 			},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
