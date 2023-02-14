@@ -1,62 +1,62 @@
-# Gardener extensibility and extraction of cloud-specific/OS-specific knowledge ([#308](https://github.com/gardener/gardener/issues/308), [#262](https://github.com/gardener/gardener/issues/262))
+# Gardener Extensibility and Extraction of Cloud-Specific/OS-Specific Knowledge ([#308](https://github.com/gardener/gardener/issues/308), [#262](https://github.com/gardener/gardener/issues/262))
 
 ## Table of Contents
 
-- [Gardener extensibility and extraction of cloud-specific/OS-specific knowledge (#308, #262)](#gardener-extensibility-and-extraction-of-cloud-specificos-specific-knowledge-308-262)
+- [Gardener Extensibility and Extraction of Cloud-Specific/OS-Specific Knowledge (#308, #262)](#gardener-extensibility-and-extraction-of-cloud-specificos-specific-knowledge-308-262)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
     - [Goals](#goals)
     - [Non-Goals](#non-goals)
   - [Proposal](#proposal)
-    - [Modification of existing `CloudProfile` and `Shoot` resources](#modification-of-existing-cloudprofile-and-shoot-resources)
+    - [Modification of Existing `CloudProfile` and `Shoot` Resources](#modification-of-existing-cloudprofile-and-shoot-resources)
       - [CloudProfiles](#cloudprofiles)
       - [Shoots](#shoots)
-    - [CRD definitions and workflow adaptation](#crd-definitions-and-workflow-adaptation)
-      - [Custom resource definitions](#custom-resource-definitions)
-        - [DNS records](#dns-records)
-        - [Infrastructure provisioning](#infrastructure-provisioning)
-        - [Backup infrastructure provisioning](#backup-infrastructure-provisioning)
-        - [Cloud config (user-data) for bootstrapping machines](#cloud-config-user-data-for-bootstrapping-machines)
-        - [Worker pools definition](#worker-pools-definition)
-        - [Generic resources](#generic-resources)
-      - [Shoot state](#shoot-state)
-      - [Shoot health checks/conditions](#shoot-health-checksconditions)
-      - [Reconciliation flow](#reconciliation-flow)
-      - [Deletion flow](#deletion-flow)
-    - [Gardenlet](#gardenlet)
-    - [Shoot control plane movement/migration](#shoot-control-plane-movementmigration)
-    - [BackupInfrastructure migration](#backupinfrastructure-migration)
-  - [Registration of external controllers at Gardener](#registration-of-external-controllers-at-gardener)
-  - [Other cloud-specific parts](#other-cloud-specific-parts)
-    - [Defaulting and validation admission plugins](#defaulting-and-validation-admission-plugins)
-    - [DNS Hosted Zone admission plugin](#dns-hosted-zone-admission-plugin)
-    - [Shoot Quota admission plugin](#shoot-quota-admission-plugin)
-    - [Shoot maintenance controller](#shoot-maintenance-controller)
+    - [CRD Definitions and Workflow Adaptation](#crd-definitions-and-workflow-adaptation)
+      - [Custom Resource Definitions](#custom-resource-definitions)
+        - [DNS Records](#dns-records)
+        - [Infrastructure Provisioning](#infrastructure-provisioning)
+        - [Backup Infrastructure Provisioning](#backup-infrastructure-provisioning)
+        - [Cloud Config (User-Data) for Bootstrapping Machines](#cloud-config-user-data-for-bootstrapping-machines)
+        - [Worker Pools Definition](#worker-pools-definition)
+        - [Generic Resources](#generic-resources)
+      - [Shoot State](#shoot-state)
+      - [Shoot Health Checks/Conditions](#shoot-health-checksconditions)
+      - [Reconciliation Flow](#reconciliation-flow)
+      - [Deletion Flow](#deletion-flow)
+    - [gardenlet](#gardenlet)
+    - [Shoot Control Plane Movement/Migration](#shoot-control-plane-movementmigration)
+    - [BackupInfrastructure Migration](#backupinfrastructure-migration)
+  - [Registration of External Controllers at Gardener](#registration-of-external-controllers-at-gardener)
+  - [Other Cloud-Specific Parts](#other-cloud-specific-parts)
+    - [Defaulting and Validation Admission Plugins](#defaulting-and-validation-admission-plugins)
+    - [DNS Hosted Zone Admission Plugin](#dns-hosted-zone-admission-plugin)
+    - [Shoot Quota Admission Plugin](#shoot-quota-admission-plugin)
+    - [Shoot Maintenance Controller](#shoot-maintenance-controller)
   - [Alternatives](#alternatives)
 
 ## Summary
 
-Gardener has evolved to a large compound of packages containing lots of highly specific knowledge which makes it very hard to extend (supporting a new cloud provider, new OS, ..., or behave differently depending on the underlying infrastructure).
+Gardener has evolved to a large compound of packages containing lots of highly specific knowledge, which makes it very hard to extend (supporting a new cloud provider, new OS, ..., or behaving differently depending on the underlying infrastructure).
 
 This proposal aims to move out the cloud-specific implementations (called "(cloud) botanists") and the OS-specifics into dedicated controllers, and simultaneously to allow deviation from the standard Gardener deployment.
 
 ## Motivation
 
-Currently, it is too hard to support additional cloud providers or operation systems/distributions as everything must be done in-tree which might affect the implementation of other cloud providers as well.
+Currently, it is too hard to support additional cloud providers or operation systems/distributions as everything must be done in-tree, which might affect the implementation of other cloud providers as well.
 The various conditions and branches make the code hard to maintain and hard to test.
 Every change must be done centrally, requires to completely rebuild Gardener, and cannot be deployed individually. Similar to the motivation for Kubernetes to extract their cloud-specifics into dedicated cloud-controller-managers or to extract the container/storage/network/... specifics into CRI/CSI/CNI/..., we aim to do the same right now.
 
 ### Goals
 
-* Gardener does not contain any cloud-specific knowledge anymore but defines a clear contract allowing external controllers (botanists) to support different environments (AWS, Azure, GCP, ...).
-* Gardener does not contain any operation system-specific knowledge anymore but defines a clear contract allowing external controllers to support different operation systems/distributions (CoreOS, SLES, Ubuntu, ...).
-* It shall become much easier to move control planes of Shoot clusters between Seed clusters ([#232](https://github.com/gardener/gardener/issues/232)) which is a necessary requirement of an automated setup for the Gardener Ring ([#233](https://github.com/gardener/gardener/issues/233)).
+* Gardener does not contain any cloud-specific knowledge anymore but defines a clear contract, allowing external controllers (botanists) to support different environments (AWS, Azure, GCP, ...).
+* Gardener does not contain any operation system-specific knowledge anymore but defines a clear contract, allowing external controllers to support different operation systems/distributions (CoreOS, SLES, Ubuntu, ...).
+* It shall become much easier to move control planes of Shoot clusters between Seed clusters ([#232](https://github.com/gardener/gardener/issues/232)), which is a necessary requirement of an automated setup for the Gardener Ring ([#233](https://github.com/gardener/gardener/issues/233)).
 
 ### Non-Goals
 
-* We want to also factor out the specific knowledge of the addon deployments (nginx-ingress, kubernetes-dashboard, ...), but we already have dedicated projects/issues for that: https://github.com/gardener/bouquet and [#246](https://github.com/gardener/gardener/issues/246). We will keep the addons in-tree as part of this proposal and tackle their extraction separately.
-* We do not want to make the Gardener a plain workflow engine that just executes a given template (which indeed would allow to be generic, open, and extensible in their highest forms but which would end-up in building a "programming/scripting language" inside a serialization format (YAML/JSON/...)). Rather, we want to have well-defined contracts and APIs, keeping Gardener responsible for the clusters management.
+* We want to also factor out the specific knowledge of the addon deployments (nginx-ingress, kubernetes-dashboard, ...), but we already have dedicated projects/issues for that: [Bouquet Gardener Addon Manager [Deprecated]](https://github.com/gardener/bouquet) and [#246](https://github.com/gardener/gardener/issues/246). We will keep the addons in-tree as part of this proposal and tackle their extraction separately.
+* We do not want to make Gardener a plain workflow engine that just executes a given template (which indeed would allow to be generic, open, and extensible in their highest forms, but which would end-up in building a "programming/scripting language" inside a serialization format (YAML/JSON/...)). Rather, we want to have well-defined contracts and APIs, keeping Gardener responsible for the clusters management.
 
 ## Proposal
 
@@ -64,18 +64,18 @@ Gardener heavily relies on and implements Kubernetes principles, and its ultimat
 The extension concept in Kubernetes is based on (next to others) `CustomResourceDefinition`s, `ValidatingWebhookConfiguration`s and `MutatingWebhookConfiguration`s, and `InitializerConfiguration`s.
 Consequently, Gardener's extensibility concept relies on these mechanisms.
 
-Instead of implementing all aspects directly in Gardener it will deploy some CRDs to the Seed cluster which will be watched by dedicated controllers (also running in the Seed clusters), each one implementing one aspect of cluster management. This way one complex strongly coupled Gardener implementation covering all infrastructures is decomposed into a set of loosely coupled controllers implementing aspects of APIs defined by Gardener.
+Instead of implementing all aspects directly in Gardener it will deploy some CRDs to the Seed cluster which will be watched by dedicated controllers (also running in the Seed clusters), each one implementing one aspect of cluster management. This way, one complex strongly coupled Gardener implementation covering all infrastructures is decomposed into a set of loosely coupled controllers, implementing aspects of APIs defined by Gardener.
 Gardener will just wait until the controllers report that they are done (or have faced an error) in the CRD's `.status` field instead of doing the respective tasks itself.
 We will have one specific CRD for every specific operation (e.g., DNS, infrastructure provisioning, machine cloud config generation, ...).
 However, there are also parts inside Gardener which can be handled generically (not by cloud botanists) because they are the same or very similar for all the environments.
-One example of those is the deployment of a `Namespace` in the Seed which will run the Shoot's control plane
+One example of those is the deployment of a `Namespace` in the Seed, which will run the Shoot's control plane.
 Another one is the deployment of a `Service` for the Shoot's kube-apiserver.
-In case a cloud botanist needs to cooperate and react on those operations it should register a `ValidatingWebhookConfiguration`, a `MutatingWebhookConfiguration`, or a `InitializerConfiguration`.
+In case a cloud botanist needs to cooperate and react on those operations, it should register a `ValidatingWebhookConfiguration`, a `MutatingWebhookConfiguration`, or a `InitializerConfiguration`.
 With this approach it can validate, modify, or react on any resource created by Gardener to make it cloud infrastructure specific.
 
 The web hooks should be registered with `failurePolicy=Fail` to ensure that a request made by Gardener fails if the respective web hook is not available.
 
-### Modification of existing `CloudProfile` and `Shoot` resources
+### Modification of Existing `CloudProfile` and `Shoot` Resources
 
 We will introduce the new API group `gardener.cloud`:
 
@@ -228,15 +228,15 @@ spec:
 
 :information: The specifications for the other cloud providers Gardener already has an implementation for looks similar.
 
-### CRD definitions and workflow adaptation
+### CRD Definitions and Workflow Adaptation
 
-In the following we are outlining the CRD definitions which define the API between Gardener and the dedicated controllers.
+In the following section, we are outlining the CRD definitions which define the API between Gardener and the dedicated controllers.
 After that we will take a look at the current [reconciliation](../../pkg/gardenlet/controller/shoot/shoot/reconciler_reconcile.go)/[deletion](../../pkg/gardenlet/controller/shoot/shoot/reconciler_delete.go) flow and describe how it would look like in case we would implement this proposal.
 
-#### Custom resource definitions
+#### Custom Resource Definitions
 
-Every CRD has a `.spec.type` field containing the respective instance of the dimension the CRD represents, e.g. the cloud provider, the DNS provider or the operation system name.
-Moreover, the `.status` field must contain
+Every CRD has a `.spec.type` field containing the respective instance of the dimension the CRD represents, e.g. the cloud provider, the DNS provider, or the operation system name.
+Moreover, the `.status` field must contain:
 
 * `observedGeneration` (`int64`), a field indicating on which generation the controller last worked on.
 * `state` (`*runtime.RawExtension`), a field which is not interpreted by Gardener but persisted; it should be treated opaque and only be used by the respective CRD-specific controller (it can store anything it needs to re-construct its own state).
@@ -246,9 +246,9 @@ Moreover, the `.status` field must contain
 
 Some CRDs might have a `.spec.providerConfig` or a `.status.providerStatus` field containing controller-specific information that is treated opaque by Gardener and will only be copied to dependent or depending CRDs.
 
-##### DNS records
+##### DNS Records
 
-Every Shoot needs two DNS records (or three, depending on whether nginx-ingress addon is enabled), one so-called "internal" record that Gardener uses in the kubeconfigs of the Shoot cluster's system components, and one so-called "external" record which is used in the kubeconfig provided to the user.
+Every Shoot needs two DNS records (or three, depending on whether the nginx-ingress addon is enabled), one so-called "internal" record that Gardener uses in the kubeconfigs of the Shoot cluster's system components, and one so-called "external" record which is used in the kubeconfig provided to the user.
 
 ```yaml
 ---
@@ -302,7 +302,7 @@ status:
     ...
 ```
 
-##### Infrastructure provisioning
+##### Infrastructure Provisioning
 
 The `Infrastructure` CRD contains the information about VPC, networks, security groups, availability zones, ..., basically, everything that needs to be prepared before an actual VMs/load balancers/... can be provisioned.
 
@@ -360,7 +360,7 @@ status:
       keyName: bar
 ```
 
-##### Backup infrastructure provisioning
+##### Backup Infrastructure Provisioning
 
 The `BackupInfrastructure` CRD in the Seeds tells the cloud-specific controller to prepare a blob store bucket/container which can later be used to store etcd backups.
 
@@ -384,7 +384,7 @@ status:
   lastOperation: ...
 ```
 
-##### Cloud config (user-data) for bootstrapping machines
+##### Cloud Config (User-Data) for Bootstrapping Machines
 
 Gardener will continue to keep knowledge about the content of the cloud config scripts, but it will hand over it to the respective OS-specific controller which will generate the specific valid representation.
 Gardener creates two `MachineCloudConfig` CRDs, one for the cloud-config-downloader (which will later flow into the `WorkerPool` CRD) and one for the real cloud-config (which will be stored as a `Secret` in the Shoot's `kube-system` namespace, and downloaded and executed from the cloud-config-downloader on the machines).
@@ -451,11 +451,11 @@ status:
           ...
 ```
 
-:information: The cloud-config-downloader script does not only download the cloud-config initially but at regular intervals, e.g., every `30s`.
-If it sees an updated cloud-config then it applies it again by reloading and restarting all systemd units in order to reflect the changes.
+:information: The cloud-config-downloader script does not only download the cloud-config initially, but does so at regular intervals, e.g., every `30s`.
+If it sees an updated cloud-config, then it applies it again by reloading and restarting all systemd units in order to reflect the changes.
 The way how this reloading of the cloud-config happens is OS-specific as well and not known to Gardener anymore, however, it must be part of the script already.
-On CoreOS, you have to execute `/usr/bin/coreos-cloudinit --from-file=<path>` whereas on SLES you execute `cloud-init --file <path> single -n write_files --frequency=once`.
-As Gardener doesn't know these commands it will write a placeholder expression instead (e.g., `{RELOAD-CLOUD-CONFIG-WITH-PATH:<path>}`) and the OS-specific controller is asked to replace it with the proper expression.
+On CoreOS you have to execute `/usr/bin/coreos-cloudinit --from-file=<path>`, whereas on SLES you have to execute `cloud-init --file <path> single -n write_files --frequency=once`.
+As Gardener doesn't know these commands, it will write a placeholder expression instead (e.g., `{RELOAD-CLOUD-CONFIG-WITH-PATH:<path>}`) and the OS-specific controller is asked to replace it with the proper expression.
 
 ```yaml
 ---
@@ -547,9 +547,9 @@ status:
 Cloud-specific controllers which might need to add another kernel option or another flag to the kubelet, maybe even another file to the disk, can register a `MutatingWebhookConfiguration` to that resource and modify it upon creation/update.
 The task of the `MachineCloudConfig` controller is to only generate the OS-specific cloud-config based on the `.spec` field, but not to add or change any logic related to Shoots.
 
-##### Worker pools definition
+##### Worker Pools Definition
 
-For every worker pool defined in the `Shoot` Gardener will create a `WorkerPool` CRD which shall be picked up by a cloud-specific controller and be translated to `MachineClass`es and `MachineDeployment`s.
+For every worker pool defined in the `Shoot`, Gardener will create a `WorkerPool` CRD which shall be picked up by a cloud-specific controller and be translated to `MachineClass`es and `MachineDeployment`s.
 
 ```yaml
 ---
@@ -600,12 +600,12 @@ status:
   lastOperation: ...
 ```
 
-##### Generic resources
+##### Generic Resources
 
 Some components are cloud-specific and must be deployed by the cloud-specific botanists.
 Others might need to deploy another pod next to the shoot's control plane or must do anything else.
 Some of these might be important for a functional cluster (e.g., the cloud-controller-manager, or a CSI plugin in the future), and controllers should be able to report errors back to the user.
-Consequently, in order to trigger the controllers to deploy these components Gardener would write a `Generic` CRD to the Seed to trigger the deployment.
+Consequently, in order to trigger the controllers to deploy these components, Gardener would write a `Generic` CRD to the Seed to trigger the deployment.
 No operation is depending on the status of these resources, however, the entire reconciliation flow is.
 
 ```yaml
@@ -628,12 +628,12 @@ status:
   lastOperation: ...
 ```
 
-#### Shoot state
+#### Shoot State
 
-In order to enable moving the control plane of a Shoot between Seed clusters (e.g., if a Seed cluster is not available anymore or entirely broken) Gardener must store some non-reconstructable state, potentially also the state written by the controllers.
+In order to enable moving the control plane of a Shoot between Seed clusters (e.g., if a Seed cluster is not available anymore or entirely broken), Gardener must store some non-reconstructable state, potentially also the state written by the controllers.
 Gardener watches these extension CRDs and copies the `.status.state` in a `ShootState` resource into the Garden cluster.
 Any observed status change of the respective CRD-controllers must be immediately reflected in the `ShootState` resource.
-The contract between Gardener and those controllers is: **Every controller must be capable of reconstructing its own environment based on both the state it has written before and on the real world's conditions/state.**
+The contract between Gardener and those controllers is:
 
 ```yaml
 ---
@@ -661,19 +661,21 @@ state:
   <other fields required to keep track of>
 ```
 
+:information: **Every controller must be capable of reconstructing its own environment based on both the state it has written before and on the real world's conditions/state.**
+
 We cannot assume that Gardener is always online to observe the most recent states the controllers have written to their resources.
 Consequently, the information stored here must not be used as "single point of truth", but the controllers must potentially check the real world's status to reconstruct themselves.
 However, this must anyway be part of their normal reconciliation logic and is a general best practice for Kubernetes controllers.
 
-#### Shoot health checks/conditions
+#### Shoot Health Checks/Conditions
 
-Some of the existing conditions already contain specific code which shall be simplified as well.
+Some of the existing conditions already contain specific code, which shall be simplified as well.
 All of the CRDs described above have a `.status.conditions` field to which the controllers may write relevant health information of their function area.
 Gardener will pick them up and copy them over to the Shoots `.status.conditions` (only those conditions setting `propagate=true`).
 
-#### Reconciliation flow
+#### Reconciliation Flow
 
-We are now examining the current Shoot creation/reconciliation flow and describe how it could look like when applying this proposal:
+We are now examining the current Shoot creation/reconciliation flow and describing how it could look like when applying this proposal:
 
 | Operation | Description |
 |-----------|-------------|
@@ -681,25 +683,25 @@ We are now examining the current Shoot creation/reconciliation flow and describe
 | botanist.DeployKubeAPIServerService | Gardener creates a Service of type `LoadBalancer` in the Seed.<br>AWS Botanist registers a Mutating Webhook and adds its AWS-specific annotation. |
 | botanist.WaitUntilKubeAPIServerServiceIsReady | Gardener checks the `.status` object of the just created `Service` in the Seed. The contract is that also clouds not supporting load balancers must react on the `Service` object and modify the `.status` to correctly reflect the kube-apiserver's ingress IP. |
 | botanist.DeploySecrets | Gardener creates the secrets/certificates it needs like it does today, but it provides utility functions that can be adopted by Botanists/other controllers if they need additional certificates/secrets created on their own. (We should also add labels to all secrets) |
-| botanist.Shoot.Components.DNS.Internal{Provider/Entry}.Deploy | Gardener creates a DNS-specific CRD in the Seed, and the responsible DNS-controller picks it up and creates a corresponding DNS record (see CRD specification above). |
-| botanist.Shoot.Components.DNS.External{Provider/Entry}.Deploy | Gardener creates a DNS-specific CRD in the Seed, and the responsible DNS-controller picks it up and creates a corresponding DNS record: (see CRD specification above). |
-| shootCloudBotanist.DeployInfrastructure | Gardener creates a Infrastructure-specific CRD in the Seed, and the responsible Botanist picks it up and does its job: (see CRD above). |
-| botanist.DeployBackupInfrastructure | Gardener creates a `BackupInfrastructure` resource in the Garden cluster.<br>(The BackupInfrastructure controller creates a BackupInfrastructure-specific CRD in the Seed, and the responsible Botanist picks it up and does its job: (see CRD above).) |
+| botanist.Shoot.Components.DNS.Internal{Provider/Entry}.Deploy | Gardener creates a DNS-specific CRD in the Seed, and the responsible DNS-controller picks it up and creates a corresponding DNS record (see the CRD specification above). |
+| botanist.Shoot.Components.DNS.External{Provider/Entry}.Deploy | Gardener creates a DNS-specific CRD in the Seed, and the responsible DNS-controller picks it up and creates a corresponding DNS record (see the CRD specification above). |
+| shootCloudBotanist.DeployInfrastructure | Gardener creates a Infrastructure-specific CRD in the Seed, and the responsible Botanist picks it up and does its job (see the CRD above). |
+| botanist.DeployBackupInfrastructure | Gardener creates a `BackupInfrastructure` resource in the Garden cluster.<br>(The BackupInfrastructure controller creates a BackupInfrastructure-specific CRD in the Seed, and the responsible Botanist picks it up and does its job (see the CRD above)) |
 | botanist.WaitUntilBackupInfrastructureReconciled | Gardener checks the `.status` object of the just created `BackupInfrastructure` resource. |
-| hybridBotanist.DeployETCD | Gardener does only deploy the etcd `StatefulSet` without backup-restore sidecar at all.<br>The cloud-specific Botanist registers a Mutating Webhook and adds the backup-restore sidecar, and it also creates the `Secret` needed by the backup-restore sidecar. |
+| hybridBotanist.DeployETCD | Gardener only deploys the etcd `StatefulSet` without adding a backup-restore sidecar.<br>The cloud-specific Botanist registers a Mutating Webhook and adds the backup-restore sidecar, and it also creates the `Secret` needed by the backup-restore sidecar. |
 | botanist.WaitUntilEtcdReady | Gardener checks the `.status` object of the etcd `Statefulset` and waits until readiness is indicated. |
 | hybridBotanist.DeployCloudProviderConfig | Gardener does not execute this anymore because it doesn't know anything about cloud-specific configuration. |
-| hybridBotanist.DeployKubeAPIServer | Gardener does only deploy the kube-apiserver `Deployment` without any cloud-specific flags/configuration.<br> The cloud-specific Botanist registers a Mutating Webhook and adds whatever is needed for the kube-apiserver to run in its cloud environment. |
-| hybridBotanist.DeployKubeControllerManager | Gardener does only deploy the kube-controller-manager `Deployment` without any cloud-specific flags/configuration.<br>The cloud-specific Botanist registers a Mutating Webhook and adds whatever is needed for the kube-controller-manager to run in its cloud environment (e.g., the cloud-config). |
-| hybridBotanist.DeployKubeScheduler | Gardener does only deploy the kube-scheduler `Deployment` without any cloud-specific flags/configuration.<br>The cloud-specific Botanist registers a Mutating Webhook and adds whatever is needed for the kube-scheduler to run in its cloud environment. |
-| hybridBotanist.DeployCloudControllerManager | Gardener does not execute this anymore because it doesn't know anything about cloud-specific configuration. The Botanists would be responsible to deploy their own cloud-controller-manager now.<br>They would watch for the kube-apiserver Deployment to exist, and as soon as it does, they deploy the CCM.<br> (Side note: The Botanist would also be responsible to deploy further controllers needed for this cloud environment, e.g. F5-controllers or CSI plugins). |
+| hybridBotanist.DeployKubeAPIServer | Gardener only deploys the kube-apiserver `Deployment` without any cloud-specific flags/configuration.<br> The cloud-specific Botanist registers a Mutating Webhook and adds whatever is needed for the kube-apiserver to run in its cloud environment. |
+| hybridBotanist.DeployKubeControllerManager | Gardener only deploys the kube-controller-manager `Deployment` without any cloud-specific flags/configuration.<br>The cloud-specific Botanist registers a Mutating Webhook and adds whatever is needed for the kube-controller-manager to run in its cloud environment (e.g., the cloud-config). |
+| hybridBotanist.DeployKubeScheduler | Gardener only deploys the kube-scheduler `Deployment` without any cloud-specific flags/configuration.<br>The cloud-specific Botanist registers a Mutating Webhook and adds whatever is needed for the kube-scheduler to run in its cloud environment. |
+| hybridBotanist.DeployCloudControllerManager | Gardener does not execute this anymore because it doesn't know anything about cloud-specific configuration. The Botanists would be responsible to deploy their own cloud-controller-manager now.<br>They would watch for the kube-apiserver Deployment to exist, and as soon as it does, they would deploy the CCM.<br> (Side note: The Botanist would also be responsible to deploy further controllers needed for this cloud environment, e.g. F5-controllers or CSI plugins). |
 | botanist.WaitUntilKubeAPIServerReady | Gardener checks the `.status` object of the kube-apiserver `Deployment` and waits until readiness is indicated. |
 | botanist.InitializeShootClients | Unchanged; Gardener creates a Kubernetes client for the Shoot cluster. |
-| botanist.DeployMachineControllerManager | Deleted, Gardener does no longer deploy MCM itself. See below. |
-| hybridBotanist.ReconcileMachines | Gardener creates a `Worker` CRD in the Seed, and the responsible `Worker` controller picks it up and does its job (see CRD above). It also deploys the machine-controller-manager.<br>Gardener waits until the status indicates that the controller is done. |
-| hybridBotanist.DeployKubeAddonManager | This function also computes the CoreOS cloud-config (because the secret storing it is managed by the kube-addon-manager).<br>Gardener would deploy the CloudConfig-specific CRD in the Seed, and the responsible OS controller picks it up and does its job (see CRD above).<br>The Botanists which would have to modify something would register a Webhook for this CloudConfig-specific resource and apply their changes.<br>The rest is mostly unchanged, Gardener generates the manifests for the addons and deploys the kube-addon-manager into the Seed.<br>AWS Botanist registers a Webhook for nginx-ingress.<br>Azure Botanist registers a Webhook for calico.<br>Gardener will no longer deploy the `StorageClass`es. Instead, the Botanists wait until the kube-apiserver is available and deploy them.<br><br>In the long term we want to get rid of optional addons inside the Gardener core and implement a sophisticated addon concept (see [#246](https://github.com/gardener/gardener/issues/246)). |
+| botanist.DeployMachineControllerManager | Deleted, Gardener no longer deploys MCM itself. See below. |
+| hybridBotanist.ReconcileMachines | Gardener creates a `Worker` CRD in the Seed, and the responsible `Worker` controller picks it up and does its job (see the CRD above). It also deploys the machine-controller-manager.<br>Gardener waits until the status indicates that the controller is done. |
+| hybridBotanist.DeployKubeAddonManager | This function also computes the CoreOS cloud-config (because the secret storing it is managed by the kube-addon-manager).<br>Gardener would deploy the CloudConfig-specific CRD in the Seed, and the responsible OS controller picks it up and does its job (see the CRD above).<br>The Botanists, which would have to modify something, would register a Webhook for this CloudConfig-specific resource and apply their changes.<br>The rest is mostly unchanged, Gardener generates the manifests for the addons and deploys the kube-addon-manager into the Seed.<br>AWS Botanist registers a Webhook for nginx-ingress.<br>Azure Botanist registers a Webhook for calico.<br>Gardener will no longer deploy the `StorageClass`es. Instead, the Botanists wait until the kube-apiserver is available and deploy them.<br><br>In the long term we want to get rid of optional addons inside the Gardener core and implement a sophisticated addon concept (see [#246](https://github.com/gardener/gardener/issues/246)). |
 | shootCloudBotanist.DeployKube2IAMResources | This function would be removed (currently Gardener would execute a Terraform job creating the IAM roles specified in the Shoot manifest). We cannot keep this behavior, the user would be responsible to create the needed IAM roles on its own. |
-| botanist.Shoot.Components.Nginx.DNSEtnry | Gardener creates a DNS-specific CRD in the Seed, and the responsible DNS-controller picks it up and creates a corresponding DNS record (see CRD specification above). |
+| botanist.Shoot.Components.Nginx.DNSEtnry | Gardener creates a DNS-specific CRD in the Seed, and the responsible DNS-controller picks it up and creates a corresponding DNS record (see the CRD specification above). |
 | botanist.WaitUntilVPNConnectionExists | Unchanged, Gardener checks that it is possible to port-forward to a Shoot pod. |
 | seedCloudBotanist.ApplyCreateHook | This function would be removed (actually, only the AWS Botanist implements it).<br>AWS Botanist deploys the aws-lb-readvertiser once the API Server is deployed and updates the ELB health check protocol one the load balancer pointing to the API server is created. |
 | botanist.DeploySeedMonitoring | Unchanged, Gardener deploys the monitoring stack into the Seed. |
@@ -708,14 +710,14 @@ We are now examining the current Shoot creation/reconciliation flow and describe
 :information: We can easily lift the contract later and allow dynamic network plugins or not using the VPN solution at all.
 We could also introduce a dedicated `ControlPlane` CRD and leave the complete responsibility of deploying kube-apiserver, kube-controller-manager, etc., to other controllers (if we need it at some point in time).
 
-#### Deletion flow
+#### Deletion Flow
 
 We are now examining the current Shoot deletion flow and describe shortly how it could look like when applying this proposal:
 
 | Operation | Description |
 |-----------|-------------|
 | botanist.DeploySecrets | This is just refreshing the cloud provider secret in the Shoot namespace in the Seed (in case the user has changed it before triggering the deletion). This function would stay as it is. |
-| hybridBotanist.RefreshMachineClassSecrets | This function would disappear.<br>Worker Pool controller needs to watch the referenced secret and update the generated MachineClassSecrets immediately. |
+| hybridBotanist.RefreshMachineClassSecrets | This function would disappear.<br>The Worker Pool controller needs to watch the referenced secret and update the generated MachineClassSecrets immediately. |
 | hybridBotanist.RefreshCloudProviderConfig | This function would disappear. Botanist needs to watch the referenced secret and update the generated cloud-provider-config immediately. |
 | botanist.RefreshCloudControllerManagerChecksums | See "hybridBotanist.RefreshCloudProviderConfig". |
 | botanist.RefreshKubeControllerManagerChecksums | See "hybridBotanist.RefreshCloudProviderConfig". |
@@ -737,16 +739,16 @@ We are now examining the current Shoot deletion flow and describe shortly how it
 | botanist.WaitUntilSeedNamespaceDeleted | Unchanged; Gardener waits until the Shoot namespace in the Seed has been deleted. |
 | botanist.DeleteGardenSecrets | Unchanged; Gardener deletes the kubeconfig/ssh-keypair `Secret` in the project namespace in the Garden. |
 
-### Gardenlet
+### gardenlet
 
 One part of the whole extensibility work will also to further split Gardener itself.
-Inspired from Kubernetes itself we plan to move the `Shoot` reconciliation/deletion controller loops as well as the `BackupInfrastructure` reconciliation/deletion controller loops into a dedicated "gardenlet" component that will run in the Seed cluster.
-With that, it can talk locally to the responsible kube-apiserver and we do no longer need to perform every operation out of the Garden cluster.
-This approach will also help us with scalability, performance, maintainability, testability in general.
+Inspired from Kubernetes itself, we plan to move the `Shoot` reconciliation/deletion controller loops, as well as the `BackupInfrastructure` reconciliation/deletion controller loops, into a dedicated "gardenlet" component that will run in the Seed cluster.
+With that, it can talk locally to the responsible kube-apiserver and we no longer need to perform every operation out of the Garden cluster.
+This approach will also help us with scalability, performance, maintainability, and testability in general.
 
 This architectural change implies that the Kubernetes API server of the Garden cluster must be exposed publicly (or at least be reachable by the registered Seeds). The Gardener controller-manager will remain and will keep its `CloudProfile`, `SecretBinding`, `Quota`, `Project`, and `Seed` controller loops. One part of the seed controller could be to deploy the "gardenlet" into the Seeds, however, this would require network connectivity to the Seed cluster.
 
-### Shoot control plane movement/migration
+### Shoot Control Plane Movement/Migration
 
 Automatically moving control planes is difficult with the current implementation as some resources created in the old Seed must be moved to the new one. However, some of them are not under Gardener's control (e.g., `Machine` resources). Moreover, the old control plane must be deactivated somehow to ensure that not two controllers work on the same things (e.g., virtual machines) from different environments.
 
@@ -764,7 +766,7 @@ aws-01.core.garden.example.com. 120 IN	TXT "Seed=seed-01"
 
 Gardener always keeps the DNS record up-to-date based on which Seed is responsible.
 
-In the above CRD examples one object in the `.spec` section was omitted as it is needed to get Shoot control plane movement/migration working (the field is only explained now in this section and not before; it was omitted on purpose to support focusing on the relevant specifications first).
+In the above CRD examples one object in the `.spec` section was omitted, as it is needed to get Shoot control plane movement/migration working (the field is only explained now in this section and not before; it was omitted on purpose to support focusing on the relevant specifications first).
 Every CRD also has the following section in its `.spec`:
 
 ```yaml
@@ -774,8 +776,8 @@ leadership:
   leaseSeconds: 60
 ```
 
-Before every operation the CRD-controllers check this DNS record (based on the `.spec.leadership.leaseSeconds` configuration) and verify that its result is equal to the `.spec.leadership.value` field.
-If both match they know that they should act on the resource, otherwise they stop doing anything.
+Before every operation, the CRD-controllers check this DNS record (based on the `.spec.leadership.leaseSeconds` configuration) and verify that its result is equal to the `.spec.leadership.value` field.
+If both match, they know that they should act on the resource, otherwise they stop doing anything.
 
 :information: We will provide an easy-to-use framework for the controllers containing all of these features out-of-the-box in order to allow the developers to focus on writing the actual controller logic.
 
@@ -789,7 +791,7 @@ Apart from that, the normal reconciliation flow gets executed.
 Gardener stores the list of Seeds that were responsible for hosting a Shoots control plane at some time in the Shoots `.status.seeds` list so that it knows which Seeds must be cleaned up (i.e., where the control plane must be deleted because it has been moved).
 Once cleaned up, the Seed's name will be removed from that list.
 
-### BackupInfrastructure migration
+### BackupInfrastructure Migration
 
 One part of the reconciliation flow above is the provisioning of the infrastructure for the Shoot's etcd backups (usually, this is a blob store bucket/container).
 Gardener already uses a separate `BackupInfrastructure` resource that is written into the Garden cluster and picked up by a dedicated `BackupInfrastructure` controller (bundled into the Gardener controller manager).
@@ -806,12 +808,12 @@ spec:
   shootUID: uuid-of-shoot
 ```
 
-The actual provisioning is executed in a corresponding Seed cluster as Gardener can only assume network connectivity to the underlying cloud environment in the Seed.
+The actual provisioning is executed in a corresponding Seed cluster, as Gardener can only assume network connectivity to the underlying cloud environment in the Seed.
 We would like to keep the created artifacts in the Seed (e.g., Terraform state) near to the control plane.
 Consequently, when Gardener moves a control plane, it will update the `.spec.seed` field of the `BackupInfrastructure` resource as well.
-With the exact same logic described above the `BackupInfrastructure` controller inside the Gardener will move to the new Seed.
+With the exact same logic described above, the `BackupInfrastructure` controller inside the Gardener will move to the new Seed.
 
-## Registration of external controllers at Gardener
+## Registration of External Controllers at Gardener
 
 We want to have a dynamic registration process, i.e. we don't want to hard-code any information about which controllers shall be deployed.
 The ideal solution would be to not even requiring a restart of Gardener when a new controller registers.
@@ -837,7 +839,7 @@ spec:
 
 Every `.kind`/`.type` combination may only exist once in the system.
 
-When a `Shoot` shall be reconciled Gardener can identify based on the referenced `Seed` and the content of the `Shoot` specification which controllers are needed in the respective Seed cluster.
+When a `Shoot` shall be reconciled, Gardener can identify based on the referenced `Seed` and the content of the `Shoot` specification which controllers are needed in the respective Seed cluster.
 It will demand the operators in the Garden cluster to deploy the controllers they are responsible for to a specific Seed.
 This kind of communication happens via CRDs as well:
 
@@ -867,46 +869,46 @@ Gardener will be also able to ask for deletion of controllers from Seeds when th
 
 :information: The provided easy-to-use framework for the controllers will also contain these needed features to implement corresponding operators.
 
-For most cases the controller deployment is very simple (just deploying it into the seed with some static configuration).
-In these cases it would produce unnecessary effort to ask for providing another component (the operator) that deploys the controller.
-To simplify this situation Gardener will be able to react on `ControllerInstallation`s specifying `.spec.registration.deployment.type=helm`.
+For most cases, the controller deployment is very simple (just deploying it into the seed with some static configuration).
+In these cases, it would produce unnecessary effort to ask for providing another component (the operator) that deploys the controller.
+To simplify this situation, Gardener will be able to react on `ControllerInstallation`s specifying `.spec.registration.deployment.type=helm`.
 The controller would be registered with the `ControllerRegistration` resources that would contain a Helm chart with all resources needed to deploy this controller into a seed (plus some static values).
 Gardener would render the Helm chart and deploy the resources into the seed.
-It will not react if `.spec.registration.deployment.type!=helm` which allows to also use any other deployment mechanism. Controllers that are getting deployed by operators would not specify the `.spec.deployment` section in the `ControllerRegistration` at all.
+It will not react if `.spec.registration.deployment.type!=helm`, which allows it to also use any other deployment mechanism. Controllers that are getting deployed by operators would not specify the `.spec.deployment` section in the `ControllerRegistration` at all.
 
 :information: Any controller requiring dynamic configuration values (e.g., based on the cloud provider or the region of the seed) must be installed with the operator approach.
 
-## Other cloud-specific parts
+## Other Cloud-Specific Parts
 
-The Gardener API server has a few admission controllers that contain cloud-specific code as well. We have to replace these parts as well.
+The Gardener API server has a few admission controllers that contain cloud-specific code. We have to replace these parts as well.
 
-### Defaulting and validation admission plugins
+### Defaulting and Validation Admission Plugins
 
-Right now, the admission controllers inside the Gardener API server do perform a lot of validation and defaulting of fields in the Shoot specification.
+Right now, the admission controllers inside the Gardener API server perform a lot of validation and defaulting of fields in the Shoot specification.
 The cloud-specific parts of these admission controllers will be replaced by mutating admission webhooks that will get called instead.
-As we will have a dedicated operator running in the Garden cluster anyway it will also get the responsibility to register this webhook if it needs to validate/default parts of the Shoot specification.
+As we will have a dedicated operator running in the Garden cluster anyway, it will also get the responsibility to register this webhook if it needs to validate/default parts of the Shoot specification.
 
 Example: The `.spec.cloud.workerPools[*].providerConfig.machineImage` field in the new Shoot manifest mentioned above could be omitted by the user and would get defaulted by the cloud-specific operator.
 
-### DNS Hosted Zone admission plugin
+### DNS Hosted Zone Admission Plugin
 
-For the same reasons the existing DNS Hosted Zone admission plugin will be removed from the Gardener core and moved into the responsibility of the respective DNS-specific operators running in the Garden cluster.
+For the same reasons, the existing DNS Hosted Zone admission plugin will be removed from the Gardener core and moved into the responsibility of the respective DNS-specific operators running in the Garden cluster.
 
-### Shoot Quota admission plugin
+### Shoot Quota Admission Plugin
 
 The Shoot quota admission plugin validates create or update requests on Shoots and checks that the specified machine/storage configuration is defined as per referenced `Quota` objects.
-The cloud-specifics in this controller are no longer needed as the `CloudProfile` and the `Shoot` resource have been adapted:
-The machine/storage configuration is no longer in cloud-specific sections but hard-wired fields in the general `Shoot` specification (see example resources above).
+The cloud-specifics in this controller are no longer needed, as the `CloudProfile` and the `Shoot` resource have been adapted.
+The machine/storage configuration is no longer in cloud-specific sections but in hard-wired fields in the general `Shoot` specification (see the example resources above).
 The quota admission plugin will be simplified and remains in the Gardener core.
 
-### Shoot maintenance controller
+### Shoot Maintenance Controller
 
 Every Shoot cluster can define a maintenance time window in which Gardener will update the Kubernetes patch version (if enabled) and the used machine image version in the Shoot resource.
 While the Kubernetes version is not part of the `providerConfig` section in the `CloudProfile` resource, the `machineImage` field is, and thus Gardener can't understand it any longer.
-In the future Gardener has to rely on the cloud-specific operator (probably the same doing the defaulting/validation mentioned before) to update this field.
+In the future, Gardener has to rely on the cloud-specific operator (probably the same doing the defaulting/validation mentioned before) to update this field.
 In the maintenance time window the maintenance controller will update the Kubernetes patch version (if enabled) and add a `trigger.gardener.cloud=maintenance` annotation in the Shoot resource.
 The already registered mutating web hook will call the operator who has to remove this annotation and update the `machineImage` in the `.spec.cloud.workerPools[*].providerConfig` sections.
 
 ## Alternatives
 
-* Alternative to DNS approach for Shoot control plane movement/migration: We have thought about rotating the credentials when a move is triggered which would make all controllers ineffective immediately. However, one problem with this is that we require IAM privileges for the users infrastructure account which might be not desired. Another, more complicated problem is that we cannot assume API access in order to create technical users for all cloud environments that might be supported.
+* Alternative to DNS approach for Shoot control plane movement/migration: We have thought about rotating the credentials when a move is triggered, which would make all controllers ineffective immediately. However, one problem with this is that we require IAM privileges for the users infrastructure account which might be not desired. Another, more complicated problem is that we cannot assume API access in order to create technical users for all cloud environments that might be supported.

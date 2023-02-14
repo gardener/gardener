@@ -1,26 +1,26 @@
 ---
-title: New Core Gardener Cloud APIs
+title: 03 New Core Gardener Cloud APIs
 ---
 
-# New `core.gardener.cloud/v1beta1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core
+# New `core.gardener.cloud/v1beta1` APIs Required to Extract Cloud-Specific/OS-Specific Knowledge Out of Gardener Core
 
 ## Table of Contents
 
-- [New `core.gardener.cloud/v1beta1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core](#new-coregardenercloudv1beta1-apis-required-to-extract-cloud-specificos-specific-knowledge-out-of-gardener-core)
+- [New `core.gardener.cloud/v1beta1` APIs Required to Extract Cloud-Specific/OS-Specific Knowledge Out of Gardener Core](#new-coregardenercloudv1beta1-apis-required-to-extract-cloud-specificos-specific-knowledge-out-of-gardener-core)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
     - [Goals](#goals)
     - [Non-Goals](#non-goals)
   - [Proposal](#proposal)
-    - [`CloudProfile` resource](#cloudprofile-resource)
-    - [`Seed` resource](#seed-resource)
-    - [`Project` resource](#project-resource)
+    - [`CloudProfile` Resource](#cloudprofile-resource)
+    - [`Seed` Resource](#seed-resource)
+    - [`Project` Resource](#project-resource)
     - [`SecretBinding` resource](#secretbinding-resource)
-    - [`Quota` resource](#quota-resource)
-    - [`BackupBucket` resource](#backupbucket-resource)
-    - [`BackupEntry` resource](#backupentry-resource)
-    - [`Shoot` resource](#shoot-resource)
+    - [`Quota` Resource](#quota-resource)
+    - [`BackupBucket` Resource](#backupbucket-resource)
+    - [`BackupEntry` Resource](#backupentry-resource)
+    - [`Shoot` Resource](#shoot-resource)
     - [`Plant` resource](#plant-resource)
 
 ## Summary
@@ -49,9 +49,9 @@ In order to achieve the same, we have to provide proper APIs.
 ## Proposal
 
 In GEP-1 we already have proposed a first version for new `CloudProfile` and `Shoot` resources.
-In order to deprecate the existing/old `garden.sapcloud.io/v1beta1` API group (and remove it, eventually) we should move all existing resources to the new `core.gardener.cloud/v1beta1` API group.
+In order to deprecate the existing/old `garden.sapcloud.io/v1beta1` API group (and remove it, eventually), we should move all existing resources to the new `core.gardener.cloud/v1beta1` API group.
 
-### `CloudProfile` resource
+### `CloudProfile` Resource
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -199,7 +199,7 @@ spec:
     #   id: d61c3912-8422-4daf-835e-854efa0062e4
 ```
 
-### `Seed` resource
+### `Seed` Resource
 
 Special note: The proposal contains fields that are not yet existing in the current `garden.sapcloud.io/v1beta1.Seed` resource, but they should be implemented (open issues that require them are linked).
 
@@ -263,7 +263,7 @@ spec:
   - key: seed.gardener.cloud/invisible
   blockCIDRs:
   - 169.254.169.254/32
-  backup: # See https://github.com/gardener/gardener/blob/master/docs/proposals/02-backupinfra.md.
+  backup: # See https://github.com/gardener/gardener/blob/master/docs/proposals/02-backupinfra.md
     type: <some-provider-name> # {aws,azure,gcp,...}
   # region: eu-west-1
     secretRef:
@@ -284,7 +284,7 @@ status:
   observedGeneration: 1
 ```
 
-### `Project` resource
+### `Project` Resource
 
 Special note: The `members` and `viewers` field of the `garden.sapcloud.io/v1beta1.Project` resource will be merged together into one `members` field.
 Every member will have a role that is either `admin` or `viewer`.
@@ -358,7 +358,7 @@ quotas: []
 # # namespace: namespace-other-than-'garden-core' // optional
 ```
 
-### `Quota` resource
+### `Quota` Resource
 
 Special note: No modifications needed compared to the current `garden.sapcloud.io/v1beta1.Quota` resource.
 
@@ -382,7 +382,7 @@ spec:
     loadbalancer: "100"
 ```
 
-### `BackupBucket` resource
+### `BackupBucket` Resource
 
 Special note: This new resource is cluster-scoped.
 
@@ -429,7 +429,7 @@ status:
   observedGeneration: 1
 ```
 
-### `BackupEntry` resource
+### `BackupEntry` Resource
 
 Special note: This new resource is cluster-scoped.
 
@@ -476,7 +476,7 @@ status:
   observedGeneration: 1
 ```
 
-### `Shoot` resource
+### `Shoot` Resource
 
 Special notes:
 
