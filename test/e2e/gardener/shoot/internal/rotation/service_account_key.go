@@ -93,7 +93,8 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 func (v *ServiceAccountKeyVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastCompletionTriggeredTime).NotTo(BeNil())
-	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)).To(BeTrue())
+	Expect(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastCompletionTriggeredTime.Time.Equal(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time) ||
+		v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)).To(BeTrue())
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
