@@ -1,23 +1,23 @@
 ---
-title: Shoot APIServer via SNI
+title: 08 Shoot APIServer via SNI
 ---
 
-# SNI Passthrough proxy for kube-apiservers
+# SNI Passthrough Proxy for kube-apiservers
 
 This GEP tackles the problem that today a single `LoadBalancer` is needed for every single Shoot cluster's control plane.
 
 ## Background
 
-When the control plane of a Shoot cluster is provisioned, a dedicated LoadBalancer is created for it. It keeps the entire flow quite easy - the apiserver Pods are running and they are accessible via that LoadBalancer. It's hostnames / IP addresses are used for DNS records like `api.<external-domain>` and `api.<shoot>.<project>.<internal-domain>`. While this solution is simple it comes with several issues.
+When the control plane of a Shoot cluster is provisioned, a dedicated LoadBalancer is created for it. It keeps the entire flow quite easy - the apiserver Pods are running and they are accessible via that LoadBalancer. It's hostnames / IP addresses are used for DNS records like `api.<external-domain>` and `api.<shoot>.<project>.<internal-domain>`. While this solution is simple, it comes with several issues.
 
 ## Motivation
 
-There are several problems with the current setup.
+There are several problems with the current setu:
 
-- IaaS provider costs. For example `ClassicLoadBalancer` on AWS costs at minimum 17 USD / month.
+- IaaS provider costs. For example, `ClassicLoadBalancer` on AWS costs at minimum 17 USD / month.
 - Quotas can limit the amount of LoadBalancers you can get per account / project, limiting the number of clusters you can host under a single account.
 - Lack of support for better loadbalancing [algorithms than round-robin](https://www.envoyproxy.io/docs/envoy/v1.10.0/intro/arch_overview/load_balancing/load_balancers#supported-load-balancers).
-- Slow cluster provisioning time - depending on the provider a LoadBalancer provisioning could take quite a while.
+- Slow cluster provisioning time - depending on the provider, a LoadBalancer provisioning could take quite a while.
 - Lower downtime when workload is shuffled in the clusters as the LoadBalancer is Kubernetes-aware.
 
 ## Goals
@@ -30,7 +30,7 @@ There are several problems with the current setup.
 
 ## Proposal
 
-### Seed cluster
+### Seed Cluster
 
 To solve the problem of having multiple `kube-apiservers` behind a single LoadBalancer, an intermediate proxy must be placed between the Cloud-Provider's LoadBalancer and `kube-apiservers`. This proxy is going to choose the Shoot API Server with the help of Server Name Indication. From [wikipedia](https://en.wikipedia.org/wiki/Server_Name_Indication):
 
@@ -75,11 +75,11 @@ A rough diagram of the flow of data:
 
 Sequentially:
 
-1. client requests `Shoot Cluster A` and sets the `Server Name` in the TLS handshake to `api.shoot-a.foo.bar`.
-1. this packet goes through the Network LB and it's forwarded to the Proxy server. (this loadbalancer should be a simple Layer-4 TCP proxy)
-1. the proxy server reads the packet and see that client requests `api.shoot-a.foo.bar`.
-1. based on its configuration, it maps `api.shoot-a.foo.bar` to `Shoot API Server Cluster A`.
-1. it acts as TCP proxy and simply send the data `Shoot API Server Cluster A`.
+1. Client requests `Shoot Cluster A` and sets the `Server Name` in the TLS handshake to `api.shoot-a.foo.bar`.
+1. This packet goes through the Network LB and it's forwarded to the Proxy server. (this loadbalancer should be a simple Layer-4 TCP proxy)
+1. The proxy server reads the packet and see that client requests `api.shoot-a.foo.bar`.
+1. Based on its configuration, it maps `api.shoot-a.foo.bar` to `Shoot API Server Cluster A`.
+1. It acts as TCP proxy and simply send the data `Shoot API Server Cluster A`.
 
 There are multiple OSS proxies for this case:
 
@@ -89,15 +89,15 @@ There are multiple OSS proxies for this case:
 - traefik
 - [linkerd2-proxy](https://github.com/linkerd/linkerd2-proxy)
 
-To ease integration it should:
+To ease integration, it should:
 
-- be configurable via Kubernetes resources
-- not require restarting when configuration changes
-- be fast and with little overhead
+- be configurable via Kubernetes resources.
+- not require restarting when configuration changes.
+- be fast and with little overhead.
 
 All things considered, [Envoy proxy](http://envoyproxy.io/) is the most fitting solution as it provides all the features Gardener would like (no process reload being the most important one + battle tested in production by various companies).
 
-While building a custom control plane for Envoy is [quite simple](https://github.com/envoyproxy/go-control-plane), an already established solution might be the better path forward. [Istio's Pilot](https://istio.io/docs/concepts/traffic-management/#pilot-and-envoy) is one of the most feature-complete Envoy control plane solutions as it offers a way to configure edge ingress traffic for Envoy via [Gateway](https://istio.io/docs/reference/config/networking/v1alpha3/gateway/) and [VirtualService](https://istio.io/docs/reference/config/networking/v1alpha3/virtual-service/).
+While building a custom control plane for Envoy is [quite simple](https://github.com/envoyproxy/go-control-plane), an already established solution might be the better path forward. [Istio's Pilot](https://istio.io/docs/concepts/traffic-management/#pilot-and-envoy) is one of the most feature-complete Envoy control plane solutions, as it offers a way to configure edge ingress traffic for Envoy via [Gateway](https://istio.io/docs/reference/config/networking/v1alpha3/gateway/) and [VirtualService](https://istio.io/docs/reference/config/networking/v1alpha3/virtual-service/).
 
 The resources which needs to be created per Shoot clusters are the following:
 
@@ -196,13 +196,13 @@ Updated diagram:
       +-----------------+         +---------------------+
 ```
 
-In this case the `internal` and `external` `DNSEntries` should be changed to the Network LoadBalancer's IP.
+In this case, the `internal` and `external` `DNSEntries` should be changed to the Network LoadBalancer's IP.
 
-### In-cluster communication to the apiserver
+### In-Cluster Communication to the apiserver
 
-In Kubernetes the API server is discoverable via the master service (`kubernetes` in `default` namespace). Today, this service can only be of type `ClusterIP` - making in-cluster communication to the API server impossible due to:
+In Kubernetes, the API server is discoverable via the master service (`kubernetes` in `default` namespace). Today, this service can only be of type `ClusterIP` - making in-cluster communication to the API server impossible due to:
 
-- the client doesn't set the `Server Name` in the TLS handshake, if it attempts to talk to an IP address. In this case, the TLS handshake reaches the Envoy IngressGateway proxy, but it's rejected by it.
+- the client doesn't set the `Server Name` in the TLS handshake if it attempts to talk to an IP address. In this case, the TLS handshake reaches the Envoy IngressGateway proxy, but it's rejected by it.
 - Kubernetes services can be of type `ExternalName`, but the master service is not supported by [kubelet](https://github.com/gardener/gardener/issues/1135#issuecomment-505317932).
   - even if this is fixed in future Kubernetes versions, this problem still exists for older versions where this functionality is not available.
 
@@ -252,7 +252,7 @@ Multiple OSS solutions can be used:
 - haproxy
 - nginx
 
-To add a PROXY lister with Istio several resources must be created - a dedicated `Gateway`, dummy `VirtualService` and `EnvoyFilter` which adds listener filter (`envoy.listener.proxy_protocol`) on `8443` port:
+To add a PROXY lister with Istio, several resources must be created - a dedicated `Gateway`, dummy `VirtualService` and `EnvoyFilter` which adds listener filter (`envoy.listener.proxy_protocol`) on `8443` port:
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -352,7 +352,7 @@ spec:
             prefix_len: 32
 ```
 
-> Note: this additional `EnvoyFilter` can be removed when Istio supports full [L4 matching](https://istio.io/docs/reference/config/networking/virtual-service/#L4MatchAttributes).
+> **Note:** This additional `EnvoyFilter` can be removed when Istio supports full [L4 matching](https://istio.io/docs/reference/config/networking/virtual-service/#L4MatchAttributes).
 
 A nginx proxy client in the Shoot cluster on every node could have the following configuration:
 
@@ -373,9 +373,9 @@ stream {
 events { }
 ```
 
-### In-cluster communication to the apiserver when ExernalName is supported
+### In-Cluster Communication to the apiserver when ExernalName is Supported
 
-Even if in future versions of Kubernetes, the master service of type `ExternalName` is supported, we still have the problem that in-cluster workload can talk to the server via DNS. For this to work we still need the above mentioned proxy (this time listening on another IP address `10.0.0.2`). An additional change to CoreDNS would be needed:
+Even if in future versions of Kubernetes, the master service of type `ExternalName` is supported, we still have the problem that in-cluster workload can talk to the server via DNS. For this to work, we still need the above mentioned proxy (this time listening on another IP address `10.0.0.2`). An additional change to CoreDNS would be needed:
 
 ```text
 default.svc.cluster.local.:8053 {
@@ -417,9 +417,9 @@ $ORIGIN default.svc.cluster.local.
 kubernetes     IN A     10.0.0.2
 ```
 
-So when a client requests `kubernetes.default.svc.cluster.local`, it'll be send to the proxy listening on that IP address.
+So when a client requests `kubernetes.default.svc.cluster.local`, it'll be sent to the proxy listening on that IP address.
 
-## Future work
+## Future Work
 
 While out of scope of this GEP, several things can be improved:
 
@@ -427,4 +427,4 @@ While out of scope of this GEP, several things can be improved:
 
 ## References
 
-- https://github.com/gardener/gardener/issues/1135
+- [One API Server LB per Seed for all Shoots Issue](https://github.com/gardener/gardener/issues/1135)
