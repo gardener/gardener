@@ -64,6 +64,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	// Predicates only filter watch events but don't filter when an object (or rather a reconcile.Request) is already in
+	// the queue. Though, some other party might remove the taint while the controller is in backoff.
+	// Hence, we should always check whether there is work left to do in the controller in addition to predicates.
 	if !NodeHasCriticalComponentsNotReadyTaint(node) {
 		return reconcile.Result{}, nil
 	}
