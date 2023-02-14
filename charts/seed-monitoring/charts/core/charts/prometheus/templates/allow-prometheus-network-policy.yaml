@@ -26,10 +26,6 @@ spec:
           role: garden
     - podSelector:
         matchLabels:
-          app: etcd-statefulset
-          gardener.cloud/role: controlplane
-    - podSelector:
-        matchLabels:
           app: prometheus
           role: monitoring
       namespaceSelector:
