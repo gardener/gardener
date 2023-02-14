@@ -176,6 +176,10 @@ var _ = Describe("KubeScheduler", func() {
 						"app":  "kubernetes",
 						"role": "scheduler",
 					},
+					Annotations: map[string]string{
+						"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+						"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":10259}]`,
+					},
 				},
 				Spec: corev1.ServiceSpec{
 					Selector: map[string]string{
@@ -233,7 +237,6 @@ var _ = Describe("KubeScheduler", func() {
 								"maintenance.gardener.cloud/restart": "true",
 								"networking.gardener.cloud/to-dns":   "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
-								"networking.gardener.cloud/from-prometheus":    "allowed",
 							},
 						},
 						Spec: corev1.PodSpec{
