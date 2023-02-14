@@ -39,7 +39,7 @@ var _ = Describe("Validation", func() {
 		})
 
 		It("should allow valid suffixes", func() {
-			config.CommonSuffixes = []string{".gardener.cloud", ".github.com"}
+			config.CommonSuffixes = []string{"gardener.cloud", "github.com"}
 
 			errorList := ValidateConfiguration(config)
 
@@ -47,7 +47,7 @@ var _ = Describe("Validation", func() {
 		})
 
 		It("should forbid invalid suffixes", func() {
-			config.CommonSuffixes = []string{"foo", "foo.bar", "foo", ".foo.bar"}
+			config.CommonSuffixes = []string{"foo", ".foo.bar", "foo.bar", "foo.bar"}
 
 			errorList := ValidateConfiguration(config)
 
@@ -55,25 +55,19 @@ var _ = Describe("Validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("commonSuffixes[0]"),
-					"Detail":   Equal("not enough dots ('.'), at least two dots required"),
+					"Detail":   Equal("not enough dots ('.'), at least one dot required"),
 					"BadValue": Equal("foo"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("commonSuffixes[1]"),
-					"Detail":   Equal("not enough dots ('.'), at least two dots required"),
-					"BadValue": Equal("foo.bar"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("commonSuffixes[2]"),
-					"Detail":   Equal("not enough dots ('.'), at least two dots required"),
-					"BadValue": Equal("foo"),
+					"Detail":   Equal("should not start with a dot ('.'), as it is automatically appended"),
+					"BadValue": Equal(".foo.bar"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeDuplicate),
-					"Field":    Equal("commonSuffixes[2]"),
-					"BadValue": Equal("foo"),
+					"Field":    Equal("commonSuffixes[3]"),
+					"BadValue": Equal("foo.bar"),
 				})),
 			))
 		})
