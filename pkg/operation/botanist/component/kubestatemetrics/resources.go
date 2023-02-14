@@ -20,6 +20,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -158,6 +159,14 @@ func (k *kubeStateMetrics) emptyService() *corev1.Service {
 
 func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 	service.Labels = k.getLabels()
+
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     utils.IntStrPtrFromInt(port),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		}))
+	}
+
 	service.Spec.Type = corev1.ServiceTypeClusterIP
 	service.Spec.Selector = k.getLabels()
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
@@ -185,8 +194,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 
 		deploymentLabels = k.getLabels()
 		podLabels        = map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS:          v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
 		}
 		args = []string{
 			fmt.Sprintf("--port=%d", port),
