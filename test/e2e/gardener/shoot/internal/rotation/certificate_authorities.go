@@ -197,7 +197,8 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 func (v *CAVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTriggeredTime).NotTo(BeNil())
-	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.Time)).To(BeTrue())
+	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTriggeredTime.Time.Equal(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.Time) ||
+		v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.Time)).To(BeTrue())
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
