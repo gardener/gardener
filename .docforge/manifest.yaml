@@ -58,20 +58,11 @@ structure:
         - Operators
   nodesSelector:
     path: /docs/monitoring
-- name: proposals
-  properties:
-    frontmatter:
-      title: Proposals
-      weight: 7
-      categories:
-        - Developers
-  nodesSelector:
-    path: /docs/proposals
 - name: usage
   properties:
     frontmatter:
       title: Usage
-      weight: 8
+      weight: 7
       categories:
         - Operators
         - Users
