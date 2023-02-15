@@ -436,16 +436,14 @@ var _ = Describe("Shoot Care controller tests", func() {
 				})
 			})
 
-			It("SystemComponentsHealthy condition should not fail beacause of Managed Resource", func() {
+			It("SystemComponentsHealthy condition should not fail because all relevant Managed Resources are healthy", func() {
 				By("Expect conditions to be set")
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					return shoot.Status.Conditions
 				}).Should(And(
-					ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("HealthzRequestSucceeded"), WithMessageSubstrings("API server /healthz endpoint responded with success status code.")),
-					ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager kube-scheduler]")),
-					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [grafana kube-state-metrics]")),
-					ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("MissingNodes")),
+					// here SystemComponentsHealthy condition is not healthy because for SystemComponentsHealthy to be healthy a tunnel connection is required
+					// which can't be faked, if it would have been failing because of MangedResource is not healthy then the reason will not be `NoTunnelDeployed`.
 					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("NoTunnelDeployed"), WithMessageSubstrings("no tunnels are currently deployed to perform health-check on")),
 				))
 			})
@@ -519,16 +517,12 @@ var _ = Describe("Shoot Care controller tests", func() {
 				})
 			})
 
-			It("SystemComponentsHealthy condition should fail because of Managed Resource healthiness", func() {
+			It("SystemComponentsHealthy condition should fail because of ManagedResource is not healthy", func() {
 				By("Expect conditions to be set")
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					return shoot.Status.Conditions
 				}).Should(And(
-					ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("HealthzRequestSucceeded"), WithMessageSubstrings("API server /healthz endpoint responded with success status code.")),
-					ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager kube-scheduler]")),
-					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [grafana kube-state-metrics]")),
-					ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("MissingNodes")),
 					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("ApplyFailed"), WithMessageSubstrings("Resources failed to get applied")),
 				))
 			})
@@ -563,25 +557,25 @@ func createDeployment(names []string) {
 		}
 
 		By("Create Deployment " + name)
-		Expect(testClient.Create(ctx, deployment)).To(Succeed(), "for deployment "+name)
+		ExpectWithOffset(1, testClient.Create(ctx, deployment)).To(Succeed(), "for deployment "+name)
 		log.Info("Created Deployment for test", "deployment", client.ObjectKeyFromObject(deployment))
 
 		By("Ensure manager has observed deployment " + name)
-		Eventually(func() error {
+		EventuallyWithOffset(1, func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
 			By("Delete Deployment " + name)
-			Expect(testClient.Delete(ctx, deployment)).To(Succeed(), "for deployment "+name)
+			ExpectWithOffset(1, testClient.Delete(ctx, deployment)).To(Succeed(), "for deployment "+name)
 
 			By("Ensure Deployment " + name + " is gone")
-			Eventually(func() error {
+			EventuallyWithOffset(1, func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 			}).Should(BeNotFoundError(), "for deployment "+name)
 
 			By("Ensure manager has observed deployment deletion " + name)
-			Eventually(func() error {
+			EventuallyWithOffset(1, func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 			}).Should(BeNotFoundError())
 		})
