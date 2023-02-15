@@ -1383,10 +1383,10 @@ plugins: null
 				})
 
 				It("should successfully deploy the configmap resource w/ admission plugins", func() {
-					admissionPlugins := []gardencorev1beta1.AdmissionPlugin{
-						{Name: "Foo"},
-						{Name: "Bar"},
-						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}},
+					admissionPlugins := []AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Bar"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}}},
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{EnabledAdmissionPlugins: admissionPlugins, RuntimeVersion: runtimeVersion, Version: version})
@@ -2218,10 +2218,13 @@ rules:
 
 			Context("kube-apiserver container", func() {
 				var (
-					acceptedIssuers    = []string{"issuer1", "issuer2"}
-					admissionPlugin1   = "foo"
-					admissionPlugin2   = "foo"
-					admissionPlugins   = []gardencorev1beta1.AdmissionPlugin{{Name: admissionPlugin1}, {Name: admissionPlugin2}}
+					acceptedIssuers  = []string{"issuer1", "issuer2"}
+					admissionPlugin1 = "foo"
+					admissionPlugin2 = "foo"
+					admissionPlugins = []AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: admissionPlugin1}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: admissionPlugin2}},
+					}
 					apiServerResources = corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("1"),

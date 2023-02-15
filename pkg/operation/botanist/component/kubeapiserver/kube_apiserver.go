@@ -119,7 +119,7 @@ type Interface interface {
 // Values contains configuration values for the kube-apiserver resources.
 type Values struct {
 	// EnabledAdmissionPlugins is the list of admission plugins that should be enabled with configuration for the kube-apiserver.
-	EnabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
+	EnabledAdmissionPlugins []AdmissionPluginConfig
 	// DisabledAdmissionPlugins is the list of admission plugins that should be disabled for the kube-apiserver.
 	DisabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 	// AnonymousAuthenticationEnabled states whether anonymous authentication is enabled.
@@ -177,6 +177,14 @@ type Values struct {
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
+}
+
+// AdmissionPluginConfig contains information about a specific admission plugin and its corresponding configuration.
+type AdmissionPluginConfig struct {
+	gardencorev1beta1.AdmissionPlugin
+	// Kubeconfig is an optional kubeconfig for the configuration of this admission plugins. The configs for some
+	// admission plugins like `ImagePolicyWebhook` or `ValidatingAdmissionWebhook` can take a reference to a kubeconfig.
+	Kubeconfig []byte
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
