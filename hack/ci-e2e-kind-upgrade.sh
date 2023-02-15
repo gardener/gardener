@@ -131,8 +131,8 @@ function set_gardener_upgrade_version_env_variables() {
       echo "No tags found for the previous minor version ($VERSION) to upgrade Gardener." >&2
       exit 1
     fi
-      # Find the most recent tag for the previous minor version
-      export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
+    # Find the most recent tag for the previous minor version
+    export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
   fi
 
   if [[ -z "$GARDENER_NEXT_RELEASE" ]]; then
