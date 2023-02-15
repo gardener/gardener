@@ -1023,6 +1023,7 @@ build:
         - cmd/gardener-resource-manager/app/bootstrappers
         - cmd/utils
         - pkg/api/extensions
+        - pkg/api/indexer
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
@@ -1078,6 +1079,8 @@ build:
         - pkg/resourcemanager/controller/health/progressing
         - pkg/resourcemanager/controller/health/utils
         - pkg/resourcemanager/controller/managedresource
+        - pkg/resourcemanager/controller/node
+        - pkg/resourcemanager/controller/node/helper
         - pkg/resourcemanager/controller/networkpolicy
         - pkg/resourcemanager/controller/secret
         - pkg/resourcemanager/controller/tokeninvalidator

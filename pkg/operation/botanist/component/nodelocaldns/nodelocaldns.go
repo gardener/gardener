@@ -246,9 +246,10 @@ ip6.arpa:53 {
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					labelKey:                        nodelocaldnsconstants.LabelValue,
-					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+					labelKey:                                    nodelocaldnsconstants.LabelValue,
+					v1beta1constants.GardenRole:                 v1beta1constants.GardenRoleSystemComponent,
+					managedresources.LabelKeyOrigin:             managedresources.LabelValueGardener,
+					v1beta1constants.LabelNodeCriticalComponent: "true",
 				},
 			},
 			Spec: appsv1.DaemonSetSpec{
@@ -265,8 +266,9 @@ ip6.arpa:53 {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							labelKey:                                 nodelocaldnsconstants.LabelValue,
-							v1beta1constants.LabelNetworkPolicyToDNS: "allowed",
+							labelKey:                                    nodelocaldnsconstants.LabelValue,
+							v1beta1constants.LabelNetworkPolicyToDNS:    "allowed",
+							v1beta1constants.LabelNodeCriticalComponent: "true",
 						},
 						Annotations: map[string]string{
 							"prometheus.io/port":   strconv.Itoa(prometheusPort),

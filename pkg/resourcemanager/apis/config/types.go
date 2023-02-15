@@ -110,16 +110,18 @@ type ResourceManagerControllerConfiguration struct {
 	// ResourceClass is the name of the class in ManagedResources to filter for.
 	ResourceClass *string
 
-	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
-	KubeletCSRApprover KubeletCSRApproverControllerConfig
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig
 	// Health is the configuration for the health controller.
 	Health HealthControllerConfig
+	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
+	KubeletCSRApprover KubeletCSRApproverControllerConfig
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig
 	// NetworkPolicy is the configuration for the networkpolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfig
+	// Node is the configuration for the node controller.
+	Node NodeControllerConfig
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig
 	// TokenInvalidator is the configuration for the token-invalidator controller.
@@ -198,6 +200,16 @@ type TokenRequestorControllerConfig struct {
 	Enabled bool
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int
+}
+
+// NodeControllerConfig is the configuration for the node controller.
+type NodeControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	ConcurrentSyncs *int
+	// Backoff is the duration to use as backoff when Nodes have non-ready node-critical pods.
+	Backoff *metav1.Duration
 }
 
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.

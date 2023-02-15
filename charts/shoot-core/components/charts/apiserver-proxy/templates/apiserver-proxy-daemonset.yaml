@@ -10,6 +10,7 @@ metadata:
   labels:
     gardener.cloud/role: system-component
     origin: gardener
+    node.gardener.cloud/critical-component: "true"
   annotations:
 {{ include "apiserver-proxy.daemonset.annotations" . | indent 4 }}
 spec:
@@ -32,6 +33,7 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-apiserver: allowed
         networking.gardener.cloud/from-seed: allowed
+        node.gardener.cloud/critical-component: "true"
     spec:
       serviceAccountName: apiserver-proxy
       priorityClassName: system-node-critical

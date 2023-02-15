@@ -187,6 +187,18 @@ func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerCon
 	}
 }
 
+// SetDefaults_NodeControllerConfig sets defaults for the NodeControllerConfig object.
+func SetDefaults_NodeControllerConfig(obj *NodeControllerConfig) {
+	if obj.Enabled {
+		if obj.ConcurrentSyncs == nil {
+			obj.ConcurrentSyncs = pointer.Int(5)
+		}
+		if obj.Backoff == nil {
+			obj.Backoff = &metav1.Duration{Duration: 10 * time.Second}
+		}
+	}
+}
+
 // SetDefaults_PodSchedulerNameWebhookConfig sets defaults for the PodSchedulerNameWebhookConfig object.
 func SetDefaults_PodSchedulerNameWebhookConfig(obj *PodSchedulerNameWebhookConfig) {
 	if obj.Enabled && obj.SchedulerName == nil {

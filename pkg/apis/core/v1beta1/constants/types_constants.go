@@ -803,4 +803,9 @@ const (
 	// TechnicalIDPrefix is a prefix used for a shoot's technical id. For historic reasons, there is only one 'dash'
 	// while nowadays we always use two dashes after "shoot".
 	TechnicalIDPrefix = "shoot-"
+
+	// TaintNodeCriticalComponentsNotReady is the key for the gardener-managed node components taint.
+	TaintNodeCriticalComponentsNotReady = "node.gardener.cloud/critical-components-not-ready"
+	// LabelNodeCriticalComponent is the label key for marking node-critical component pods.
+	LabelNodeCriticalComponent = "node.gardener.cloud/critical-component"
 )

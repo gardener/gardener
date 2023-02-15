@@ -269,6 +269,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				"--expendable-pods-priority-cutoff=-10",
 				"--balance-similar-node-groups=true",
 				"--v=2",
+				"--ignore-taint=node.gardener.cloud/critical-components-not-ready",
 			}, commandConfigFlags...)
 			command = append(command,
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment1Min, machineDeployment1Max, namespace, machineDeployment1Name),
