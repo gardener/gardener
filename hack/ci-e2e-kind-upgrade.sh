@@ -132,7 +132,7 @@ function set_gardener_upgrade_version_env_variables() {
       exit 1
     fi
       # Find the most recent tag for the previous minor version
-      export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | sort -r | head -n 1)
+      export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
   fi
 
   if [[ -z "$GARDENER_NEXT_RELEASE" ]]; then
