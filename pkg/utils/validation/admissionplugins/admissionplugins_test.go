@@ -187,7 +187,6 @@ var _ = Describe("admissionplugins", func() {
 							"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", kubernetesVersion, "pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1"),
 						}))))
 					})
-
 				}
 			}
 
