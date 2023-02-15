@@ -17,62 +17,97 @@ package admissionplugins
 import (
 	"fmt"
 
+	"github.com/Masterminds/semver"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
+	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
+	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-// admissionPluginsVersionRanges contains the version ranges for all Kubernetes admission plugins.
-// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/kubeapiserver/options/plugins.go
-// and https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/staging/src/k8s.io/apiserver/pkg/server/plugins.go.
-// To maintain this list for each new Kubernetes version:
-//   - Run hack/compare-k8s-admission-plugins.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-admission-plugins.sh 1.22 1.23').
-//     It will present 2 lists of admission plugins: those added and those removed in <new-version> compared to <old-version> and
-//   - Add all added admission plugins to the map with <new-version> as AddedInVersion and no RemovedInVersion.
-//   - For any removed admission plugin, add <new-version> as RemovedInVersion to the already existing admission plugin in the map.
+var (
+	// admissionPluginsVersionRanges contains the version ranges for all Kubernetes admission plugins.
+	// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/kubeapiserver/options/plugins.go
+	// and https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/staging/src/k8s.io/apiserver/pkg/server/plugins.go.
+	// To maintain this list for each new Kubernetes version:
+	//   - Run hack/compare-k8s-admission-plugins.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-admission-plugins.sh 1.22 1.23').
+	//     It will present 2 lists of admission plugins: those added and those removed in <new-version> compared to <old-version> and
+	//   - Add all added admission plugins to the map with <new-version> as AddedInVersion and no RemovedInVersion.
+	//   - For any removed admission plugin, add <new-version> as RemovedInVersion to the already existing admission plugin in the map.
+	admissionPluginsVersionRanges = map[string]*AdmissionPluginVersionRange{
+		"AlwaysAdmit":                          {},
+		"AlwaysDeny":                           {},
+		"AlwaysPullImages":                     {},
+		"CertificateApproval":                  {AddedInVersion: "1.18"},
+		"CertificateSigning":                   {AddedInVersion: "1.18"},
+		"CertificateSubjectRestriction":        {AddedInVersion: "1.18"},
+		"DefaultIngressClass":                  {AddedInVersion: "1.18"},
+		"DefaultStorageClass":                  {},
+		"DefaultTolerationSeconds":             {},
+		"DenyEscalatingExec":                   {RemovedInVersion: "1.21"},
+		"DenyExecOnPrivileged":                 {RemovedInVersion: "1.21"},
+		"DenyServiceExternalIPs":               {AddedInVersion: "1.21"},
+		"EventRateLimit":                       {},
+		"ExtendedResourceToleration":           {},
+		"ImagePolicyWebhook":                   {},
+		"LimitPodHardAntiAffinityTopology":     {},
+		"LimitRanger":                          {},
+		"MutatingAdmissionWebhook":             {Required: true},
+		"NamespaceAutoProvision":               {},
+		"NamespaceExists":                      {},
+		"NamespaceLifecycle":                   {Required: true},
+		"NodeRestriction":                      {Required: true},
+		"OwnerReferencesPermissionEnforcement": {},
+		"PersistentVolumeClaimResize":          {},
+		"PersistentVolumeLabel":                {},
+		"PodNodeSelector":                      {},
+		"PodPreset":                            {RemovedInVersion: "1.20"},
+		"PodSecurity":                          {AddedInVersion: "1.22", Required: true},
+		"PodSecurityPolicy":                    {RemovedInVersion: "1.25"},
+		"PodTolerationRestriction":             {},
+		"Priority":                             {Required: true},
+		"ResourceQuota":                        {},
+		"RuntimeClass":                         {},
+		"SecurityContextDeny":                  {Forbidden: true},
+		"ServiceAccount":                       {},
+		"StorageObjectInUseProtection":         {Required: true},
+		"TaintNodesByCondition":                {},
+		"ValidatingAdmissionPolicy":            {AddedInVersion: "1.26"},
+		"ValidatingAdmissionWebhook":           {Required: true},
+	}
 
-var admissionPluginsVersionRanges = map[string]*AdmissionPluginVersionRange{
-	"AlwaysAdmit":                          {},
-	"AlwaysDeny":                           {},
-	"AlwaysPullImages":                     {},
-	"CertificateApproval":                  {AddedInVersion: "1.18"},
-	"CertificateSigning":                   {AddedInVersion: "1.18"},
-	"CertificateSubjectRestriction":        {AddedInVersion: "1.18"},
-	"DefaultIngressClass":                  {AddedInVersion: "1.18"},
-	"DefaultStorageClass":                  {},
-	"DefaultTolerationSeconds":             {},
-	"DenyEscalatingExec":                   {RemovedInVersion: "1.21"},
-	"DenyExecOnPrivileged":                 {RemovedInVersion: "1.21"},
-	"DenyServiceExternalIPs":               {AddedInVersion: "1.21"},
-	"EventRateLimit":                       {},
-	"ExtendedResourceToleration":           {},
-	"ImagePolicyWebhook":                   {},
-	"LimitPodHardAntiAffinityTopology":     {},
-	"LimitRanger":                          {},
-	"MutatingAdmissionWebhook":             {Required: true},
-	"NamespaceAutoProvision":               {},
-	"NamespaceExists":                      {},
-	"NamespaceLifecycle":                   {Required: true},
-	"NodeRestriction":                      {Required: true},
-	"OwnerReferencesPermissionEnforcement": {},
-	"PersistentVolumeClaimResize":          {},
-	"PersistentVolumeLabel":                {},
-	"PodNodeSelector":                      {},
-	"PodPreset":                            {RemovedInVersion: "1.20"},
-	"PodSecurity":                          {AddedInVersion: "1.22", Required: true},
-	"PodSecurityPolicy":                    {RemovedInVersion: "1.25"},
-	"PodTolerationRestriction":             {},
-	"Priority":                             {Required: true},
-	"ResourceQuota":                        {},
-	"RuntimeClass":                         {},
-	"SecurityContextDeny":                  {Forbidden: true},
-	"ServiceAccount":                       {},
-	"StorageObjectInUseProtection":         {Required: true},
-	"TaintNodesByCondition":                {},
-	"ValidatingAdmissionPolicy":            {AddedInVersion: "1.26"},
-	"ValidatingAdmissionWebhook":           {Required: true},
+	runtimeScheme *runtime.Scheme
+	codec         runtime.Codec
+)
+
+func init() {
+	runtimeScheme = runtime.NewScheme()
+	utilruntime.Must(admissionapiv1alpha1.AddToScheme(runtimeScheme))
+	utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
+	utilruntime.Must(admissionapiv1.AddToScheme(runtimeScheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			admissionapiv1alpha1.SchemeGroupVersion,
+			admissionapiv1beta1.SchemeGroupVersion,
+			admissionapiv1.SchemeGroupVersion,
+		})
+	)
+
+	codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
 }
 
 // IsAdmissionPluginSupported returns true if the given admission plugin is supported for the given Kubernetes version.
@@ -145,8 +180,52 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 			if pointer.BoolDeref(plugin.Disabled, false) && admissionPluginsVersionRanges[plugin.Name].Required {
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
 			}
+			if err := validateAdmissionPluginConfig(plugin, version, idxPath); err != nil {
+				allErrs = append(allErrs, err)
+			}
 		}
 	}
 
 	return allErrs
+}
+
+func validateAdmissionPluginConfig(plugin core.AdmissionPlugin, version string, fldPath *field.Path) *field.Error {
+	kubernetesVersion, err := semver.NewVersion(version)
+	if err != nil {
+		return field.Invalid(field.NewPath("spec", "kubernetes", "version"), version, err.Error())
+	}
+
+	switch plugin.Name {
+	case "PodSecurity":
+		if plugin.Config == nil {
+			return nil
+		}
+
+		config, err := runtime.Decode(codec, plugin.Config.Raw)
+		if err != nil {
+			if runtime.IsNotRegisteredError(err) {
+				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), "expected pod-security.admission.config.k8s.io/v1alpha1.PodSecurityConfiguration or pod-security.admission.config.k8s.io/v1beta1.PodSecurityConfiguration or pod-security.admission.config.k8s.io/v1.PodSecurityConfiguration")
+			}
+			return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf("cannot decode the given config: %s", err.Error()))
+		}
+
+		var (
+			apiGroup    = config.GetObjectKind().GroupVersionKind().Group
+			apiVersion  = config.GetObjectKind().GroupVersionKind().Version
+			errorString = "PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q"
+		)
+
+		switch {
+		case versionutils.ConstraintK8sLess123.Check(kubernetesVersion):
+			if apiVersion != admissionapiv1alpha1.SchemeGroupVersion.Version {
+				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, "pod-security.admission.config.k8s.io/v1alpha1", apiGroup+"/"+apiVersion))
+			}
+		case versionutils.ConstraintK8sLess125.Check(kubernetesVersion):
+			if apiVersion != admissionapiv1beta1.SchemeGroupVersion.Version && apiVersion != admissionapiv1alpha1.SchemeGroupVersion.Version {
+				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, "pod-security.admission.config.k8s.io/v1beta1 or pod-security.admission.config.k8s.io/v1alpha1", apiGroup+"/"+apiVersion))
+			}
+		}
+	}
+
+	return nil
 }
