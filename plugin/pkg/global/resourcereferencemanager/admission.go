@@ -48,10 +48,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -85,7 +83,7 @@ type ReferenceManager struct {
 	projectLister              gardencorelisters.ProjectLister
 	quotaLister                gardencorelisters.QuotaLister
 	controllerDeploymentLister gardencorelisters.ControllerDeploymentLister
-	exposureClassLister        gardencorev1alpha1listers.ExposureClassLister
+	exposureClassLister        gardencorelisters.ExposureClassLister
 	readyFunc                  admission.ReadyFunc
 }
 
@@ -96,7 +94,6 @@ var (
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ReferenceManager{})
 
 	readyFuncs = []admission.ReadyFunc{}
 
@@ -149,6 +146,9 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f gardencoreinformers.
 	controllerDeploymentInformer := f.Core().InternalVersion().ControllerDeployments()
 	r.controllerDeploymentLister = controllerDeploymentInformer.Lister()
 
+	exposureClassInformer := f.Core().InternalVersion().ExposureClasses()
+	r.exposureClassLister = exposureClassInformer.Lister()
+
 	readyFuncs = append(readyFuncs,
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
@@ -157,15 +157,8 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f gardencoreinformers.
 		secretBindingInformer.Informer().HasSynced,
 		quotaInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
-		controllerDeploymentInformer.Informer().HasSynced)
-}
-
-// SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (r *ReferenceManager) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
-	exposureClassInformer := f.Core().V1alpha1().ExposureClasses()
-	r.exposureClassLister = exposureClassInformer.Lister()
-
-	readyFuncs = append(readyFuncs, exposureClassInformer.Informer().HasSynced)
+		controllerDeploymentInformer.Informer().HasSynced,
+		exposureClassInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.

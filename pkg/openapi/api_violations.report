@@ -77,6 +77,8 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,DNS,Providers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,DNSIncludeExclude,Exclude
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,DNSIncludeExclude,Include
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExposureClassScheduling,Tolerations
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionResourceState,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Hibernation,Schedules
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,APIAudiences
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,AdmissionPlugins
@@ -108,6 +110,9 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Extensions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Tolerations
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStateSpec,Extensions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStateSpec,Gardener
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStateSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,AdvertisedAddresses
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,Constraints

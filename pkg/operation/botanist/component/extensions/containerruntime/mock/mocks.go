@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -92,7 +92,7 @@ func (mr *MockInterfaceMockRecorder) Migrate(arg0 interface{}) *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1alpha1.ShootState) error {
+func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1beta1.ShootState) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", arg0, arg1)
 	ret0, _ := ret[0].(error)

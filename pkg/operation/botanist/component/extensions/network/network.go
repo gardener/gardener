@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -105,7 +105,7 @@ func (n *network) Deploy(ctx context.Context) error {
 }
 
 // Restore uses the seed client and the ShootState to create the Network custom resource in the Shoot namespace in the Seed and restore its state
-func (n *network) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
+func (n *network) Restore(ctx context.Context, shootState *v1beta1.ShootState) error {
 	return extensions.RestoreExtensionWithDeployFunction(
 		ctx,
 		n.client,

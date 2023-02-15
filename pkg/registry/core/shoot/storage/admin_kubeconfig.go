@@ -40,9 +40,9 @@ import (
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -104,7 +104,7 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		return nil, err
 	}
 
-	shootState := &gardencorev1alpha1.ShootState{}
+	shootState := &gardencorev1beta1.ShootState{}
 	if err := kubernetes.GardenScheme.Convert(shootStateObj, shootState, nil); err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
-	resourceDataList := v1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	resourceDataList := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 
 	clusterCABundle, err := getClusterCABundle(resourceDataList)
 	if err != nil {
@@ -197,14 +197,14 @@ var (
 	caCertificateSelector      = labels.NewSelector().Add(managedBySecretsManagerReq).Add(identityGardenletReq)
 )
 
-func findNewestCACertificate(results []*gardencorev1alpha1.GardenerResourceData) (*gardencorev1alpha1.GardenerResourceData, error) {
+func findNewestCACertificate(results []*gardencorev1beta1.GardenerResourceData) (*gardencorev1beta1.GardenerResourceData, error) {
 	if len(results) == 1 {
 		return results[0], nil
 	}
 
 	var (
 		newestIssuedAtTime int64
-		result             *gardencorev1alpha1.GardenerResourceData
+		result             *gardencorev1beta1.GardenerResourceData
 	)
 
 	for _, data := range results {
@@ -227,7 +227,7 @@ func findNewestCACertificate(results []*gardencorev1alpha1.GardenerResourceData)
 	return result, nil
 }
 
-func getClusterCABundle(resourceDataList v1alpha1helper.GardenerResourceDataList) ([]byte, error) {
+func getClusterCABundle(resourceDataList v1beta1helper.GardenerResourceDataList) ([]byte, error) {
 	var (
 		allCAs   = resourceDataList.Select(caCertificateSelector.Add(nameCAClusterReq))
 		caBundle []byte
@@ -268,9 +268,9 @@ func getClusterCABundle(resourceDataList v1alpha1helper.GardenerResourceDataList
 	return caBundle, nil
 }
 
-func getClientCACertificate(resourceDataList v1alpha1helper.GardenerResourceDataList) (*secrets.Certificate, error) {
+func getClientCACertificate(resourceDataList v1beta1helper.GardenerResourceDataList) (*secrets.Certificate, error) {
 	var (
-		ca  *gardencorev1alpha1.GardenerResourceData
+		ca  *gardencorev1beta1.GardenerResourceData
 		err error
 	)
 
@@ -293,7 +293,7 @@ func getClientCACertificate(resourceDataList v1alpha1helper.GardenerResourceData
 	return secrets.LoadCertificate("", key, cert)
 }
 
-func getCADataRaw(resourceData *gardencorev1alpha1.GardenerResourceData) (certificate []byte, privateKey []byte, err error) {
+func getCADataRaw(resourceData *gardencorev1beta1.GardenerResourceData) (certificate []byte, privateKey []byte, err error) {
 	data := make(map[string][]byte)
 	if err = json.Unmarshal(resourceData.Data.Raw, &data); err != nil {
 		return nil, nil, err
@@ -303,7 +303,7 @@ func getCADataRaw(resourceData *gardencorev1alpha1.GardenerResourceData) (certif
 	return
 }
 
-func parseIssuedAtUnix(caSecret *gardencorev1alpha1.GardenerResourceData) (int64, error) {
+func parseIssuedAtUnix(caSecret *gardencorev1beta1.GardenerResourceData) (int64, error) {
 	issuedAtTime, ok1 := caSecret.Labels[secretsmanager.LabelKeyIssuedAtTime]
 	if !ok1 {
 		return -1, fmt.Errorf("ca %q does not have %s label", caSecret.Name, secretsmanager.LabelKeyIssuedAtTime)

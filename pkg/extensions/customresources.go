@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -250,7 +248,7 @@ func WaitUntilExtensionObjectDeleted(
 func RestoreExtensionWithDeployFunction(
 	ctx context.Context,
 	c client.Client,
-	shootState *gardencorev1alpha1.ShootState,
+	shootState *gardencorev1beta1.ShootState,
 	kind string,
 	deployFunc func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error),
 ) error {
@@ -270,7 +268,7 @@ func RestoreExtensionWithDeployFunction(
 func RestoreExtensionObjectState(
 	ctx context.Context,
 	c client.Client,
-	shootState *gardencorev1alpha1.ShootState,
+	shootState *gardencorev1beta1.ShootState,
 	extensionObj extensionsv1alpha1.Object,
 	kind string,
 ) error {
@@ -278,7 +276,7 @@ func RestoreExtensionObjectState(
 	if shootState.Spec.Extensions != nil {
 		resourceName := extensionObj.GetName()
 		purpose := extensionObj.GetExtensionSpec().GetExtensionPurpose()
-		list := v1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+		list := v1beta1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
 		if extensionResourceState := list.Get(kind, &resourceName, purpose); extensionResourceState != nil {
 			patch := client.MergeFrom(extensionObj.DeepCopyObject().(client.Object))
 			extensionStatus := extensionObj.GetExtensionStatus()
@@ -295,7 +293,7 @@ func RestoreExtensionObjectState(
 		}
 	}
 	if shootState.Spec.Resources != nil {
-		list := v1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+		list := v1beta1helper.ResourceDataList(shootState.Spec.Resources)
 		for _, resourceRef := range resourceRefs {
 			resourceData := list.Get(&resourceRef)
 			if resourceData != nil {

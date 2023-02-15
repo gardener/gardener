@@ -141,6 +141,9 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
 	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
 
+	exposureClassStorage := exposureclassstore.NewStorage(restOptionsGetter)
+	storage["exposureclasses"] = exposureClassStorage.ExposureClass
+
 	projectStorage := projectstore.NewStorage(restOptionsGetter)
 	storage["projects"] = projectStorage.Project
 	storage["projects/status"] = projectStorage.Status
@@ -154,6 +157,9 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
+
+	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
+	storage["shootstates"] = shootStateStorage.ShootState
 
 	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
 	storage["shoots"] = shootStorage.Shoot

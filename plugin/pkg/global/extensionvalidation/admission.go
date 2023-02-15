@@ -29,11 +29,10 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	corev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 )
 
 const (
@@ -54,13 +53,13 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 // ExtensionValidator contains listers and admission handler.
 type ExtensionValidator struct {
 	*admission.Handler
-	controllerRegistrationLister corev1beta1listers.ControllerRegistrationLister
-	backupBucketLister           corev1beta1listers.BackupBucketLister
+	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
+	backupBucketLister           gardencorelisters.BackupBucketLister
 	readyFunc                    admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ExtensionValidator{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ExtensionValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -78,12 +77,12 @@ func (e *ExtensionValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	e.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (e *ExtensionValidator) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
-	controllerRegistrationInformer := f.Core().V1beta1().ControllerRegistrations()
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (e *ExtensionValidator) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	controllerRegistrationInformer := f.Core().InternalVersion().ControllerRegistrations()
 	e.controllerRegistrationLister = controllerRegistrationInformer.Lister()
 
-	backupBucketInformer := f.Core().V1beta1().BackupBuckets()
+	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
 	e.backupBucketLister = backupBucketInformer.Lister()
 
 	readyFuncs = append(readyFuncs, controllerRegistrationInformer.Informer().HasSynced, backupBucketInformer.Informer().HasSynced)
@@ -352,7 +351,7 @@ func isExtensionRegistered(kindToTypesMap map[string]sets.Set[string], extension
 
 // computeRegisteredPrimaryExtensionKindTypes computes a map that maps the extension kind to the set of types that are
 // registered (only if primary=true), e.g. {ControlPlane=>{foo,bar,baz}, Network=>{a,b,c}}.
-func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.Set[string] {
+func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*core.ControllerRegistration) map[string]sets.Set[string] {
 	out := map[string]sets.Set[string]{}
 
 	for _, controllerRegistration := range controllerRegistrationList {

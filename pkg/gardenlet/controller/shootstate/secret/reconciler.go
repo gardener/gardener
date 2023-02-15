@@ -28,10 +28,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -95,7 +94,7 @@ func (r *Reconciler) reconcile(
 	ctx context.Context,
 	log logr.Logger,
 	secret *corev1.Secret,
-	shootState *gardencorev1alpha1.ShootState,
+	shootState *gardencorev1beta1.ShootState,
 ) (
 	reconcile.Result,
 	error,
@@ -116,8 +115,8 @@ func (r *Reconciler) reconcile(
 
 	patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
-	dataList := v1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
-	dataList.Upsert(&gardencorev1alpha1.GardenerResourceData{
+	dataList := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	dataList.Upsert(&gardencorev1beta1.GardenerResourceData{
 		Name:   secret.Name,
 		Labels: secret.Labels,
 		Type:   "secret",
@@ -132,7 +131,7 @@ func (r *Reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
 	secret *corev1.Secret,
-	shootState *gardencorev1alpha1.ShootState,
+	shootState *gardencorev1beta1.ShootState,
 	shoot *gardencorev1beta1.Shoot,
 ) (
 	reconcile.Result,
@@ -145,7 +144,7 @@ func (r *Reconciler) delete(
 
 		patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
-		dataList := v1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+		dataList := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 		dataList.Delete(secret.Name)
 		shootState.Spec.Gardener = dataList
 

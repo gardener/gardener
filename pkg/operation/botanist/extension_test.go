@@ -29,7 +29,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -50,7 +49,7 @@ var _ = Describe("Extensions", func() {
 
 		ctx        = context.TODO()
 		fakeErr    = fmt.Errorf("fake")
-		shootState = &gardencorev1alpha1.ShootState{}
+		shootState = &gardencorev1beta1.ShootState{}
 		namespace  = "shoot--name--space"
 	)
 

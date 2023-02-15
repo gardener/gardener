@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -41,7 +40,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		resourceName string
 
 		shoot      *gardencorev1beta1.Shoot
-		shootState *gardencorev1alpha1.ShootState
+		shootState *gardencorev1beta1.ShootState
 
 		cluster *extensionsv1alpha1.Cluster
 
@@ -109,7 +108,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		}
 
 		By("Create shootstate")
-		shootState = &gardencorev1alpha1.ShootState{
+		shootState = &gardencorev1beta1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shoot.Name,
 				Namespace: shoot.Namespace,
@@ -177,7 +176,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		}).Should(Succeed())
 
 		By("Verify secret did not get synced to shootstate")
-		Consistently(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Consistently(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).ShouldNot(containData(withName(secret.Name)))
@@ -194,7 +193,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 
 		By("Verify secret did still not get synced to shootstate")
-		Consistently(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Consistently(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).ShouldNot(containData(withName(secret.Name)))
@@ -211,7 +210,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 
 		By("Verify secret did now get synced to shootstate")
-		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Eventually(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).Should(containData(
@@ -233,7 +232,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 
 		By("Verify secret did now get synced")
-		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Eventually(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).Should(containData(
@@ -247,7 +246,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		Expect(testClient.Delete(ctx, secret)).To(Succeed())
 
 		By("Verify secret got removed")
-		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Eventually(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).ShouldNot(containData(withName(secret.Name)))
@@ -270,7 +269,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		}).Should(Succeed())
 
 		By("Verify secret did get synced to shootstate")
-		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Eventually(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).Should(containData(
@@ -308,7 +307,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		By("Verify secret does not get added to shootstate")
-		Consistently(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Consistently(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).ShouldNot(containData(withName(secret.Name)))
@@ -331,7 +330,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		}).Should(Succeed())
 
 		By("Verify secret gets synced to shootstate")
-		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Eventually(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).Should(containData(withName(secret.Name)))
@@ -368,7 +367,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		}).Should(BeNotFoundError())
 
 		By("Verify secret info did not get removed in shootstate")
-		Consistently(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+		Consistently(func(g Gomega) []gardencorev1beta1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).Should(containData(withName(secret.Name)))

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,9 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -33,7 +32,7 @@ var _ = Describe("ShootStateList", func() {
 	Describe("ExtensionResourceStateList", func() {
 		fooString := "foo"
 		var (
-			shootState         *gardencorev1alpha1.ShootState
+			shootState         *gardencorev1beta1.ShootState
 			extensionKind      = fooString
 			extensionName      = &fooString
 			extensionPurpose   = &fooString
@@ -51,13 +50,13 @@ var _ = Describe("ShootStateList", func() {
 		)
 
 		BeforeEach(func() {
-			shootState = &gardencorev1alpha1.ShootState{
+			shootState = &gardencorev1beta1.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "foo",
 				},
-				Spec: gardencorev1alpha1.ShootStateSpec{
-					Extensions: []gardencorev1alpha1.ExtensionResourceState{
+				Spec: gardencorev1beta1.ShootStateSpec{
+					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Kind:      extensionKind,
 							Name:      extensionName,
@@ -108,7 +107,7 @@ var _ = Describe("ShootStateList", func() {
 			It("should append new extension resource state to the list", func() {
 				list := ExtensionResourceStateList(shootState.Spec.Extensions)
 				barString := "bar"
-				newResource := &gardencorev1alpha1.ExtensionResourceState{
+				newResource := &gardencorev1beta1.ExtensionResourceState{
 					Kind:    barString,
 					Name:    &barString,
 					Purpose: &barString,
@@ -121,7 +120,7 @@ var _ = Describe("ShootStateList", func() {
 			It("should update an extension resource state in the list if it already exists", func() {
 				list := ExtensionResourceStateList(shootState.Spec.Extensions)
 				newState := &runtime.RawExtension{Raw: []byte("new state")}
-				updatedResource := &gardencorev1alpha1.ExtensionResourceState{
+				updatedResource := &gardencorev1beta1.ExtensionResourceState{
 					Kind:    extensionKind,
 					Name:    extensionName,
 					Purpose: extensionPurpose,
@@ -136,20 +135,20 @@ var _ = Describe("ShootStateList", func() {
 
 	Describe("GardenerResourceDataList", func() {
 		var (
-			shootState           *gardencorev1alpha1.ShootState
+			shootState           *gardencorev1beta1.ShootState
 			dataName             = "foo"
 			dataType             = "foo"
 			gardenerResourceData = runtime.RawExtension{Raw: []byte("data")}
 		)
 
 		BeforeEach(func() {
-			shootState = &gardencorev1alpha1.ShootState{
+			shootState = &gardencorev1beta1.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "foo",
 				},
-				Spec: gardencorev1alpha1.ShootStateSpec{
-					Gardener: []gardencorev1alpha1.GardenerResourceData{
+				Spec: gardencorev1beta1.ShootStateSpec{
+					Gardener: []gardencorev1beta1.GardenerResourceData{
 						{
 							Name: dataName,
 							Type: dataType,
@@ -182,10 +181,10 @@ var _ = Describe("ShootStateList", func() {
 					utils.MustNewRequirement("foo", selection.Equals, "bar"),
 				)
 
-				data1 = gardencorev1alpha1.GardenerResourceData{Name: "data1", Labels: map[string]string{"bar": "foo"}}
-				data2 = gardencorev1alpha1.GardenerResourceData{Name: "data2", Labels: map[string]string{"foo": "bar"}}
-				data3 = gardencorev1alpha1.GardenerResourceData{Name: "data3", Labels: map[string]string{"foo": "baz"}}
-				data4 = gardencorev1alpha1.GardenerResourceData{Name: "data4", Labels: map[string]string{"foo": "bar"}}
+				data1 = gardencorev1beta1.GardenerResourceData{Name: "data1", Labels: map[string]string{"bar": "foo"}}
+				data2 = gardencorev1beta1.GardenerResourceData{Name: "data2", Labels: map[string]string{"foo": "bar"}}
+				data3 = gardencorev1beta1.GardenerResourceData{Name: "data3", Labels: map[string]string{"foo": "baz"}}
+				data4 = gardencorev1beta1.GardenerResourceData{Name: "data4", Labels: map[string]string{"foo": "bar"}}
 			)
 
 			It("should return an empty list because nothing matches", func() {
@@ -226,7 +225,7 @@ var _ = Describe("ShootStateList", func() {
 		Context("#Upsert", func() {
 			It("should append new Gardener resource data to the list", func() {
 				list := GardenerResourceDataList(shootState.Spec.Gardener)
-				newResource := &gardencorev1alpha1.GardenerResourceData{
+				newResource := &gardencorev1beta1.GardenerResourceData{
 					Name: "bar",
 					Type: "bar",
 					Data: runtime.RawExtension{Raw: []byte("data")},
@@ -242,7 +241,7 @@ var _ = Describe("ShootStateList", func() {
 				newData := runtime.RawExtension{Raw: []byte("new data")}
 				newLabels := map[string]string{"foo": "bar"}
 
-				updatedResource := &gardencorev1alpha1.GardenerResourceData{
+				updatedResource := &gardencorev1beta1.GardenerResourceData{
 					Name:   dataName,
 					Type:   newType,
 					Data:   newData,
@@ -261,7 +260,7 @@ var _ = Describe("ShootStateList", func() {
 				list := GardenerResourceDataList(shootState.Spec.Gardener)
 				shootStateResourceName := shootState.Spec.Gardener[0].Name
 
-				newResource := &gardencorev1alpha1.GardenerResourceData{
+				newResource := &gardencorev1beta1.GardenerResourceData{
 					Name: shootStateResourceName + "bar",
 					Type: "bar",
 					Data: runtime.RawExtension{Raw: []byte("data")},
@@ -282,7 +281,7 @@ var _ = Describe("ShootStateList", func() {
 				list := GardenerResourceDataList(shootState.Spec.Gardener).DeepCopy()
 				shootStateResourceName := shootState.Spec.Gardener[0].Name
 
-				newResource := &gardencorev1alpha1.GardenerResourceData{
+				newResource := &gardencorev1beta1.GardenerResourceData{
 					Name: shootStateResourceName + "bar",
 					Type: "bar",
 					Data: runtime.RawExtension{Raw: []byte("data")},
@@ -303,7 +302,7 @@ var _ = Describe("ShootStateList", func() {
 
 	Describe("ResourceDataList", func() {
 		var (
-			shootState *gardencorev1alpha1.ShootState
+			shootState *gardencorev1beta1.ShootState
 			ref        = autoscalingv1.CrossVersionObjectReference{
 				Kind:       "Secret",
 				Name:       "test-secret",
@@ -313,13 +312,13 @@ var _ = Describe("ShootStateList", func() {
 		)
 
 		BeforeEach(func() {
-			shootState = &gardencorev1alpha1.ShootState{
+			shootState = &gardencorev1beta1.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "foo",
 				},
-				Spec: gardencorev1alpha1.ShootStateSpec{
-					Resources: []gardencorev1alpha1.ResourceData{
+				Spec: gardencorev1beta1.ShootStateSpec{
+					Resources: []gardencorev1beta1.ResourceData{
 						{
 							CrossVersionObjectReference: ref,
 							Data:                        data,
@@ -361,7 +360,7 @@ var _ = Describe("ShootStateList", func() {
 		Context("#Upsert", func() {
 			It("should append new resource data to the list", func() {
 				list := ResourceDataList(shootState.Spec.Resources)
-				newResource := &gardencorev1alpha1.ResourceData{
+				newResource := &gardencorev1beta1.ResourceData{
 					CrossVersionObjectReference: autoscalingv1.CrossVersionObjectReference{
 						Kind:       "Secret",
 						Name:       "test-secret2",
@@ -376,7 +375,7 @@ var _ = Describe("ShootStateList", func() {
 			It("should update a resource data in the list if it already exists", func() {
 				list := ResourceDataList(shootState.Spec.Resources)
 				newData := runtime.RawExtension{Raw: []byte("new data")}
-				updatedResource := &gardencorev1alpha1.ResourceData{
+				updatedResource := &gardencorev1beta1.ResourceData{
 					CrossVersionObjectReference: ref,
 					Data:                        newData,
 				}
