@@ -319,9 +319,6 @@ var _ = Describe("validator", func() {
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
-			// extCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
-			// admissionHandler.SetExternalCoreInformerFactory(extCoreInformerFactory)
-
 			authorizeAttributes = authorizer.AttributesRecord{
 				User:            userInfo,
 				APIGroup:        "core.gardener.cloud",
