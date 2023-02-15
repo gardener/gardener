@@ -184,7 +184,6 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 				allErrs = append(allErrs, err)
 			}
 		}
-
 	}
 
 	return allErrs
