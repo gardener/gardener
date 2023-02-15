@@ -178,6 +178,14 @@ rules:
   verbs:
   - list
   - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
 `
 			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -236,6 +244,14 @@ rules:
   - leases
   verbs:
   - create
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
 `
 			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
