@@ -749,7 +749,7 @@ In a multi-zonal shoot control plane setup there will be multiple replicas of Ku
 
 _During evaluation of this feature some caveats were discovered:_
 
-For each cluster, Гardener provides a capability to create one or more `Worker Pool/Group`. Each worker pool can span across one or more availability zones. For a combination of each worker pool and zone there will be a corresponding `MachineDeployment` which will also map 1:1 to a `Node Group`, which is understood by cluster-autoscaler.
+For each cluster, Gardener provides a capability to create one or more `Worker Pool/Group`. Each worker pool can span across one or more availability zones. For a combination of each worker pool and zone there will be a corresponding `MachineDeployment` which will also map 1:1 to a `Node Group`, which is understood by cluster-autoscaler.
 
 Consider the following cluster setup:
 <img src="assets/multi-zone-node-groups.png">
