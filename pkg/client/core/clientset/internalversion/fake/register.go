@@ -19,13 +19,12 @@ limitations under the License.
 package fake
 
 import (
+	coreinternalversion "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	coreinternalversion "github.com/gardener/gardener/pkg/apis/core"
 )
 
 var scheme = runtime.NewScheme()

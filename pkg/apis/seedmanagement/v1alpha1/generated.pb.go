@@ -20,18 +20,20 @@ package v1alpha1
 
 import (
 	fmt "fmt"
+
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	io "io"
-	math "math"
-	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
 
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
 	k8s_io_api_core_v1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	math "math"
+	math_bits "math/bits"
+	reflect "reflect"
+	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

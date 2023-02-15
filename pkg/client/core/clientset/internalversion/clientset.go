@@ -22,11 +22,10 @@ import (
 	"fmt"
 	"net/http"
 
+	coreinternalversion "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/typed/core/internalversion"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
-
-	coreinternalversion "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/typed/core/internalversion"
 )
 
 type Interface interface {
