@@ -800,9 +800,14 @@ func getSearchPathRewrites(enabled bool, clusterDomain string, commonSuffixes []
 	suffixRewrites := ""
 	for _, suffix := range commonSuffixes {
 		suffixRewrites = suffixRewrites + `
-  rewrite stop name regex (.*)` + regexp.QuoteMeta(suffix) + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}` + suffix
+  rewrite stop {
+    name regex (.*)\.` + regexp.QuoteMeta(suffix) + `\.svc\.` + quotedClusterDomain + ` {1}.` + suffix + `
+    answer name (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.` + clusterDomain + `
+  }`
 	}
 	return `
-  rewrite stop name regex (.+)\.svc\.` + quotedClusterDomain + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.svc.` + clusterDomain + `
-  rewrite stop name regex (.+)\.(.+)\.svc\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain + suffixRewrites
+  rewrite stop {
+    name regex ([^\.]+)\.([^\.]+)\.svc\.` + quotedClusterDomain + `\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain + `
+    answer name ([^\.]+)\.([^\.]+)\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain + `.svc.` + clusterDomain + `
+  }` + suffixRewrites
 }

@@ -47,7 +47,6 @@ var _ = Describe("CoreDNS", func() {
 		managedResourceName = "shoot-core-coredns"
 		namespace           = "some-namespace"
 		clusterDomain       = "foo.bar"
-		quotedClusterDomain = regexp.QuoteMeta(clusterDomain)
 		clusterIP           = "1.2.3.4"
 		image               = "some-image:some-tag"
 		cpaImage            = "cpa-image:cpa-tag"
@@ -130,11 +129,16 @@ data:
       ready`
 			if rewritingEnabled {
 				out += `
-      rewrite stop name regex (.+)\.svc\.` + quotedClusterDomain + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.svc.` + clusterDomain + `
-      rewrite stop name regex (.+)\.(.+)\.svc\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain
+      rewrite stop {
+        name regex ([^\.]+)\.([^\.]+)\.svc\.foo\.bar\.svc\.foo\.bar {1}.{2}.svc.foo.bar
+        answer name ([^\.]+)\.([^\.]+)\.svc\.foo\.bar {1}.{2}.svc.foo.bar.svc.foo.bar
+      }`
 				for _, suffix := range commonSuffixes {
 					out += `
-      rewrite stop name regex (.*)` + regexp.QuoteMeta(suffix) + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}` + suffix
+      rewrite stop {
+        name regex (.*)\.` + regexp.QuoteMeta(suffix) + `\.svc\.foo\.bar {1}.` + suffix + `
+        answer name (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.foo.bar
+      }`
 				}
 			}
 			out += `
