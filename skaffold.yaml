@@ -1230,4 +1230,4 @@ profiles:
     value:
     - bash
     - -ec
-    - RETRY_LIMIT=240 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
