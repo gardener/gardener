@@ -95,7 +95,7 @@ Each consumer therefore needs to decide on the degree of failure isolation that 
 
 ## Non-Goals
 
-- Setting up a high availability Gardener service.
+- Setting up a highly available Gardener service.
 - Upgrading from a single-zone shoot control plane to a multi-zonal shoot control plane.
 - Failure domains on region level, i.e. multi-region control-planes.
 - Downgrading HA shoots to non-HA shoots.
