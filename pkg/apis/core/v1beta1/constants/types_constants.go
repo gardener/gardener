@@ -298,25 +298,6 @@ const (
 	// TODO(shreyas-s-rao): Deprecate HA annotation with the stable release of zonal clusters feature.
 	ShootAlphaControlPlaneScaleDownDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled"
 
-	// ShootAlphaControlPlaneHighAvailability is a constant for an annotation on the Shoot resource stating that the
-	// high availability setup for the control plane should be enabled.
-	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
-	// what you do.
-	// Deprecated: This annotation is deprecated and not respected anymore. Please use `shoot.spec.controlPlane.highAvailability` instead.
-	ShootAlphaControlPlaneHighAvailability = "alpha.control-plane.shoot.gardener.cloud/high-availability"
-	// ShootAlphaControlPlaneHighAvailabilitySingleZone is a specific value that can be set for the shoot control
-	// plane high availability annotation, that allows gardener to spread the shoot control plane across
-	// multiple nodes within a single availability zone if it is possible.
-	// This enables shoot clusters having a control plane with a higher failure tolerance as well as zero downtime maintenance,
-	// especially for infrastructure providers that provide less than three zones in a region and thus a multi-zone setup
-	// is not possible there.
-	// Deprecated: This annotation value is deprecated and not respected anymore. Please use `shoot.spec.controlPlane.highAvailability.failureTolerance.type=node` instead.
-	ShootAlphaControlPlaneHighAvailabilitySingleZone = "single-zone"
-	// ShootAlphaControlPlaneHighAvailabilityMultiZone is a specific value that can be set for the shoot control
-	// plane high availability annotation, that allows gardener to spread the shoot control plane across
-	// multiple availability zones if it is possible.
-	// Deprecated: This annotation value is deprecated and not respected anymore. Please use `shoot.spec.controlPlane.highAvailability.failureTolerance.type=zone` instead.
-	ShootAlphaControlPlaneHighAvailabilityMultiZone = "multi-zone"
 	// ShootAlphaControlPlaneHAVPN is a constant for an annotation on the Shoot resource to enforce
 	// enabling/disabling the high availability setup for the VPN connection.
 	// By default, the HA setup for VPN connections is activated automatically if the control plane high availability is enabled.
