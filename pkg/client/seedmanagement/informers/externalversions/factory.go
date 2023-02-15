@@ -23,14 +23,13 @@ import (
 	sync "sync"
 	time "time"
 
+	versioned "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	internalinterfaces "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions/internalinterfaces"
+	seedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions/seedmanagement"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
-
-	versioned "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	internalinterfaces "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions/internalinterfaces"
-	seedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions/seedmanagement"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.

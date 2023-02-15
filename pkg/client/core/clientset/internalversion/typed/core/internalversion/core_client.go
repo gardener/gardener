@@ -21,9 +21,8 @@ package internalversion
 import (
 	"net/http"
 
-	rest "k8s.io/client-go/rest"
-
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/scheme"
+	rest "k8s.io/client-go/rest"
 )
 
 type CoreInterface interface {

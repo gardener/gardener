@@ -19,12 +19,11 @@ limitations under the License.
 package scheme
 
 import (
+	core "github.com/gardener/gardener/pkg/apis/core/install"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
-
-	core "github.com/gardener/gardener/pkg/apis/core/install"
 )
 
 var Scheme = runtime.NewScheme()

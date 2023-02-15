@@ -24,6 +24,8 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	core "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -32,9 +34,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	types "k8s.io/apimachinery/pkg/types"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
-
-	core "github.com/gardener/gardener/pkg/apis/core"
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 func init() {

@@ -24,10 +24,9 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	local "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-
-	local "github.com/gardener/gardener/pkg/provider-local/apis/local"
 )
 
 func init() {

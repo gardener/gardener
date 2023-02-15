@@ -24,10 +24,9 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	shootdnsrewriting "github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-
-	shootdnsrewriting "github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting"
 )
 
 func init() {

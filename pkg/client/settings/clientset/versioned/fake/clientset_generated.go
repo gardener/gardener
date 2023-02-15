@@ -19,15 +19,14 @@ limitations under the License.
 package fake
 
 import (
+	clientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/typed/settings/v1alpha1"
+	fakesettingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/typed/settings/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
-
-	clientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/typed/settings/v1alpha1"
-	fakesettingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/typed/settings/v1alpha1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
