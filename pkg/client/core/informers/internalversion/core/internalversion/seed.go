@@ -22,15 +22,14 @@ import (
 	"context"
 	time "time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
-
 	core "github.com/gardener/gardener/pkg/apis/core"
 	clientsetinternalversion "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/internalversion/internalinterfaces"
 	internalversion "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // SeedInformer provides access to a shared informer and lister for

@@ -19,10 +19,9 @@ limitations under the License.
 package fake
 
 import (
+	v1alpha1 "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/typed/settings/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
-
-	v1alpha1 "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/typed/settings/v1alpha1"
 )
 
 type FakeSettingsV1alpha1 struct {

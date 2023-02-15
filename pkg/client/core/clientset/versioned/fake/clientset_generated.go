@@ -19,17 +19,16 @@ limitations under the License.
 package fake
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/discovery"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/testing"
-
 	clientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	corev1alpha1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1"
 	fakecorev1alpha1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1/fake"
 	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	fakecorev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1/fake"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/discovery"
+	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/testing"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.

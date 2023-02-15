@@ -24,13 +24,12 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	config "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	v1 "k8s.io/api/rbac/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-
-	config "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 )
 
 func init() {

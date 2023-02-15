@@ -21,11 +21,10 @@ package v1alpha1
 import (
 	encoding_binary "encoding/binary"
 	fmt "fmt"
+
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	io "io"
-	math "math"
-	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
 
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
@@ -35,10 +34,14 @@ import (
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	v11 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	math "math"
+	math_bits "math/bits"
+	reflect "reflect"
+	strings "strings"
+
 	k8s_io_apimachinery_pkg_types "k8s.io/apimachinery/pkg/types"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
-
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

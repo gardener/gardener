@@ -19,10 +19,9 @@ limitations under the License.
 package fake
 
 import (
+	internalversion "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/typed/core/internalversion"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
-
-	internalversion "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/typed/core/internalversion"
 )
 
 type FakeCore struct {

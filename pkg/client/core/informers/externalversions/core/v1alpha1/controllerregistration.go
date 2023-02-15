@@ -22,15 +22,14 @@ import (
 	"context"
 	time "time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
-
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ControllerRegistrationInformer provides access to a shared informer and lister for

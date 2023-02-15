@@ -22,15 +22,14 @@ import (
 	"context"
 	time "time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
-
 	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // CloudProfileInformer provides access to a shared informer and lister for

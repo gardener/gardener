@@ -24,12 +24,11 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
-	conversion "k8s.io/apimachinery/pkg/conversion"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
+	conversion "k8s.io/apimachinery/pkg/conversion"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 func init() {
