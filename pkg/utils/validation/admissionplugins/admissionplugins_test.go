@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
@@ -109,5 +110,175 @@ var _ = Describe("admissionplugins", func() {
 				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list: [SecurityContextDeny]"),
 			})))),
 		)
+
+		Describe("validate PodSecurity admissionPlugin config", func() {
+			test := func(kubernetesVersion string, v1alpha1, v1beta1, v1 bool) {
+				if v1alpha1 {
+					It("should allow v1alpha1 configuration", func() {
+						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+							getPodSecurityPluginForConfigVersion("v1alpha1"),
+						},
+							kubernetesVersion,
+							field.NewPath("admissionPlugins"),
+						)).To(BeEmpty())
+					})
+				}
+
+				if v1beta1 {
+					It("should allow v1beta1 configuration", func() {
+						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+							getPodSecurityPluginForConfigVersion("v1beta1"),
+						},
+							kubernetesVersion,
+							field.NewPath("admissionPlugins"),
+						)).To(BeEmpty())
+					})
+				} else {
+					It("should not allow v1beta1 configuration", func() {
+						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+							getPodSecurityPluginForConfigVersion("v1beta1"),
+						},
+							kubernetesVersion,
+							field.NewPath("admissionPlugins"),
+						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+							"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", kubernetesVersion, "pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1beta1"),
+						}))))
+					})
+				}
+
+				if v1 {
+					It("should allow v1 configuration", func() {
+						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+							getPodSecurityPluginForConfigVersion("v1"),
+						},
+							kubernetesVersion,
+							field.NewPath("admissionPlugins"),
+						)).To(BeEmpty())
+					})
+				} else if v1alpha1 && v1beta1 {
+					It("should not allow v1 configuration", func() {
+						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+							getPodSecurityPluginForConfigVersion("v1"),
+						},
+							kubernetesVersion,
+							field.NewPath("admissionPlugins"),
+						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+							"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", kubernetesVersion, "pod-security.admission.config.k8s.io/v1beta1 or pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1"),
+						}))))
+					})
+				} else {
+					It("should not allow v1 configuration", func() {
+						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+							getPodSecurityPluginForConfigVersion("v1"),
+						},
+							kubernetesVersion,
+							field.NewPath("admissionPlugins"),
+						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+							"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", kubernetesVersion, "pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1"),
+						}))))
+					})
+				}
+			}
+
+			Context("v1.22 cluster", func() {
+				test("v1.22.13", true, false, false)
+			})
+			Context("v1.23 cluster", func() {
+				test("v1.23.10", true, true, false)
+			})
+			Context("v1.24 cluster", func() {
+				test("v1.24.8", true, true, false)
+			})
+			Context("v1.25 cluster", func() {
+				test("v1.25.4", true, true, true)
+			})
+			Context("v1.26 cluster", func() {
+				test("v1.26.2", true, true, true)
+			})
+
+			Context("invalid PodSecurityConfiguration", func() {
+				It("should return error if decoding fails", func() {
+					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+						{
+							Name: "PodSecurity",
+							Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
+kind: PodSecurityConfiguration-bar
+defaults:
+   enforce-error: "privileged"
+ enforce-version: "latest"
+ exemptions:
+usernames: "admin"
+`),
+							},
+						},
+					},
+						"v1.24.8",
+						field.NewPath("admissionPlugins"),
+					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+						"Detail": ContainSubstring("cannot decode the given config: yaml: line 4: did not find expected key"),
+					}))))
+				})
+
+				It("should return error non-registered error if wrong apiVersion is passed", func() {
+					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+						{
+							Name: "PodSecurity",
+							Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
+kind: PodSecurityConfiguration-bar
+defaults:
+  enforce-error: "privileged"
+  enforce-version: "latest"
+exemptions:
+  usernames: "admin"
+`),
+							},
+						},
+					},
+						"v1.24.8",
+						field.NewPath("admissionPlugins"),
+					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+						"Detail": ContainSubstring("expected pod-security.admission.config.k8s.io/v1alpha1.PodSecurityConfiguration or pod-security.admission.config.k8s.io/v1beta1.PodSecurityConfiguration or pod-security.admission.config.k8s.io/v1.PodSecurityConfiguration"),
+					}))))
+				})
+			})
+		})
 	})
 })
+
+func getPodSecurityPluginForConfigVersion(version string) core.AdmissionPlugin {
+	apiVersion := "pod-security.admission.config.k8s.io/v1alpha1"
+
+	if version == "v1beta1" {
+		apiVersion = "pod-security.admission.config.k8s.io/v1beta1"
+	} else if version == "v1" {
+		apiVersion = "pod-security.admission.config.k8s.io/v1"
+	}
+
+	return core.AdmissionPlugin{
+		Name: "PodSecurity",
+		Config: &runtime.RawExtension{Raw: []byte(`apiVersion: ` + apiVersion + `
+kind: PodSecurityConfiguration
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+  warn-version: "v1.22"
+exemptions:
+  usernames: ["admin"]
+  runtimeClasses: ["random"]
+  namespaces: ["random"]
+`),
+		},
+	}
+}
