@@ -106,7 +106,8 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameVPNSeedClient           = "vpn-seed-client"
 		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00"
 
-		secretNameAdmissionConfig       = "kube-apiserver-admission-config-e38ff146"
+		configMapNameAdmissionConfigs   = "kube-apiserver-admission-config-e38ff146"
+		secretNameAdmissionKubeconfigs  = "kube-apiserver-admission-kubeconfigs-e3b0c442"
 		secretNameETCDEncryptionConfig  = "kube-apiserver-etcd-encryption-configuration-235f7353"
 		configMapNameAuditPolicy        = "audit-policy-config-f5b578b4"
 		configMapNameEgressPolicy       = "kube-apiserver-egress-selector-config-53d92abc"
@@ -123,6 +124,7 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
 		networkPolicyAllowKubeAPIServer      *networkingv1.NetworkPolicy
 		configMapAdmission                   *corev1.ConfigMap
+		secretAdmissionKubeconfigs           *corev1.Secret
 		configMapAuditPolicy                 *corev1.ConfigMap
 		configMapEgressSelector              *corev1.ConfigMap
 		managedResource                      *resourcesv1alpha1.ManagedResource
@@ -1165,6 +1167,69 @@ subjects:
 		})
 
 		Describe("Secrets", func() {
+			Context("admission kubeconfigs", func() {
+				It("should successfully deploy the secret resource w/o admission plugin kubeconfigs", func() {
+					secretAdmissionKubeconfigs = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-kubeconfigs", Namespace: namespace},
+						Data:       map[string][]byte{},
+					}
+					Expect(kubernetesutils.MakeUnique(secretAdmissionKubeconfigs)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
+					Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            secretAdmissionKubeconfigs.Name,
+							Namespace:       secretAdmissionKubeconfigs.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      secretAdmissionKubeconfigs.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins", func() {
+					admissionPlugins := []AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz"}, Kubeconfig: []byte("foo")},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{EnabledAdmissionPlugins: admissionPlugins, RuntimeVersion: runtimeVersion, Version: version})
+
+					secretAdmissionKubeconfigs = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-kubeconfigs", Namespace: namespace},
+						Data: map[string][]byte{
+							"baz-kubeconfig.yaml": []byte("foo"),
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(secretAdmissionKubeconfigs)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
+					Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            secretAdmissionKubeconfigs.Name,
+							Namespace:       secretAdmissionKubeconfigs.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      secretAdmissionKubeconfigs.Data,
+					}))
+				})
+			})
+
 			It("should successfully deploy the OIDCCABundle secret resource", func() {
 				var (
 					caBundle   = "some-ca-bundle"
@@ -1385,8 +1450,37 @@ plugins: null
 				It("should successfully deploy the configmap resource w/ admission plugins", func() {
 					admissionPlugins := []AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Bar"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}}},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "MutatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ValidatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ImagePolicyWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`imagePolicy:
+  foo: bar
+  kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+							Kubeconfig: []byte("foo"),
+						},
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{EnabledAdmissionPlugins: admissionPlugins, RuntimeVersion: runtimeVersion, Version: version})
@@ -1400,8 +1494,187 @@ plugins:
 - configuration: null
   name: Baz
   path: /etc/kubernetes/admission/baz.yaml
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+- configuration: null
+  name: ImagePolicyWebhook
+  path: /etc/kubernetes/admission/imagepolicywebhook.yaml
 `,
 							"baz.yaml": "some-config-for-baz",
+							"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/mutatingadmissionwebhook-kubeconfig.yaml
+`,
+							"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook-kubeconfig.yaml
+`,
+							"imagepolicywebhook.yaml": `imagePolicy:
+  foo: bar
+  kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/imagepolicywebhook-kubeconfig.yaml
+`,
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins w/ config but w/o kubeconfigs", func() {
+					admissionPlugins := []AdmissionPluginConfig{
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "MutatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ValidatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ImagePolicyWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`imagePolicy:
+  foo: bar
+  kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+						},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{EnabledAdmissionPlugins: admissionPlugins, RuntimeVersion: runtimeVersion, Version: version})
+
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{
+							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+- configuration: null
+  name: ImagePolicyWebhook
+  path: /etc/kubernetes/admission/imagepolicywebhook.yaml
+`,
+							"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: ""
+`,
+							"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: ""
+`,
+							"imagepolicywebhook.yaml": `imagePolicy:
+  foo: bar
+  kubeConfigFile: ""
+`,
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins w/o configs but w/ kubeconfig", func() {
+					admissionPlugins := []AdmissionPluginConfig{
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "MutatingAdmissionWebhook",
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ValidatingAdmissionWebhook",
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ImagePolicyWebhook",
+							},
+							Kubeconfig: []byte("foo"),
+						},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{EnabledAdmissionPlugins: admissionPlugins, RuntimeVersion: runtimeVersion, Version: version})
+
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{
+							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+- configuration: null
+  name: ImagePolicyWebhook
+  path: /etc/kubernetes/admission/imagepolicywebhook.yaml
+`,
+							"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/mutatingadmissionwebhook-kubeconfig.yaml
+`,
+							"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook-kubeconfig.yaml
+`,
+							"imagepolicywebhook.yaml": `imagePolicy:
+  kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/imagepolicywebhook-kubeconfig.yaml
+`,
 						},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
@@ -1604,7 +1877,8 @@ rules:
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
-						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
+						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 					}
 				})
@@ -1775,7 +2049,8 @@ rules:
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
-						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
+						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 					}
 				})
@@ -2352,6 +2627,10 @@ rules:
 							MountPath: "/etc/kubernetes/admission",
 						},
 						corev1.VolumeMount{
+							Name:      "admission-kubeconfigs",
+							MountPath: "/etc/kubernetes/admission-kubeconfigs",
+						},
+						corev1.VolumeMount{
 							Name:      "ca",
 							MountPath: "/srv/kubernetes/ca",
 						},
@@ -2433,8 +2712,16 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: secretNameAdmissionConfig,
+										Name: configMapNameAdmissionConfigs,
 									},
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "admission-kubeconfigs",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameAdmissionKubeconfigs,
 								},
 							},
 						},

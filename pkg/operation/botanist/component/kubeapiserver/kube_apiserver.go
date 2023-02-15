@@ -30,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	webhookadmissionv1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1"
+	webhookadmissionv1alpha1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1alpha1"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
@@ -59,6 +61,8 @@ func init() {
 	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiserverconfigv1.AddToScheme(scheme))
 	utilruntime.Must(auditv1.AddToScheme(scheme))
+	utilruntime.Must(webhookadmissionv1.AddToScheme(scheme))
+	utilruntime.Must(webhookadmissionv1alpha1.AddToScheme(scheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
@@ -70,6 +74,8 @@ func init() {
 			apiserverv1alpha1.SchemeGroupVersion,
 			apiserverconfigv1.SchemeGroupVersion,
 			auditv1.SchemeGroupVersion,
+			webhookadmissionv1.SchemeGroupVersion,
+			webhookadmissionv1alpha1.SchemeGroupVersion,
 		})
 	)
 
@@ -314,7 +320,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 		secretETCDEncryptionConfiguration    = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
-		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		configMapAdmissionConfigs            = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		secretAdmissionKubeconfigs           = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
 		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 		configMapTerminationHandler          = k.emptyConfigMap(watchdogConfigMapNamePrefix)
@@ -389,7 +396,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileConfigMapAdmission(ctx, configMapAdmission); err != nil {
+	if err := k.reconcileConfigMapAdmission(ctx, configMapAdmissionConfigs); err != nil {
+		return err
+	}
+	if err := k.reconcileSecretAdmissionKubeconfigs(ctx, secretAdmissionKubeconfigs); err != nil {
 		return err
 	}
 
@@ -442,7 +452,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		ctx,
 		deployment,
 		configMapAuditPolicy,
-		configMapAdmission,
+		configMapAdmissionConfigs,
+		secretAdmissionKubeconfigs,
 		configMapEgressSelector,
 		configMapTerminationHandler,
 		secretETCDEncryptionConfiguration,
