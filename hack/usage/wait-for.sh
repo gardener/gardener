@@ -20,8 +20,8 @@ set -euo pipefail
 
 if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <resource_type> <object_name> <condition_1> <condition_2> ... <condition_n>
-Note: Namespace/RETRY_LIMIT will be used from the 'NAMESPACE'/'RETRY_LIMIT' environment variable if set, otherwise it is optional.
-      RETRY_LIMIT: The operation will be retried a maximum of 120 times (default), with a 5 second sleep interval between each retry.
+Note: Namespace/Timeout will be used from the 'NAMESPACE'/'TIMEOUT' environment variable if set, otherwise it is optional.
+      TIMEOUT: The operation will be retried until the timeout[default 600 seconds] is reached, with a 5 second sleep interval between each retry.
 "
   exit 1
 fi
@@ -33,10 +33,10 @@ CONDITIONS=("$@")
 NAMESPACE=${NAMESPACE:-}
 
 # The number of retries before failing
-RETRY_LIMIT=${RETRY_LIMIT:-120}
+TIMEOUT=${TIMEOUT:-600}
 
 # The interval between each retry in seconds
-SLEEP_INTERVAL=5
+SLEEP_INTERVAL=${SLEEP_INTERVAL:-5}
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -44,13 +44,13 @@ NO_COLOR='\033[0m'
 
 echo "⏳ Checking conditions for ${RESOURCE_TYPE}/${OBJECT_NAME}..."
 retries=0
-while [ "${retries}" -lt "${RETRY_LIMIT}" ]; do
+while [ "${retries}" -lt "${TIMEOUT}" ]; do
   if [ -z "$NAMESPACE" ]; then
     # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
-    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -o json | yq '.status.conditions')
+    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" --request-timeout='1s' -o json | yq '.status.conditions')
   else
     # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
-    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" -o json | yq '.status.conditions')
+    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" --request-timeout='1s' -o json | yq '.status.conditions')
   fi
 
   # A flag to indicate if all conditions have passed
@@ -69,11 +69,11 @@ while [ "${retries}" -lt "${RETRY_LIMIT}" ]; do
     break
   fi
 
-  retries=$((retries + 1))
+  retries=$((retries + SLEEP_INTERVAL))
   sleep "${SLEEP_INTERVAL}"
 done
 
-if [ "${retries}" -eq "${RETRY_LIMIT}" ]; then
-  echo -e "${RED}❌ ERROR: ${condition} not met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${RETRY_LIMIT} retries"
+if [ "${retries}" -ge "${TIMEOUT}" ]; then
+  echo -e "${RED}❌ ERROR: ${condition} not met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${TIMEOUT} seconds.${NO_COLOR}"
   exit 1
 fi
