@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
@@ -122,6 +123,14 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			JitterFunc: wait.Jitter,
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token requestor controller: %w", err)
+		}
+	}
+
+	if cfg.Controllers.Node.Enabled {
+		if err := (&node.Reconciler{
+			Config: cfg.Controllers.Node,
+		}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding node controller: %w", err)
 		}
 	}
 

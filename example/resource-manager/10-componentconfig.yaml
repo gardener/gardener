@@ -40,15 +40,15 @@ debugging:
 controllers:
 # clusterID: foo
 # resourceClass: bar
-  kubeletCSRApprover:
-    enabled: true
-    concurrentSyncs: 1
   garbageCollector:
     enabled: true
     syncPeriod: 1h
   health:
     concurrentSyncs: 5
     syncPeriod: 1m
+  kubeletCSRApprover:
+    enabled: true
+    concurrentSyncs: 1
   managedResources:
     concurrentSyncs: 5
     syncPeriod: 1m
@@ -60,6 +60,10 @@ controllers:
   # namespaceSelectors:
   # - matchLabels:
   #     kubernetes.io/metadata.name: default
+  node:
+    enabled: true
+    concurrentSyncs: 5
+    backoff: 10s
   secret:
     concurrentSyncs: 5
   tokenInvalidator:

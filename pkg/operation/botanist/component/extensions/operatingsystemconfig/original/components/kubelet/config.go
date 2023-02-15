@@ -23,6 +23,7 @@ import (
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -97,12 +98,16 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		SerializeImagePulls:              params.SerializeImagePulls,
 		ServerTLSBootstrap:               true,
 		StreamingConnectionIdleTimeout:   *params.StreamingConnectionIdleTimeout,
-		RegistryPullQPS:                  params.RegistryPullQPS,
-		RegistryBurst:                    pointer.Int32Deref(params.RegistryBurst, 0),
-		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
-		SystemReserved:                   params.SystemReserved,
-		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
-		VolumePluginDir:                  pathVolumePluginDirectory,
+		RegisterWithTaints: []corev1.Taint{{
+			Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+			Effect: corev1.TaintEffectNoSchedule,
+		}},
+		RegistryPullQPS:      params.RegistryPullQPS,
+		RegistryBurst:        pointer.Int32Deref(params.RegistryBurst, 0),
+		SyncFrequency:        metav1.Duration{Duration: time.Minute},
+		SystemReserved:       params.SystemReserved,
+		VolumeStatsAggPeriod: metav1.Duration{Duration: time.Minute},
+		VolumePluginDir:      pathVolumePluginDirectory,
 	}
 
 	return config

@@ -122,16 +122,18 @@ type ResourceManagerControllerConfiguration struct {
 	// +optional
 	ResourceClass *string `json:"resourceClass,omitempty"`
 
-	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
-	KubeletCSRApprover KubeletCSRApproverControllerConfig `json:"kubeletCSRApprover"`
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig `json:"garbageCollector"`
 	// Health is the configuration for the health controller.
 	Health HealthControllerConfig `json:"health"`
+	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
+	KubeletCSRApprover KubeletCSRApproverControllerConfig `json:"kubeletCSRApprover"`
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig `json:"managedResource"`
 	// NetworkPolicy is the configuration for the networkpolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
+	// Node is the configuration for the node controller.
+	Node NodeControllerConfig `json:"node"`
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig `json:"secret"`
 	// TokenInvalidator is the configuration for the token-invalidator controller.
@@ -223,6 +225,18 @@ type TokenRequestorControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// NodeControllerConfig is the configuration for the node controller.
+type NodeControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool `json:"enabled"`
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// Backoff is the duration to use as backoff when Nodes have non-ready node-critical pods (defaults to 10s).
+	// +optional
+	Backoff *metav1.Duration `json:"backoff,omitempty"`
 }
 
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.

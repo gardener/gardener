@@ -47,6 +47,7 @@
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Projects](usage/projects.md)
 * [Project Namespace Access](usage/project_namespace_access.md)
+* [Readiness of Shoot Worker Nodes](usage/node-readiness.md)
 * [Register Shoot as Seed](usage/managed_seed.md)
 * [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
 * [Seed Bootstrapping](usage/seed_bootstrapping.md)

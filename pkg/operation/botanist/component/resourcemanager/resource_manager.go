@@ -591,6 +591,10 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		}
 	}
 
+	if r.values.TargetDiffersFromSourceCluster {
+		config.Controllers.Node.Enabled = true
+	}
+
 	data, err := runtime.Encode(codec, config)
 	if err != nil {
 		return err

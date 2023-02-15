@@ -72,15 +72,15 @@ global:
     controllers:
     # clusterID: foo
     # resourceClass: bar
-      kubeletCSRApprover:
-        enabled: false
-      # concurrentSyncs: 1
       garbageCollector:
         enabled: false
       # syncPeriod: 1h
       health:
         concurrentSyncs: 5
         syncPeriod: 1m
+      kubeletCSRApprover:
+        enabled: false
+      # concurrentSyncs: 1
       managedResources:
         concurrentSyncs: 5
         syncPeriod: 1m
@@ -92,6 +92,10 @@ global:
       # namespaceSelectors:
       # - matchLabels:
       #     foo: bar
+      node:
+        enabled: false
+      # concurrentSyncs: 5
+      # backoff: 10s
       secret:
         concurrentSyncs: 5
       tokenInvalidator:

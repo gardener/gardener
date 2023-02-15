@@ -308,7 +308,10 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name(pool),
 				Namespace: metav1.NamespaceSystem,
-				Labels:    getSystemComponentLabels(),
+				Labels: utils.MergeStringMaps(
+					getSystemComponentLabels(),
+					map[string]string{v1beta1constants.LabelNodeCriticalComponent: "true"},
+				),
 			},
 			Spec: appsv1.DaemonSetSpec{
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
@@ -319,7 +322,11 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(getPoolLabels(pool), getSystemComponentLabels()),
+						Labels: utils.MergeStringMaps(
+							getPoolLabels(pool),
+							getSystemComponentLabels(),
+							map[string]string{v1beta1constants.LabelNodeCriticalComponent: "true"},
+						),
 					},
 					Spec: corev1.PodSpec{
 						NodeSelector: map[string]string{

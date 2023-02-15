@@ -76,11 +76,6 @@ data:
       {{- if .Values.global.config.controllers.resourceClass }}
       resourceClass: {{ .Values.global.config.controllers.resourceClass }}
       {{- end }}
-      kubeletCSRApprover:
-        enabled: {{ .Values.global.config.controllers.kubeletCSRApprover.enabled }}
-        {{- if .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
-        concurrentSyncs: {{ .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
-        {{- end }}
       garbageCollector:
         enabled: {{ .Values.global.config.controllers.garbageCollector.enabled }}
         {{- if .Values.global.config.controllers.garbageCollector.syncPeriod }}
@@ -92,6 +87,11 @@ data:
         {{- end }}
         {{- if .Values.global.config.controllers.health.syncPeriod }}
         syncPeriod: {{ .Values.global.config.controllers.health.syncPeriod }}
+        {{- end }}
+      kubeletCSRApprover:
+        enabled: {{ .Values.global.config.controllers.kubeletCSRApprover.enabled }}
+        {{- if .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
         {{- end }}
       managedResources:
         {{- if .Values.global.config.controllers.managedResources.concurrentSyncs }}
@@ -114,6 +114,14 @@ data:
         {{- if .Values.global.config.controllers.networkPolicy.namespaceSelectors }}
         namespaceSelectors:
 {{ toYaml .Values.global.config.controllers.networkPolicy.namespaceSelectors | indent 8 }}
+        {{- end }}
+      node:
+        enabled: {{ .Values.global.config.controllers.node.enabled }}
+        {{- if .Values.global.config.controllers.node.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.node.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.node.backoff }}
+        backoff: {{ .Values.global.config.controllers.node.backoff }}
         {{- end }}
       secret:
         {{- if .Values.global.config.controllers.secret.concurrentSyncs }}

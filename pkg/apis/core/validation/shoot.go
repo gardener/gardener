@@ -1490,17 +1490,26 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 	return allErrs
 }
 
+var reservedTaintKeys = sets.NewString(v1beta1constants.TaintNodeCriticalComponentsNotReady)
+
 func validateClusterAutoscalerIgnoreTaints(ignoredTaints []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	taintKeySet := make(map[string]struct{})
 
-	for index, taint := range ignoredTaints {
+	for i, taint := range ignoredTaints {
+		idxPath := fldPath.Index(i)
+
 		// validate the taint key
-		allErrs = append(allErrs, metav1validation.ValidateLabelName(taint, fldPath.Index(index))...)
+		allErrs = append(allErrs, metav1validation.ValidateLabelName(taint, idxPath)...)
+
+		// deny reserved taint keys
+		if reservedTaintKeys.Has(taint) {
+			allErrs = append(allErrs, field.Forbidden(idxPath, "taint key is reserved by gardener"))
+		}
 
 		// validate if taint key is duplicate
 		if _, ok := taintKeySet[taint]; ok {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Index(index), taint))
+			allErrs = append(allErrs, field.Duplicate(idxPath, taint))
 			continue
 		}
 		taintKeySet[taint] = struct{}{}
@@ -1510,26 +1519,32 @@ func validateClusterAutoscalerIgnoreTaints(ignoredTaints []string, fldPath *fiel
 
 // https://github.com/kubernetes/kubernetes/blob/ee9079f8ec39914ff8975b5390749771b9303ea4/pkg/apis/core/validation/validation.go#L4057-L4089
 func validateTaints(taints []corev1.Taint, fldPath *field.Path) field.ErrorList {
-	allErrors := field.ErrorList{}
+	allErrs := field.ErrorList{}
 
 	uniqueTaints := map[corev1.TaintEffect]sets.Set[string]{}
 
 	for i, taint := range taints {
 		idxPath := fldPath.Index(i)
 		// validate the taint key
-		allErrors = append(allErrors, metav1validation.ValidateLabelName(taint.Key, idxPath.Child("key"))...)
+		allErrs = append(allErrs, metav1validation.ValidateLabelName(taint.Key, idxPath.Child("key"))...)
+
+		// deny reserved taint keys
+		if reservedTaintKeys.Has(taint.Key) {
+			allErrs = append(allErrs, field.Forbidden(idxPath.Child("key"), "taint key is reserved by gardener"))
+		}
+
 		// validate the taint value
 		if errs := validation.IsValidLabelValue(taint.Value); len(errs) != 0 {
-			allErrors = append(allErrors, field.Invalid(idxPath.Child("value"), taint.Value, strings.Join(errs, ";")))
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("value"), taint.Value, strings.Join(errs, ";")))
 		}
 		// validate the taint effect
-		allErrors = append(allErrors, validateTaintEffect(&taint.Effect, false, idxPath.Child("effect"))...)
+		allErrs = append(allErrs, validateTaintEffect(&taint.Effect, false, idxPath.Child("effect"))...)
 
 		// validate if taint is unique by <key, effect>
 		if len(uniqueTaints[taint.Effect]) > 0 && uniqueTaints[taint.Effect].Has(taint.Key) {
 			duplicatedError := field.Duplicate(idxPath, taint)
 			duplicatedError.Detail = "taints must be unique by key and effect pair"
-			allErrors = append(allErrors, duplicatedError)
+			allErrs = append(allErrs, duplicatedError)
 			continue
 		}
 
@@ -1539,7 +1554,7 @@ func validateTaints(taints []corev1.Taint, fldPath *field.Path) field.ErrorList 
 		}
 		uniqueTaints[taint.Effect].Insert(taint.Key)
 	}
-	return allErrors
+	return allErrs
 }
 
 // https://github.com/kubernetes/kubernetes/blob/ee9079f8ec39914ff8975b5390749771b9303ea4/pkg/apis/core/validation/validation.go#L2774-L2795
