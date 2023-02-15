@@ -39,6 +39,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
 // WaitUntilDaemonSetIsRunning waits until the daemon set with <daemonSetName> is running
@@ -356,18 +357,35 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 	return true, ""
 }
 
-// DownloadKubeconfig downloads the shoot Kubeconfig
+// DownloadKubeconfig retrieves the static token kubeconfig for the given shoot and writes the kubeconfig to the
+// given download path.
 func DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namespace, name, downloadPath string) error {
 	kubeconfig, err := GetObjectFromSecret(ctx, client, namespace, name, KubeconfigSecretKeyName)
 	if err != nil {
 		return err
 	}
-	if downloadPath != "" {
-		err = os.WriteFile(downloadPath, []byte(kubeconfig), 0755)
-		if err != nil {
-			return err
-		}
+	err = os.WriteFile(downloadPath, []byte(kubeconfig), 0755)
+	if err != nil {
+		return err
 	}
+
+	return nil
+}
+
+// DownloadAdminKubeconfigForShoot requests an admin kubeconfig for the given shoot and writes the kubeconfig to the
+// given download path. The kubeconfig expires in 6 hours.
+func DownloadAdminKubeconfigForShoot(ctx context.Context, client kubernetes.Interface, shoot *gardencorev1beta1.Shoot, downloadPath string) error {
+	const expirationSeconds = 6 * 3600 // 6h
+	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, client, shoot, pointer.Int64(expirationSeconds))
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(downloadPath, kubeconfig, 0755)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
