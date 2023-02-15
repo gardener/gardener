@@ -1,5 +1,5 @@
 ---
-title:  Observability Stack - Migrating to the prometheus-operator and fluent-bit operator
+title: 19 Observability Stack - Migrating to the prometheus-operator and fluent-bit-operator
 gep-number: 0019
 creation-date: 2022-06-21
 status: implementable
@@ -19,7 +19,7 @@ reviewers:
 
 ## Table of Contents
 
-- [GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit operator](#gep-19-observability-stack---migrating-to-the-prometheus-operator-and-fluent-bit-operator)
+- [GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit-operator](#gep-19-observability-stack---migrating-to-the-prometheus-operator-and-fluent-bit-operator)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
@@ -33,10 +33,14 @@ reviewers:
     - [BYOMC (Bring your own monitoring configuration)](#byomc-bring-your-own-monitoring-configuration)
     - [Grafana Sidecar](#grafana-sidecar)
     - [Fluent-bit Operator CRDs](#fluent-bit-operator-crds)
-    - [Fluent-bit filters and parsers](#fluent-bit-filters-and-parsers)
-    - [BYOLC (Bring your own logging configuration)](#byolc-bring-your-own-logging-configuration)
+    - [Fluent-bit Filters and Parsers](#fluent-bit-filters-and-parsers)
+    - [BYOLC (Bring Your Own Logging Configuration)](#byolc-bring-your-own-logging-configuration)
     - [Migration](#migration)
+      - [Prometheus Operator](#prometheus-operator)
+      - [Fluent-bit Operator](#fluent-bit-operator)
   - [Alternatives](#alternatives)
+
+> **Note:** FluentBit Operator is now known as Fluent Operator. The proposal has been left unchanged.
 
 ## Summary
 
@@ -44,10 +48,10 @@ As Gardener has grown, the observability configurations have also evolved with i
 Many components must be monitored and the configuration for these components
 must also be managed. This poses a challenge because the configuration is
 distributed across the Gardener project among different folders and even
-different repositories (for example extensions). While it is not possible to
+different repositories (for example, extensions). While it is not possible to
 centralize the configuration, it is possible to improve the developer experience
 and improve the general stability of the monitoring and logging. This can be done by
-introducing kubernetes operators such as the [prometheus-operator] for monitoring stack
+introducing Kubernetes operators such as the [prometheus-operator] for monitoring stack
 and [fluent-bit-operator] for the logging stack.
 These operators will make it easier for monitoring and logging configurations to be discovered and picked up with the use of the respective custom resources:
 
@@ -543,18 +547,18 @@ spec:
   positionDB: {}
 ```
 
-[fluent-bit-resource] carries the usual kubernetes workload properties,
-such as resource definitions, node selectors, pod/node affinity and so on. The sole purpose
+[fluent-bit-resource] carries the usual Kubernetes workload properties,
+such as resource definitions, node selectors, pod/node affinity, and so on. The sole purpose
 is to construct the [fluent-bit-daemonset] spec managing the fluent-bit application instances
 on the cluster nodes.
 
 The upstream project has been enhanced by Gardener and now it supports adding fluent-bit custom plugins.
-The latter is required by Gardener to mainting the custom `ordering` plugin.
-In its current state, the fluent-bit operator can be used by Gardener "as is". without the need of forking it.
+The latter is required by Gardener to maintain the custom `ordering` plugin.
+In its current state, the fluent-bit operator can be used by Gardener "as is", without the need of forking it.
 
-### Fluent-bit filters and parsers
+### Fluent-bit Filters and Parsers
 
-The second major function of the fluent-bit operator is to compile a valid application configuration aggregating declarations supplied by fluent-bit custom resources such as ClusterFitlers, ClusterParsers and so on as shown by the example.
+The second major function of the fluent-bit operator is to compile a valid application configuration aggregating declarations supplied by fluent-bit custom resources such as ClusterFitlers, ClusterParsers, and so on, as shown by the example.
 
 1. Fluent-Bit Inputs, Outputs, Filters and Parsers
 
@@ -607,9 +611,9 @@ spec:
 
 In this example, we have a fluent bit [filter-plugin] of type parser and the corresponding [regex-parser]. In the Gardener context, these configuration resources are supplied by the core components and extensions.
 
-### BYOLC (Bring your own logging configuration)
+### BYOLC (Bring Your Own Logging Configuration)
 
-Since fluent-bit uses [input-tail] plugin and reads any container output under `/var/log/pods` it processes logs outputs of all workloads. In this case, any workload may bring its own set of filters and parsers if needed using the declarative APIs supported by the operator.
+Since fluent-bit uses [input-tail] plugin and reads any container output under `/var/log/pods`, it processes logs outputs of all workloads. In this case, any workload may bring its own set of filters and parsers if needed, using the declarative APIs supported by the operator.
 
 ### Migration
 
@@ -617,16 +621,14 @@ Since fluent-bit uses [input-tail] plugin and reads any container output under `
 
 1. Deploy the [prometheus-operator] and its custom resources.
 1. Delete the old monitoring-stack.
-1. Configure `Prometheus` to "reuse" the `pv` from the old Prometheus's
-    `pvc`. An init container will be temporarily needed for this migration.
-    This ensures that no data is lost and provides a clean migration.
+1. Configure `Prometheus` to "reuse" the `pv` from the old Prometheus's `pvc`. An init container will be temporarily needed for this migration. This ensures that no data is lost and provides a clean migration.
 1. Any extension or monitoring configuration that is not migrated to the [prometheus-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
 
 #### Fluent-bit Operator
 
-1. Add fluent-bit operator CRDs in Gardener
-1. Add `ClusterFilters` and `ClusterParsers` resources in all extensions which are deploying ConfigMap with label: ```extensions.gardener.cloud/configuration: logging```
-1. Add the Fluent operator in Gardener in place of fluent-bit
+1. Add fluent-bit operator CRDs in Gardener.
+1. Add `ClusterFilters` and `ClusterParsers` resources in all extensions which are deploying ConfigMap with label: `extensions.gardener.cloud/configuration: logging`
+1. Add the Fluent operator in Gardener in place of fluent-bit.
 
 ## Alternatives
 

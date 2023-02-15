@@ -17,7 +17,7 @@ Finally, every provider is different, and thus the network always needs to adapt
 
 ## Gardener Network Extension
 
-The goal of the Gardener Network Extensions is to support different network plugin, therefore, the specification for the network resource won't be fixed and will be customized based on the underlying network plugin. To do so, a `NetworkConfig` field in the spec will be provided where each plugin will be defined. Below is an example for deploying Calico as the cluster network plugin.
+The goal of the Gardener Network Extensions is to support different network plugin, therefore the specification for the network resource won't be fixed and will be customized based on the underlying network plugin. To do so, a `NetworkConfig` field in the spec will be provided where each plugin will be defined. Below is an example for deploying Calico as the cluster network plugin.
 
 
 ### Long Term Spec

@@ -173,7 +173,7 @@ status:
 
 Extensions which do not require state migration should set `status.state=nil` in their Custom Resources and trigger a normal reconciliation operation if the CR contains the `core.gardener.cloud/operation=restore` annotation.
 
-Similar to the contract for the [reconcile operation](https://github.com/gardener/gardener/blob/master/docs/extensions/reconcile-trigger.md), the extension controller has to remove the `restore` annotation after the restoration operation has finished.
+Similarly to the contract for the [reconcile operation](https://github.com/gardener/gardener/blob/master/docs/extensions/reconcile-trigger.md), the extension controller has to remove the `restore` annotation after the restoration operation has finished.
 
 An additional annotation `gardener.cloud/operation=migrate` is added to the Custom Resources. It is used to tell the extension controllers in the **Source Seed** that they must stop reconciling resources (in case they are requeued due to errors) and should perform cleanup activities in the Shoot's control plane. These cleanup activities involve removing the finalizers on Custom Resources and deleting them without actually deleting any infrastructure resources.
 
