@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -540,15 +539,15 @@ var _ = Describe("extensions", func() {
 	Context("restoring extension object state", func() {
 		var (
 			expectedState *runtime.RawExtension
-			shootState    *gardencorev1alpha1.ShootState
+			shootState    *gardencorev1beta1.ShootState
 		)
 
 		BeforeEach(func() {
 			expectedState = &runtime.RawExtension{Raw: []byte(`{"data":"value"}`)}
 
-			shootState = &gardencorev1alpha1.ShootState{
-				Spec: gardencorev1alpha1.ShootStateSpec{
-					Extensions: []gardencorev1alpha1.ExtensionResourceState{
+			shootState = &gardencorev1beta1.ShootState{
+				Spec: gardencorev1beta1.ShootStateSpec{
+					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Name:  &name,
 							Kind:  extensionsv1alpha1.WorkerResource,

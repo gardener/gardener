@@ -25,7 +25,6 @@ build:
         - pkg/apis/core
         - pkg/apis/core/install
         - pkg/apis/core/v1alpha1
-        - pkg/apis/core/v1alpha1/helper
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
@@ -138,7 +137,6 @@ build:
         - pkg/apis/core/helper
         - pkg/apis/core/install
         - pkg/apis/core/v1alpha1
-        - pkg/apis/core/v1alpha1/helper
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper

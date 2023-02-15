@@ -38,10 +38,8 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
@@ -62,15 +60,14 @@ func (fakeAuthorizerType) Authorize(_ context.Context, a authorizer.Attributes) 
 var _ = Describe("resourcereferencemanager", func() {
 	Describe("#Admit", func() {
 		var (
-			admissionHandler                  *ReferenceManager
-			kubeInformerFactory               kubeinformers.SharedInformerFactory
-			kubeClient                        *fake.Clientset
-			gardenCoreClient                  *internalclientset.Clientset
-			gardenCoreInformerFactory         gardencoreinformers.SharedInformerFactory
-			gardenCoreExternalInformerFactory gardencoreexternalinformers.SharedInformerFactory
-			fakeAuthorizer                    fakeAuthorizerType
-			scheme                            *runtime.Scheme
-			dynamicClient                     *dynamicfake.FakeDynamicClient
+			admissionHandler          *ReferenceManager
+			kubeInformerFactory       kubeinformers.SharedInformerFactory
+			kubeClient                *fake.Clientset
+			gardenCoreClient          *internalclientset.Clientset
+			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
+			fakeAuthorizer            fakeAuthorizerType
+			scheme                    *runtime.Scheme
+			dynamicClient             *dynamicfake.FakeDynamicClient
 
 			backupBucket core.BackupBucket
 			backupEntry  core.BackupEntry
@@ -287,9 +284,6 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
-
-			gardenCoreExternalInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(gardenCoreExternalInformerFactory)
 
 			fakeAuthorizer = fakeAuthorizerType{}
 			admissionHandler.SetAuthorizer(fakeAuthorizer)
@@ -721,13 +715,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				It("should accept because the referenced exposure class exists", func() {
-					var exposureClass = gardencorev1alpha1.ExposureClass{
+					var exposureClass = core.ExposureClass{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: exposureClassName,
 						},
 					}
 
-					Expect(gardenCoreExternalInformerFactory.Core().V1alpha1().ExposureClasses().Informer().GetStore().Add(&exposureClass)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().InternalVersion().ExposureClasses().Informer().GetStore().Add(&exposureClass)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -1772,7 +1766,6 @@ var _ = Describe("resourcereferencemanager", func() {
 			rm.SetInternalCoreClientset(internalGardenClient)
 
 			rm.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			rm.SetExternalCoreInformerFactory(gardencoreexternalinformers.NewSharedInformerFactory(nil, 0))
 
 			fakeAuthorizer := fakeAuthorizerType{}
 			rm.SetAuthorizer(fakeAuthorizer)

@@ -26,7 +26,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -41,7 +40,7 @@ var _ = Describe("Controller", func() {
 		reconciler reconcile.Reconciler
 
 		exposureClassName string
-		exposureClass     *gardencorev1alpha1.ExposureClass
+		exposureClass     *gardencorev1beta1.ExposureClass
 		shoot             *gardencorev1beta1.Shoot
 	)
 
@@ -50,7 +49,7 @@ var _ = Describe("Controller", func() {
 
 		exposureClassName = "test-exposureclass"
 		reconciler = &Reconciler{Client: fakeClient, Recorder: &record.FakeRecorder{}}
-		exposureClass = &gardencorev1alpha1.ExposureClass{
+		exposureClass = &gardencorev1beta1.ExposureClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: exposureClassName,
 			},
@@ -68,7 +67,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	It("should return nil because object is not found", func() {
-		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), &gardencorev1alpha1.ExposureClass{})).To(BeNotFoundError())
+		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), &gardencorev1beta1.ExposureClass{})).To(BeNotFoundError())
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: exposureClassName}})
 		Expect(result).To(Equal(reconcile.Result{}))

@@ -44,10 +44,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -77,7 +75,7 @@ type ValidateShoot struct {
 	cloudProfileLister  gardencorelisters.CloudProfileLister
 	seedLister          gardencorelisters.SeedLister
 	shootLister         gardencorelisters.ShootLister
-	shootStateLister    gardencorev1alpha1listers.ShootStateLister
+	shootStateLister    gardencorelisters.ShootStateLister
 	projectLister       gardencorelisters.ProjectLister
 	secretBindingLister gardencorelisters.SecretBindingLister
 	readyFunc           admission.ReadyFunc
@@ -85,7 +83,6 @@ type ValidateShoot struct {
 
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateShoot{})
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -126,6 +123,9 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f gardencoreinformers.Sha
 	secretBindingInformer := f.Core().InternalVersion().SecretBindings()
 	v.secretBindingLister = secretBindingInformer.Lister()
 
+	shootStateInformer := f.Core().InternalVersion().ShootStates()
+	v.shootStateLister = shootStateInformer.Lister()
+
 	readyFuncs = append(
 		readyFuncs,
 		seedInformer.Informer().HasSynced,
@@ -133,15 +133,8 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f gardencoreinformers.Sha
 		cloudProfileInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
 		secretBindingInformer.Informer().HasSynced,
+		shootStateInformer.Informer().HasSynced,
 	)
-}
-
-// SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (v *ValidateShoot) SetExternalCoreInformerFactory(f gardencoreexternalinformers.SharedInformerFactory) {
-	shootStateInformer := f.Core().V1alpha1().ShootStates()
-	v.shootStateLister = shootStateInformer.Lister()
-
-	readyFuncs = append(readyFuncs, shootStateInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -370,7 +363,7 @@ func (c *validationContext) validateSeedSelectionForMultiZonalShoot() error {
 	return nil
 }
 
-func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister gardencorelisters.ShootLister, seedLister gardencorelisters.SeedLister, shootStateLister gardencorev1alpha1listers.ShootStateLister) error {
+func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister gardencorelisters.ShootLister, seedLister gardencorelisters.SeedLister, shootStateLister gardencorelisters.ShootStateLister) error {
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName

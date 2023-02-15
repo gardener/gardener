@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -442,7 +441,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("restore", func() {
-			var shootState = &gardencorev1alpha1.ShootState{}
+			var shootState = &gardencorev1beta1.ShootState{}
 
 			JustBeforeEach(func() {
 				b.SetShootState(shootState)
@@ -502,7 +501,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("restore", func() {
-			var shootState = &gardencorev1alpha1.ShootState{}
+			var shootState = &gardencorev1beta1.ShootState{}
 
 			JustBeforeEach(func() {
 				b.SetShootState(shootState)

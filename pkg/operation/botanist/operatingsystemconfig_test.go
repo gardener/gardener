@@ -30,7 +30,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -63,7 +62,7 @@ var _ = Describe("operatingsystemconfig", func() {
 		ctx        = context.TODO()
 		namespace  = "namespace"
 		fakeErr    = fmt.Errorf("fake")
-		shootState = &gardencorev1alpha1.ShootState{}
+		shootState = &gardencorev1beta1.ShootState{}
 
 		cloudConfigExecutionMaxDelaySeconds = 500
 		apiServerAddress                    = "1.2.3.4"

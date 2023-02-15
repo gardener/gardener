@@ -36,9 +36,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -53,17 +51,16 @@ import (
 var _ = Describe("validator", func() {
 	Describe("#Admit", func() {
 		var (
-			ctx                    context.Context
-			admissionHandler       *ValidateShoot
-			ctrl                   *gomock.Controller
-			auth                   *mockauthorizer.MockAuthorizer
-			coreInformerFactory    gardencoreinformers.SharedInformerFactory
-			extCoreInformerFactory gardencoreexternalinformers.SharedInformerFactory
-			cloudProfile           core.CloudProfile
-			seed                   core.Seed
-			secretBinding          core.SecretBinding
-			project                core.Project
-			shoot                  core.Shoot
+			ctx                 context.Context
+			admissionHandler    *ValidateShoot
+			ctrl                *gomock.Controller
+			auth                *mockauthorizer.MockAuthorizer
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			cloudProfile        core.CloudProfile
+			seed                core.Seed
+			secretBinding       core.SecretBinding
+			project             core.Project
+			shoot               core.Shoot
 
 			userInfo            = &user.DefaultInfo{Name: "foo"}
 			authorizeAttributes authorizer.AttributesRecord
@@ -287,13 +284,13 @@ var _ = Describe("validator", func() {
 				},
 			}
 
-			shootStateBase = gardencorev1alpha1.ShootState{
+			shootStateBase = core.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootBase.Name,
 					Namespace: shootBase.Namespace,
 				},
-				Spec: gardencorev1alpha1.ShootStateSpec{
-					Gardener: []gardencorev1alpha1.GardenerResourceData{
+				Spec: core.ShootStateSpec{
+					Gardener: []core.GardenerResourceData{
 						{
 							Labels: map[string]string{
 								"name":       "kube-apiserver-etcd-encryption-key",
@@ -321,9 +318,6 @@ var _ = Describe("validator", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
-
-			extCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(extCoreInformerFactory)
 
 			authorizeAttributes = authorizer.AttributesRecord{
 				User:            userInfo,
@@ -730,7 +724,7 @@ var _ = Describe("validator", func() {
 			var (
 				oldShoot   core.Shoot
 				newSeed    core.Seed
-				shootState gardencorev1alpha1.ShootState
+				shootState core.ShootState
 			)
 			BeforeEach(func() {
 				oldShoot = *shootBase.DeepCopy()
@@ -744,7 +738,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 			})
 
 			It("should not allow changing the seedName on admission.Update if the subresource is not binding", func() {
@@ -1124,7 +1118,7 @@ var _ = Describe("validator", func() {
 			Context("scheduling checks for Create operation", func() {
 				var (
 					oldShoot   *core.Shoot
-					shootState gardencorev1alpha1.ShootState
+					shootState core.ShootState
 				)
 
 				BeforeEach(func() {
@@ -1136,7 +1130,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 				})
 
 				Context("taints and tolerations", func() {
@@ -3693,7 +3687,7 @@ var _ = Describe("validator", func() {
 			var (
 				oldShoot   core.Shoot
 				newSeed    core.Seed
-				shootState gardencorev1alpha1.ShootState
+				shootState core.ShootState
 			)
 			BeforeEach(func() {
 				oldShoot = *shootBase.DeepCopy()
@@ -3707,7 +3701,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 			})
 
 			Context("when binding is updated", func() {
@@ -3732,7 +3726,7 @@ var _ = Describe("validator", func() {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
 
-					shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencorev1alpha1.GardenerResourceData{
+					shootState.Spec.Gardener = append(shootState.Spec.Gardener, core.GardenerResourceData{
 						Labels: map[string]string{
 							"name":       "kube-apiserver-etcd-encryption-key",
 							"managed-by": "secrets-manager",

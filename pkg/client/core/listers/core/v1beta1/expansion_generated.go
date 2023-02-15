@@ -46,6 +46,10 @@ type ControllerInstallationListerExpansion interface{}
 // ControllerRegistrationLister.
 type ControllerRegistrationListerExpansion interface{}
 
+// ExposureClassListerExpansion allows custom methods to be added to
+// ExposureClassLister.
+type ExposureClassListerExpansion interface{}
+
 // ProjectListerExpansion allows custom methods to be added to
 // ProjectLister.
 type ProjectListerExpansion interface{}
@@ -77,3 +81,11 @@ type ShootListerExpansion interface{}
 // ShootNamespaceListerExpansion allows custom methods to be added to
 // ShootNamespaceLister.
 type ShootNamespaceListerExpansion interface{}
+
+// ShootStateListerExpansion allows custom methods to be added to
+// ShootStateLister.
+type ShootStateListerExpansion interface{}
+
+// ShootStateNamespaceListerExpansion allows custom methods to be added to
+// ShootStateNamespaceLister.
+type ShootStateNamespaceListerExpansion interface{}

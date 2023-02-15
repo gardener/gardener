@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,15 +19,15 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/labels"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // ExtensionResourceStateList is a list of ExtensionResourceStates
-type ExtensionResourceStateList []gardencorev1alpha1.ExtensionResourceState
+type ExtensionResourceStateList []gardencorev1beta1.ExtensionResourceState
 
 // Get retrieves an ExtensionResourceState for given kind, name and purpose from a list of ExtensionResourceStates
 // If no ExtensionResourceStates can be found, nil is returned.
-func (e *ExtensionResourceStateList) Get(kind string, name, purpose *string) *gardencorev1alpha1.ExtensionResourceState {
+func (e *ExtensionResourceStateList) Get(kind string, name, purpose *string) *gardencorev1beta1.ExtensionResourceState {
 	for _, obj := range *e {
 		if matchesExtensionResourceState(&obj, kind, name, purpose) {
 			return &obj
@@ -47,7 +47,7 @@ func (e *ExtensionResourceStateList) Delete(kind string, name, purpose *string) 
 }
 
 // Upsert either inserts or updates an already existing ExtensionResourceState with kind, name and purpose in the list
-func (e *ExtensionResourceStateList) Upsert(extensionResourceState *gardencorev1alpha1.ExtensionResourceState) {
+func (e *ExtensionResourceStateList) Upsert(extensionResourceState *gardencorev1beta1.ExtensionResourceState) {
 	for i, obj := range *e {
 		if matchesExtensionResourceState(&obj, extensionResourceState.Kind, extensionResourceState.Name, extensionResourceState.Purpose) {
 			(*e)[i].State = extensionResourceState.State
@@ -58,7 +58,7 @@ func (e *ExtensionResourceStateList) Upsert(extensionResourceState *gardencorev1
 	*e = append(*e, *extensionResourceState)
 }
 
-func matchesExtensionResourceState(extensionResourceState *gardencorev1alpha1.ExtensionResourceState, kind string, name, purpose *string) bool {
+func matchesExtensionResourceState(extensionResourceState *gardencorev1beta1.ExtensionResourceState, kind string, name, purpose *string) bool {
 	if extensionResourceState.Kind == kind && apiequality.Semantic.DeepEqual(extensionResourceState.Name, name) && apiequality.Semantic.DeepEqual(extensionResourceState.Purpose, purpose) {
 		return true
 	}
@@ -66,7 +66,7 @@ func matchesExtensionResourceState(extensionResourceState *gardencorev1alpha1.Ex
 }
 
 // GardenerResourceDataList is a list of GardenerResourceData
-type GardenerResourceDataList []gardencorev1alpha1.GardenerResourceData
+type GardenerResourceDataList []gardencorev1beta1.GardenerResourceData
 
 // Delete deletes an item from the list
 func (g *GardenerResourceDataList) Delete(name string) {
@@ -79,7 +79,7 @@ func (g *GardenerResourceDataList) Delete(name string) {
 }
 
 // Get returns the item from the list
-func (g *GardenerResourceDataList) Get(name string) *gardencorev1alpha1.GardenerResourceData {
+func (g *GardenerResourceDataList) Get(name string) *gardencorev1beta1.GardenerResourceData {
 	for _, resourceDataEntry := range *g {
 		if resourceDataEntry.Name == name {
 			return &resourceDataEntry
@@ -89,8 +89,8 @@ func (g *GardenerResourceDataList) Get(name string) *gardencorev1alpha1.Gardener
 }
 
 // Select uses the provided label selector to find data entries with matching labels.
-func (g *GardenerResourceDataList) Select(labelSelector labels.Selector) []*gardencorev1alpha1.GardenerResourceData {
-	var results []*gardencorev1alpha1.GardenerResourceData
+func (g *GardenerResourceDataList) Select(labelSelector labels.Selector) []*gardencorev1beta1.GardenerResourceData {
+	var results []*gardencorev1beta1.GardenerResourceData
 
 	for _, resourceDataEntry := range *g {
 		if labelSelector.Matches(labels.Set(resourceDataEntry.Labels)) {
@@ -102,7 +102,7 @@ func (g *GardenerResourceDataList) Select(labelSelector labels.Selector) []*gard
 }
 
 // Upsert inserts a new element or updates an existing one
-func (g *GardenerResourceDataList) Upsert(data *gardencorev1alpha1.GardenerResourceData) {
+func (g *GardenerResourceDataList) Upsert(data *gardencorev1beta1.GardenerResourceData) {
 	for i, obj := range *g {
 		if obj.Name == data.Name {
 			(*g)[i].Type = data.Type
@@ -124,7 +124,7 @@ func (g GardenerResourceDataList) DeepCopy() GardenerResourceDataList {
 }
 
 // ResourceDataList is a list of ResourceData
-type ResourceDataList []gardencorev1alpha1.ResourceData
+type ResourceDataList []gardencorev1beta1.ResourceData
 
 // Delete deletes an item from the list
 func (r *ResourceDataList) Delete(ref *autoscalingv1.CrossVersionObjectReference) {
@@ -137,7 +137,7 @@ func (r *ResourceDataList) Delete(ref *autoscalingv1.CrossVersionObjectReference
 }
 
 // Get returns the item from the list
-func (r *ResourceDataList) Get(ref *autoscalingv1.CrossVersionObjectReference) *gardencorev1alpha1.ResourceData {
+func (r *ResourceDataList) Get(ref *autoscalingv1.CrossVersionObjectReference) *gardencorev1beta1.ResourceData {
 	for _, obj := range *r {
 		if apiequality.Semantic.DeepEqual(obj.CrossVersionObjectReference, *ref) {
 			return &obj
@@ -147,7 +147,7 @@ func (r *ResourceDataList) Get(ref *autoscalingv1.CrossVersionObjectReference) *
 }
 
 // Upsert inserts a new element or updates an existing one
-func (r *ResourceDataList) Upsert(data *gardencorev1alpha1.ResourceData) {
+func (r *ResourceDataList) Upsert(data *gardencorev1beta1.ResourceData) {
 	for i, obj := range *r {
 		if apiequality.Semantic.DeepEqual(obj.CrossVersionObjectReference, data.CrossVersionObjectReference) {
 			(*r)[i].Data = data.Data

@@ -354,7 +354,7 @@ var _ = Describe("Seed", func() {
 					User:            seedUser,
 					Name:            name,
 					Namespace:       namespace,
-					APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
 					Resource:        "shootstates",
 					ResourceRequest: true,
 					Verb:            "get",
