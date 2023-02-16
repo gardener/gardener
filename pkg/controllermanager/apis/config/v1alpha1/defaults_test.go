@@ -86,9 +86,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))
 
-			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).To(PointTo(Equal(5)))
-
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(PointTo(Equal(5)))
@@ -210,6 +207,16 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_ManagedSeedSetControllerConfiguration(obj)
 			Expect(obj.MaxShootRetries).To(PointTo(Equal(3)))
+		})
+	})
+
+	Describe("#SetDefaults_ShootQuotaControllerConfiguration", func() {
+		It("should correctly default the ShootHibernation Controller configuration", func() {
+			obj := &ShootQuotaControllerConfiguration{}
+
+			SetDefaults_ShootQuotaControllerConfiguration(obj)
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.SyncPeriod).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
 		})
 	})
 

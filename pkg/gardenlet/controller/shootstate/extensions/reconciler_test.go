@@ -282,9 +282,9 @@ var _ = Describe("Reconciler", func() {
 			reconciler.SeedClient = mockClient
 
 			gomock.InOrder(
-				mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(extension), gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})),
-				mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(cluster), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).SetArg(2, *cluster),
-				mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootState), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootState{})),
+				mockClient.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(extension), gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})),
+				mockClient.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(cluster), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).SetArg(2, *cluster),
+				mockClient.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootState), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootState{})),
 			)
 
 			_, err := reconciler.Reconcile(ctx, reconcileRequest)

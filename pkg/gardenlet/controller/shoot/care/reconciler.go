@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// Timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
 	// themselves run into timeouts, so that we will still update the status with that timeout error.
-	ctx, cancel := context.WithTimeout(ctx, 2*r.Config.Controllers.ShootCare.SyncPeriod.Duration)
+	ctx, cancel := context.WithTimeout(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration)
 	defer cancel()
 
 	shoot := &gardencorev1beta1.Shoot{}
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	careCtx, cancel := context.WithTimeout(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration)
+	careCtx, cancel := context.WithTimeout(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration/2)
 	defer cancel()
 
 	// Initialize conditions based on the current status.
