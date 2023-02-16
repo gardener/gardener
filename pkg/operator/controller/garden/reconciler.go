@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -386,5 +385,5 @@ func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 }
 
 func hvpaEnabled() bool {
-	return operatorfeatures.FeatureGate.Enabled(features.HVPA)
+	return features.DefaultFeatureGate.Enabled(features.HVPA)
 }

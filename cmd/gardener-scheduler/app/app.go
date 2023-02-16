@@ -35,11 +35,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/controller"
-	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 )
 
 // Name is a const for the name of this component.
@@ -94,10 +94,10 @@ func NewCommand() *cobra.Command {
 
 func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguration) error {
 	// Add feature flags
-	if err := schedulerfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
+	if err := features.DefaultFeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
 		return fmt.Errorf("failed to set feature gates: %w", err)
 	}
-	log.Info("Feature Gates", "featureGates", schedulerfeatures.FeatureGate.String())
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {

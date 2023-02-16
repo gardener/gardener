@@ -22,7 +22,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -49,7 +48,7 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 			b.APIServerAddress = address
 			b.newDNSComponentsTargetingAPIServerAddress()
 		},
-		gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+		features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 		"",
 	)
 }
@@ -67,7 +66,7 @@ func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.
 // APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and the shoot uses internal and external
 // DNS.
 func (b *Botanist) APIServerSNIEnabled() bool {
-	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
+	return features.DefaultFeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
 // DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.

@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
@@ -184,7 +183,7 @@ var _ = Describe("KubeAPIServer", func() {
 					}
 
 					if featureGate != nil && value != nil {
-						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, *featureGate, *value)()
+						defer test.WithFeatureGate(features.DefaultFeatureGate, *featureGate, *value)()
 					}
 
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
@@ -395,7 +394,7 @@ var _ = Describe("KubeAPIServer", func() {
 					}
 
 					if featureGate != nil && value != nil {
-						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, *featureGate, *value)()
+						defer test.WithFeatureGate(features.DefaultFeatureGate, *featureGate, *value)()
 					}
 
 					kubeAPIServer.EXPECT().GetValues()

@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -495,7 +494,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			Context("IPv6", func() {
 				BeforeEach(func() {
-					DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.IPv6SingleStack, true))
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true))
 					seed.Spec.Networks.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 				})
 
@@ -584,7 +583,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			})
 
 			It("should fail updating immutable fields with featureGate IPv6SingleStack enabled", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.IPv6SingleStack, true)()
+				defer test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true)()
 
 				oldSeed.Spec.Networks.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
 

@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
@@ -170,7 +171,7 @@ var _ = Describe("dns", func() {
 		})
 
 		It("returns true when feature gate is enabled", func() {
-			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
+			Expect(features.DefaultFeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
@@ -187,7 +188,7 @@ var _ = Describe("dns", func() {
 
 		Context("APIServerSNI feature gate is enabled", func() {
 			BeforeEach(func() {
-				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
+				Expect(features.DefaultFeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 				b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 				b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 				b.Shoot.ExternalClusterDomain = pointer.String("baz")

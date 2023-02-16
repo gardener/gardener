@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -1957,7 +1956,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Context("IPv6", func() {
 						BeforeEach(func() {
-							DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.IPv6SingleStack, true))
+							DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true))
 							shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
 							// /64 CIDR can host a lot of pod IPs (prefix is small enough for the largest maxPods setting)
@@ -2678,7 +2677,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow increasing the networking nodes range if feature gate is enabled", func() {
-				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.MutableShootSpecNetworkingNodes, true))
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootSpecNetworkingNodes, true))
 				shoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/18")
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
@@ -2777,7 +2776,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Context("IPv6", func() {
 				BeforeEach(func() {
-					DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.IPv6SingleStack, true))
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true))
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 				})
 

@@ -138,7 +138,7 @@ func WithWd(path string) func() {
 // Failures to set or restore cause the test to fail.
 // Example use:
 //
-//	defer WithFeatureGate(utilfeature.DefaultFeatureGate, features.<FeatureName>, true)()
+//	defer WithFeatureGate(features.DefaultFeatureGate, features.<FeatureName>, true)()
 func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value bool) func() {
 	originalValue := gate.Enabled(f)
 

@@ -28,7 +28,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -51,7 +50,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		NodeNetworkCIDR:                 b.Shoot.GetInfo().Spec.Networking.Nodes,
 		AutoscalingMode:                 gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
 		KubernetesVersion:               b.Shoot.KubernetesVersion,
-		SearchPathRewritesEnabled:       v1beta1helper.IsCoreDNSRewritingEnabled(gardenletfeatures.FeatureGate.Enabled(features.CoreDNSQueryRewriting), b.Shoot.GetInfo().GetAnnotations()),
+		SearchPathRewritesEnabled:       v1beta1helper.IsCoreDNSRewritingEnabled(features.DefaultFeatureGate.Enabled(features.CoreDNSQueryRewriting), b.Shoot.GetInfo().GetAnnotations()),
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
 	}
 
@@ -107,7 +106,7 @@ func (b *Botanist) getCoreDNSRestartedAtAnnotations(ctx context.Context) (map[st
 }
 
 func getCommonSuffixesForRewriting(systemComponents *gardencorev1beta1.SystemComponents) []string {
-	if gardenletfeatures.FeatureGate.Enabled(features.CoreDNSQueryRewriting) && systemComponents != nil && systemComponents.CoreDNS != nil && systemComponents.CoreDNS.Rewriting != nil {
+	if features.DefaultFeatureGate.Enabled(features.CoreDNSQueryRewriting) && systemComponents != nil && systemComponents.CoreDNS != nil && systemComponents.CoreDNS.Rewriting != nil {
 		return systemComponents.CoreDNS.Rewriting.CommonSuffixes
 	}
 	return []string{}

@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -84,9 +83,9 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	hvpaValues := make(map[string]interface{})
-	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
 	if b.isShootNodeLoggingEnabled() {

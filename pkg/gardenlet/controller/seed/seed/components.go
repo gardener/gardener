@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -124,7 +123,7 @@ func defaultIstio(
 		LoadBalancerIP:        conf.SNI.Ingress.ServiceExternalIP,
 		Labels:                operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
 		Namespace:             *conf.SNI.Ingress.Namespace,
-		ProxyProtocolEnabled:  gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+		ProxyProtocolEnabled:  features.DefaultFeatureGate.Enabled(features.APIServerSNI),
 		VPNEnabled:            true,
 	}
 
@@ -159,7 +158,7 @@ func defaultIstio(
 				Labels:               operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
 				Zones:                []string{zone},
 				Namespace:            namespace,
-				ProxyProtocolEnabled: gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+				ProxyProtocolEnabled: features.DefaultFeatureGate.Enabled(features.APIServerSNI),
 				VPNEnabled:           true,
 			})
 		}
@@ -179,7 +178,7 @@ func defaultIstio(
 			LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
 			Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			Namespace:             *handler.SNI.Ingress.Namespace,
-			ProxyProtocolEnabled:  gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+			ProxyProtocolEnabled:  features.DefaultFeatureGate.Enabled(features.APIServerSNI),
 			VPNEnabled:            true,
 		})
 
@@ -199,7 +198,7 @@ func defaultIstio(
 					Labels:               operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					Zones:                []string{zone},
 					Namespace:            namespace,
-					ProxyProtocolEnabled: gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+					ProxyProtocolEnabled: features.DefaultFeatureGate.Enabled(features.APIServerSNI),
 					VPNEnabled:           true,
 				})
 			}
@@ -336,7 +335,7 @@ func defaultVPNAuthzServer(
 		seedVersion,
 	)
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
 		return vpnAuthzServer, nil
 	}
 

@@ -43,7 +43,6 @@ import (
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
@@ -99,7 +98,7 @@ var _ = Describe("NginxIngress", func() {
 		})
 
 		It("should successfully create a nginxingress interface", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
+			defer test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true)()
 			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller"}, {Name: "ingress-default-backend"}}
 

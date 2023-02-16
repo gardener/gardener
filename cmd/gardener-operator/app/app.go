@@ -44,12 +44,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
-	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/operator/webhook"
 )
 
@@ -105,10 +105,10 @@ func NewCommand() *cobra.Command {
 
 func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration) error {
 	// Add feature flags
-	if err := operatorfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
+	if err := features.DefaultFeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
 		return err
 	}
-	log.Info("Feature Gates", "featureGates", operatorfeatures.FeatureGate.String())
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {

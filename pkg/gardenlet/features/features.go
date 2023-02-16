@@ -16,17 +16,13 @@ package features
 
 import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/component-base/featuregate"
 
 	"github.com/gardener/gardener/pkg/features"
 )
 
-// FeatureGate is a shared global FeatureGate for Gardenlet flags.
-var FeatureGate = featuregate.NewFeatureGate()
-
 // RegisterFeatureGates registers the feature gates of the Gardenlet.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
+	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.HVPA,
 		features.HVPAForShootedSeed,
 		features.ManagedIstio,
@@ -35,6 +31,7 @@ func RegisterFeatureGates() {
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
+		features.IPv6SingleStack,
 		features.FullNetworkPoliciesInRuntimeCluster,
 	)))
 }

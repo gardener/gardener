@@ -34,7 +34,6 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/server/resourceconfig"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -68,6 +67,7 @@ import (
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/openapi"
 )
@@ -270,7 +270,7 @@ func (o *Options) Run(ctx context.Context) error {
 	klog.SetLogger(log)
 
 	log.Info("Starting gardener-apiserver", "version", version.Get())
-	log.Info("Feature Gates", "featureGates", utilfeature.DefaultFeatureGate)
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	// Create clientset for the native Kubernetes API group
 	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
@@ -398,7 +398,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	}
 	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
 		return err
-	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, utilfeature.DefaultFeatureGate, initializers...); err != nil {
+	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, features.DefaultFeatureGate, initializers...); err != nil {
 		return err
 	}
 	if err := o.ExtraOptions.ApplyTo(config); err != nil {

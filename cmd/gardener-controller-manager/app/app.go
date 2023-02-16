@@ -40,8 +40,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -98,10 +98,10 @@ func NewCommand() *cobra.Command {
 
 func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConfiguration) error {
 	// Add feature flags
-	if err := controllermanagerfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
+	if err := features.DefaultFeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
 		return err
 	}
-	log.Info("Feature Gates", "featureGates", controllermanagerfeatures.FeatureGate.String())
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	// This is like importing the automaxprocs package for its init func (it will in turn call maxprocs.Set).
 	// Here we pass a custom logger, so that the result of the library gets logged to the same logger we use for the

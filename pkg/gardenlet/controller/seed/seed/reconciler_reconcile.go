@@ -52,7 +52,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
@@ -276,7 +275,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
 		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
-		hvpaEnabled    = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		hvpaEnabled    = features.DefaultFeatureGate.Enabled(features.HVPA)
 
 		loggingConfig   = r.Config.Logging
 		gardenNamespace = &corev1.Namespace{
@@ -382,7 +381,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
 		istioCRDs := istio.NewCRD(chartApplier, seedClient)
 		if err := istioCRDs.Deploy(ctx); err != nil {
 			return err
@@ -416,9 +415,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 			r.Config.LogLevel, r.Config.LogFormat,
 			v1beta1constants.SecretNameCASeed,
 			v1beta1constants.PriorityClassNameSeedSystemCritical,
-			gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
+			features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
-			gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+			features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 			true,
 			&resourcemanagerv1alpha1.IngressControllerSelector{
 				Namespace: v1beta1constants.GardenNamespace,
@@ -452,7 +451,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	)
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
 		aggregateMonitoringComponentFunctions = append(aggregateMonitoringComponentFunctions, istio.AggregateMonitoringConfiguration)
 	}
 
@@ -743,7 +742,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	sniEnabledOrInUse := anySNIInUse || gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI)
+	sniEnabledOrInUse := anySNIInUse || features.DefaultFeatureGate.Enabled(features.APIServerSNI)
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {
@@ -765,7 +764,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"images":       imagevector.ImageMapToValues(seedImages),
 		},
 		"prometheus": map[string]interface{}{
-			"deployAllowAllAccessNetworkPolicy": !gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+			"deployAllowAllAccessNetworkPolicy": !features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 			"resources":                         monitoringResources["prometheus"],
 			"storage":                           seed.GetValidVolumeSize("10Gi"),
 			"additionalScrapeConfigs":           centralScrapeConfigs.String(),
@@ -799,7 +798,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"enabled": hvpaEnabled,
 		},
 		"istio": map[string]interface{}{
-			"enabled": gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio),
+			"enabled": features.DefaultFeatureGate.Enabled(features.ManagedIstio),
 		},
 		"ingress": map[string]interface{}{
 			"authSecretName": globalMonitoringSecretSeed.Name,
@@ -828,7 +827,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		istio     component.DeployWaiter
 	)
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
 		istio, err = defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse)
 		if err != nil {
 			return err
@@ -868,7 +867,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+	if features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
 		if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
 			return err
 		}
@@ -878,7 +877,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		g = flow.NewGraph("Seed cluster creation")
 		_ = g.Add(flow.Task{
 			Name: "Deploying Istio",
-			Fn:   flow.TaskFn(func(ctx context.Context) error { return istio.Deploy(ctx) }).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+			Fn:   flow.TaskFn(func(ctx context.Context) error { return istio.Deploy(ctx) }).DoIf(features.DefaultFeatureGate.Enabled(features.ManagedIstio)),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Ensuring network policies",

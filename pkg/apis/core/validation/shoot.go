@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 
@@ -602,7 +601,7 @@ func validateNetworkingUpdate(newNetworking, oldNetworking core.Networking, fldP
 	if oldNetworking.Services != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Services, oldNetworking.Services, fldPath.Child("services"))...)
 	}
-	if !utilfeature.DefaultFeatureGate.Enabled(features.MutableShootSpecNetworkingNodes) && oldNetworking.Nodes != nil {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootSpecNetworkingNodes) && oldNetworking.Nodes != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Nodes, oldNetworking.Nodes, fldPath.Child("nodes"))...)
 	}
 

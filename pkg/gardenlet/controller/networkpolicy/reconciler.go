@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -143,7 +142,7 @@ type networkPolicyConfig struct {
 
 func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 	extendLabelSelectorsIfFeatureGateEnabled := func(in []labels.Selector) []labels.Selector {
-		if !gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+		if !features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
 			return in
 		}
 		return append(in, labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}))

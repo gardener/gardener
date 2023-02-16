@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -369,7 +368,7 @@ func (r *Reconciler) reconcileNetworkPoliciesInSeed(ctx context.Context, namespa
 		}
 	)
 
-	if !gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+	if !features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
 		return client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, allowAllTrafficNetworkPolicy))
 	}
 	return client.IgnoreNotFound(r.SeedClientSet.Client().Delete(ctx, allowAllTrafficNetworkPolicy))

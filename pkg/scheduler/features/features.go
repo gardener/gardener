@@ -14,12 +14,5 @@
 
 package features
 
-import (
-	"k8s.io/component-base/featuregate"
-)
-
-// FeatureGate is a shared global FeatureGate for Gardener Scheduler flags.
-var FeatureGate = featuregate.NewFeatureGate()
-
 // RegisterFeatureGates registers the feature gates of the Gardener Scheduler.
 func RegisterFeatureGates() {}

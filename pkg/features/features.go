@@ -15,6 +15,7 @@
 package features
 
 import (
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 )
 
@@ -111,6 +112,9 @@ const (
 	// alpha: v1.66.0
 	FullNetworkPoliciesInRuntimeCluster featuregate.Feature = "FullNetworkPoliciesInRuntimeCluster"
 )
+
+// DefaultFeatureGate TODO: Comment
+var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:               {Default: false, PreRelease: featuregate.Alpha},

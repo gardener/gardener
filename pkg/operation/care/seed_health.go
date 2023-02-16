@@ -29,7 +29,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -107,11 +106,11 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		managedResources = append(managedResources, clusteridentity.ManagedResourceControlName)
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
 		managedResources = append(managedResources, istio.ManagedResourceControlName)
 		managedResources = append(managedResources, istio.ManagedResourceIstioSystemName)
 	}
-	if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
+	if features.DefaultFeatureGate.Enabled(features.HVPA) {
 		managedResources = append(managedResources, hvpa.ManagedResourceName)
 	}
 	if v1beta1helper.SeedSettingDependencyWatchdogWeederEnabled(h.seed.Spec.Settings) {

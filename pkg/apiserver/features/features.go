@@ -16,14 +16,13 @@ package features
 
 import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"github.com/gardener/gardener/pkg/features"
 )
 
 // RegisterFeatureGates registers the feature gates of the gardener-apiserver.
 func RegisterFeatureGates() {
-	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(features.GetFeatures(
+	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.HAControlPlanes,
 		features.SeedChange,
 		features.IPv6SingleStack,
