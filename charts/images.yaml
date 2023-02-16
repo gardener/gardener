@@ -40,8 +40,13 @@ images:
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.3.1"
-  targetVersion: ">= 1.22"
+  tag: "v1.4.0"
+  targetVersion: "1.22.x"
+- name: nginx-ingress-controller-seed
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: registry.k8s.io/ingress-nginx/controller-chroot
+  tag: "v1.6.4"
+  targetVersion: ">= 1.23"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
