@@ -66,8 +66,6 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
 
-	runMigration(shoot)
-
 	dropDisabledFields(shoot, nil)
 }
 
@@ -78,45 +76,11 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	newShoot.Status = oldShoot.Status               // can only be changed by shoots/status subresource
 	newShoot.Spec.SeedName = oldShoot.Spec.SeedName // can only be changed by shoots/binding subresource
 
-	runMigration(newShoot)
-
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
 	dropDisabledFields(newShoot, oldShoot)
-}
-
-func runMigration(shoot *core.Shoot) {
-	// TODO(timuthy): Remove in a future Gardener release.
-	migrateHighAvailabilityAnnotation(shoot)
-}
-
-func migrateHighAvailabilityAnnotation(shoot *core.Shoot) {
-	if val, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
-		if shoot.Spec.ControlPlane == nil || shoot.Spec.ControlPlane.HighAvailability == nil {
-			switch val {
-			case v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone:
-				shoot.Spec.ControlPlane = &core.ControlPlane{
-					HighAvailability: &core.HighAvailability{
-						FailureTolerance: core.FailureTolerance{
-							Type: core.FailureToleranceTypeNode,
-						},
-					},
-				}
-			case v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone:
-				shoot.Spec.ControlPlane = &core.ControlPlane{
-					HighAvailability: &core.HighAvailability{
-						FailureTolerance: core.FailureTolerance{
-							Type: core.FailureToleranceTypeZone,
-						},
-					},
-				}
-			}
-		}
-	}
-
-	delete(shoot.Annotations, v1beta1constants.ShootAlphaControlPlaneHighAvailability)
 }
 
 // dropDisabledFields removes disabled fields from shoot.
