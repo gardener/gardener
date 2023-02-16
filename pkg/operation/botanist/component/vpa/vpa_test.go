@@ -312,10 +312,9 @@ var _ = Describe("VPA", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"app":                 "vpa-updater",
-								"gardener.cloud/role": "vpa",
-								"networking.gardener.cloud/from-prometheus":    "allowed",
-								"networking.gardener.cloud/to-dns":             "allowed",
+								"app":                              "vpa-updater",
+								"gardener.cloud/role":              "vpa",
+								"networking.gardener.cloud/to-dns": "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
 							},
 						},

@@ -741,7 +741,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						Spec: policyv1beta1.PodDisruptionBudgetSpec{
-							MaxUnavailable: intOrStrPtr(intstr.FromInt(1)),
+							MaxUnavailable: utils.IntStrPtrFromInt(1),
 							Selector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									"app":  "kubernetes",
@@ -777,7 +777,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: intOrStrPtr(intstr.FromInt(1)),
+							MaxUnavailable: utils.IntStrPtrFromInt(1),
 							Selector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									"app":  "kubernetes",
@@ -878,11 +878,10 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			var (
-				protocol             = corev1.ProtocolTCP
-				portAPIServer        = intstr.FromInt(443)
-				portBlackboxExporter = intstr.FromInt(9115)
-				portEtcd             = intstr.FromInt(2379)
-				portVPNSeedServer    = intstr.FromInt(9443)
+				protocol          = corev1.ProtocolTCP
+				portAPIServer     = intstr.FromInt(443)
+				portEtcd          = intstr.FromInt(2379)
+				portVPNSeedServer = intstr.FromInt(9443)
 			)
 
 			Context("allow-kube-apiserver NetworkPolicy resource", func() {
@@ -960,27 +959,6 @@ var _ = Describe("KubeAPIServer", func() {
 										Port:     &portAPIServer,
 									}},
 								},
-								{
-									From: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "monitoring",
-												"app":                 "prometheus",
-												"role":                "monitoring",
-											},
-										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{
-										{
-											Protocol: &protocol,
-											Port:     &portBlackboxExporter,
-										},
-										{
-											Protocol: &protocol,
-											Port:     &portAPIServer,
-										},
-									},
-								},
 							},
 							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 						},
@@ -1046,27 +1024,6 @@ var _ = Describe("KubeAPIServer", func() {
 										Protocol: &protocol,
 										Port:     &portAPIServer,
 									}},
-								},
-								{
-									From: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "monitoring",
-												"app":                 "prometheus",
-												"role":                "monitoring",
-											},
-										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{
-										{
-											Protocol: &protocol,
-											Port:     &portBlackboxExporter,
-										},
-										{
-											Protocol: &protocol,
-											Port:     &portAPIServer,
-										},
-									},
 								},
 							},
 							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
@@ -1721,7 +1678,6 @@ rules:
 						"networking.gardener.cloud/to-dns": "allowed",
 						"networking.gardener.cloud/to-private-networks": "allowed",
 						"networking.gardener.cloud/to-public-networks":  "allowed",
-						"networking.gardener.cloud/from-prometheus":     "allowed",
 					}
 				})
 
@@ -3413,10 +3369,6 @@ rules:
 		})
 	})
 })
-
-func intOrStrPtr(intOrStr intstr.IntOrString) *intstr.IntOrString {
-	return &intOrStr
-}
 
 func egressSelectorConfigFor(controlPlaneName string) string {
 	return `apiVersion: apiserver.k8s.io/v1alpha1

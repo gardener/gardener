@@ -275,7 +275,6 @@ admin:
 						v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -711,19 +710,6 @@ admin:
 					{
 						From: []networkingv1.NetworkPolicyPeer{
 							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-										v1beta1constants.LabelApp:   v1beta1constants.StatefulSetNamePrometheus,
-										v1beta1constants.LabelRole:  v1beta1constants.GardenRoleMonitoring,
-									},
-								},
-							},
-						},
-					},
-					{
-						From: []networkingv1.NetworkPolicyPeer{
-							{
 								// we don't want to modify existing labels on the istio namespace
 								NamespaceSelector: &metav1.LabelSelector{},
 								PodSelector: &metav1.LabelSelector{
@@ -779,7 +765,9 @@ admin:
 				Name:      ServiceName,
 				Namespace: namespace,
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo":                                       "*",
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":15000}]`,
 				},
 			},
 			Spec: corev1.ServiceSpec{

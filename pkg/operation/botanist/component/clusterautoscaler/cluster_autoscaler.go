@@ -22,6 +22,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -158,6 +159,12 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, service, func() error {
 		service.Labels = getLabels()
+
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     utils.IntStrPtrFromInt(int(portMetrics)),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		}))
+
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.ClusterIP = corev1.ClusterIPNone
@@ -194,7 +201,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 					v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyFromPrometheus:     v1beta1constants.LabelNetworkPolicyAllowed,
 				}),
 			},
 			Spec: corev1.PodSpec{
@@ -292,11 +298,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data); err != nil {
-		return err
-	}
-
-	return nil
+	return managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data)
 }
 
 func getLabels() map[string]string {

@@ -6,6 +6,9 @@ metadata:
   labels:
     app: kubernetes
     role: machine-controller-manager
+  annotations:
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ .Values.metricsPort }},"protocol":"TCP"}]'
 spec:
   type: ClusterIP
   clusterIP: None

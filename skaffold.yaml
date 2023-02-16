@@ -334,7 +334,6 @@ build:
         - pkg/operation/botanist/component/kubescheduler
         - pkg/operation/botanist/component/kubestatemetrics
         - pkg/operation/botanist/component/logging/kuberbacproxy
-        - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/nodelocaldns
         - pkg/operation/botanist/component/nodelocaldns/constants
         - pkg/operation/botanist/component/projectrbac
@@ -672,7 +671,6 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/kubeapiserver
         - pkg/operation/botanist/component/kubeproxy
-        - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/vpnseedserver
         - pkg/provider-local/apis/local
         - pkg/provider-local/apis/local/helper
@@ -950,7 +948,6 @@ build:
         - pkg/operation/botanist/component/logging/eventlogger
         - pkg/operation/botanist/component/logging/kuberbacproxy
         - pkg/operation/botanist/component/metricsserver
-        - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/namespaces
         - pkg/operation/botanist/component/networkpolicies
         - pkg/operation/botanist/component/nginxingress

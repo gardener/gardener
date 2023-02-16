@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -30,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -69,8 +69,8 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 				PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "coredns"}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: intStrPtr(9053), Protocol: &protocolTCP},
-				{Port: intStrPtr(9053), Protocol: &protocolUDP},
+				{Port: utils.IntStrPtrFromInt(9053), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt(9053), Protocol: &protocolUDP},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{
@@ -90,9 +90,9 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 				}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: intStrPtr(8132), Protocol: &protocolTCP},
-				{Port: intStrPtr(8443), Protocol: &protocolTCP},
-				{Port: intStrPtr(9443), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt(8132), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt(8443), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt(9443), Protocol: &protocolTCP},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{
@@ -189,9 +189,4 @@ func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {
 			Namespace: namespace,
 		},
 	}
-}
-
-func intStrPtr(in int) *intstr.IntOrString {
-	out := intstr.FromInt(in)
-	return &out
 }

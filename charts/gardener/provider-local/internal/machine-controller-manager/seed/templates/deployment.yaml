@@ -30,7 +30,6 @@ spec:
         networking.gardener.cloud/to-private-networks: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.gardener.cloud/to-shoot-apiserver: allowed
-        networking.gardener.cloud/from-prometheus: allowed
 {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
 {{- end }}

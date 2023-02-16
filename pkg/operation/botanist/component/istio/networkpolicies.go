@@ -20,13 +20,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
@@ -62,7 +62,7 @@ func getIstioSystemNetworkPolicyTransformers() []networkPolicyTransformer {
 								},
 							},
 							Ports: []networkingv1.NetworkPolicyPort{
-								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(portWebhookServer)},
+								{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(portWebhookServer)},
 							},
 						}},
 						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
@@ -139,8 +139,8 @@ func getIstioSystemNetworkPolicyTransformers() []networkPolicyTransformer {
 								},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(15014),
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(15014),
 							}},
 						},
 						},
@@ -227,8 +227,8 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 								NamespaceSelector: &metav1.LabelSelector{},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(kubeapiserver.Port),
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(kubeapiserver.Port),
 							}},
 						}},
 					}
@@ -263,8 +263,8 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 								NamespaceSelector: &metav1.LabelSelector{},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(vpnseedserver.OpenVPNPort),
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(vpnseedserver.OpenVPNPort),
 							}},
 						}},
 					}
@@ -305,8 +305,8 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 								},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(vpnauthzserver.ServerPort),
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(vpnauthzserver.ServerPort),
 							}},
 						}},
 					}
@@ -347,8 +347,8 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 								},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(15012),
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(15012),
 							}},
 						}},
 					}
@@ -357,13 +357,4 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 			},
 		},
 	}
-}
-
-func protocolPtr(protocol corev1.Protocol) *corev1.Protocol {
-	return &protocol
-}
-
-func intStrPtr(port int) *intstr.IntOrString {
-	v := intstr.FromInt(port)
-	return &v
 }

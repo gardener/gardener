@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -209,16 +210,21 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, service, func() error {
 		service.Labels = getLabels()
+
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     utils.IntStrPtrFromInt(int(port)),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		}))
+
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
-		desiredPorts := []corev1.ServicePort{
-			{
-				Name:     portNameMetrics,
-				Protocol: corev1.ProtocolTCP,
-				Port:     port,
-			},
-		}
+		desiredPorts := []corev1.ServicePort{{
+			Name:     portNameMetrics,
+			Protocol: corev1.ProtocolTCP,
+			Port:     port,
+		}}
 		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
+
 		return nil
 	}); err != nil {
 		return err
@@ -243,7 +249,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					v1beta1constants.LabelPodMaintenanceRestart:         "true",
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyFromPrometheus:   v1beta1constants.LabelNetworkPolicyAllowed,
 				}),
 			},
 			Spec: corev1.PodSpec{

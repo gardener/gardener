@@ -138,9 +138,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(updater)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: utils.MergeStringMaps(getAllLabels(updater), map[string]string{
-					v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
-				}),
+				Labels: getAllLabels(updater),
 			},
 			Spec: corev1.PodSpec{
 				PriorityClassName: v.values.Updater.PriorityClassName,

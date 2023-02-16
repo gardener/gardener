@@ -397,11 +397,10 @@ var _ = Describe("EventLogger", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"app":                 name,
-								"role":                "logging",
-								"gardener.cloud/role": "logging",
-								"networking.gardener.cloud/from-prometheus":      "allowed",
-								"networking.gardener.cloud/to-dns":               "allowed",
+								"app":                              name,
+								"role":                             "logging",
+								"gardener.cloud/role":              "logging",
+								"networking.gardener.cloud/to-dns": "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver":   "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 							},

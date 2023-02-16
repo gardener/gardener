@@ -171,7 +171,7 @@ var _ = Describe("KubeStateMetrics", func() {
 			return obj
 		}
 		serviceFor = func(clusterType component.ClusterType) *corev1.Service {
-			return &corev1.Service{
+			obj := &corev1.Service{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "v1",
 					Kind:       "Service",
@@ -198,6 +198,15 @@ var _ = Describe("KubeStateMetrics", func() {
 					}},
 				},
 			}
+
+			if clusterType == component.ClusterTypeShoot {
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":8080}]`,
+				}
+			}
+
+			return obj
 		}
 		deploymentFor = func(clusterType component.ClusterType) *appsv1.Deployment {
 			var (
@@ -228,7 +237,6 @@ var _ = Describe("KubeStateMetrics", func() {
 					"type":                             string(clusterType),
 					"role":                             "monitoring",
 					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/from-prometheus":      "allowed",
 					"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 				}
 				args = []string{
@@ -253,7 +261,6 @@ var _ = Describe("KubeStateMetrics", func() {
 					"type":                             string(clusterType),
 					"gardener.cloud/role":              "monitoring",
 					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/from-prometheus":    "allowed",
 					"networking.gardener.cloud/to-shoot-apiserver": "allowed",
 				}
 				args = []string{

@@ -27,7 +27,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -44,6 +43,7 @@ import (
 	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -468,23 +468,14 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					},
 				},
 				Ports: []networkingv1.NetworkPolicyPort{
-					{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(corednsconstants.PortServiceServer)},
-					{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(corednsconstants.PortServiceServer)},
-					{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(corednsconstants.PortServer)},
-					{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(corednsconstants.PortServer)},
+					{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServiceServer)},
+					{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServiceServer)},
+					{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServer)},
+					{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServer)},
 				},
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
 	})
-}
-
-func protocolPtr(protocol corev1.Protocol) *corev1.Protocol {
-	return &protocol
-}
-
-func intStrPtr(port int) *intstr.IntOrString {
-	v := intstr.FromInt(port)
-	return &v
 }

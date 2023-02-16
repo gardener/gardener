@@ -5,8 +5,16 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml .Values.labels | indent 4 }}
+{{- if or .Values.annotations (eq .Values.clusterType "shoot") }}
   annotations:
+{{- if eq .Values.clusterType "shoot" }}
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":"metrics","protocol":"TCP"}{{ if .Values.rbacSidecarEnabled }},{"port":{{ .Values.telegraf.port }},"protocol":"TCP"}{{ end }}]'
+{{- end }}
+{{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 4 }}
+{{- end }}
+{{- end }}
 spec:
   type: {{ .Values.service.type }}
   ports:
