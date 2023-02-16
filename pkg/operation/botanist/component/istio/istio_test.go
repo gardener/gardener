@@ -1202,7 +1202,6 @@ spec:
     match:
       context: GATEWAY
       listener:
-        name: 0.0.0.0_999
         portNumber: 999
     patch:
       operation: MERGE
@@ -2077,7 +2076,6 @@ spec:
       context: GATEWAY
       listener:
         portNumber: 8443
-        name: 0.0.0.0_8443
     patch:
       operation: MERGE
       value:
