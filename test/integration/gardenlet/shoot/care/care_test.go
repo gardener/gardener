@@ -28,6 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -325,55 +326,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		Context("when some control plane deployments for the Shoot are present", func() {
 			JustBeforeEach(func() {
-				for _, name := range []string{"gardener-resource-manager", "kube-controller-manager", "kube-scheduler", "grafana"} {
-					deployment := &appsv1.Deployment{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      name,
-							Namespace: testNamespace.Name,
-							Labels: map[string]string{
-								testID:                      testRunID,
-								v1beta1constants.GardenRole: getRole(name),
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-							Replicas: pointer.Int32(1),
-							Template: corev1.PodTemplateSpec{
-								ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
-								Spec: corev1.PodSpec{
-									Containers: []corev1.Container{{
-										Name:  "foo-container",
-										Image: "foo",
-									}},
-								},
-							},
-						},
-					}
-
-					By("Create Deployment " + name)
-					Expect(testClient.Create(ctx, deployment)).To(Succeed(), "for deployment "+name)
-					log.Info("Created Deployment for test", "deployment", client.ObjectKeyFromObject(deployment))
-
-					By("Ensure manager has observed deployment " + name)
-					Eventually(func() error {
-						return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-					}).Should(Succeed())
-
-					DeferCleanup(func() {
-						By("Delete Deployment " + name)
-						Expect(testClient.Delete(ctx, deployment)).To(Succeed(), "for deployment "+name)
-
-						By("Ensure Deployment " + name + " is gone")
-						Eventually(func() error {
-							return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).Should(BeNotFoundError(), "for deployment "+name)
-
-						By("Ensure manager has observed deployment deletion " + name)
-						Eventually(func() error {
-							return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).Should(BeNotFoundError())
-					})
-				}
+				createDeployment([]string{"gardener-resource-manager", "kube-controller-manager", "kube-scheduler", "grafana"})
 			})
 
 			It("should set conditions", func() {
@@ -390,8 +343,244 @@ var _ = Describe("Shoot Care controller tests", func() {
 				))
 			})
 		})
+
+		Context("when all Managed Resources of spec.class=nil in shoot namespace in seed are healthy except one with spec.class!=nil", func() {
+			JustBeforeEach(func() {
+				// kube-apiserver deployment is required because care controller doesn't check any other
+				// condition if APIServer is down.
+				createDeployment([]string{"kube-apiserver"})
+
+				managedResource1 := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-1",
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							testID: testRunID,
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{
+							{Name: "test-1"},
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, managedResource1)).To(Succeed())
+
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedResource1), managedResource1)
+				}).Should(Succeed())
+
+				By("Patch Managed Resource to report healthiness")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource1), managedResource1)).To(Succeed())
+
+					patch := client.MergeFrom(managedResource1.DeepCopy())
+					managedResource1.Status.ObservedGeneration = managedResource1.Generation
+					managedResource1.Status.Conditions = []gardencorev1beta1.Condition{
+						{
+							Type:               resourcesv1alpha1.ResourcesApplied,
+							Status:             gardencorev1beta1.ConditionTrue,
+							LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+							LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+						},
+						{
+							Type:               resourcesv1alpha1.ResourcesHealthy,
+							Status:             gardencorev1beta1.ConditionTrue,
+							LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+							LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+						},
+						{
+							Type:               resourcesv1alpha1.ResourcesProgressing,
+							Status:             gardencorev1beta1.ConditionFalse,
+							LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+							LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+						},
+					}
+					g.Expect(testClient.Status().Patch(ctx, managedResource1, patch)).To(Succeed())
+				}).Should(Succeed())
+
+				managedResource2 := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-2",
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							testID: testRunID,
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: pointer.String("test"),
+						SecretRefs: []corev1.LocalObjectReference{
+							{Name: "test-2"},
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, managedResource2)).To(Succeed())
+
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedResource2), managedResource2)
+				}).Should(Succeed())
+
+				DeferCleanup(func() {
+					By("Delete Managed Resource")
+					Expect(testClient.Delete(ctx, managedResource1)).To(Succeed())
+					Expect(testClient.Delete(ctx, managedResource2)).To(Succeed())
+
+					By("Ensure Managed Resource is gone")
+					Eventually(func() error {
+						return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedResource1), managedResource1)
+					}).Should(BeNotFoundError())
+
+					Eventually(func() error {
+						return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedResource2), managedResource2)
+					}).Should(BeNotFoundError())
+				})
+			})
+
+			It("SystemComponentsHealthy condition should not fail because all relevant Managed Resources are healthy", func() {
+				By("Expect conditions to be set")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Status.Conditions
+				}).Should(And(
+					// here SystemComponentsHealthy condition is not healthy because for SystemComponentsHealthy to be healthy a tunnel connection is required
+					// which can't be faked, if it would have been failing because of MangedResource is not healthy then the reason will not be `NoTunnelDeployed`.
+					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("NoTunnelDeployed"), WithMessageSubstrings("no tunnels are currently deployed to perform health-check on")),
+				))
+			})
+		})
+
+		Context("when Managed Resources of spec.class=nil in shoot namespace in seed are not healthy", func() {
+			JustBeforeEach(func() {
+				// kube-apiserver deployment is required because care controller doesn't check any other
+				// condition if APIServer is down.
+				createDeployment([]string{"kube-apiserver"})
+
+				managedResource1 := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-1",
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							testID: testRunID,
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{
+							{Name: "test-1"},
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, managedResource1)).To(Succeed())
+
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedResource1), managedResource1)
+				}).Should(Succeed())
+
+				By("Patch Managed Resource status")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource1), managedResource1)).To(Succeed())
+
+					patch := client.MergeFrom(managedResource1.DeepCopy())
+					managedResource1.Status.ObservedGeneration = managedResource1.Generation
+					managedResource1.Status.Conditions = []gardencorev1beta1.Condition{
+						{
+							Type:               resourcesv1alpha1.ResourcesApplied,
+							Status:             gardencorev1beta1.ConditionFalse,
+							LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+							LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+							Reason:             "ApplyFailed",
+							Message:            "Resources failed to get applied",
+						},
+						{
+							Type:               resourcesv1alpha1.ResourcesHealthy,
+							Status:             gardencorev1beta1.ConditionTrue,
+							LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+							LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+						},
+						{
+							Type:               resourcesv1alpha1.ResourcesProgressing,
+							Status:             gardencorev1beta1.ConditionFalse,
+							LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+							LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+						},
+					}
+					g.Expect(testClient.Status().Patch(ctx, managedResource1, patch)).To(Succeed())
+				}).Should(Succeed())
+
+				DeferCleanup(func() {
+					By("Delete Managed Resource")
+					Expect(testClient.Delete(ctx, managedResource1)).To(Succeed())
+
+					By("Ensure Managed Resource is gone")
+					Eventually(func() error {
+						return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedResource1), managedResource1)
+					}).Should(BeNotFoundError())
+				})
+			})
+
+			It("SystemComponentsHealthy condition should fail because of ManagedResource is not healthy", func() {
+				By("Expect conditions to be set")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Status.Conditions
+				}).Should(And(
+					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("ApplyFailed"), WithMessageSubstrings("Resources failed to get applied")),
+				))
+			})
+		})
 	})
 })
+
+func createDeployment(names []string) {
+	for _, name := range names {
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: testNamespace.Name,
+				Labels: map[string]string{
+					testID:                      testRunID,
+					v1beta1constants.GardenRole: getRole(name),
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+				Replicas: pointer.Int32(1),
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "foo-container",
+							Image: "foo",
+						}},
+					},
+				},
+			},
+		}
+
+		By("Create Deployment " + name)
+		ExpectWithOffset(1, testClient.Create(ctx, deployment)).To(Succeed(), "for deployment "+name)
+		log.Info("Created Deployment for test", "deployment", client.ObjectKeyFromObject(deployment))
+
+		By("Ensure manager has observed deployment " + name)
+		EventuallyWithOffset(1, func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
+		}).Should(Succeed())
+
+		DeferCleanup(func() {
+			By("Delete Deployment " + name)
+			ExpectWithOffset(1, testClient.Delete(ctx, deployment)).To(Succeed(), "for deployment "+name)
+
+			By("Ensure Deployment " + name + " is gone")
+			EventuallyWithOffset(1, func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
+			}).Should(BeNotFoundError(), "for deployment "+name)
+
+			By("Ensure manager has observed deployment deletion " + name)
+			EventuallyWithOffset(1, func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
+			}).Should(BeNotFoundError())
+		})
+	}
+}
 
 func getRole(name string) string {
 	switch name {
