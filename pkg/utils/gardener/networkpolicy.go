@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
@@ -30,19 +29,12 @@ import (
 // `networking.resources.gardener.cloud/from-policy-allowed-ports` annotation of the given service. In addition, it adds
 // the well-known annotation for scrape targets of Prometheus in shoot namespaces.
 func InjectNetworkPolicyAnnotationsForScrapeTargets(service *corev1.Service, ports ...networkingv1.NetworkPolicyPort) error {
-	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector, v1beta1constants.LabelNetworkPolicyScrapeTargets)
-
-	annotations := service.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string, 1)
-	}
-
 	rawPorts, err := json.Marshal(ports)
 	if err != nil {
 		return err
 	}
 
-	annotations[v1alpha1.NetworkingFromPolicyAllowedPorts] = string(rawPorts)
-	service.Annotations = annotations
+	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector, v1beta1constants.LabelNetworkPolicyScrapeTargets)
+	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyAllowedPorts, string(rawPorts))
 	return nil
 }

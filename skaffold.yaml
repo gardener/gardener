@@ -948,7 +948,6 @@ build:
         - pkg/operation/botanist/component/logging/eventlogger
         - pkg/operation/botanist/component/logging/kuberbacproxy
         - pkg/operation/botanist/component/metricsserver
-        - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/namespaces
         - pkg/operation/botanist/component/networkpolicies
         - pkg/operation/botanist/component/nginxingress

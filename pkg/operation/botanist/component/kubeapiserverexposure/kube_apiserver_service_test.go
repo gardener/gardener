@@ -210,7 +210,7 @@ var _ = Describe("#Service", func() {
 			expected.Annotations = map[string]string{
 				"foo": "bar",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443},{"protocol":"TCP","port":9115}]`,
+				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
 			}
 		})
 
@@ -224,7 +224,7 @@ var _ = Describe("#Service", func() {
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443},{"protocol":"TCP","port":9115}]`,
+				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
 			}
 			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
@@ -240,7 +240,7 @@ var _ = Describe("#Service", func() {
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443},{"protocol":"TCP","port":9115}]`,
+				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
 			}
 			expected.Spec.Type = corev1.ServiceTypeClusterIP
 			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
@@ -256,7 +256,7 @@ var _ = Describe("#Service", func() {
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443},{"protocol":"TCP","port":9115}]`,
+				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
 			}
 			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 		})

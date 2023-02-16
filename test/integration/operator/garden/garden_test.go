@@ -274,7 +274,7 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
 			return service.Annotations
 		}).Should(Equal(utils.MergeStringMaps(loadBalancerServiceAnnotations, map[string]string{
-			"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443},{"protocol":"TCP","port":9115}]`,
+			"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
 		})))
 

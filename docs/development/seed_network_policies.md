@@ -85,7 +85,7 @@ annotations:
 ```
 
 This automatically allows the needed network traffic from the Prometheus pod.
-For more information, see take a look at [this document](../concepts/resource-manager.md#networkpolicy-controllerpkgresourcemanagercontrollernetworkpolicy).
+For more information, take a look at [this document](../concepts/resource-manager.md#networkpolicy-controllerpkgresourcemanagercontrollernetworkpolicy).
 
 ### Implications for Gardener Extensions
 

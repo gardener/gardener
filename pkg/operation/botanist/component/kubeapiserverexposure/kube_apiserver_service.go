@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -154,10 +153,7 @@ func (s *service) Deploy(ctx context.Context) error {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		}
 
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj,
-			networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserver.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
-			networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(monitoring.BlackboxExporterPort), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
-		))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserver.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
 		obj.Labels = getLabels()
 		if s.values.gardenerManaged {
