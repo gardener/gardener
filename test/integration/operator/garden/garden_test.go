@@ -47,6 +47,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -272,7 +273,10 @@ var _ = Describe("Garden controller tests", func() {
 			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
 			return service.Annotations
-		}).Should(Equal(loadBalancerServiceAnnotations))
+		}).Should(Equal(utils.MergeStringMaps(loadBalancerServiceAnnotations, map[string]string{
+			"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
+			"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+		})))
 
 		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in
 		// this test, so let's fake this here.

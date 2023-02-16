@@ -10,6 +10,7 @@ global:
       app: fluent-bit
       role: logging
 
+clusterType: seed
 authEnabled: true
 
 annotations: {}

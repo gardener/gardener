@@ -6,6 +6,9 @@ metadata:
   labels:
     component: alertmanager
     role: monitoring
+  annotations:
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":9093,"protocol":"TCP"}]'
 spec:
   ports:
   - port: 9093
@@ -61,7 +64,6 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-private-networks: allowed
-        networking.gardener.cloud/from-prometheus: allowed
     spec:
       priorityClassName: gardener-system-100
       containers:

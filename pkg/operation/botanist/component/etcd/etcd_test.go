@@ -151,24 +151,11 @@ var _ = Describe("Etcd", func() {
 									},
 								},
 							},
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"gardener.cloud/role": "monitoring",
-										"app":                 "prometheus",
-										"role":                "monitoring",
-									},
-								},
-							},
 						},
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
 								Protocol: &protocolTCP,
 								Port:     &portEtcdClient,
-							},
-							{
-								Protocol: &protocolTCP,
-								Port:     &portBackupRestore,
 							},
 						},
 					},
@@ -352,6 +339,12 @@ var _ = Describe("Etcd", func() {
 						Metrics:                 &metricsBasic,
 						DefragmentationSchedule: &defragSchedule,
 						Quota:                   &quota,
+						ClientService: &druidv1alpha1.ClientService{
+							Annotations: map[string]string{
+								"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+								"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":2379},{"protocol":"TCP","port":8080}]`,
+							},
+						},
 					},
 					Backup: druidv1alpha1.BackupSpec{
 						TLS: &druidv1alpha1.TLSConfig{

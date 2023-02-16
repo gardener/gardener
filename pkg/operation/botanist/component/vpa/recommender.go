@@ -172,6 +172,11 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: utils.MergeStringMaps(getAllLabels(recommender), map[string]string{
+					// TODO(rfranzke): Replace this label as soon as gardener-resource-manager's NetworkPolicy
+					//  controller is active for the garden namespace (seed-prometheus scrapes all vpa-recommenders in
+					//  all namespaces).
+					//  Actually, seed-prometheus should probably only scrape the vpa-recommender in garden namespace,
+					//  and the prometheis in the shoot namespaces should scrape their vpa-recommenders.
 					v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
 				}),
 			},

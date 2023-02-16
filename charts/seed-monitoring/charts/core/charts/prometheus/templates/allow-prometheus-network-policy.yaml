@@ -19,17 +19,6 @@ spec:
           networking.gardener.cloud/from-prometheus: allowed
     - podSelector:
         matchLabels:
-          networking.gardener.cloud/from-prometheus: allowed
-          component: kube-state-metrics
-      namespaceSelector:
-        matchLabels:
-          role: garden
-    - podSelector:
-        matchLabels:
-          app: etcd-statefulset
-          gardener.cloud/role: controlplane
-    - podSelector:
-        matchLabels:
           app: prometheus
           role: monitoring
       namespaceSelector:

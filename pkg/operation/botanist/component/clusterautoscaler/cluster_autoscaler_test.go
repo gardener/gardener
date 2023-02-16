@@ -197,6 +197,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"app":  "kubernetes",
 					"role": "cluster-autoscaler",
 				},
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":8085}]`,
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
@@ -306,7 +310,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 								"networking.gardener.cloud/to-dns":   "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver":   "allowed",
-								"networking.gardener.cloud/from-prometheus":      "allowed",
 							},
 						},
 						Spec: corev1.PodSpec{

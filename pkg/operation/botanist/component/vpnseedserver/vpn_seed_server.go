@@ -44,6 +44,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -299,7 +301,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 				v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
 				v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 				v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-				v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -707,14 +708,15 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 }
 
 func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
-	var (
-		service = v.emptyService(idx)
-	)
+	service := v.emptyService(idx)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
-		service.Annotations = map[string]string{
-			"networking.istio.io/exportTo": "*",
-		}
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     utils.IntStrPtrFromInt(metricsPort),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		}))
+
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
 			{
@@ -733,6 +735,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 				TargetPort: intstr.FromInt(metricsPort),
 			},
 		}
+
 		if idx == nil {
 			service.Spec.Selector = map[string]string{
 				v1beta1constants.LabelApp: DeploymentName,
@@ -742,6 +745,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 				"statefulset.kubernetes.io/pod-name": v.indexedName(idx),
 			}
 		}
+
 		return nil
 	})
 	return err
@@ -792,6 +796,7 @@ func (v *vpnSeedServer) deployNetworkPolicy(ctx context.Context) error {
 		networkPolicy = v.emptyNetworkPolicy()
 		igwSelectors  = v.getIngressGatewaySelectors()
 	)
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, networkPolicy, func() error {
 		networkPolicy.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerDescription: "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
@@ -809,19 +814,6 @@ func (v *vpnSeedServer) deployNetworkPolicy(ctx context.Context) error {
 									v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 									v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
 									v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-								},
-							},
-						},
-					},
-				},
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-									v1beta1constants.LabelApp:   v1beta1constants.StatefulSetNamePrometheus,
-									v1beta1constants.LabelRole:  v1beta1constants.GardenRoleMonitoring,
 								},
 							},
 						},

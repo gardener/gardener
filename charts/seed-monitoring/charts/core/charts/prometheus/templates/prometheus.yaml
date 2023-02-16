@@ -61,6 +61,7 @@ spec:
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-shoot-apiserver: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-all-scrape-targets: allowed
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus

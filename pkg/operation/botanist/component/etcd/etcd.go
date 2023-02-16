@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -308,20 +308,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								},
 							},
 						},
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: monitoring.GetPrometheusLabels(),
-							},
-						},
 					},
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
 							Protocol: &protocolTCP,
 							Port:     &intStrPortEtcdClient,
-						},
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortBackupRestore,
 						},
 					},
 				},
@@ -406,6 +397,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
+	clientService := &corev1.Service{}
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService,
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(int(PortEtcdClient)), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(int(PortBackupRestore)), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+	))
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
@@ -426,6 +423,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			//  creates. Hence, we cannot change them because otherwise multi-node ETCD clusters would break (since the
 			//  services wouldn't select anything anymore). Until this is fixed, we have to keep using the deprecated
 			//  to-seed-apiserver label instead of the new to-runtime-apiserver.
+			//  See https://github.com/gardener/etcd-druid/pull/521.
 			v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 			// v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
@@ -458,6 +456,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   &quota,
+			ClientService:           &druidv1alpha1.ClientService{Annotations: clientService.Annotations},
 		}
 
 		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.

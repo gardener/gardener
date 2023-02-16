@@ -689,7 +689,7 @@ For a component which initiates the connection to many other components, it's so
 For example, let's say a component `foo` talks to `bar{0..9}` on ports `tcp/808{0..9}`.
 `foo` would need to have the ten `networking.resources.gardener.cloud/to-bar{0..9}-tcp-808{0..9}=allowed` labels.
 
-As an alternative and to simplify this, it is also possible to annotate the targeted `Service`s with `networking.resources.gardener.cloud/from-policy-pod-selector-label=<some-alias>`.
+As an alternative and to simplify this, it is also possible to annotate the targeted `Service`s with `networking.resources.gardener.cloud/from-policy-pod-label-selector=<some-alias>`.
 For our example, `<some-alias>` could be `all-bars`.
 
 As a result, component `foo` just needs to have the label `networking.resources.gardener.cloud/to-all-bars=allowed` instead of all the other ten explicit labels.
