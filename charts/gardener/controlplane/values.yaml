@@ -29,8 +29,6 @@ global:
       requests:
         cpu: 100m
         memory: 100Mi
-      limits:
-        memory: 256Mi
   # podAnnotations: # YAML formated annotations used for pod template
   # podLabels: # YAML formated labels used for pod template
     minReadySeconds: 30
@@ -285,8 +283,6 @@ global:
       requests:
         cpu: 100m
         memory: 200Mi
-      limits:
-        memory: 512Mi
   # service:
   #   clusterIP: 1.2.3.4
   # podAnnotations: # YAML formated annotations used for pod template
@@ -359,8 +355,6 @@ global:
       requests:
         cpu: 100m
         memory: 100Mi
-      limits:
-        memory: 512Mi
   # podAnnotations: # YAML formated annotations used for pod template
   # podLabels: # YAML formated labels used for pod template
     additionalVolumes: []
@@ -471,8 +465,6 @@ global:
       requests:
         cpu: 50m
         memory: 50Mi
-      limits:
-        memory: 256Mi
   # podAnnotations: # YAML formatted annotations used for pod template
   # podLabels: # YAML formatted labels used for pod template
     vpa: false
