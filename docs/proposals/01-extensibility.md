@@ -45,7 +45,7 @@ This proposal aims to move out the cloud-specific implementations (called "(clou
 
 Currently, it is too hard to support additional cloud providers or operation systems/distributions as everything must be done in-tree, which might affect the implementation of other cloud providers as well.
 The various conditions and branches make the code hard to maintain and hard to test.
-Every change must be done centrally, requires to completely rebuild Gardener, and cannot be deployed individually. Similar to the motivation for Kubernetes to extract their cloud-specifics into dedicated cloud-controller-managers or to extract the container/storage/network/... specifics into CRI/CSI/CNI/..., we aim to do the same right now.
+Every change must be done centrally, requires to completely rebuild Gardener, and cannot be deployed individually. Similarly to the motivation for Kubernetes to extract their cloud-specifics into dedicated cloud-controller-managers or to extract the container/storage/network/... specifics into CRI/CSI/CNI/..., we aim to do the same right now.
 
 ### Goals
 
