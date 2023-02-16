@@ -353,7 +353,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileNetworkPolicyAllowKubeAPIServer(ctx, networkPolicyAllowKubeAPIServer); err != nil {
+	// TODO(rfranzke): Remove this in a future release.
+	if err := kubernetesutils.DeleteObject(ctx, k.client.Client(), networkPolicyAllowKubeAPIServer); err != nil {
 		return err
 	}
 

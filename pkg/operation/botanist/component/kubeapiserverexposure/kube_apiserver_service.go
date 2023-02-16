@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -153,8 +154,11 @@ func (s *service) Deploy(ctx context.Context) error {
 		if s.values.enableSNI {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		}
-
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+		// TODO(rfranzke): Drop this annotation once the APIServerSNI feature gate is dropped (then API servers are only
+		//  exposed indirectly via Istio) and the NetworkPolicy controller in gardener-resource-manager is enabled for
+		//  all relevant namespaces in the seed cluster.
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, kubeapiserverconstants.Port))
 
 		obj.Labels = getLabels()
 		if s.values.gardenerManaged {
