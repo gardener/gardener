@@ -25,6 +25,7 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
@@ -72,6 +73,11 @@ func (o *options) complete() error {
 }
 
 func (o *options) validate() error {
+	// Add feature flags
+	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
+	}
+
 	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
 		return errs.ToAggregate()
 	}

@@ -35,6 +35,7 @@ config:
     APIServerSNI: true
     DefaultSeccompProfile: true
     CoreDNSQueryRewriting: true
+    IPv6SingleStack: true
     FullNetworkPoliciesInRuntimeCluster: true
   logging:
     enabled: true

@@ -131,10 +131,6 @@ func NewCommand() *cobra.Command {
 }
 
 func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.GardenletConfiguration) error {
-	// Add feature flags
-	if err := features.DefaultFeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
-		return err
-	}
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	if kubeconfig := os.Getenv("GARDEN_KUBECONFIG"); kubeconfig != "" {
