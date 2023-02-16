@@ -91,10 +91,10 @@ We will add a new feature gate `CARotation` for `gardener-apiserver` and `garden
   - Annotation increases the generation
   - Value for triggering first phase: `start-ca-rotation`
   - Value for triggering the second phase: `complete-ca-rotation`
-  - `gardener-apiserver` performs the needful validation: a user can't trigger another rotation if one is already in progress, a user can't trigger `complete-ca-rotation` if first phase has not been compeleted, etc.
+  - `gardener-apiserver` performs the needful validation: a user can't trigger another rotation if one is already in progress, a user can't trigger `complete-ca-rotation` if first phase has not been completed, etc.
 - The annotation triggers a usual shoot reconciliation (just like a kubeconfig or SSH key rotation).
 - The `gardenlet` begins the CA rotation sequence by setting the new status section `.status.credentials.caRotation` (probably in `updateShootStatusOperationStart`) and removes the annotation afterwards.
-  - Shoot reconciliation needs to be idemptotent to CA rotation phase, i.e., if a usual reconciliation or maintenance operation is triggered in between, no new CAs are generated or similar things that would interfere with the CA rotation sequence.
+  - Shoot reconciliation needs to be idempotent to CA rotation phase, i.e., if a usual reconciliation or maintenance operation is triggered in between, no new CAs are generated or similar things that would interfere with the CA rotation sequence.
 
 ### Changing the Shoot Status
 

@@ -144,7 +144,7 @@ We do expect performance and throughput to be slightly lower compared to the exi
 
 ### Availability and Failure Scenarios
 
-This solution reuses multiple instances of the envoy component used for the kube-apiserver endpoints. We assume that the availability for kube-apiservers is good enough for the cluster VPN as well.
+This solution reuses multiple instances of the envoy component used for the kube-apiserver endpoints. We assume that the availability of kube-apiservers is good enough for the cluster VPN as well.
 
 The OpenVPN client- and server pods are singleton pods in this approach and therefore are affected by potential failures and during cluster-, and control plane updates. Potential outages are only restricted to single shoot clusters and are comparable to the situation with the existing solution today.
 
@@ -168,7 +168,7 @@ The general idea of the proposal is to keep the existing cluster VPN solution mo
 
 We achieve this by tunneling the open vpn connection through a WireGuard tunnel, which is established from the shoot to the seed (note that WireGuard uses UDP as protocol). Independent of that we can also use UDP for the OpenVPN connection, but we can also stay with TCP as it was before. While this might look like a big change, it only introduces minor changes to the existing solution, but let's look at the details. In essence, the OpenVPN connection does not require a public endpoint in the shoot cluster but it uses the internal endpoint provided by the WireGuard tunnel.
 
-This is roughly depcited in this diagram. Note that the `vpn-seed` and `vpn-shoot` containers only require very little changes and are fully backwards compatible.
+This is roughly depicted in this diagram. Note that the `vpn-seed` and `vpn-shoot` containers only require very little changes and are fully backwards compatible.
 
 ![alt text](assets/WireGuardClusterVPN.png "Overview WireGuard Current Cluster VPN")
 
@@ -201,7 +201,7 @@ Kubelink addresses three challenges managing WireGuard interfaces on cluster nod
 
 On the shoot, we create the keys and acquire the WireGuard IP in the standard secret generation. The data is added as a secret to the control plane and to the shootstate. The vpn shoot deployment is extended to include the WireGuard device setup inside the vpn shoot pod network. For certain infrastructures (AWS), we need a re-advertiser to resolve the seed WireGuard endpoint and evaluate whether the IP address changed.
 
-While it is possible to configure a WireGuard device using DNS names, only IP addresses can be stored in Linux Kernel data structures. A change of a load balancer IP address can therefore not be mitigated on that level. As WireGuard dynamically adapts endpoint IP addresses, a change in load banlancer IPs is mitigated in most but not all cases. This is why a re-advertiser is required for public cloud providers such as AWS.
+While it is possible to configure a WireGuard device using DNS names, only IP addresses can be stored in Linux Kernel data structures. A change of a load balancer IP address can therefore not be mitigated on that level. As WireGuard dynamically adapts endpoint IP addresses, a change in load balancer IPs is mitigated in most but not all cases. This is why a re-advertiser is required for public cloud providers such as AWS.
 
 The load balancer exposing the OpenVPN endpoint in the shoot cluster is no longer required and therefore removed if this functionality is used.
 
