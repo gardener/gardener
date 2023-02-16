@@ -21,6 +21,8 @@ export_logs() {
   echo "> Exporting logs of kind cluster '$cluster_name'"
   kind export logs "${ARTIFACTS:-}" --name "$cluster_name" || true
 
+  export_resource_yamls_for seeds shoots etcds leases
+
   # dump logs from shoot machine pods (similar to `kind export logs`)
   while IFS= read -r namespace; do
     while IFS= read -r node; do
@@ -46,7 +48,16 @@ export_logs() {
 
 export_events_for_kind() {
   echo "> Exporting events of kind cluster '$1'"
-  export_events_for_cluster "${1}-control-plane"
+  export_events_for_cluster "$ARTIFACTS"
+}
+
+export_resource_yamls_for() {
+  mkdir -p $ARTIFACTS
+  # Loop over the resource types
+  for resource_type in "$@"; do
+    echo "> Exporting Resource '$resource_type' yaml > $ARTIFACTS/$resource_type.yaml"
+    kubectl get "$resource_type" -A -o yaml >"$ARTIFACTS/$resource_type.yaml" || true
+  done
 }
 
 export_events_for_shoots() {
@@ -65,13 +76,13 @@ export_events_for_shoots() {
       base64 -d \
         >"$shoot_kubeconfig"
 
-    KUBECONFIG="$shoot_kubeconfig" export_events_for_cluster "$shoot_id"
+    KUBECONFIG="$shoot_kubeconfig" export_events_for_cluster "$ARTIFACTS/$shoot_id"
     rm -f "$shoot_kubeconfig"
   done < <(kubectl get shoot -A -o=custom-columns=namespace:metadata.namespace,name:metadata.name,id:status.technicalID --no-headers)
 }
 
 export_events_for_cluster() {
-  local dir="$ARTIFACTS/$1/events"
+  local dir="$1/events"
   mkdir -p "$dir"
 
   while IFS= read -r namespace; do
