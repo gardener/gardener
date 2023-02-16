@@ -41,10 +41,6 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-          component: grafana
-          gardener.cloud/role: monitoring
-    - podSelector:
-        matchLabels:
           app: nginx-ingress
           component: controller
       namespaceSelector:

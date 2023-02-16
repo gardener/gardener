@@ -29,6 +29,7 @@ spec:
         component: grafana
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-loki: allowed
+        networking.resources.gardener.cloud/to-prometheus-web-tcp-9090: allowed
     spec:
       priorityClassName: gardener-system-100
       containers:

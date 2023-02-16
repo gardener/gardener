@@ -11,16 +11,6 @@ spec:
     matchLabels:
       component: grafana
       gardener.cloud/role: monitoring
-  egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          app: prometheus
-          gardener.cloud/role: monitoring
-          role: monitoring
-    ports:
-    - protocol: TCP
-      port: {{ required ".ports.prometheus is required" .Values.ports.prometheus }}
   ingress:
   - from:
     - namespaceSelector:
