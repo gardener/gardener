@@ -5,7 +5,7 @@ As a Gardener deployment grows to host hundreds (if not thousands) of clusters, 
 
 To correct this problem, the webhook remediator has been created. This extension simply checks whether a customer's webhook matches a set of rules, described [here](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L66-L180). If at least one of the rule matches, it will change 2 status constraints (`.status.constraints[].type: HibernationPossible` and `.status.constraints[].type: MaintenancePreconditionsSatisfied`) to `False` in the shoot yaml.
 
-# How to correct this error
+## How to correct this error
 In most cases, you simply need to exclude the kube-system namespace from your webhook.
 
 Example
