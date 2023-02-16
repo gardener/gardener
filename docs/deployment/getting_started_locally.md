@@ -97,7 +97,7 @@ Afterwards, the Gardener resources will be deployed into the cluster.
 You can wait for the `Seed` to be ready by running:
 
 ```bash
-kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local --timeout=5m
+./hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
 ```
 
 Alternatively, you can run `kubectl get seed local` and wait for the `STATUS` to indicate readiness:
@@ -116,7 +116,7 @@ kubectl apply -f example/provider-local/shoot.yaml
 You can wait for the `Shoot` to be ready by running:
 
 ```bash
-kubectl wait --for=condition=apiserveravailable --for=condition=controlplanehealthy --for=condition=observabilitycomponentshealthy --for=condition=everynodeready --for=condition=systemcomponentshealthy shoot local -n garden-local --timeout=10m
+NAMESPACE=garden-local ./hack/usage/wait-for.sh shoot APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
 ```
 
 Alternatively, you can run `kubectl -n garden-local get shoot local` and wait for the `LAST OPERATION` to reach `100%`:
@@ -193,7 +193,7 @@ The following steps assume that you are using the kubeconfig that points to the 
 You can wait for the `local2` `Seed` to be ready by running:
 
 ```bash
-kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
+./hack/usage/wait-for.sh seed local2 GardenletReady Bootstrapped ExtensionsReady
 ```
 
 Alternatively, you can run `kubectl get seed local2` and wait for the `STATUS` to indicate readiness:
