@@ -39,4 +39,5 @@ KUBECONFIG="$kubeconfig" GO111MODULE=on \
       -mod=vendor \
       -ldflags "$(./hack/get-build-ld-flags.sh)" \
       "$(dirname $0)"/../../cmd/gardener-admission-controller/main.go \
-      --config="$(dirname $0)"/../../dev/20-componentconfig-gardener-admission-controller.yaml
+      --config="$(dirname $0)"/../../dev/20-componentconfig-gardener-admission-controller-${IPFAMILY}.yaml
+

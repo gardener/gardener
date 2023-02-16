@@ -1,0 +1,95 @@
+---
+apiVersion: controllermanager.config.gardener.cloud/v1alpha1
+kind: ControllerManagerConfiguration
+gardenClientConnection:
+  qps: 100
+  burst: 130
+controllers:
+  bastion:
+    maxLifetime: 24h
+    concurrentSyncs: 5
+  certificateSigningRequest:
+    concurrentSyncs: 5
+  secretBinding:
+    concurrentSyncs: 5
+  seed:
+    concurrentSyncs: 5
+    syncPeriod: 10s
+  # monitorPeriod: 40s
+  # shootMonitorPeriod: 300s
+  seedExtensionsCheck:
+    concurrentSyncs: 5
+    syncPeriod: 30s
+    conditionThresholds:
+      - type: ExtensionsReady
+        duration: 1m
+  seedBackupBucketsCheck:
+    concurrentSyncs: 5
+    syncPeriod: 30s
+    conditionThresholds:
+      - type: BackupBucketsReady
+        duration: 1m
+  shootMaintenance:
+    concurrentSyncs: 5
+  # enableShootControlPlaneRestarter: true
+  # enableShootCoreAddonRestarter: true
+  shootHibernation:
+    concurrentSyncs: 5
+    triggerDeadlineDuration: 2h
+  shootQuota:
+    concurrentSyncs: 5
+    syncPeriod: 60m
+  shootReference:
+    concurrentSyncs: 5
+  shootRetry:
+    concurrentSyncs: 5
+  # retryDuration: 10m
+  project:
+    concurrentSyncs: 5
+    minimumLifetimeDays: 30
+    staleGracePeriodDays: 14
+    staleExpirationTimeDays: 90
+    staleSyncPeriod: 12h
+  # quotas:
+  # - config:
+  #     apiVersion: v1
+  #     kind: ResourceQuota
+  #     spec:
+  #       hard:
+  #         count/shoots.core.gardener.cloud: "100"
+  #         count/secretbindings.core.gardener.cloud: "10"
+  #         count/secrets: "400"
+  #   projectSelector: {}
+  event:
+    concurrentSyncs: 5
+    ttlNonShootEvents: 1h
+  managedSeedSet:
+    concurrentSyncs: 5
+  # maxShootRetries: 3
+    syncPeriod: 30m
+  controllerDeployment:
+    concurrentSyncs: 5
+  controllerRegistration:
+    concurrentSyncs: 5
+  exposureClass:
+    concurrentSyncs: 5
+leaderElection:
+  leaderElect: true
+  leaseDuration: 15s
+  renewDeadline: 10s
+  retryPeriod: 2s
+  resourceLock: leases
+  resourceNamespace: garden
+  resourceName: gardener-controller-manager-leader-election
+logLevel: info
+logFormat: text
+server:
+  healthProbes:
+    bindAddress: [::]
+    port: 2718
+  metrics:
+    bindAddress: [::]
+    port: 2719
+debugging:
+  enableProfiling: false
+  enableContentionProfiling: false
