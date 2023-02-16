@@ -170,12 +170,6 @@ function set_seed_name() {
   esac
 }
 
-function wait_until_seed_gets_upgraded() {
-  echo "Wait until seed gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  kubectl wait seed $1 --timeout=5m \
-    --for=jsonpath='{.status.gardener.version}'=$GARDENER_NEXT_RELEASE && condition=gardenletready && condition=extensionsready && condition=bootstrapped
-}
-
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 set_cluster_name
@@ -203,7 +197,13 @@ make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDE
 
 echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
 upgrade_to_next_release
-wait_until_seed_gets_upgraded "$SEED_NAME"
+
+echo "Wait until seed '$SEED_NAME' gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
+kubectl wait seed $SEED_NAME --timeout=5m --for=jsonpath="{.status.gardener.version}=$GARDENER_NEXT_RELEASE"
+# TIMEOUT has been increased to 1200 (20 minutes) due to the upgrading of Gardener for seed.
+# In a single-zone setup, 2 istio-ingressgateway pods will be running, and it will take 9 minutes to complete the rollout.
+# In a multi-zone setup, 6 istio-ingressgateway pods will be running, and it will take 18 minutes to complete the rollout.
+TIMEOUT=1200 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 echo "Running gardener post-upgrade tests"
 make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
