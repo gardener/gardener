@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -39,10 +40,14 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
@@ -61,14 +66,16 @@ func TestCare(t *testing.T) {
 const testID = "shoot-care-controller-test"
 
 var (
-	ctx = context.Background()
-	log logr.Logger
+	ctx       = context.Background()
+	log       logr.Logger
+	fakeClock *testclock.FakeClock
 
-	restConfig    *rest.Config
-	testEnv       *gardenerenvtest.GardenerTestEnvironment
-	testClient    client.Client
-	testClientSet kubernetes.Interface
-	mgrClient     client.Client
+	restConfig     *rest.Config
+	testEnv        *gardenerenvtest.GardenerTestEnvironment
+	testClient     client.Client
+	testClientSet  kubernetes.Interface
+	shootClientMap clientmap.ClientMap
+	mgrClient      client.Client
 
 	testRunID     string
 	testNamespace *corev1.Namespace
@@ -184,9 +191,13 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
+	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: testNamespace.Name}}), testClientSet).Build()
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
+
 	By("Register controller")
 	Expect((&care.Reconciler{
-		SeedClientSet: testClientSet,
+		SeedClientSet:  testClientSet,
+		ShootClientMap: shootClientMap,
 		Config: config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				ShootCare: &config.ShootCareControllerConfiguration{
@@ -201,6 +212,7 @@ var _ = BeforeSuite(func() {
 				},
 			},
 		},
+		Clock:    fakeClock,
 		SeedName: seedName,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
