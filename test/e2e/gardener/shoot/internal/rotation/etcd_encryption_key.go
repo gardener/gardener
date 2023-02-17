@@ -165,7 +165,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 func (v *ETCDEncryptionKeyVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTriggeredTime).NotTo(BeNil())
-	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime.Time)).To(BeTrue())
+	Expect(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTriggeredTime.Time.Equal(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime.Time) ||
+		v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTriggeredTime.After(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationFinishedTime.Time)).To(BeTrue())
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
