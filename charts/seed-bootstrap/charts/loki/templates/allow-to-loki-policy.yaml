@@ -1,3 +1,4 @@
+{{- if ne .Values.clusterType "shoot" }}
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
@@ -22,3 +23,4 @@ spec:
   policyTypes:
   - Egress
   ingress: []
+{{- end }}
