@@ -74,7 +74,7 @@ const (
 	volumeNameServiceAccountKey          = "service-account-key"
 	volumeNameServiceAccountKeyBundle    = "service-account-key-bundle"
 	volumeNameStaticToken                = "static-token"
-	volumeNamePathPrefixTLSSNISecret     = "tls-sni-"
+	volumeNamePrefixTLSSNISecret         = "tls-sni-"
 	volumeNameVPNSeedClient              = "vpn-seed-client"
 	volumeNameAPIServerAccess            = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth             = "vpn-seed-tlsauth"
@@ -710,7 +710,7 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, secr
 
 	for i, sni := range k.values.SNI.TLS {
 		var (
-			volumeName      = fmt.Sprintf("%s%d", volumeNamePathPrefixTLSSNISecret, i)
+			volumeName      = fmt.Sprintf("%s%d", volumeNamePrefixTLSSNISecret, i)
 			volumeMountPath = fmt.Sprintf("%s%d", volumeMountPathPrefixTLSSNISecret, i)
 			flag            = fmt.Sprintf("--tls-sni-cert-key=%s/tls.crt,%s/tls.key", volumeMountPath, volumeMountPath)
 		)

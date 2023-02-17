@@ -289,11 +289,11 @@ type SNIConfig struct {
 	APIServerFQDN string
 	// AdvertiseAddress is the address which should be advertised by the kube-apiserver.
 	AdvertiseAddress string
-	// TLS contains information for the configuring the TLS SNI settings for the kube-apiserver.
+	// TLS contains information for configuring the TLS SNI settings for the kube-apiserver.
 	TLS []TLSSNIConfig
 }
 
-// TLSSNIConfig contains information for the configuring the TLS SNI settings for the kube-apiserver.
+// TLSSNIConfig contains information for configuring the TLS SNI settings for the kube-apiserver.
 type TLSSNIConfig struct {
 	// SecretName is the name for an existing secret containing the TLS certificate and private key. Either this or both
 	// Certificate and PrivateKey must be specified. If both is provided, SecretName is taking precedence.
