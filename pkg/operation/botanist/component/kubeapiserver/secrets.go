@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,6 +47,7 @@ const (
 	secretOIDCCABundleNamePrefix             = "kube-apiserver-oidc-cabundle"
 	secretOIDCCABundleDataKeyCaCrt           = "ca.crt"
 	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
+	secretAdmissionKubeconfigsNamePrefix     = "kube-apiserver-admission-kubeconfigs"
 
 	userNameClusterAdmin = "system:cluster-admin"
 	userNameHealthCheck  = "health-check"
@@ -53,6 +55,23 @@ const (
 
 func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
 	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: k.namespace}}
+}
+
+func (k *kubeAPIServer) reconcileSecretAdmissionKubeconfigs(ctx context.Context, secret *corev1.Secret) error {
+	secret.Data = make(map[string][]byte)
+
+	for _, plugin := range k.values.EnabledAdmissionPlugins {
+		if len(plugin.Kubeconfig) != 0 {
+			secret.Data[admissionPluginsKubeconfigFilename(plugin.Name)] = plugin.Kubeconfig
+		}
+	}
+
+	utilruntime.Must(kubernetesutils.MakeUnique(secret))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func admissionPluginsKubeconfigFilename(name string) string {
+	return strings.ToLower(name) + "-kubeconfig.yaml"
 }
 
 func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret *corev1.Secret) error {
