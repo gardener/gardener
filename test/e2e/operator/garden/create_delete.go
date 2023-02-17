@@ -54,6 +54,32 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 		waitForGardenToBeReconciled(ctx, garden)
 
+		DeferCleanup(func() {
+			By("Delete Garden")
+			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
+			defer cancel()
+
+			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
+			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
+			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
+			waitForGardenToBeDeleted(ctx, garden)
+			cleanupVolumes(ctx)
+
+			By("Verify deletion")
+			secretList := &corev1.SecretList{}
+			Expect(runtimeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+				secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+				secretsmanager.LabelKeyManagerIdentity: operatorv1alpha1.SecretManagerIdentityOperator,
+			})).To(Succeed())
+			Expect(secretList.Items).To(BeEmpty())
+
+			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+			Expect(runtimeClient.List(ctx, crdList)).To(Succeed())
+			Expect(crdList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardens.operator.gardener.cloud")})})))
+
+			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: namespace}, &appsv1.Deployment{})).To(BeNotFoundError())
+		})
+
 		By("Verify creation")
 		CEventually(ctx, func(g Gomega) {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
@@ -80,30 +106,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenKubeAPIServerService), virtualGardenKubeAPIServerService)).To(Succeed())
 			g.Expect(virtualGardenKubeAPIServerService.Status.LoadBalancer.Ingress).To(HaveLen(1))
 		}).Should(Succeed())
-
-		By("Delete Garden")
-		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
-		defer cancel()
-
-		Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
-		Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
-		Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
-		waitForGardenToBeDeleted(ctx, garden)
-		cleanupVolumes(ctx)
-
-		By("Verify deletion")
-		secretList := &corev1.SecretList{}
-		Expect(runtimeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-			secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
-			secretsmanager.LabelKeyManagerIdentity: operatorv1alpha1.SecretManagerIdentityOperator,
-		})).To(Succeed())
-		Expect(secretList.Items).To(BeEmpty())
-
-		crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-		Expect(runtimeClient.List(ctx, crdList)).To(Succeed())
-		Expect(crdList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardens.operator.gardener.cloud")})})))
-
-		Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: namespace}, &appsv1.Deployment{})).To(BeNotFoundError())
 	})
 })
 
