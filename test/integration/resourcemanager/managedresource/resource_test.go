@@ -880,6 +880,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 						deployment.Spec.Replicas = pointer.Int32(5)
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
+						patch = client.MergeFrom(managedResource.DeepCopy())
+						metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "gardener.cloud/operation", "reconcile")
+						Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
 						Eventually(func(g Gomega) int32 {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 							return *deployment.Spec.Replicas
@@ -942,6 +946,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 						patch := client.MergeFrom(deployment.DeepCopy())
 						deployment.Spec.Template = *newPodTemplateSpec
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
+
+						patch = client.MergeFrom(managedResource.DeepCopy())
+						metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "gardener.cloud/operation", "reconcile")
+						Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
 
 						Eventually(func(g Gomega) corev1.ResourceRequirements {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
