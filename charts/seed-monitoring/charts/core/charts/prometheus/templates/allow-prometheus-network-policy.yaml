@@ -39,13 +39,6 @@ spec:
           component: controller
       namespaceSelector:
         matchLabels:
-          role: kube-system
-    - podSelector:
-        matchLabels:
-          app: nginx-ingress
-          component: controller
-      namespaceSelector:
-        matchLabels:
           role: garden
     - podSelector:
         matchLabels:

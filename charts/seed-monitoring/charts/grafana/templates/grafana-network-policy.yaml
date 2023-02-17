@@ -20,13 +20,6 @@ spec:
         matchLabels:
           app: nginx-ingress
           component: controller
-    - namespaceSelector:
-        matchLabels:
-          role: kube-system
-      podSelector:
-        matchLabels:
-          app: nginx-ingress
-          component: controller
     ports:
     - protocol: TCP
       port: {{ required ".ports.grafana is required" .Values.ports.grafana }}
