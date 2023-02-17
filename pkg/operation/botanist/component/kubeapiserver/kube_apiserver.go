@@ -442,6 +442,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretNamesTLSSNI, err := k.reconcileTLSSNISecrets(ctx)
+	if err != nil {
+		return err
+	}
+
 	if k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled {
 		if err := k.reconcileServiceAccount(ctx); err != nil {
 			return err

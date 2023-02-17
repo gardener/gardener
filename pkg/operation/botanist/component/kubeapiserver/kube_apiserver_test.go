@@ -1371,6 +1371,49 @@ resources:
 				Entry("encrypting with current", true),
 				Entry("encrypting with old", false),
 			)
+
+			Context("TLS SNI", func() {
+				It("should successfully deploy the needed secret resources", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version, SNI: SNIConfig{TLS: []TLSSNIConfig{
+						{SecretName: pointer.String("foo")},
+						{Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+						{SecretName: pointer.String("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+					}}})
+
+					expectedSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-tls-sni-1", Namespace: namespace},
+						Data:       map[string][]byte{"tls.crt": []byte("foo"), "tls.key": []byte("bar")},
+					}
+					Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+					actualSecret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+					Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            expectedSecret.Name,
+							Namespace:       expectedSecret.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      expectedSecret.Data,
+					}))
+				})
+
+				It("should return an error for invalid configuration", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version, SNI: SNIConfig{TLS: []TLSSNIConfig{{}}}})
+
+					Expect(kapi.Deploy(ctx)).To(MatchError(ContainSubstring("either the name of an existing secret or both certificate and private key must be provided for TLS SNI config")))
+				})
+			})
 		})
 
 		Describe("ConfigMaps", func() {
