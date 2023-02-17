@@ -19,9 +19,13 @@ set -o errexit
 export_logs() {
   cluster_name="${1}"
   echo "> Exporting logs of kind cluster '$cluster_name'"
-  kind export logs "${ARTIFACTS:-}" --name "$cluster_name" || true
+  kind export logs "${ARTIFACTS:-}/$cluster_name" --name "$cluster_name" || true
+
+  echo "> Exporting events of kind cluster '$cluster_name' > '$ARTIFACTS/$cluster_name'"
+  export_events_for_cluster "$ARTIFACTS/$cluster_name"
 
   export_resource_yamls_for seeds shoots etcds leases
+  export_events_for_shoots
 
   # dump logs from shoot machine pods (similar to `kind export logs`)
   while IFS= read -r namespace; do
