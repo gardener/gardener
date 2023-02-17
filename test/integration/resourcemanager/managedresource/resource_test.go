@@ -985,6 +985,49 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 		})
 	})
+
+	Describe("Immutable resources", func() {
+		It("should fail to apply the resource if the update is invalid", func() {
+			newData := map[string]string{
+				"foo": "bar",
+			}
+
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Status.Conditions
+			}).Should(
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
+			)
+
+			Expect(testClient.Delete(ctx, configMap)).To(Succeed())
+
+			configMap.Data = newData
+			configMap.Immutable = pointer.Bool(true)
+			Expect(testClient.Create(ctx, configMap)).To(Succeed())
+
+			Eventually(func(g Gomega) error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+			}).Should(Succeed())
+
+			Consistently(func(g Gomega) map[string]string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				return configMap.Data
+			}).Should(Equal(newData))
+
+			patch := client.MergeFrom(managedResource.DeepCopy())
+			metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "gardener.cloud/operation", "reconcile")
+			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(resourcesv1alpha1.ResourcesApplied),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithMessage("Forbidden: field is immutable when `immutable` is set"),
+			))
+		})
+	})
 })
 
 func secretDataForObject(obj runtime.Object, key string) map[string][]byte {
