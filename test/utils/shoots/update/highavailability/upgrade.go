@@ -141,6 +141,8 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 					Namespace: namespace,
 					Labels: map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+						// TODO(rfranzke): Drop this label in a future (after v1.65 got released).
+						v1beta1constants.LabelNetworkPolicyToShootAPIServer:                                                         v1beta1constants.LabelNetworkPolicyAllowed,
 						gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
