@@ -1118,18 +1118,7 @@ deploy:
           command:
           - bash
           - -ec
-          - |
-            echo "Wait until seed is ready"
-            for i in `seq 1 30`;
-            do
-              if kubectl get seed local 2> /dev/null; then
-                break
-              fi
-              echo "Wait until seed gets created by gardenlet"
-              sleep 2
-            done
-            kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped \
-              --for=condition=seedsystemcomponentshealthy --for=condition=backupbucketsready seed local --timeout=5m
+          - hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
     releases:
     - name: gardener-gardenlet
       chartPath: charts/gardener/gardenlet
@@ -1165,17 +1154,7 @@ profiles:
     value:
     - bash
     - -ec
-    - |
-      echo "Wait until seed is ready"
-      for i in `seq 1 30`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG get seed local2 2> /dev/null; then
-          break
-        fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
-      done
-      kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind2.yaml
@@ -1196,17 +1175,7 @@ profiles:
     value:
     - bash
     - -ec
-    - |
-      echo "Wait until seed is ready"
-      for i in `seq 1 60`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG get seed $SEED_NAME 2> /dev/null; then
-          break
-        fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
-      done
-      kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=bootstrapped seed $SEED_NAME --timeout=5m
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
@@ -1237,17 +1206,7 @@ profiles:
     value:
     - bash
     - -ec
-    - |
-      echo "Wait until seed is ready"
-      for i in `seq 1 30`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG get seed local-ha-single-zone 2> /dev/null; then
-          break
-        fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
-      done
-      kubectl --kubeconfig=$GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local-ha-single-zone --timeout=5m
+    - hack/usage/wait-for.sh seed local-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 - name: ha-multi-zone
   patches:
@@ -1259,14 +1218,4 @@ profiles:
     value:
     - bash
     - -ec
-    - |
-      echo "Wait until seed is ready"
-      for i in `seq 1 30`;
-      do
-        if kubectl --kubeconfig=$GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG get seed local-ha-multi-zone 2> /dev/null; then
-          break
-        fi
-        echo "Wait until seed gets created by gardenlet"
-        sleep 2
-      done
-      kubectl --kubeconfig=$GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local-ha-multi-zone --timeout=5m
+    - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady

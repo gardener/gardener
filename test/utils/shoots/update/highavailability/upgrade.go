@@ -145,48 +145,21 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "validator",
-							Image:   "alpine/curl",
-							Command: []string{"/bin/sh"},
-
-							//To avoid flakiness, consider downtime when curl fails consecutively back-to-back.
-							Args: []string{"-ec",
-								"echo '" +
-									"failed=0 ; threshold=2 ; " +
-									"while [ $failed -lt $threshold ] ; do  " +
-									"$(curl -k https://kube-apiserver/healthz -H \"Authorization: " + token + "\" -s -f  -o /dev/null ); " +
-									"if [ $? -gt 0 ] ; then let failed++; echo \"etcd is unhealthy and retrying\"; continue;  fi ; " +
-									"echo \"kube-apiserver is healthy\";  touch /tmp/healthy; let failed=0; " +
-									"sleep 1; done;  echo \"kube-apiserver is unhealthy\"; exit 1;" +
-									"' > test.sh && sh test.sh",
-							},
-							ReadinessProbe: &corev1.Probe{
-								InitialDelaySeconds: int32(5),
-								FailureThreshold:    int32(2),
-								PeriodSeconds:       int32(1),
-								SuccessThreshold:    int32(3),
-								ProbeHandler: corev1.ProbeHandler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"cat",
-											"/tmp/healthy",
-										},
-									},
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								InitialDelaySeconds: int32(5),
-								FailureThreshold:    int32(2),
-								PeriodSeconds:       int32(1),
-								ProbeHandler: corev1.ProbeHandler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"cat",
-											"/tmp/healthy",
-										},
-									},
-								},
-							},
+							Name:  "validator",
+							Image: "alpine/curl",
+							Command: []string{"/bin/sh", "-ec",
+								//To avoid flakiness, consider downtime when curl fails consecutively back-to-back three times.
+								"failed=0; threshold=3; " +
+									"while [ $failed -lt $threshold ]; do " +
+									"if curl -m 2 -k https://kube-apiserver/healthz -H 'Authorization: " + token + "' -s -f -o /dev/null ; then " +
+									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') INFO: kube-apiserver is healthy.; failed=0; " +
+									"else failed=$((failed+1)); " +
+									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is unhealthy and retrying.; " +
+									"fi; " +
+									"sleep 1; " +
+									"done; " +
+									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is still unhealthy after $failed attempts. Considered as downtime.; " +
+									"exit 1; "},
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,
