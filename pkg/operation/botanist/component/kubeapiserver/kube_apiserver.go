@@ -289,6 +289,27 @@ type SNIConfig struct {
 	APIServerFQDN string
 	// AdvertiseAddress is the address which should be advertised by the kube-apiserver.
 	AdvertiseAddress string
+	// TLS contains information for the configuring the TLS SNI settings for the kube-apiserver.
+	TLS []TLSSNIConfig
+}
+
+// TLSSNIConfig contains information for the configuring the TLS SNI settings for the kube-apiserver.
+type TLSSNIConfig struct {
+	// SecretName is the name for an existing secret containing the TLS certificate and private key. Either this or both
+	// Certificate and PrivateKey must be specified. If both is provided, SecretName is taking precedence.
+	SecretName *string
+	// Certificate is the TLS certificate. Either both this and PrivateKey, or SecretName must be specified. If both is
+	// provided, SecretName is taking precedence.
+	Certificate []byte
+	// PrivateKey is the TLS certificate. Either both this and Certificate, or SecretName must be specified. If both is
+	// provided, SecretName is taking precedence.
+	PrivateKey []byte
+	// DomainPatters is an optional list of domain patterns which are fully qualified domain names, possibly with
+	// prefixed wildcard segments. The domain patterns also allow IP addresses, but IPs should only be used if the
+	// apiserver has visibility to the IP address requested by a client. If no domain patterns are provided, the names
+	// of the certificate are extracted. Non-wildcard matches trump over wildcard matches, explicit domain patterns
+	// trump over extracted names.
+	DomainPatters []string
 }
 
 // New creates a new instance of DeployWaiter for the kube-apiserver.
