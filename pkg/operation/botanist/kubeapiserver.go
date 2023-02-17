@@ -106,7 +106,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	)
 
 	if apiServerConfig != nil {
-		enabledAdmissionPlugins = b.computeKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
+		enabledAdmissionPlugins = b.computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
 		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
 
 		enabledAdmissionPlugins, err = b.ensureAdmissionPluginConfig(enabledAdmissionPlugins)
@@ -138,12 +138,17 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		logging = apiServerConfig.Logging
 	}
 
+	enabledAdmissionPluginConfigs, err := b.convertToAdmissionPluginConfigs(enabledAdmissionPlugins)
+	if err != nil {
+		return nil, err
+	}
+
 	return kubeapiserver.New(
 		b.SeedClientSet,
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		kubeapiserver.Values{
-			EnabledAdmissionPlugins:             enabledAdmissionPlugins,
+			EnabledAdmissionPlugins:             enabledAdmissionPluginConfigs,
 			DisabledAdmissionPlugins:            disabledAdmissionPlugins,
 			AnonymousAuthenticationEnabled:      v1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
 			APIAudiences:                        apiAudiences,
@@ -176,7 +181,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	), nil
 }
 
-func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+func (b *Botanist) computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
 	for _, plugin := range configuredPlugins {
 		pluginOverwritesDefault := false
 
@@ -255,7 +260,20 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 
 		plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
 	}
+
 	return plugins, nil
+}
+
+func (b *Botanist) convertToAdmissionPluginConfigs(plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
+	var out []kubeapiserver.AdmissionPluginConfig
+
+	for _, plugin := range plugins {
+		out = append(out, kubeapiserver.AdmissionPluginConfig{
+			AdmissionPlugin: plugin,
+		})
+	}
+
+	return out, nil
 }
 
 func (b *Botanist) computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
