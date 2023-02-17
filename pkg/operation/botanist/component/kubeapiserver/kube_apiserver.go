@@ -492,6 +492,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretHTTPProxy,
 		secretHAVPNSeedClient,
 		secretHAVPNClientSeedTLSAuth,
+		secretNamesTLSSNI,
 	); err != nil {
 		return err
 	}

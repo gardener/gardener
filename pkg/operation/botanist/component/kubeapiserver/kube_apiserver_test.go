@@ -3377,6 +3377,50 @@ rules:
 						"--shutdown-send-retry-after=true",
 					))
 				})
+
+				It("should properly set the TLS SNI flag if necessary", func() {
+					values.SNI.TLS = []TLSSNIConfig{
+						{SecretName: pointer.String("existing-secret")},
+						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatters: []string{"foo1.com", "*.foo2.com"}},
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/0/tls.crt,/srv/kubernetes/tls-sni/0/tls.key",
+						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/1/tls.crt,/srv/kubernetes/tls-sni/1/tls.key:foo1.com,*.foo2.com",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "tls-sni-0",
+							MountPath: "/srv/kubernetes/tls-sni/0",
+							ReadOnly:  true,
+						},
+						corev1.VolumeMount{
+							Name:      "tls-sni-1",
+							MountPath: "/srv/kubernetes/tls-sni/1",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "tls-sni-0",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "existing-secret",
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "tls-sni-1",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-tls-sni-1-ec321de5",
+								},
+							},
+						},
+					))
+				})
 			})
 		})
 

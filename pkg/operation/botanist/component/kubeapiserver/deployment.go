@@ -74,6 +74,7 @@ const (
 	volumeNameServiceAccountKey          = "service-account-key"
 	volumeNameServiceAccountKeyBundle    = "service-account-key-bundle"
 	volumeNameStaticToken                = "static-token"
+	volumeNamePathPrefixTLSSNISecret     = "tls-sni-"
 	volumeNameVPNSeedClient              = "vpn-seed-client"
 	volumeNameAPIServerAccess            = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth             = "vpn-seed-tlsauth"
@@ -104,6 +105,7 @@ const (
 	volumeMountPathServiceAccountKey          = "/srv/kubernetes/service-account-key"
 	volumeMountPathServiceAccountKeyBundle    = "/srv/kubernetes/service-account-key-bundle"
 	volumeMountPathStaticToken                = "/srv/kubernetes/token"
+	volumeMountPathPrefixTLSSNISecret         = "/srv/kubernetes/tls-sni/"
 	volumeMountPathVPNSeedClient              = "/srv/secrets/vpn-client"
 	volumeMountPathAPIServerAccess            = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth             = "/srv/secrets/tlsauth"
@@ -137,6 +139,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
+	secretNamesTLSSNI []string,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -462,6 +465,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
 			return err
 		}
+		if err := k.handleTLSSNISettings(deployment, secretNamesTLSSNI); err != nil {
+			return err
+		}
 
 		if version.ConstraintK8sEqual124.Check(k.values.Version) {
 			// For kube-apiserver version 1.24 there is a deadlock that can occur during shutdown that prevents the
@@ -695,6 +701,41 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 
 	deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
+}
+
+func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, secretNames []string) error {
+	if len(k.values.SNI.TLS) != len(secretNames) {
+		return fmt.Errorf("number of TLS SNI configs and provided secret names is not equal (%d vs. %d)", len(k.values.SNI.TLS), len(secretNames))
+	}
+
+	for i, sni := range k.values.SNI.TLS {
+		var (
+			volumeName      = fmt.Sprintf("%s%d", volumeNamePathPrefixTLSSNISecret, i)
+			volumeMountPath = fmt.Sprintf("%s%d", volumeMountPathPrefixTLSSNISecret, i)
+			flag            = fmt.Sprintf("--tls-sni-cert-key=%s/tls.crt,%s/tls.key", volumeMountPath, volumeMountPath)
+		)
+
+		if len(sni.DomainPatters) > 0 {
+			flag += ":" + strings.Join(sni.DomainPatters, ",")
+		}
+
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, flag)
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: volumeMountPath,
+			ReadOnly:  true,
+		})
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretNames[i],
+				},
+			},
+		})
+	}
+
+	return nil
 }
 
 func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
