@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -39,6 +40,20 @@ var _ = Describe("NetworkPolicy", func() {
 				HaveKeyWithValue("networking.resources.gardener.cloud/from-policy-pod-label-selector", "all-scrape-targets"),
 				HaveKeyWithValue("networking.resources.gardener.cloud/from-policy-allowed-ports", `[{"protocol":"TCP","port":1234},{"protocol":"UDP","port":"foo"}]`),
 			))
+		})
+	})
+
+	Describe("#InjectNetworkPolicyNamespaceSelectors", func() {
+		It("should inject the annotation", func() {
+			obj := &corev1.Service{}
+
+			Expect(InjectNetworkPolicyNamespaceSelectors(
+				obj,
+				metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "foo", Operator: metav1.LabelSelectorOpIn, Values: []string{"bar"}}}},
+			)).Should(Succeed())
+
+			Expect(obj.Annotations).To(HaveKeyWithValue("networking.resources.gardener.cloud/namespace-selectors", `[{"matchLabels":{"foo":"bar"}},{"matchExpressions":[{"key":"foo","operator":"In","values":["bar"]}]}]`))
 		})
 	})
 

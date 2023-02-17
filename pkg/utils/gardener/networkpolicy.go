@@ -40,6 +40,18 @@ func InjectNetworkPolicyAnnotationsForScrapeTargets(service *corev1.Service, por
 	return nil
 }
 
+// InjectNetworkPolicyNamespaceSelectors injects the provided selectors into the
+// `networking.resources.gardener.cloud/namespace-selectors` annotation of the given service.
+func InjectNetworkPolicyNamespaceSelectors(service *corev1.Service, selectors ...metav1.LabelSelector) error {
+	rawSelectors, err := json.Marshal(selectors)
+	if err != nil {
+		return err
+	}
+
+	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, string(rawSelectors))
+	return nil
+}
+
 // NetworkPolicyLabel returns the network policy label for a component initiating the connection to a service with the
 // given name and TCP port.
 func NetworkPolicyLabel(serviceName string, port int) string {

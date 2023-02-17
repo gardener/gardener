@@ -712,12 +712,10 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, fmt.Sprintf(`[{"matchLabels":{"%s":"%s"}}]`, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioIngress))
+
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(metricsPort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-		}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(metricsPort), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{

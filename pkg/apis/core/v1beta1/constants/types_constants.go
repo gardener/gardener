@@ -472,7 +472,7 @@ const (
 	// which should be scraped by Prometheus.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
 	LabelNetworkPolicyScrapeTargets = "all-scrape-targets"
-	// LabelNetworkPolicyShootNamespaceAlias is constant for the alias for shoot namespaces used in NetworkPolicy
+	// LabelNetworkPolicyShootNamespaceAlias is a constant for the alias for shoot namespaces used in NetworkPolicy
 	// labels.
 	LabelNetworkPolicyShootNamespaceAlias = "all-shoots"
 
