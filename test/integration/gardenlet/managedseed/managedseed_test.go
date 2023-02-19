@@ -116,9 +116,6 @@ var _ = Describe("ManagedSeed controller test", func() {
 							Name:      "test-seed-secret",
 							Namespace: gardenNamespaceGarden.Name,
 						},
-						DNS: gardencorev1beta1.SeedDNS{
-							IngressDomain: pointer.String("someingress.example.com"),
-						},
 					},
 				},
 			},

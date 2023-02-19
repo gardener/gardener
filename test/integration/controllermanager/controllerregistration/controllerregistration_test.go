@@ -31,11 +31,13 @@ import (
 
 var _ = Describe("ControllerRegistration controller test", func() {
 	var (
-		providerType = "provider"
+		providerType    = "provider"
+		dnsProviderType = "dnsProvider"
 
-		seed          *gardencorev1beta1.Seed
-		seedNamespace *corev1.Namespace
-		seedSecret    *corev1.Secret
+		seed                   *gardencorev1beta1.Seed
+		seedNamespace          *corev1.Namespace
+		seedSecret             *corev1.Secret
+		controllerRegistration *gardencorev1beta1.ControllerRegistration
 	)
 
 	BeforeEach(func() {
@@ -49,6 +51,21 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					Region: "region",
 					Type:   providerType,
 				},
+				Ingress: &gardencorev1beta1.Ingress{
+					Domain: "seed.example.com",
+					Controller: gardencorev1beta1.IngressController{
+						Kind: "nginx",
+					},
+				},
+				DNS: gardencorev1beta1.SeedDNS{
+					Provider: &gardencorev1beta1.SeedDNSProvider{
+						Type: dnsProviderType,
+						SecretRef: corev1.SecretReference{
+							Name:      "some-secret",
+							Namespace: "some-namespace",
+						},
+					},
+				},
 				Settings: &gardencorev1beta1.SeedSettings{
 					Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
 				},
@@ -60,9 +77,6 @@ var _ = Describe("ControllerRegistration controller test", func() {
 						Pods:     pointer.String("100.128.0.0/11"),
 						Services: pointer.String("100.72.0.0/13"),
 					},
-				},
-				DNS: gardencorev1beta1.SeedDNS{
-					IngressDomain: pointer.String("someingress.example.com"),
 				},
 			},
 		}
@@ -98,12 +112,28 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			return seed.Finalizers
 		}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
+		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "ctrlreg-" + testID + "-",
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.ControllerRegistrationSpec{
+				Resources: []gardencorev1beta1.ControllerResource{{Kind: extensionsv1alpha1.DNSRecordResource, Type: dnsProviderType}},
+			},
+		}
+
+		By("Create ControllerRegistration")
+		Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
+
 		DeferCleanup(func() {
 			By("Delete Seed")
 			Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 
 			By("Delete ControllerInstallations")
 			Expect(testClient.DeleteAllOf(ctx, &gardencorev1beta1.ControllerInstallation{})).To(Or(Succeed(), BeNotFoundError()))
+
+			By("Delete ControllerRegistrations")
+			Expect(testClient.DeleteAllOf(ctx, &gardencorev1beta1.ControllerRegistration{})).To(Or(Succeed(), BeNotFoundError()))
 
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
@@ -119,29 +149,11 @@ var _ = Describe("ControllerRegistration controller test", func() {
 
 	Context("Seed", func() {
 		It("should reconcile the ControllerInstallations", func() {
-			controllerRegistration := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "ctrlreg-" + testID + "-",
-					Labels:       map[string]string{testID: testRunID},
-				},
-				Spec: gardencorev1beta1.ControllerRegistrationSpec{
-					Resources: []gardencorev1beta1.ControllerResource{{Kind: extensionsv1alpha1.DNSRecordResource, Type: providerType}},
-				},
-			}
-
-			By("Create ControllerRegistration")
-			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
-
 			By("Expect finalizer to be added to ControllerRegistration")
 			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)).To(Succeed())
 				return controllerRegistration.Finalizers
 			}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
-
-			By("Patch Seed to require DNSProvider extension")
-			patch := client.MergeFrom(seed.DeepCopy())
-			seed.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{Type: providerType}
-			Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
 
 			By("Expect ControllerInstallation be created")
 			Eventually(func(g Gomega) {
@@ -153,10 +165,8 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
 			}).Should(Succeed())
 
-			By("Patch Seed to no longer require DNSProvider extension")
-			patch = client.MergeFrom(seed.DeepCopy())
-			seed.Spec.DNS.Provider = nil
-			Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
+			By("Delete object")
+			Expect(testClient.Delete(ctx, seed)).To(Succeed())
 
 			By("Expect ControllerInstallation be deleted")
 			Eventually(func(g Gomega) {

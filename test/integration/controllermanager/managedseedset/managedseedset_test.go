@@ -17,6 +17,7 @@ package managedseedset_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -118,6 +119,21 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 					Region: "region",
 					Type:   "providerType",
 				},
+				Ingress: &gardencorev1beta1.Ingress{
+					Domain: "seed.example.com",
+					Controller: gardencorev1beta1.IngressController{
+						Kind: "nginx",
+					},
+				},
+				DNS: gardencorev1beta1.SeedDNS{
+					Provider: &gardencorev1beta1.SeedDNSProvider{
+						Type: "provider",
+						SecretRef: corev1.SecretReference{
+							Name:      "some-secret",
+							Namespace: "some-namespace",
+						},
+					},
+				},
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
@@ -126,9 +142,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 						Pods:     pointer.String("100.128.0.0/11"),
 						Services: pointer.String("100.72.0.0/13"),
 					},
-				},
-				DNS: gardencorev1beta1.SeedDNS{
-					IngressDomain: pointer.String("someingress.example.com"),
 				},
 			},
 		}
@@ -279,7 +292,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				gardenletConfig, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, true)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(gardenletConfig.SeedConfig.Spec.Provider.Type).To(Equal("providerType"))
-				g.Expect(gardenletConfig.SeedConfig.Spec.DNS.IngressDomain).To(Equal(seed.Spec.DNS.IngressDomain))
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(managedSeedSet.Status.PendingReplica).NotTo(BeNil())
 			}).Should(Succeed())

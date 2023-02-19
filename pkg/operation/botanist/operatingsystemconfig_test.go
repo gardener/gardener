@@ -104,8 +104,8 @@ var _ = Describe("operatingsystemconfig", func() {
 		botanist.SetShootState(shootState)
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Spec: gardencorev1beta1.SeedSpec{
-				DNS: gardencorev1beta1.SeedDNS{
-					IngressDomain: &ingressDomain,
+				Ingress: &gardencorev1beta1.Ingress{
+					Domain: ingressDomain,
 				},
 			},
 		})
