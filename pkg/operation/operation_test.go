@@ -51,8 +51,8 @@ var _ = Describe("operation", func() {
 		var (
 			seed = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
-					DNS: gardencorev1beta1.SeedDNS{
-						IngressDomain: &domain,
+					Ingress: &gardencorev1beta1.Ingress{
+						Domain: domain,
 					},
 				},
 			}

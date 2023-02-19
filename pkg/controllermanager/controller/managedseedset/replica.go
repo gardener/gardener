@@ -412,10 +412,7 @@ func replacePlaceholdersInShootSpec(spec *gardencorev1beta1.ShootSpec, name stri
 }
 
 func replacePlaceholdersInSeedSpec(spec *gardencorev1beta1.SeedSpec, name string) {
-	switch {
-	case spec.DNS.IngressDomain != nil:
-		spec.DNS.IngressDomain = pointer.String(strings.Replace(*spec.DNS.IngressDomain, placeholder, name, -1))
-	case spec.Ingress != nil:
+	if spec.Ingress != nil {
 		spec.Ingress.Domain = strings.Replace(spec.Ingress.Domain, placeholder, name, -1)
 	}
 }
