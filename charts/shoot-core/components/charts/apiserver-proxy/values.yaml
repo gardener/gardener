@@ -1,4 +1,4 @@
-
+# TODO(oliver-goetz): Delete this Helm chart in a future version.
 images:
   apiserver-proxy: image-repository
   apiserver-proxy-sidecar: image-repository

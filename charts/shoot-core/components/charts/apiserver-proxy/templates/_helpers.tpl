@@ -1,3 +1,4 @@
+# TODO(oliver-goetz): Delete this Helm chart in a future version.
 {{- define "apiserver-proxy.config.data" -}}
 envoy.yaml: |-
   layered_runtime:
