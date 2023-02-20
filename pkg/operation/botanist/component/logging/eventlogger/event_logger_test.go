@@ -401,8 +401,8 @@ var _ = Describe("EventLogger", func() {
 								"role":                             "logging",
 								"gardener.cloud/role":              "logging",
 								"networking.gardener.cloud/to-dns": "allowed",
-								"networking.gardener.cloud/to-shoot-apiserver":   "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":                "allowed",
+								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 							},
 						},
 						Spec: corev1.PodSpec{

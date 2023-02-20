@@ -67,14 +67,18 @@ build:
         - pkg/operation/botanist/component
         - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
+        - pkg/operation/botanist/component/etcd/constants
         - pkg/operation/botanist/component/gardensystem
         - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/kubeapiserver
+        - pkg/operation/botanist/component/kubeapiserver/constants
         - pkg/operation/botanist/component/kubeapiserverexposure
         - pkg/operation/botanist/component/kubescheduler
         - pkg/operation/botanist/component/resourcemanager
+        - pkg/operation/botanist/component/resourcemanager/constants
         - pkg/operation/botanist/component/shared
         - pkg/operation/botanist/component/vpa
+        - pkg/operation/botanist/component/vpa/constants
         - pkg/operation/botanist/component/vpnseedserver
         - pkg/operator/apis/config
         - pkg/operator/apis/config/v1alpha1

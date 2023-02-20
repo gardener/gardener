@@ -25,8 +25,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 )
 
 const (
@@ -42,9 +41,10 @@ func (k *kubeAPIServer) emptyNetworkPolicy(name string) *networkingv1.NetworkPol
 func (k *kubeAPIServer) reconcileNetworkPolicyAllowFromShootAPIServer(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
 		networkPolicy.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from Shoot's Kubernetes API Server "+
-				"to talk to pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyFromShootAPIServer,
-				v1beta1constants.LabelNetworkPolicyAllowed),
+			v1beta1constants.GardenerDescription: fmt.Sprintf("DEPRECATED: Do not use this policy anymore - label "+
+				"kube-apiserver pods with `networking.resources.gardener.cloud/to-<service-name>-tcp-<container-port>=allowed` "+
+				"instead. Allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with '%s=%s'.",
+				v1beta1constants.LabelNetworkPolicyFromShootAPIServer, v1beta1constants.LabelNetworkPolicyAllowed),
 		}
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
@@ -69,14 +69,15 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowFromShootAPIServer(ctx contex
 func (k *kubeAPIServer) reconcileNetworkPolicyAllowToShootAPIServer(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy) error {
 	var (
 		protocol = corev1.ProtocolTCP
-		port     = intstr.FromInt(Port)
+		port     = intstr.FromInt(kubeapiserverconstants.Port)
 	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
 		networkPolicy.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to "+
-				"talk to Shoot's Kubernetes API Server.", v1beta1constants.LabelNetworkPolicyToShootAPIServer,
-				v1beta1constants.LabelNetworkPolicyAllowed),
+			v1beta1constants.GardenerDescription: fmt.Sprintf("DEPRECATED: Do not use this policy anymore - label "+
+				"your pods with `networking.resources.gardener.cloud/to-kube-apiserver-tcp-443=allowed` instead. Allows "+
+				"Egress from pods labeled with '%s=%s' to talk to Shoot's Kubernetes API Server.",
+				v1beta1constants.LabelNetworkPolicyToShootAPIServer, v1beta1constants.LabelNetworkPolicyAllowed),
 		}
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
@@ -97,82 +98,6 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowToShootAPIServer(ctx context.
 			}},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
-		return nil
-	})
-	return err
-}
-
-func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy) error {
-	var (
-		protocol               = corev1.ProtocolTCP
-		portAPIServer          = intstr.FromInt(Port)
-		portEtcd               = intstr.FromInt(int(etcd.PortEtcdClient))
-		portVPNSeedServerNonHA = intstr.FromInt(vpnseedserver.EnvoyPort)
-		portVPNSeedServerHA    = intstr.FromInt(vpnseedserver.OpenVPNPort)
-	)
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
-		networkPolicy.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress to the Shoot's Kubernetes API "+
-				"Server from pods labeled with '%s=%s' and Prometheus, and Egress to etcd pods.",
-				v1beta1constants.LabelNetworkPolicyToShootAPIServer, v1beta1constants.LabelNetworkPolicyAllowed),
-		}
-
-		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: GetLabels(),
-			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{
-				{
-					// Allow connection to shoot's etcd instances.
-					To: []networkingv1.NetworkPolicyPeer{{
-						PodSelector: &metav1.LabelSelector{
-							MatchLabels: etcd.GetLabels(),
-						},
-					}},
-					Ports: []networkingv1.NetworkPolicyPort{{
-						Protocol: &protocol,
-						Port:     &portEtcd,
-					}},
-				},
-			},
-			// Allow connections from everything which needs to talk to the API server.
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						// Allow all other Pods in the Seed cluster to access it.
-						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-						// kube-apiserver can be accessed from anywhere using the LoadBalancer.
-						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-					},
-					Ports: []networkingv1.NetworkPolicyPort{{
-						Protocol: &protocol,
-						Port:     &portAPIServer,
-					}},
-				},
-			},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-		}
-
-		if k.values.VPN.Enabled {
-			portVPNSeedServer := &portVPNSeedServerNonHA
-			if k.values.VPN.HighAvailabilityEnabled {
-				portVPNSeedServer = &portVPNSeedServerHA
-			}
-
-			networkPolicy.Spec.Egress = append(networkPolicy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
-				To: []networkingv1.NetworkPolicyPeer{{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: vpnseedserver.GetLabels(),
-					},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{{
-					Protocol: &protocol,
-					Port:     portVPNSeedServer,
-				}},
-			})
-		}
-
 		return nil
 	})
 	return err

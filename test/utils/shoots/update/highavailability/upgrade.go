@@ -32,6 +32,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -138,8 +140,10 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Labels: map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+						// TODO(rfranzke): Drop this label in a future (after v1.65 got released).
+						v1beta1constants.LabelNetworkPolicyToShootAPIServer:                                                         v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -148,7 +152,7 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 							Name:  "validator",
 							Image: "alpine/curl",
 							Command: []string{"/bin/sh", "-ec",
-								//To avoid flakiness, consider downtime when curl fails consecutively back-to-back three times.
+								// To avoid flakiness, consider downtime when curl fails consecutively back-to-back three times.
 								"failed=0; threshold=3; " +
 									"while [ $failed -lt $threshold ]; do " +
 									"if curl -m 2 -k https://kube-apiserver/healthz -H 'Authorization: " + token + "' -s -f -o /dev/null ; then " +

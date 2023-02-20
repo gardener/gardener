@@ -158,7 +158,10 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove this in a future version.
-	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}})
+	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: b.Shoot.SeedNamespace}},
+	)
 }
 
 func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {

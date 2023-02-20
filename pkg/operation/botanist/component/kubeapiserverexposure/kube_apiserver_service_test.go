@@ -211,6 +211,7 @@ var _ = Describe("#Service", func() {
 				"foo": "bar",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
 				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
+				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
 			}
 		})
 
@@ -225,6 +226,7 @@ var _ = Describe("#Service", func() {
 				"networking.istio.io/exportTo": "*",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
 				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
+				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
 			}
 			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
@@ -241,6 +243,7 @@ var _ = Describe("#Service", func() {
 				"networking.istio.io/exportTo": "*",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
 				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
+				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
 			}
 			expected.Spec.Type = corev1.ServiceTypeClusterIP
 			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
@@ -257,6 +260,7 @@ var _ = Describe("#Service", func() {
 				"networking.istio.io/exportTo": "*",
 				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
 				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
+				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
 			}
 			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 		})

@@ -33,7 +33,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
@@ -45,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	etcdconstants "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -90,19 +90,7 @@ const (
 var (
 	// TimeNow is a function returning the current time exposed for testing.
 	TimeNow = time.Now
-
-	// PortEtcdPeer is the port exposed by etcd for server-to-server communication.
-	PortEtcdPeer = int32(2380)
-	// PortEtcdClient is the port exposed by etcd for client communication.
-	PortEtcdClient = int32(2379)
-	// PortBackupRestore is the client port exposed by the backup-restore sidecar container.
-	PortBackupRestore = int32(8080)
 )
-
-// ServiceName returns the service name for an etcd for the given role.
-func ServiceName(role string) string {
-	return fmt.Sprintf("etcd-%s-client", role)
-}
 
 // Interface contains functions for a etcd deployer.
 type Interface interface {
@@ -203,16 +191,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		clientNetworkPolicy = e.emptyNetworkPolicy(NetworkPolicyNameClient)
-		peerNetworkPolicy   = e.emptyNetworkPolicy(NetworkPolicyNamePeer)
-		hvpa                = e.emptyHVPA()
+		peerNetworkPolicy = e.emptyNetworkPolicy(NetworkPolicyNamePeer)
+		hvpa              = e.emptyHVPA()
 
 		replicas = e.computeReplicas(existingEtcd)
-
-		protocolTCP             = corev1.ProtocolTCP
-		intStrPortEtcdClient    = intstr.FromInt(int(PortEtcdClient))
-		intStrPortEtcdPeer      = intstr.FromInt(int(PortEtcdPeer))
-		intStrPortBackupRestore = intstr.FromInt(int(PortBackupRestore))
 
 		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources(existingSts)
 		quota                                 = resource.MustParse("8Gi")
@@ -285,46 +267,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	// Hence, it doesn't make sense if both component deployers are running this code - let's only do it for the main
 	// ETCD.
 	if e.values.Role == v1beta1constants.ETCDRoleMain {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, clientNetworkPolicy, func() error {
-			clientNetworkPolicy.Annotations = map[string]string{
-				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
-			}
-			clientNetworkPolicy.Labels = map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-			}
-			clientNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
-				MatchLabels: GetLabels(),
-			}
-			clientNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								// TODO: Replace below map with a function call to the to-be-introduced kubeapiserver package.
-								MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-									v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-									v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-								},
-							},
-						},
-					},
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Protocol: &protocolTCP,
-							Port:     &intStrPortEtcdClient,
-						},
-					},
-				},
-			}
-			clientNetworkPolicy.Spec.Egress = nil
-			clientNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
-			return nil
-		}); err != nil {
+		// TODO(rfranzke): Remove this in a future version.
+		if err := kubernetesutils.DeleteObject(ctx, e.client, e.emptyNetworkPolicy(NetworkPolicyNameClient)); err != nil {
 			return err
 		}
 
 		// create peer network policy only if there are 3 replicas
+		// TODO(rfranzke): When https://github.com/gardener/etcd-druid/pull/521 is resolved then drop this NetworkPolicy
+		//  and replace it with the new labels instead.
 		if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
 			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
 				peerNetworkPolicy.Annotations = map[string]string{
@@ -340,16 +290,16 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					{
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
-								Protocol: &protocolTCP,
-								Port:     &intStrPortEtcdClient,
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient),
 							},
 							{
-								Protocol: &protocolTCP,
-								Port:     &intStrPortBackupRestore,
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore),
 							},
 							{
-								Protocol: &protocolTCP,
-								Port:     &intStrPortEtcdPeer,
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdPeer),
 							},
 						},
 						To: []networkingv1.NetworkPolicyPeer{
@@ -372,16 +322,16 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						},
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
-								Protocol: &protocolTCP,
-								Port:     &intStrPortEtcdClient,
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient),
 							},
 							{
-								Protocol: &protocolTCP,
-								Port:     &intStrPortBackupRestore,
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore),
 							},
 							{
-								Protocol: &protocolTCP,
-								Port:     &intStrPortEtcdPeer,
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdPeer),
 							},
 						},
 					},
@@ -399,8 +349,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	clientService := &corev1.Service{}
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService,
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(int(PortEtcdClient)), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(int(PortBackupRestore)), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 	))
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
@@ -451,8 +401,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			ServerPort:              &PortEtcdPeer,
-			ClientPort:              &PortEtcdClient,
+			ServerPort:              pointer.Int32(int32(etcdconstants.PortEtcdPeer)),
+			ClientPort:              pointer.Int32(int32(etcdconstants.PortEtcdClient)),
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   &quota,
@@ -494,7 +444,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			Port:                    &PortBackupRestore,
+			Port:                    pointer.Int32(int32(etcdconstants.PortBackupRestore)),
 			Resources:               resourcesBackupRestore,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
 			GarbageCollectionPeriod: &garbageCollectionPeriod,
@@ -743,7 +693,7 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 		podsList.Items[0].GetName(),
 		containerNameBackupRestore,
 		"/bin/sh",
-		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full?final=true", e.values.Role, PortBackupRestore),
+		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full?final=true", e.values.Role, etcdconstants.PortBackupRestore),
 	)
 	return err
 }

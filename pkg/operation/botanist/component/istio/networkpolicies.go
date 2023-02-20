@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -228,7 +228,7 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(kubeapiserver.Port),
+								Port:     utils.IntStrPtrFromInt(kubeapiserverconstants.Port),
 							}},
 						}},
 					}
@@ -236,6 +236,7 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 				}
 			},
 		},
+		// TODO(rfranzke): Delete this network policy in a future release.
 		{
 			name: "allow-to-shoot-vpn-seed-server",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {

@@ -29,7 +29,7 @@ spec:
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-private-networks: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
-        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed
 {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
 {{- end }}

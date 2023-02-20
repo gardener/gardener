@@ -41,8 +41,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -147,7 +149,6 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	istioNamespaceFunc func() string,
-	istioLabelsFunc func() map[string]string,
 	values Values,
 ) Interface {
 	return &vpnSeedServer{
@@ -156,7 +157,6 @@ func New(
 		secretsManager:     secretsManager,
 		values:             values,
 		istioNamespaceFunc: istioNamespaceFunc,
-		istioLabelsFunc:    istioLabelsFunc,
 	}
 }
 
@@ -168,7 +168,6 @@ type vpnSeedServer struct {
 	values             Values
 	secrets            Secrets
 	istioNamespaceFunc func() string
-	istioLabelsFunc    func() map[string]string
 }
 
 func (v *vpnSeedServer) GetValues() Values {
@@ -235,15 +234,15 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := v.deployNetworkPolicy(ctx); err != nil {
+	// TODO(rfranzke): Delete this in a future release.
+	if err := kubernetesutils.DeleteObject(ctx, v.client, v.emptyNetworkPolicy()); err != nil {
 		return err
 	}
 
 	podTemplate := v.podTemplate(configMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth)
 	labels := map[string]string{
-		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.LabelApp:                             DeploymentName,
-		v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		v1beta1constants.LabelApp:   DeploymentName,
 	}
 
 	if v.values.HighAvailabilityEnabled {
@@ -301,6 +300,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 				v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
 				v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 				v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -712,10 +712,10 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(metricsPort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-		}))
+
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(metricsPort), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
@@ -784,71 +784,6 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 				Tls: &istionetworkingv1beta1.ClientTLSSettings{
 					Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
 				},
-			},
-		}
-		return nil
-	})
-	return err
-}
-
-func (v *vpnSeedServer) deployNetworkPolicy(ctx context.Context) error {
-	var (
-		networkPolicy = v.emptyNetworkPolicy()
-		igwSelectors  = v.getIngressGatewaySelectors()
-	)
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, networkPolicy, func() error {
-		networkPolicy.ObjectMeta.Annotations = map[string]string{
-			v1beta1constants.GardenerDescription: "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
-		}
-		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: GetLabels(),
-			},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-									v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-									v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-								},
-							},
-						},
-					},
-				},
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							// we don't want to modify existing labels on the istio namespace
-							NamespaceSelector: &metav1.LabelSelector{},
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: igwSelectors,
-							},
-						},
-					},
-				},
-			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{
-				{
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-									v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-									v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-								},
-							},
-						},
-					},
-				},
-			},
-			PolicyTypes: []networkingv1.PolicyType{
-				networkingv1.PolicyTypeIngress,
-				networkingv1.PolicyTypeEgress,
 			},
 		}
 		return nil
@@ -973,12 +908,7 @@ func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
 	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioNamespaceFunc()}}
 }
 
-func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
-	return v.istioLabelsFunc()
-}
-
-// GetLabels returns the labels for the vpn-seed-server
-func GetLabels() map[string]string {
+func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.LabelApp:   DeploymentName,

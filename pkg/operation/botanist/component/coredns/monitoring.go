@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 )
 
 const (
@@ -88,7 +88,7 @@ authorization:
 honor_labels: false
 kubernetes_sd_configs:
 - role: endpoints
-  api_server: https://` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
+  api_server: https://` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserverconstants.Port) + `
   tls_config:
     ca_file: /etc/prometheus/seed/ca.crt
   authorization:
@@ -105,7 +105,7 @@ relabel_configs:
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod
 - target_label: __address__
-  replacement: ` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
+  replacement: ` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserverconstants.Port) + `
 - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_port_number]
   regex: (.+);(.+)
   target_label: __metrics_path__

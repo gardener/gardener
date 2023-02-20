@@ -24,9 +24,11 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
+{{- if ne .Values.clusterType "shoot" }}
     - podSelector:
         matchLabels:
           networking.gardener.cloud/to-loki: allowed
+{{- end }}
     ports:
     - protocol: TCP
       port: {{ .Values.service.port }}
@@ -35,13 +37,6 @@ spec:
     - namespaceSelector:
         matchLabels:
           role: garden
-      podSelector:
-        matchLabels:
-          app: nginx-ingress
-          component: controller
-    - namespaceSelector:
-        matchLabels:
-          role: kube-system
       podSelector:
         matchLabels:
           app: nginx-ingress

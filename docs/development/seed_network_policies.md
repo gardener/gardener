@@ -40,6 +40,7 @@ These policies are the same for every Shoot control plane.
 ```
 NAME                              POD-SELECTOR      
 # Pods that need to access the Shoot API server. Used by all Kubernetes control plane components.
+# deprecated. Use networking.resources.gardener.cloud/to-kube-apiserver-tcp-443=allowed instead
 allow-to-shoot-apiserver          networking.gardener.cloud/to-shoot-apiserver=allowed
 
 # allows access to kube-dns/core-dns pods for DNS queries                       

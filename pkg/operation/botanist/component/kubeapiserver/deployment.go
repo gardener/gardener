@@ -32,9 +32,14 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
+	resourcemanagerconstants "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/constants"
+	vpaconstants "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -207,9 +212,13 @@ func (k *kubeAPIServer) reconcileDeployment(
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:                                                                                   v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToPublicNetworks:                                                                        v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(resourcemanagerconstants.ServiceName, resourcemanagerconstants.ServerPort):                v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(vpaconstants.AdmissionControllerServiceName, vpaconstants.AdmissionControllerPort):        v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient):   v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient): v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
@@ -228,7 +237,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",
-							ContainerPort: Port,
+							ContainerPort: kubeapiserverconstants.Port,
 							Protocol:      corev1.ProtocolTCP,
 						}},
 						Resources: k.values.Autoscaling.APIServerResources,
@@ -237,7 +246,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/livez",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(Port),
+									Port:   intstr.FromInt(kubeapiserverconstants.Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
 										Value: "Bearer " + healthCheckToken,
@@ -255,7 +264,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(Port),
+									Port:   intstr.FromInt(kubeapiserverconstants.Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
 										Value: "Bearer " + healthCheckToken,
@@ -502,8 +511,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--etcd-cafile=%s/%s", volumeMountPathCAEtcd, secrets.DataKeyCertificateBundle))
 	out = append(out, fmt.Sprintf("--etcd-certfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--etcd-keyfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyPrivateKey))
-	out = append(out, fmt.Sprintf("--etcd-servers=https://%s:%d", etcd.ServiceName(v1beta1constants.ETCDRoleMain), etcd.PortEtcdClient))
-	out = append(out, fmt.Sprintf("--etcd-servers-overrides=/events#https://%s:%d", etcd.ServiceName(v1beta1constants.ETCDRoleEvents), etcd.PortEtcdClient))
+	out = append(out, fmt.Sprintf("--etcd-servers=https://%s:%d", etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient))
+	out = append(out, fmt.Sprintf("--etcd-servers-overrides=/events#https://%s:%d", etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
 	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
 
@@ -560,7 +569,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.ServiceNetworkCIDR))
-	out = append(out, fmt.Sprintf("--secure-port=%d", Port))
+	out = append(out, fmt.Sprintf("--secure-port=%d", kubeapiserverconstants.Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
 	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey))
@@ -728,11 +737,18 @@ func (k *kubeAPIServer) handleVPNSettings(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
 	}
 
+	var portVPNSeedServer int
 	if k.values.VPN.HighAvailabilityEnabled {
 		k.handleVPNSettingsHA(deployment, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		portVPNSeedServer = vpnseedserver.OpenVPNPort
 	} else {
 		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxy, configMapEgressSelector)
+		portVPNSeedServer = vpnseedserver.EnvoyPort
 	}
+
+	deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
+		gardenerutils.NetworkPolicyLabel(vpnseedserver.ServiceName, portVPNSeedServer): v1beta1constants.LabelNetworkPolicyAllowed,
+	})
 
 	return nil
 }
