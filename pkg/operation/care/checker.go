@@ -272,11 +272,11 @@ func defaultSuccessfulCheck() func(condition gardencorev1beta1.Condition) bool {
 	}
 }
 
-func resourcesNotProgressingCheck(clock clock.Clock, theshold *metav1.Duration) func(condition gardencorev1beta1.Condition) bool {
+func resourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration) func(condition gardencorev1beta1.Condition) bool {
 	return func(condition gardencorev1beta1.Condition) bool {
 		notProgressing := condition.Status != gardencorev1beta1.ConditionTrue && condition.Status != gardencorev1beta1.ConditionUnknown
 
-		if theshold != nil && !notProgressing && clock.Since(condition.LastTransitionTime.Time) < theshold.Duration {
+		if threshold != nil && !notProgressing && clock.Since(condition.LastTransitionTime.Time) < threshold.Duration {
 			// ManagedResource is progressing but the given threshold didn't pass.
 			// Hence, return that the ManagedResource is not progressing.
 			return true
