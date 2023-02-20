@@ -65,7 +65,7 @@ Each project member must have at least one role (currently described in `.spec.m
 
 The [project controller](../concepts/controller-manager.md#project-controller) inside the Gardener Controller Manager is managing RBAC resources that grant the described privileges to the respective members.
 
-There are three central `ClusterRole`s `gardener.cloud:system:project-member`, `gardener.cloud:system:project-viewer` and `gardener.cloud:system:project-serviceaccountmanager` that grant the permissions for namespaced resources (e.g., `Secret`s, `Shoot`s, `ServiceAccount`s, etc.).
+There are three central `ClusterRole`s `gardener.cloud:system:project-member`, `gardener.cloud:system:project-viewer` and `gardener.cloud:system:project-serviceaccountmanager` that grant the permissions for namespaced resources (e.g., `Secret`s, `Shoot`s, `ServiceAccount`s).
 Via referring `RoleBinding`s created in the respective namespace the project members get bound to these `ClusterRole`s and, thus, the needed permissions.
 There are also project-specific `ClusterRole`s granting the permissions for cluster-scoped resources, e.g. the `Namespace` or `Project` itself.  
 For each role, the following `ClusterRole`s, `ClusterRoleBinding`s, and `RoleBinding`s are created:

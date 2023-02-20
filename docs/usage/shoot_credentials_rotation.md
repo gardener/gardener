@@ -84,7 +84,7 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 ### Certificate Authorities
 
 Gardener generates several certificate authorities (CAs) to ensure secured communication between the various components and actors.
-Most of those CAs are used for internal communication (e.g., `kube-apiserver` talks to etcd, `vpn-shoot` talks to the `vpn-seed-server`, `kubelet` talks to `kube-apiserver` etc.).
+Most of those CAs are used for internal communication (e.g., `kube-apiserver` talks to etcd, `vpn-shoot` talks to the `vpn-seed-server`, `kubelet` talks to `kube-apiserver`).
 However, there is also the "cluster CA" which is part of all `kubeconfig`s and used to sign the server certificate exposed by the `kube-apiserver`.
 
 Gardener populates a `Secret` with name `<shoot-name>.ca-cluster` in the project namespace in the garden cluster which contains the following data keys:

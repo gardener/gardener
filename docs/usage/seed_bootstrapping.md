@@ -56,4 +56,4 @@ This is exactly the situation in which the DWD will become active:
 If it detects that a certain `Service` is available again (e.g., after the `etcd` was temporarily down while being moved to another seed node) then DWD will restart all crash-looping dependant pods.
 These dependant pods are detected via a pre-configured label selector.
 
-As of today, the DWD is configured to restart a crash-looping `kube-apiserver` after `etcd` became available again, or any pod depending on the `kube-apiserver` that has a `gardener.cloud/role=controlplane` label (e.g., `kube-controller-manager`, `kube-scheduler`, etc.).
+As of today, the DWD is configured to restart a crash-looping `kube-apiserver` after `etcd` became available again, or any pod depending on the `kube-apiserver` that has a `gardener.cloud/role=controlplane` label (e.g., `kube-controller-manager`, `kube-scheduler`).

@@ -21,7 +21,7 @@ For historical reasons, you will find different kinds of Kubernetes clients in G
 ### Client-Go Clients
 
 [client-go](https://github.com/kubernetes/client-go) is the default/official client for talking to the Kubernetes API in Golang.
-It features the so called ["client sets"](https://github.com/kubernetes/client-go/blob/release-1.21/kubernetes/clientset.go#L72) for all built-in Kubernetes API groups and versions (e.g. `v1` (aka `core/v1`), `apps/v1`, etc.).
+It features the so called ["client sets"](https://github.com/kubernetes/client-go/blob/release-1.21/kubernetes/clientset.go#L72) for all built-in Kubernetes API groups and versions (e.g. `v1` (aka `core/v1`), `apps/v1`).
 client-go clients are generated from the built-in API types using [client-gen](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/generating-clientset.md) and are composed of interfaces for every known API GroupVersionKind.
 A typical client-go usage looks like this:  
 ```go
@@ -294,7 +294,7 @@ However, in any case, retrying on conflict is probably not the right option to s
 As explained before, conflicts are actually important and prevent clients from doing wrongful concurrent updates. This means that conflicts are not something we generally want to avoid or ignore.
 However, in many cases controllers are exclusive owners of the fields they want to update and thus it might be safe to run without optimistic locking.
 
-For example, the gardenlet is the exclusive owner of the `spec` section of the Extension resources it creates on behalf of a Shoot (e.g., the `Infrastructure` resource for creating VPC, etc.). Meaning, it knows the exact desired state and no other actor is supposed to update the Infrastructure's `spec` fields.
+For example, the gardenlet is the exclusive owner of the `spec` section of the Extension resources it creates on behalf of a Shoot (e.g., the `Infrastructure` resource for creating VPC). Meaning, it knows the exact desired state and no other actor is supposed to update the Infrastructure's `spec` fields.
 When the gardenlet now updates the Infrastructures `spec` section as part of the Shoot reconciliation, it can simply issue a `PATCH` request that only updates the `spec` and runs without optimistic locking.
 If another controller concurrently updated the object in the meantime (e.g., the `status` section), the `resourceVersion` got changed, which would cause a conflict error if running with optimistic locking.
 However, concurrent `status` updates would not change the gardenlet's mind on the desired `spec` of the Infrastructure resource as it is determined only by looking at the Shoot's specification.

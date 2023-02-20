@@ -27,7 +27,7 @@ When enabling the plugins, there is one additional step for each before the `gar
 ![Flow Diagram](content/gardenlet_api_access_flow.png)
 
 Please note that the example shows a request to an object (`Shoot`) residing in one of the API groups served by `gardener-apiserver`.
-However, the `gardenlet` is also interacting with objects in API groups served by the `kube-apiserver` (e.g., `Secret`,`ConfigMap`, etc.).
+However, the `gardenlet` is also interacting with objects in API groups served by the `kube-apiserver` (e.g., `Secret`,`ConfigMap`).
 In this case, the consultation of the `SeedRestriction` admission plugin is performed by the `kube-apiserver` itself before it forwards the request to the `gardener-apiserver`.
 
 Today, the following rules are implemented:

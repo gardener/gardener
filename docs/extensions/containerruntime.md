@@ -42,7 +42,7 @@ Gardener would deploy four `ContainerRuntime` resources. For `worker-one`: one `
 
 ## Supporting a New Container Runtime Provider
 
-To add support for another container runtime (e.g., gvisor, kata-containers, etc.), a container runtime extension controller needs to be implemented. It should support Gardener's supported CRI plugins.
+To add support for another container runtime (e.g., gvisor, kata-containers), a container runtime extension controller needs to be implemented. It should support Gardener's supported CRI plugins.
 
 The container runtime extension should install the necessary resources into the shoot cluster (e.g., `RuntimeClass`es), and it should copy the runtime binaries to the relevant worker machines in path: `spec.binaryPath`. 
 Gardener labels the shoot nodes according to the CRI configured: `worker.gardener.cloud/cri-name=<value>` (e.g `worker.gardener.cloud/cri-name=containerd`) and multiple labels for each of the container runtimes configured for the shoot Worker machine:

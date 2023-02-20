@@ -535,7 +535,7 @@ Please see [Test Machinery Tests](testmachinery_tests.md).
   - Testing against real infrastructure can cause flakes sometimes (e.g., in outage situations).
   - Failures are hard to debug, because clusters are deleted after the test (for obvious cost reasons).
   - Bugs can only be caught, once it's "too late", i.e., when code is merged and deployed.
-- Today, test machinery tests cover a bigger "test matrix" (e.g., Shoot creation across infrastructures, kubernetes versions, machine image versions, etc.).
+- Today, test machinery tests cover a bigger "test matrix" (e.g., Shoot creation across infrastructures, kubernetes versions, machine image versions).
 - Test machinery also runs Kubernetes conformance tests.
 - However, because of the listed drawbacks, we should rather focus on augmenting our e2e tests, as we can run them locally and in CI in order to catch bugs before they get merged.
 - It's still a good idea to add test machinery tests if a feature that is depending on some installation-specific configuration needs to be tested.

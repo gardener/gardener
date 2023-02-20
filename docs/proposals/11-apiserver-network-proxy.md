@@ -27,7 +27,7 @@ reviewers:
 
 ## Problem
 
-Gardener's architecture for Kubernetes clusters relies on having the control-plane (e.g., kube-apiserver, kube-scheduler, kube-controller-manager, etc.) and the data-plane  (e.g., kube-proxy, kubelet, etc.) of the cluster residing in separate places, this provides many benefits but poses some challenges, especially when API-server to system components communication is required. This problem is solved today in Gardener by [making use of OpenVPN](https://github.com/gardener/vpn) to establish a VPN connection from the seed to the shoot. To do so, the following steps are required:
+Gardener's architecture for Kubernetes clusters relies on having the control-plane (e.g., kube-apiserver, kube-scheduler, kube-controller-manager) and the data-plane  (e.g., kube-proxy, kubelet) of the cluster residing in separate places, this provides many benefits but poses some challenges, especially when API-server to system components communication is required. This problem is solved today in Gardener by [making use of OpenVPN](https://github.com/gardener/vpn) to establish a VPN connection from the seed to the shoot. To do so, the following steps are required:
 
 - Create a Loadbalancer service on the shoot.
 - Add a sidecar to the API server pod which knows the address of the newly created Loadbalancer.
@@ -65,7 +65,7 @@ To solve this issue, we can utilize the [apiserver-network-proxy](https://github
 The initial motivation for the apiserver-network-proxy project is to get rid of provider-specific implementations that reside in the API-server (e.g., SSH), but it turns out that
 it has other interesting use-cases such as data-plane connection decoupling, which is the main use-case for this proposal.
 
-Starting with **Kubernetes 1.18**, it's possible to make use of an `--egress-selector-config-file` flag, this helps point the API-server to traffic hook points based on traffic direction. For example, in the config below the API server would have to forward all cluster related traffic (e.g., logs, port-forward, exec, etc.) to the **proxy-server**, which then knows how to forward traffic to the shoot. For the rest of the traffic, e.g., API server to ETCD or other control-plane components, `direct` is used which means legacy routing method, i.e., bypass the proxy.
+Starting with **Kubernetes 1.18**, it's possible to make use of an `--egress-selector-config-file` flag, this helps point the API-server to traffic hook points based on traffic direction. For example, in the config below the API server would have to forward all cluster related traffic (e.g., logs, port-forward, exec) to the **proxy-server**, which then knows how to forward traffic to the shoot. For the rest of the traffic, e.g., API server to ETCD or other control-plane components, `direct` is used which means legacy routing method, i.e., bypass the proxy.
 ```yaml
   egress-selector-configuration.yaml: |-
     apiVersion: apiserver.k8s.io/v1alpha1

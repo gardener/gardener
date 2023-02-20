@@ -1,6 +1,6 @@
 # Secrets Management for Seed and Shoot Cluster
 
-The gardenlet needs to create quite some amount of credentials (certificates, private keys, passwords, etc.) for seed and shoot clusters in order to ensure secure deployments.
+The gardenlet needs to create quite some amount of credentials (certificates, private keys, passwords) for seed and shoot clusters in order to ensure secure deployments.
 Such credentials typically should be renewed automatically when their validity expires, rotated regularly, and they potentially need to be persisted such that they don't get lost in case of a control plane migration or a lost seed cluster.
 
 ## SecretsManager Introduction
