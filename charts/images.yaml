@@ -230,6 +230,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'high'
       availability_requirement: 'high'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-core-networking-maintainers'
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: registry.k8s.io/dns/k8s-dns-node-cache
@@ -243,6 +247,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'high'
       availability_requirement: 'high'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-core-networking-maintainers'
 - name: node-problem-detector
   sourceRepository: github.com/kubernetes/node-problem-detector
   repository: registry.k8s.io/node-problem-detector/node-problem-detector
@@ -529,6 +537,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'high'
       availability_requirement: 'high'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-core-networking-maintainers'
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
@@ -542,6 +554,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'high'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-core-networking-maintainers'
 
 # External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server
@@ -563,6 +579,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'high'
       availability_requirement: 'high'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-core-networking-maintainers'
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
