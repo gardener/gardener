@@ -22,6 +22,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,7 +41,9 @@ import (
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -60,6 +63,88 @@ var _ = Describe("ResourceManager", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
+	})
+
+	Describe("#DefaultResourceManager", func() {
+		var (
+			k8sSeedClient kubernetes.Interface
+		)
+
+		BeforeEach(func() {
+			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithVersion("v1.26.1").Build()
+			botanist.SeedClientSet = k8sSeedClient
+
+			botanist.Seed = &seedpkg.Seed{}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
+			botanist.Shoot = &shootpkg.Shoot{}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+		})
+
+		It("should successfully create a resource-manager component", func() {
+			botanist.ImageVector = imagevector.ImageVector{
+				{Name: "gardener-resource-manager"},
+			}
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return an error because the gardener-resource-manager image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{}
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).To(BeNil())
+			Expect(err).To(HaveOccurred())
+		})
+
+		DescribeTable("should correctly set topology-aware routing value",
+			func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
+				botanist.ImageVector = imagevector.ImageVector{
+					{Name: "gardener-resource-manager"},
+				}
+
+				botanist.Seed.SetInfo(seed)
+				botanist.Shoot.SetInfo(shoot)
+
+				resourceManager, err := botanist.DefaultResourceManager()
+				Expect(resourceManager).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+				values := resourceManager.GetValues()
+				Expect(values.TopologyAwareRoutingEnabled).To(matcher)
+			},
+
+			Entry("seed setting is nil, shoot control plane is not HA",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+				BeFalse(),
+			),
+			Entry("seed setting is disabled, shoot control plane is not HA",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+				BeFalse(),
+			),
+			Entry("seed setting is enabled, shoot control plane is not HA",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+				BeFalse(),
+			),
+			Entry("seed setting is nil, shoot control plane is HA with failure tolerance type 'zone'",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+				BeFalse(),
+			),
+			Entry("seed setting is disabled, shoot control plane is HA with failure tolerance type 'zone'",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+				BeFalse(),
+			),
+			Entry("seed setting is enabled, shoot control plane is HA with failure tolerance type 'zone'",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+				BeTrue(),
+			),
+		)
 	})
 
 	Describe("#DeployGardenerResourceManager", func() {

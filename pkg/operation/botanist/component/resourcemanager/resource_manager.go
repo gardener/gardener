@@ -214,6 +214,8 @@ type Interface interface {
 	SetReplicas(*int32)
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
+	// GetValues returns the current configuration values of the deployer.
+	GetValues() Values
 }
 
 // New creates a new instance of the gardener-resource-manager.
@@ -298,6 +300,9 @@ type Values struct {
 	FailureToleranceType *gardencorev1beta1.FailureToleranceType
 	// Zones is number of availability zones.
 	Zones []string
+	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the gardener-resource-manager service.
+	// This value is only applicable for the GRM that is deployed in the Shoot control plane (when TargetDiffersFromSourceCluster=true).
+	TopologyAwareRoutingEnabled bool
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -682,6 +687,14 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 			Port:     utils.IntStrPtrFromInt(metricsPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
+
+		if r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster {
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, corev1.AnnotationTopologyAwareHints, "auto")
+			metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
+		} else {
+			delete(service.Annotations, corev1.AnnotationTopologyAwareHints)
+			// No need to delete the consider label as the labels are overwritten few lines above.
+		}
 
 		service.Spec.Selector = appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -1913,6 +1926,9 @@ func (r *resourceManager) SetReplicas(replicas *int32) { r.values.Replicas = rep
 
 // SetSecrets sets the secrets for the gardener-resource-manager.
 func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
+
+// GetValues returns the current configuration values of the deployer.
+func (r *resourceManager) GetValues() Values { return r.values }
 
 // Secrets is collection of secrets for the gardener-resource-manager.
 type Secrets struct {
