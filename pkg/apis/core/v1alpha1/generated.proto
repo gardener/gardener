@@ -2216,6 +2216,13 @@ message SeedSettingScheduling {
   optional bool visible = 1;
 }
 
+// SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
+// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+message SeedSettingTopologyAwareRouting {
+  // Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
+  optional bool enabled = 1;
+}
+
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
 // seed.
 message SeedSettingVerticalPodAutoscaler {
@@ -2250,6 +2257,11 @@ message SeedSettings {
   // DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
   // +optional
   optional SeedSettingDependencyWatchdog dependencyWatchdog = 7;
+
+  // TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+  // +optional
+  optional SeedSettingTopologyAwareRouting topologyAwareRouting = 8;
 }
 
 // SeedSpec is the specification of a Seed.
