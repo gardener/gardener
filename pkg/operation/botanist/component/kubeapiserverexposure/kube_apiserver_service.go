@@ -54,16 +54,19 @@ type ServiceValues struct {
 	AnnotationsFunc func() map[string]string
 	// SNIPhase is the current status of the SNI configuration.
 	SNIPhase component.Phase
+	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
+	TopologyAwareRoutingEnabled bool
 }
 
 // serviceValues configure the kube-apiserver service.
 // this one is not exposed as not all values should be configured
 // from the outside.
 type serviceValues struct {
-	annotationsFunc func() map[string]string
-	serviceType     corev1.ServiceType
-	enableSNI       bool
-	gardenerManaged bool
+	annotationsFunc             func() map[string]string
+	serviceType                 corev1.ServiceType
+	enableSNI                   bool
+	gardenerManaged             bool
+	topologyAwareRoutingEnabled bool
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -124,6 +127,7 @@ func NewService(
 		}
 
 		internalValues.annotationsFunc = values.AnnotationsFunc
+		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 	}
 
 	return &service{
@@ -174,9 +178,19 @@ func (s *service) Deploy(ctx context.Context) error {
 				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
 		}
 
+		if s.values.topologyAwareRoutingEnabled {
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, corev1.AnnotationTopologyAwareHints, "auto")
+		} else {
+			delete(obj.Annotations, corev1.AnnotationTopologyAwareHints)
+		}
+
 		obj.Labels = getLabels()
 		if s.values.gardenerManaged {
 			metav1.SetMetaDataLabel(&obj.ObjectMeta, v1beta1constants.LabelAPIServerExposure, v1beta1constants.LabelAPIServerExposureGardenerManaged)
+		}
+		if s.values.topologyAwareRoutingEnabled {
+			metav1.SetMetaDataLabel(&obj.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
+			// No need to delete the consider label when topologyAwareRoutingEnabled=false as the labels are overwritten few lines above.
 		}
 
 		obj.Spec.Type = s.values.serviceType

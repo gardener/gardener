@@ -274,6 +274,51 @@ var _ = Describe("#Service", func() {
 
 		assertEnabledSNI()
 	})
+
+	Describe("#Deploy", func() {
+		Context("when TopologyAwareRoutingEnabled=true", func() {
+			It("should successfully deploy with expected kube-apiserver service annotations and labels", func() {
+				sniPhase = component.PhaseEnabled
+				defaultDepWaiter = NewService(
+					log,
+					c,
+					&ServiceValues{
+						AnnotationsFunc:             func() map[string]string { return map[string]string{"foo": "bar"} },
+						SNIPhase:                    sniPhase,
+						TopologyAwareRoutingEnabled: true,
+					},
+					func() client.ObjectKey { return serviceObjKey },
+					func() client.ObjectKey { return sniServiceObjKey },
+					&retryfake.Ops{MaxAttempts: 1},
+					clusterIPFunc,
+					ingressIPFunc,
+				)
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				actual := &corev1.Service{}
+				Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
+
+				expected.Annotations = map[string]string{
+					"foo":                          "bar",
+					"networking.istio.io/exportTo": "*",
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
+					"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
+					"networking.resources.gardener.cloud/namespace-selectors":            `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
+					"service.kubernetes.io/topology-aware-hints":                         "auto",
+				}
+				expected.Labels = map[string]string{
+					"app": "kubernetes",
+					"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
+					"core.gardener.cloud/apiserver-exposure":                 "gardener-managed",
+					"role":                                                   "apiserver",
+				}
+				expected.Spec.Type = corev1.ServiceTypeClusterIP
+				Expect(actual).To(DeepEqual(expected))
+			})
+		})
+	})
 })
 
 func netpolAnnotations() map[string]string {

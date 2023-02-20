@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -33,8 +34,9 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc: func() map[string]string { return b.IstioLoadBalancerAnnotations() },
-			SNIPhase:        sniPhase,
+			AnnotationsFunc:             func() map[string]string { return b.IstioLoadBalancerAnnotations() },
+			SNIPhase:                    sniPhase,
+			TopologyAwareRoutingEnabled: v1beta1helper.IsTopologyAwareRoutingEnabled(b.Seed.GetInfo(), b.Shoot.GetInfo()),
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}
