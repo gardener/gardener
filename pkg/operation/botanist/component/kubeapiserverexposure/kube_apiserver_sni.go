@@ -40,7 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -110,7 +110,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		Name:      envoyFilter.Name,
 		Namespace: envoyFilter.Namespace,
 		Host:      hostName,
-		Port:      kubeapiserver.Port,
+		Port:      kubeapiserverconstants.Port,
 	}); err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			Servers: []*istioapinetworkingv1beta1.Server{{
 				Hosts: s.valuesFunc().Hosts,
 				Port: &istioapinetworkingv1beta1.Port{
-					Number:   kubeapiserver.Port,
+					Number:   kubeapiserverconstants.Port,
 					Name:     "tls",
 					Protocol: "TLS",
 				},
@@ -182,13 +182,13 @@ func (s *sni) Deploy(ctx context.Context) error {
 			Gateways: []string{gateway.Name},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
-					Port:     kubeapiserver.Port,
+					Port:     kubeapiserverconstants.Port,
 					SniHosts: s.valuesFunc().Hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{
 						Host: hostName,
-						Port: &istioapinetworkingv1beta1.PortSelector{Number: kubeapiserver.Port},
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: kubeapiserverconstants.Port},
 					},
 				}},
 			}},

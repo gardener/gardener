@@ -16,6 +16,7 @@ package gardener
 
 import (
 	"encoding/json"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -37,4 +38,22 @@ func InjectNetworkPolicyAnnotationsForScrapeTargets(service *corev1.Service, por
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector, v1beta1constants.LabelNetworkPolicyScrapeTargets)
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyAllowedPorts, string(rawPorts))
 	return nil
+}
+
+// InjectNetworkPolicyNamespaceSelectors injects the provided selectors into the
+// `networking.resources.gardener.cloud/namespace-selectors` annotation of the given service.
+func InjectNetworkPolicyNamespaceSelectors(service *corev1.Service, selectors ...metav1.LabelSelector) error {
+	rawSelectors, err := json.Marshal(selectors)
+	if err != nil {
+		return err
+	}
+
+	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, string(rawSelectors))
+	return nil
+}
+
+// NetworkPolicyLabel returns the network policy label for a component initiating the connection to a service with the
+// given name and TCP port.
+func NetworkPolicyLabel(serviceName string, port int) string {
+	return fmt.Sprintf("networking.resources.gardener.cloud/to-%s-tcp-%d", serviceName, port)
 }

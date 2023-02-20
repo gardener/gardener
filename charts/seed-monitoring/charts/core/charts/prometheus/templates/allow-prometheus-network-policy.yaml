@@ -31,25 +31,8 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
-    {{- if .Values.shoot.sniEnabled }}
-    - namespaceSelector: {}
-      podSelector:
-        matchLabels:
-          app: istio-ingressgateway
-    {{- end }}
   ingress:
   - from:
-    - podSelector:
-        matchLabels:
-          component: grafana
-          gardener.cloud/role: monitoring
-    - podSelector:
-        matchLabels:
-          app: nginx-ingress
-          component: controller
-      namespaceSelector:
-        matchLabels:
-          role: kube-system
     - podSelector:
         matchLabels:
           app: nginx-ingress

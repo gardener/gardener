@@ -236,7 +236,7 @@ var _ = Describe("KubeScheduler", func() {
 								"gardener.cloud/role":                "controlplane",
 								"maintenance.gardener.cloud/restart": "true",
 								"networking.gardener.cloud/to-dns":   "allowed",
-								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 							},
 						},
 						Spec: corev1.PodSpec{

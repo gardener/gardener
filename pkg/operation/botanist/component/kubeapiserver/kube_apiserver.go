@@ -83,8 +83,6 @@ func init() {
 }
 
 const (
-	// Port is the port exposed by the kube-apiserver.
-	Port = 443
 	// SecretNameUserKubeconfig is the name for the user kubeconfig.
 	SecretNameUserKubeconfig = "user-kubeconfig"
 	// ServicePortName is the name of the port in the service.
@@ -350,11 +348,13 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(rfranzke): Delete this network policy in a future release.
 	if err := k.reconcileNetworkPolicyAllowToShootAPIServer(ctx, networkPolicyAllowToShootAPIServer); err != nil {
 		return err
 	}
 
-	if err := k.reconcileNetworkPolicyAllowKubeAPIServer(ctx, networkPolicyAllowKubeAPIServer); err != nil {
+	// TODO(rfranzke): Remove this in a future release.
+	if err := kubernetesutils.DeleteObject(ctx, k.client.Client(), networkPolicyAllowKubeAPIServer); err != nil {
 		return err
 	}
 

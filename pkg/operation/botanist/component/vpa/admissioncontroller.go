@@ -20,7 +20,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +30,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
+	vpaconstants "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -40,9 +41,7 @@ import (
 
 const (
 	admissionController                  = "vpa-admission-controller"
-	admissionControllerServiceName       = "vpa-webhook"
 	admissionControllerServicePort int32 = 443
-	admissionControllerPort              = 10250
 
 	volumeMountPathCertificates = "/etc/tls-certs"
 	volumeNameCertificates      = "vpa-tls-certs"
@@ -62,7 +61,7 @@ func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 	var (
 		clusterRole         = v.emptyClusterRole("admission-controller")
 		clusterRoleBinding  = v.emptyClusterRoleBinding("admission-controller")
-		service             = v.emptyService(admissionControllerServiceName)
+		service             = v.emptyService(vpaconstants.AdmissionControllerServiceName)
 		deployment          = v.emptyDeployment(admissionController)
 		podDisruptionBudget = v.emptyPodDisruptionBudget(admissionController, version.ConstraintK8sGreaterEqual121.Check(v.values.RuntimeKubernetesVersion))
 		vpa                 = v.emptyVerticalPodAutoscaler(admissionController)
@@ -85,9 +84,7 @@ func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	} else {
-		networkPolicy := v.emptyNetworkPolicy("allow-kube-apiserver-to-vpa-admission-controller")
 		configs = append(configs,
-			component.ResourceConfig{Obj: networkPolicy, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerNetworkPolicy(networkPolicy) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, nil) }},
 			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
@@ -152,34 +149,10 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	desiredPorts := []corev1.ServicePort{
 		{
 			Port:       admissionControllerServicePort,
-			TargetPort: intstr.FromInt(admissionControllerPort),
+			TargetPort: intstr.FromInt(vpaconstants.AdmissionControllerPort),
 		},
 	}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
-}
-
-func (v *vpa) reconcileAdmissionControllerNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy) {
-	protocol := corev1.ProtocolTCP
-	port := intstr.FromInt(admissionControllerPort)
-
-	networkPolicy.Annotations = map[string]string{v1beta1constants.GardenerDescription: "Allows Egress from shoot's kube-apiserver pods to the VPA admission controller."}
-	networkPolicy.Spec = networkingv1.NetworkPolicySpec{
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: kubeapiserver.GetLabels(),
-		},
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				PodSelector: &metav1.LabelSelector{
-					MatchLabels: getAppLabel(admissionController),
-				},
-			}},
-			Ports: []networkingv1.NetworkPolicyPort{{
-				Protocol: &protocol,
-				Port:     &port,
-			}},
-		}},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	}
 }
 
 func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
@@ -208,7 +181,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 						fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificate),
 						fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyPrivateKey),
 						"--address=:8944",
-						fmt.Sprintf("--port=%d", admissionControllerPort),
+						fmt.Sprintf("--port=%d", vpaconstants.AdmissionControllerPort),
 						"--register-webhook=false",
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
@@ -227,7 +200,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 							ContainerPort: 8944,
 						},
 						{
-							ContainerPort: admissionControllerPort,
+							ContainerPort: vpaconstants.AdmissionControllerPort,
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{{
@@ -280,9 +253,8 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}
 

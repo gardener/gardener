@@ -79,10 +79,8 @@ var _ = Describe("VpnSeedServer", func() {
 			SeedVersion:                          semver.MustParse("1.22.1"),
 		}
 
-		istioLabels        = map[string]string{"foo": "bar"}
 		istioNamespace     = "istio-foo"
 		istioNamespaceFunc = func() string { return istioNamespace }
-		istioLabelsFunc    = func() map[string]string { return istioLabels }
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -259,9 +257,8 @@ admin:
 			Name:      DeploymentName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleControlPlane,
-				v1beta1constants.LabelApp:                        DeploymentName,
-				"networking.gardener.cloud/from-shoot-apiserver": "allowed",
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+				v1beta1constants.LabelApp:   DeploymentName,
 			},
 		}
 
@@ -270,11 +267,12 @@ admin:
 			template := &corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
-						v1beta1constants.LabelApp:                            DeploymentName,
-						v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.GardenRole:                                     v1beta1constants.GardenRoleControlPlane,
+						v1beta1constants.LabelApp:                                       DeploymentName,
+						v1beta1constants.LabelNetworkPolicyToShootNetworks:              v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:                        v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:            v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -678,69 +676,6 @@ admin:
 			return destRule
 		}
 
-		networkPolicy = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-to-vpn-seed-server",
-				Namespace: namespace,
-				Annotations: map[string]string{
-					"gardener.cloud/description": "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
-				},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-						v1beta1constants.LabelApp:   DeploymentName,
-					},
-				},
-				Ingress: []networkingv1.NetworkPolicyIngressRule{
-					{
-						From: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-									},
-								},
-							},
-						},
-					},
-					{
-						From: []networkingv1.NetworkPolicyPeer{
-							{
-								// we don't want to modify existing labels on the istio namespace
-								NamespaceSelector: &metav1.LabelSelector{},
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: istioLabels,
-								},
-							},
-						},
-					},
-				},
-				Egress: []networkingv1.NetworkPolicyEgressRule{
-					{
-						To: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-									},
-								},
-							},
-						},
-					},
-				},
-				PolicyTypes: []networkingv1.PolicyType{
-					networkingv1.PolicyTypeIngress,
-					networkingv1.PolicyTypeEgress,
-				},
-			},
-		}
-
 		maxUnavailable      = intstr.FromInt(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
@@ -765,9 +700,11 @@ admin:
 				Name:      ServiceName,
 				Namespace: namespace,
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo":                                       "*",
-					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":15000}]`,
+					"networking.istio.io/exportTo":                                           "*",
+					"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
+					"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":15000}]`,
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -847,7 +784,7 @@ admin:
 		By("Ensure secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "ca-vpn"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
-		vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, values)
+		vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, values)
 	})
 
 	AfterEach(func() {
@@ -922,7 +859,7 @@ admin:
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the networkpolicy cannot be created", func() {
+			It("should fail because the networkpolicy cannot be deleted", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server"))
@@ -932,8 +869,7 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).Return(fakeErr),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}).Return(fakeErr),
 				)
 
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
@@ -949,8 +885,7 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
 				)
@@ -968,8 +903,7 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -991,8 +925,7 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -1012,8 +945,7 @@ admin:
 					}),
 					c.EXPECT().Create(ctx, configMap),
 					c.EXPECT().Create(ctx, secretDH),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -1037,7 +969,7 @@ admin:
 			It("should successfully deploy all resources (w/o node network)", func() {
 				copy := values
 				copy.Network.NodeCIDR = ""
-				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, copy)
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, copy)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1056,11 +988,7 @@ admin:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(networkPolicy))
-						}),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1100,7 +1028,7 @@ admin:
 				haValues.HighAvailabilityNumberOfSeedServers = 3
 				haValues.HighAvailabilityNumberOfShootClients = 2
 
-				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, haValues)
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, haValues)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1119,11 +1047,7 @@ admin:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(networkPolicy))
-						}),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.StatefulSet{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1179,7 +1103,7 @@ admin:
 			})
 
 			It("should successfully deploy all resources (w/ node network)", func() {
-				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, values)
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, values)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
@@ -1198,11 +1122,7 @@ admin:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(networkPolicy))
-						}),
+					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1339,7 +1259,7 @@ admin:
 			haValues.HighAvailabilityEnabled = true
 			haValues.HighAvailabilityNumberOfSeedServers = 2
 			haValues.HighAvailabilityNumberOfShootClients = 1
-			vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, istioLabelsFunc, haValues)
+			vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, haValues)
 
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),

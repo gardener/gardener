@@ -34,7 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns/constants"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -115,7 +115,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		port53      = intstr.FromInt(53)
-		port443     = intstr.FromInt(kubeapiserver.Port)
+		port443     = intstr.FromInt(kubeapiserverconstants.Port)
 		port8053    = intstr.FromInt(corednsconstants.PortServer)
 		port10250   = intstr.FromInt(10250)
 		protocolUDP = corev1.ProtocolUDP

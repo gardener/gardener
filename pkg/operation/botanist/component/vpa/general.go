@@ -31,6 +31,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	vpaconstants "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/constants"
 )
 
 const (
@@ -202,7 +203,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
-			Name:      admissionControllerServiceName,
+			Name:      vpaconstants.AdmissionControllerServiceName,
 			Namespace: v.namespace,
 			Port:      pointer.Int32(admissionControllerServicePort),
 		}
@@ -211,7 +212,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		// if it's false it will not set the port during registration, i.e., it will be defaulted to 443,
 		// so the servicePort has to be 443 in this case
 		// see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/admission-controller/config.go#L70-L74
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d", admissionControllerServiceName, v.namespace, admissionControllerServicePort))
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d", vpaconstants.AdmissionControllerServiceName, v.namespace, admissionControllerServicePort))
 	}
 
 	metav1.SetMetaDataLabel(&mutatingWebhookConfiguration.ObjectMeta, v1beta1constants.LabelExcludeWebhookFromRemediation, "true")
