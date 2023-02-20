@@ -71,6 +71,10 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings.DependencyWatchdog == nil {
 		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
 	}
+
+	if obj.Spec.Settings.TopologyAwareRouting == nil {
+		obj.Spec.Settings.TopologyAwareRouting = &SeedSettingTopologyAwareRouting{Enabled: false}
+	}
 }
 
 // SetDefaults_SeedNetworks sets default values for SeedNetworks objects.

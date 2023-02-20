@@ -44,6 +44,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
 		})
 
 		It("should allow taints that were not allowed in version v1.12", func() {
@@ -61,6 +62,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
 			Expect(obj.Spec.Taints).To(HaveLen(3))
 			Expect(obj.Spec.Taints).To(Equal(taints))
 		})
@@ -69,6 +71,7 @@ var _ = Describe("Defaults", func() {
 			var (
 				dwdEndpointEnabled        = false
 				dwdProbeEnabled           = false
+				topologyAwareRouting      = true
 				excessCapacityReservation = false
 				scheduling                = true
 				vpaEnabled                = false
@@ -79,6 +82,9 @@ var _ = Describe("Defaults", func() {
 				DependencyWatchdog: &SeedSettingDependencyWatchdog{
 					Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
 					Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
+				},
+				TopologyAwareRouting: &SeedSettingTopologyAwareRouting{
+					Enabled: topologyAwareRouting,
 				},
 				ExcessCapacityReservation: &SeedSettingExcessCapacityReservation{Enabled: excessCapacityReservation},
 				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
@@ -94,6 +100,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(Equal(ownerChecks))
+			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(Equal(topologyAwareRouting))
 		})
 
 		It("should default ipFamilies setting to IPv4 single-stack", func() {
