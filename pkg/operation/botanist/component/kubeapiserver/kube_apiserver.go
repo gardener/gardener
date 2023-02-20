@@ -304,12 +304,12 @@ type TLSSNIConfig struct {
 	// PrivateKey is the TLS certificate. Either both this and Certificate, or SecretName must be specified. If both is
 	// provided, SecretName is taking precedence.
 	PrivateKey []byte
-	// DomainPatters is an optional list of domain patterns which are fully qualified domain names, possibly with
+	// DomainPatterns is an optional list of domain patterns which are fully qualified domain names, possibly with
 	// prefixed wildcard segments. The domain patterns also allow IP addresses, but IPs should only be used if the
 	// apiserver has visibility to the IP address requested by a client. If no domain patterns are provided, the names
 	// of the certificate are extracted. Non-wildcard matches trump over wildcard matches, explicit domain patterns
 	// trump over extracted names.
-	DomainPatters []string
+	DomainPatterns []string
 }
 
 // New creates a new instance of DeployWaiter for the kube-apiserver.
@@ -442,7 +442,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	secretNamesTLSSNI, err := k.reconcileTLSSNISecrets(ctx)
+	tlsSNISecrets, err := k.reconcileTLSSNISecrets(ctx)
 	if err != nil {
 		return err
 	}
@@ -492,7 +492,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretHTTPProxy,
 		secretHAVPNSeedClient,
 		secretHAVPNClientSeedTLSAuth,
-		secretNamesTLSSNI,
+		tlsSNISecrets,
 	); err != nil {
 		return err
 	}

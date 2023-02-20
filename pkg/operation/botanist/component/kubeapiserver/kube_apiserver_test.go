@@ -3381,7 +3381,7 @@ rules:
 				It("should properly set the TLS SNI flag if necessary", func() {
 					values.SNI.TLS = []TLSSNIConfig{
 						{SecretName: pointer.String("existing-secret")},
-						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatters: []string{"foo1.com", "*.foo2.com"}},
+						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatterns: []string{"foo1.com", "*.foo2.com"}},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()

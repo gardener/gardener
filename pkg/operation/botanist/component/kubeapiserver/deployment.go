@@ -139,7 +139,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
-	secretNamesTLSSNI []string,
+	tlsSNISecrets []tlsSNISecret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -456,6 +456,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleLifecycleSettings(deployment)
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
+		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handlePodMutatorSettings(deployment)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
@@ -463,9 +464,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 			return err
 		}
 		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
-			return err
-		}
-		if err := k.handleTLSSNISettings(deployment, secretNamesTLSSNI); err != nil {
 			return err
 		}
 
@@ -703,20 +701,16 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
 }
 
-func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, secretNames []string) error {
-	if len(k.values.SNI.TLS) != len(secretNames) {
-		return fmt.Errorf("number of TLS SNI configs and provided secret names is not equal (%d vs. %d)", len(k.values.SNI.TLS), len(secretNames))
-	}
-
-	for i, sni := range k.values.SNI.TLS {
+func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsSNISecrets []tlsSNISecret) {
+	for i, sni := range tlsSNISecrets {
 		var (
 			volumeName      = fmt.Sprintf("%s%d", volumeNamePrefixTLSSNISecret, i)
 			volumeMountPath = fmt.Sprintf("%s%d", volumeMountPathPrefixTLSSNISecret, i)
 			flag            = fmt.Sprintf("--tls-sni-cert-key=%s/tls.crt,%s/tls.key", volumeMountPath, volumeMountPath)
 		)
 
-		if len(sni.DomainPatters) > 0 {
-			flag += ":" + strings.Join(sni.DomainPatters, ",")
+		if len(sni.domainPatterns) > 0 {
+			flag += ":" + strings.Join(sni.domainPatterns, ",")
 		}
 
 		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, flag)
@@ -729,13 +723,11 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, secr
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretNames[i],
+					SecretName: sni.secretName,
 				},
 			},
 		})
 	}
-
-	return nil
 }
 
 func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
