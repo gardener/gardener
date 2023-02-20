@@ -189,9 +189,10 @@ var _ = Describe("ControllerInstallation controller tests", func() {
     blockCIDRs: null
     clusterIdentity: ` + seedClusterIdentity + `
     identity: ` + seed.Name + `
-    ingressDomain: ` + *seed.Spec.DNS.IngressDomain + `
+    ingressDomain: ` + seed.Spec.Ingress.Domain + `
     labels:
       ` + testID + `: ` + testRunID + `
+      dnsrecord.extensions.gardener.cloud/` + seed.Spec.DNS.Provider.Type + `: "true"
       provider.extensions.gardener.cloud/` + seed.Spec.Provider.Type + `: "true"
     networks:
       ipFamilies:
@@ -204,7 +205,15 @@ var _ = Describe("ControllerInstallation controller tests", func() {
     region: ` + seed.Spec.Provider.Region + `
     spec:
       dns:
-        ingressDomain: ` + *seed.Spec.DNS.IngressDomain + `
+        provider:
+          secretRef:
+            name: ` + seed.Spec.DNS.Provider.SecretRef.Name + `
+            namespace: ` + seed.Spec.DNS.Provider.SecretRef.Namespace + `
+          type: ` + seed.Spec.DNS.Provider.Type + `
+      ingress:
+        controller:
+          kind: ` + seed.Spec.Ingress.Controller.Kind + `
+        domain: ` + seed.Spec.Ingress.Domain + `
       networks:
         ipFamilies:
         - IPv4
