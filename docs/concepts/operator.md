@@ -13,7 +13,7 @@ There is a [Helm chart](../../charts/gardener/operator) which can be used to dep
 Once deployed and ready, you can create a `Garden` resource.
 Note that there can only be one `Garden` resource per system at a time.
 
-> ℹ️ Similar to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), see [this section](#vertical-pod-autoscaler).
+> ℹ️ Similarly to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), see [this section](#vertical-pod-autoscaler).
 > By default, `gardener-operator` deploys the VPA components.
 > However, when there already is a VPA available, then set `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=false` in the `Garden` resource.
 

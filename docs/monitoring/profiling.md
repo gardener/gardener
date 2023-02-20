@@ -1,6 +1,6 @@
 # Profiling Gardener Components
 
-Similar to Kubernetes, Gardener components support profiling using [standard Go tools](https://golang.org/doc/diagnostics#profiling) for analyzing CPU and memory usage by different code sections and more.
+Similarly to Kubernetes, Gardener components support profiling using [standard Go tools](https://golang.org/doc/diagnostics#profiling) for analyzing CPU and memory usage by different code sections and more.
 This document shows how to enable and use profiling handlers with Gardener components.
 
 Enabling profiling handlers and the ports on which they are exposed differs between components.

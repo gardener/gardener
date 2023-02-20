@@ -8,7 +8,7 @@ Extensions are registered in the garden cluster via [`ControllerRegistration`](.
 Deployment for respective extensions are specified via [`ControllerDeployment`](../../example/25-controllerdeployment.yaml) resources.
 Gardener evaluates the registrations and deployments and creates [`ControllerInstallation`](../../example/25-controllerinstallation.yaml) resources which describe the request "please install this controller `X` to this seed `Y`".
 
-Similar to how `CloudProfile` or `Seed` resources get into the system, the Gardener administrator must deploy the `ControllerRegistration` and `ControllerDeployment` resources (this does not happen automatically in any way - the administrator decides which extensions shall be enabled).
+Similarly to how `CloudProfile` or `Seed` resources get into the system, the Gardener administrator must deploy the `ControllerRegistration` and `ControllerDeployment` resources (this does not happen automatically in any way - the administrator decides which extensions shall be enabled).
 
 The specification mainly describes which of Gardener's extension CRDs are managed, for example:
 
@@ -182,7 +182,7 @@ spec:
 In the above example, Gardener itself does not understand the AWS-specific provider configuration for the infrastructure.
 However, if this part of the `Shoot` resource should be validated, then you should run an AWS-specific component in the garden cluster that registers a webhook. You can do it similarly if you want to default some fields of a resource (by using a `MutatingWebhookConfiguration`).
 
-Again, similar to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
+Again, similarly to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
 
 ### `Extension` Resource Configurations
 
@@ -233,7 +233,7 @@ There are the following policies:
 
 * `OnDemand` (default): Gardener will demand the deployment and deletion of the extension controller to/from seed clusters dynamically. It will automatically determine (based on other resources like `Shoot`s) whether it is required and decide accordingly.
 * `Always`: Gardener will demand the deployment of the extension controller to seed clusters independent of whether it is actually required or not. This might be helpful if you want to add a new component/controller to all seed clusters by default. Another use-case is to minimize the durations until extension controllers get deployed and ready in case you have highly fluctuating seed clusters.
-* `AlwaysExceptNoShoots`: Similar to `Always`, but if the seed does not have any shoots, then the extension is not being deployed. It will be deleted from a seed after the last shoot has been removed from it.
+* `AlwaysExceptNoShoots`: Similarly to `Always`, but if the seed does not have any shoots, then the extension is not being deployed. It will be deleted from a seed after the last shoot has been removed from it.
 
 Also, the `.spec.deployment.seedSelector` allows to specify a label selector for seed clusters.
 Only if it matches the labels of a seed, then it will be deployed to it.

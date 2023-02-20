@@ -21,7 +21,7 @@ in the Kubernetes architecture:
 | `gardener-scheduler` | `kube-scheduler` |
 | `gardenlet` | `kubelet` |
 
-Similar to how the `kube-scheduler` of Kubernetes finds an appropriate node
+Similarly to how the `kube-scheduler` of Kubernetes finds an appropriate node
 for newly created pods, the `gardener-scheduler` of Gardener finds an appropriate seed cluster
 to host the control plane for newly ordered clusters.
 By providing multiple seed clusters for a region or provider, and distributing the workload,
@@ -170,7 +170,7 @@ More information: [Example gardenlet Component Configuration](../../example/20-c
 
 ## Heartbeats
 
-Similar to how Kubernetes uses `Lease` objects for node heart beats
+Similarly to how Kubernetes uses `Lease` objects for node heart beats
 (see [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/589-efficient-node-heartbeats/README.md)),
 the gardenlet is using `Lease` objects for heart beats of the seed cluster.
 Every two seconds, the gardenlet checks that the seed cluster's `/healthz`

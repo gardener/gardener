@@ -38,7 +38,7 @@ handler: internet-config
 #       network/env: internet
 ```
 
-Similar to `RuntimeClasses`, `ExposureClasses` also define a `.handler` field reflecting the name reference for the corresponding CRI configuration of the `RuntimeClass` and the control plane exposure configuration for the `ExposureClass`.
+Similarly to `RuntimeClasses`, `ExposureClasses` also define a `.handler` field reflecting the name reference for the corresponding CRI configuration of the `RuntimeClass` and the control plane exposure configuration for the `ExposureClass`.
 
 The CRI handler for `RuntimeClasses` is usually installed by an administrator (e.g. via a `DaemonSet` which installs the corresponding container runtime on the nodes).
 The control plane exposure configuration for `ExposureClasses` will be also provided by an administrator.

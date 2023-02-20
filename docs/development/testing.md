@@ -278,7 +278,7 @@ export KUBECONFIG=$PWD/dev/envtest-kubeconfig.yaml
 k get bastion -A -w
 ```
 
-Similar to [debugging unit tests](#debugging-unit-tests), the `stress` tool can help hunting flakes in integration tests.
+Similarly to [debugging unit tests](#debugging-unit-tests), the `stress` tool can help hunting flakes in integration tests.
 Though, you might need to run less tests in parallel though (specified via `-p`) and have a bit more patience.
 Generally, reproducing flakes in integration tests is easier when stress-testing against an existing test environment instead of starting temporary individual control planes per test run.
 

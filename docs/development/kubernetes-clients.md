@@ -161,7 +161,7 @@ Also, [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251)
 
 ## Cache Types: Informers, Listers, Controller-Runtime Caches
 
-Similar to the different types of client(set)s, there are also different kinds of Kubernetes client caches.
+Similarly to the different types of client(set)s, there are also different kinds of Kubernetes client caches.
 However, all of them are based on the same concept: `Informer`s.
 An `Informer` is a watch-based cache implementation, meaning it opens [watch connections](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes) to the API server and continuously updates cached objects based on the received watch events (`ADDED`, `MODIFIED`, `DELETED`).
 `Informer`s offer to add indices to the cache for efficient object lookup (e.g., by name or labels) and to add `EventHandler`s for the watch events.
@@ -274,7 +274,7 @@ _Important points about concurrency control and conflicts:_
 
 ### Don’t Retry on Conflict
 
-Similar to how a human would typically handle a conflict error, there are helper functions implementing `RetryOnConflict`-semantics, i.e., try an update call, then re-read the object if a conflict occurs, apply the modification again and retry the update.
+Similarly to how a human would typically handle a conflict error, there are helper functions implementing `RetryOnConflict`-semantics, i.e., try an update call, then re-read the object if a conflict occurs, apply the modification again and retry the update.
 However, controllers should generally *not* use `RetryOnConflict`-semantics. Instead, controllers should abort their current reconciliation run and let the queue handle the conflict error with exponential backoff.
 The reasoning behind this is that a conflict error indicates that the controller has operated on stale data and might have made wrong decisions earlier on in the reconciliation.
 When using a helper function that implements `RetryOnConflict`-semantics, the controller doesn't check which fields were changed and doesn't revise its previous decisions accordingly.
