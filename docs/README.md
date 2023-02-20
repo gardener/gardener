@@ -67,6 +67,7 @@
 * [Accessing Shoot Clusters](usage/shoot_access.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
 * [Tolerations](usage/tolerations.md)
+* [Topology-Aware Traffic Routing](usage/topology_aware_routing.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
