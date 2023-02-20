@@ -900,6 +900,7 @@ build:
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/webhook/crddeletionprotection
+        - pkg/resourcemanager/webhook/endpointslicehints
         - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
@@ -1008,6 +1009,7 @@ build:
         - pkg/resourcemanager/predicate
         - pkg/resourcemanager/webhook
         - pkg/resourcemanager/webhook/crddeletionprotection
+        - pkg/resourcemanager/webhook/endpointslicehints
         - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername

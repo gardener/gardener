@@ -75,6 +75,8 @@ controllers:
 webhooks:
   crdDeletionProtection:
     enabled: true
+  endpointSliceHints:
+    enabled: true
   extensionValidation:
     enabled: true
   highAvailabilityConfig:

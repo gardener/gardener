@@ -146,6 +146,12 @@ const (
 	// adding the pod-template-hash selector to the topology spread constraint.
 	PodTopologySpreadConstraintsSkip = "topology-spread-constraints.resources.gardener.cloud/skip"
 
+	// EndpointSliceHintsConsider is a constant for a label on an Service which indicates that the EndpointSlices of the
+	// Service should be considered by the EndpointSlice hints webhook. This label is added to the Service object, Kubernetes
+	// maintains the Service label as EndpointSlice label. Finally, the EndpointSlice hints webhook mutates EndpointSlice resources
+	// containing this label.
+	EndpointSliceHintsConsider = "endpoint-slice-hints.resources.gardener.cloud/consider"
+
 	// NetworkingNamespaceSelectors is a constant for an annotation on a Service which contains a list of namespace
 	// selectors. By default, NetworkPolicy resources are only created in the Service's namespace. If any selector is
 	// present, NetworkPolicy resources are also created in all namespaces matching any of the provided selectors.

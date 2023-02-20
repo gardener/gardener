@@ -291,3 +291,37 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 {{- end }}
+{{- if .Values.global.config.webhooks.endpointSliceHints.enabled }}
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /webhooks/endpoint-slice-hints
+      port: 443
+  failurePolicy: Ignore
+  matchPolicy: Equivalent
+  name: endpoint-slice-hints.resources.gardener.cloud
+  namespaceSelector: {}
+  objectSelector:
+    matchLabels:
+      endpoint-slice-hints.resources.gardener.cloud/consider: "true"
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - discovery.k8s.io
+    apiVersions:
+    - v1
+    resources:
+    - endpointslices
+    operations:
+    - CREATE
+    - UPDATE
+  sideEffects: None
+  timeoutSeconds: 10
+{{- end }}
