@@ -51,20 +51,43 @@ Even if the `failurePolicy` is set to `Ignore`, high timeouts (`>15s`) can lead 
 That's because most control-plane API calls are made with a client-side timeout of `30s`, so if a webhook has `timeoutSeconds=30`
 the overall request might still fail as there is overhead in communication with the API server and potential other webhooks.
 Generally, it's [best pratice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts) to specify low timeouts in WebhookConfigs.
-Also, it's [best practice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#avoiding-operating-on-the-kube-system-namespace)
-to exclude the `kube-system` namespace from webhooks to avoid blocking critical operations on system components of the cluster.
-Shoot owners can do so by adding a `namespaceSelector` similar to this one to their webhook configurations:
+
+As an effort to correct this common problem, the webhook remediator has been created. This feature simply checks whether a customer's webhook matches a set of rules, described [here](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L66-L180). If at least one of the rule matches, it will change the constraints (`HibernationPossible` & `MaintenancePreconditionsSatisfied`) statues.
+
+In most cases, you can avoid this by simply excluding the kube-system namespace from your webhook.
 ```yaml
-namespaceSelector:
-  matchExpressions:
-  - key: gardener.cloud/purpose
-    operator: NotIn
-    values:
-    - kube-system
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+webhooks:
+  - name: my-webhook.example.com
+    namespaceSelector:
+      matchExpressions:
+      - key: gardener.cloud/purpose
+        operator: NotIn
+        values:
+          - kube-system
+    rules:
+      - operations: ["*"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        scope: "Namespaced"
 ```
 
-If the Shoot still has webhooks with either `failurePolicy={Fail,nil}` or `failurePolicy=Ignore && timeoutSeconds>15` that act on [critical resources](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L60) in the `kube-system` namespace, Gardener will set the `HibernationPossible` to `False` indicating, that the Shoot can probably not be woken up again after hibernation without manual intervention of the Gardener Operator.
-`gardener-apiserver` will prevent any Shoot with the `HibernationPossible` constraint set to `False` from being hibernated, that is via manual hibernation as well as scheduled hibernation.
+However, some other resources (mostly without namespaces) might still trigger the remediator, namely:
+- endpoints
+- nodes
+- podsecuritypolicies
+- clusterroles
+- clusterrolebindings
+- customresourcedefinitions
+- apiservices
+- certificatesigningrequests
+- priorityclasses
+
+In these cases, please make sure that your `rules` don't overlap with one of those resources (and their subresources).
+
+You can also find help from the [kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings)
 
 > By setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the gardenlet configuration, the auto-remediation of webhooks not following the best practices can be turned on in the shoot clusters.
 > Concretely, missing `namespaceSelector`s or `objectSelector`s will be added and too high `timeoutSeconds` will be lowered.
