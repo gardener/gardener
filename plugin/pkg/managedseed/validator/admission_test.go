@@ -94,6 +94,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 					Kubernetes: core.Kubernetes{
 						EnableStaticTokenKubeconfig: pointer.Bool(false),
+						Version:                     "1.23.9",
 						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
 							Enabled: true,
 						},
@@ -450,6 +451,130 @@ var _ = Describe("ManagedSeed", func() {
 						"Detail": ContainSubstring("seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"),
 					})),
 				))
+			})
+
+			Context("when topology-aware routing Seed setting is enabled", func() {
+				It("it should forbid when the TopologyAwareHints feature gate is not enabled", func() {
+					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					seedx.Spec.Settings.TopologyAwareRouting = &gardencorev1beta1.SeedSettingTopologyAwareRouting{
+						Enabled: true,
+					}
+
+					managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+						Config: &gardenletv1alpha1.GardenletConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "GardenletConfiguration",
+							},
+							SeedConfig: &gardenletv1alpha1.SeedConfig{
+								SeedTemplate: gardencorev1beta1.SeedTemplate{
+									Spec: seedx.Spec,
+								},
+							},
+						},
+					}
+
+					err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
+							"Detail": ContainSubstring("the topology-aware routing Seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-apiserver"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
+							"Detail": ContainSubstring("the topology-aware routing Seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-controller-manager"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
+							"Detail": ContainSubstring("the topology-aware routing Seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-proxy"),
+						})),
+					))
+				})
+
+				It("should allow the ManagedSeed creation when the TopologyAwareHints feature gate is enabled and the K8s version is 1.23", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+						KubernetesConfig: core.KubernetesConfig{
+							FeatureGates: map[string]bool{
+								"TopologyAwareHints": true,
+							},
+						},
+					}
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
+						KubernetesConfig: core.KubernetesConfig{
+							FeatureGates: map[string]bool{
+								"TopologyAwareHints": true,
+							},
+						},
+					}
+					shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+						KubernetesConfig: core.KubernetesConfig{
+							FeatureGates: map[string]bool{
+								"TopologyAwareHints": true,
+							},
+						},
+					}
+
+					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					seedx.Spec.Settings.TopologyAwareRouting = &gardencorev1beta1.SeedSettingTopologyAwareRouting{
+						Enabled: true,
+					}
+
+					managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+						Config: &gardenletv1alpha1.GardenletConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "GardenletConfiguration",
+							},
+							SeedConfig: &gardenletv1alpha1.SeedConfig{
+								SeedTemplate: gardencorev1beta1.SeedTemplate{
+									Spec: seedx.Spec,
+								},
+							},
+						},
+					}
+
+					err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should allow the ManagedSeed creation when the K8s version is > 1.23", func() {
+					shoot.Spec.Kubernetes.Version = "1.24.10"
+
+					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					seedx.Spec.Settings.TopologyAwareRouting = &gardencorev1beta1.SeedSettingTopologyAwareRouting{
+						Enabled: true,
+					}
+
+					managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+						Config: &gardenletv1alpha1.GardenletConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "GardenletConfiguration",
+							},
+							SeedConfig: &gardenletv1alpha1.SeedConfig{
+								SeedTemplate: gardencorev1beta1.SeedTemplate{
+									Spec: seedx.Spec,
+								},
+							},
+						},
+					}
+
+					err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 	})
