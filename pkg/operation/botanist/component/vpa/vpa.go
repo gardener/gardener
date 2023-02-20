@@ -57,6 +57,9 @@ const (
 // Interface contains functions for a VPA deployer.
 type Interface interface {
 	component.DeployWaiter
+
+	// GetValues returns the current configuration values of the deployer.
+	GetValues() Values
 }
 
 // New creates a new instance of DeployWaiter for the Kubernetes Vertical Pod Autoscaler.
@@ -213,6 +216,10 @@ func (v *vpa) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, v.managedResourceName())
+}
+
+func (v *vpa) GetValues() Values {
+	return v.values
 }
 
 func (v *vpa) managedResourceName() string {

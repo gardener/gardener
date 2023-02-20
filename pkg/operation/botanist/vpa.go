@@ -20,6 +20,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -45,9 +46,10 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 
 	var (
 		valuesAdmissionController = vpa.ValuesAdmissionController{
-			Image:             imageAdmissionController.String(),
-			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
-			Replicas:          pointer.Int32(b.Shoot.GetReplicas(1)),
+			Image:                       imageAdmissionController.String(),
+			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane200,
+			Replicas:                    pointer.Int32(b.Shoot.GetReplicas(1)),
+			TopologyAwareRoutingEnabled: v1beta1helper.IsTopologyAwareRoutingEnabled(b.Seed.GetInfo(), b.Shoot.GetInfo()),
 		}
 		valuesRecommender = vpa.ValuesRecommender{
 			Image:             imageRecommender.String(),
