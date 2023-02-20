@@ -517,27 +517,12 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 				return err
 			}
 
-			if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated {
-				if current.GetAPIVersion() == "v1" && sets.New[string]("ConfigMap", "Secret").Has(current.GetKind()) {
-					cause, ok := apierrors.StatusCause(err, metav1.CauseType(field.ErrorTypeForbidden))
-					if !ok || !strings.Contains(cause.Message, "field is immutable when `immutable` is set") {
-						continue
-					}
-
-					if deleteErr := r.TargetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
-						return fmt.Errorf("error deleting immutable object %q after 'invalid' update error: %s", resource, deleteErr)
-					}
-					// return error directly, so that the create after delete will be retried
-					return fmt.Errorf("deleted immutable object %q because of 'invalid' update error: %s", resource, err)
+			if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated && deleteOnInvalidUpdate(current, err) {
+				if deleteErr := r.TargetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
+					return fmt.Errorf("error deleting object %q after 'invalid' update error: %s", resource, deleteErr)
 				}
-
-				if deleteOnInvalidUpdate(current) {
-					if deleteErr := r.TargetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
-						return fmt.Errorf("error deleting object %q after 'invalid' update error: %s", resource, deleteErr)
-					}
-					// return error directly, so that the create after delete will be retried
-					return fmt.Errorf("deleted object %q because of 'invalid' update error and 'delete-on-invalid-update' annotation on object (%s)", resource, err)
-				}
+				// return error directly, so that the create after delete will be retried
+				return fmt.Errorf("deleted object %q because of 'invalid' update error, and 'delete-on-invalid-update' annotation on object or the resource is an immutable ConfigMap/Secret: %s", resource, err)
 			}
 
 			return fmt.Errorf("error during apply of object %q: %s", resource, err)
@@ -653,8 +638,16 @@ func ignore(meta metav1.Object) bool {
 	return keyExistsAndValueTrue(meta.GetAnnotations(), resourcesv1alpha1.Ignore)
 }
 
-func deleteOnInvalidUpdate(meta metav1.Object) bool {
-	return keyExistsAndValueTrue(meta.GetAnnotations(), resourcesv1alpha1.DeleteOnInvalidUpdate)
+func deleteOnInvalidUpdate(obj *unstructured.Unstructured, err error) bool {
+	isImmutableConfigMapOrSecret := false
+	if obj.GetAPIVersion() == "v1" && sets.New[string]("ConfigMap", "Secret").Has(obj.GetKind()) {
+		cause, ok := apierrors.StatusCause(err, metav1.CauseType(field.ErrorTypeForbidden))
+		if ok && strings.Contains(cause.Message, "field is immutable when `immutable` is set") {
+			isImmutableConfigMapOrSecret = true
+		}
+	}
+
+	return keyExistsAndValueTrue(obj.GetAnnotations(), resourcesv1alpha1.DeleteOnInvalidUpdate) || isImmutableConfigMapOrSecret
 }
 
 func keepObject(meta metav1.Object) bool {
