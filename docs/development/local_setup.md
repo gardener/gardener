@@ -96,13 +96,14 @@ When running on macOS, install the GNU core utilities and friends:
 brew install coreutils gnu-sed gnu-tar grep
 ```
 
-This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` etc., at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH` (`brew` will print out instructions for each installed formula).
+This will create symbolic links for the GNU utilities with `g` prefix on your `PATH`, e.g., `gsed` or `gbase64`.
+To allow using them without the `g` prefix, add the `gnubin` directories to the beginning of your `PATH` environment variable (`brew install` and `brew info` will print out instructions for each formula):
 
 ```bash
-export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH
-export PATH=/usr/local/opt/gnu-sed/libexec/gnubin:$PATH
-export PATH=/usr/local/opt/gnu-tar/libexec/gnubin:$PATH
-export PATH=/usr/local/opt/grep/libexec/gnubin:$PATH
+export PATH=$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH
+export PATH=$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH
+export PATH=$(brew --prefix)/opt/gnu-tar/libexec/gnubin:$PATH
+export PATH=$(brew --prefix)/opt/grep/libexec/gnubin:$PATH
 ```
 
 ## [Windows Only] WSL2
