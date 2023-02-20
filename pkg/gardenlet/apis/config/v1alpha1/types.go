@@ -159,9 +159,6 @@ type GardenletControllerConfiguration struct {
 	// BackupEntry defines the configuration of the BackupEntry controller.
 	// +optional
 	BackupEntry *BackupEntryControllerConfiguration `json:"backupEntry,omitempty"`
-	// BackupEntryMigration defines the configuration of the BackupEntryMigration controller.
-	// +optional
-	BackupEntryMigration *BackupEntryMigrationControllerConfiguration `json:"backupEntryMigration,omitempty"`
 	// Bastion defines the configuration of the Bastion controller.
 	// +optional
 	Bastion *BastionControllerConfiguration `json:"bastion,omitempty"`
@@ -225,25 +222,6 @@ type BackupEntryControllerConfiguration struct {
 	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
 	// +optional
 	DeletionGracePeriodShootPurposes []gardencorev1beta1.ShootPurpose `json:"deletionGracePeriodShootPurposes,omitempty"`
-}
-
-// BackupEntryMigrationControllerConfiguration defines the configuration of the BackupEntryMigration
-// controller.
-type BackupEntryMigrationControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	// It is only relevant for backup entries that are currently being migrated.
-	// +optional
-	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
-	// GracePeriod is the period to wait before forcing the restoration after the migration has started.
-	// +optional
-	GracePeriod *metav1.Duration `json:"gracePeriod,omitempty"`
-	// LastOperationStaleDuration is the duration to consider the last operation stale after it was last updated.
-	// +optional
-	LastOperationStaleDuration *metav1.Duration `json:"lastOperationStaleDuration,omitempty"`
 }
 
 // BastionControllerConfiguration defines the configuration of the Bastion

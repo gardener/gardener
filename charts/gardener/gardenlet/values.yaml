@@ -128,11 +128,6 @@ config:
       syncPeriod: 1m
       gracePeriod: 2h
       lastOperationStaleDuration: 10m
-    backupEntryMigration:
-      concurrentSyncs: 5
-      syncPeriod: 1m
-      gracePeriod: 10m
-      lastOperationStaleDuration: 2m
   resources:
     capacity:
       shoots: 250

@@ -711,18 +711,6 @@ func ComputeExpectedGardenletConfiguration(
 				ConcurrentSyncs:          &twenty,
 				DeletionGracePeriodHours: &zero,
 			},
-			BackupEntryMigration: &gardenletv1alpha1.BackupEntryMigrationControllerConfiguration{
-				ConcurrentSyncs: &five,
-				SyncPeriod: &metav1.Duration{
-					Duration: time.Minute,
-				},
-				GracePeriod: &metav1.Duration{
-					Duration: 10 * time.Minute,
-				},
-				LastOperationStaleDuration: &metav1.Duration{
-					Duration: 2 * time.Minute,
-				},
-			},
 			Bastion: &gardenletv1alpha1.BastionControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},

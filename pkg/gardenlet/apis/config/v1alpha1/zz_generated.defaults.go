@@ -56,9 +56,6 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.BackupEntry != nil {
 			SetDefaults_BackupEntryControllerConfiguration(in.Controllers.BackupEntry)
 		}
-		if in.Controllers.BackupEntryMigration != nil {
-			SetDefaults_BackupEntryMigrationControllerConfiguration(in.Controllers.BackupEntryMigration)
-		}
 		if in.Controllers.Bastion != nil {
 			SetDefaults_BastionControllerConfiguration(in.Controllers.Bastion)
 		}

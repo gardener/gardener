@@ -133,8 +133,6 @@ type GardenletControllerConfiguration struct {
 	BackupBucket *BackupBucketControllerConfiguration
 	// BackupEntry defines the configuration of the BackupEntry controller.
 	BackupEntry *BackupEntryControllerConfiguration
-	// BackupEntryMigration defines the configuration of the BackupEntryMigration controller.
-	BackupEntryMigration *BackupEntryMigrationControllerConfiguration
 	// Bastion defines the configuration of the Bastion controller.
 	Bastion *BastionControllerConfiguration
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
@@ -181,21 +179,6 @@ type BackupEntryControllerConfiguration struct {
 	// DeletionGracePeriodShootPurposes is a list of shoot purposes for which the deletion grace period applies. All
 	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
 	DeletionGracePeriodShootPurposes []gardencore.ShootPurpose
-}
-
-// BackupEntryMigrationControllerConfiguration defines the configuration of the BackupEntryMigration
-// controller.
-type BackupEntryMigrationControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs *int
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	// It is only relevant for backup entries that are currently being migrated.
-	SyncPeriod *metav1.Duration
-	// GracePeriod is the period to wait before forcing the restoration after the migration has started.
-	GracePeriod *metav1.Duration
-	// LastOperationStaleDuration is the duration to consider the last operation stale after it was last updated.
-	LastOperationStaleDuration *metav1.Duration
 }
 
 // BastionControllerConfiguration defines the configuration of the Bastion

@@ -239,15 +239,6 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
 
-#### "Migration" Reconciler
-
-This reconciler is only active if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the `gardenlet` and if the seed has owner checks enabled (i.e., `spec.setttings.ownerChecks.enabled=true`).
-It checks if the source `Seed` also has owner checks enabled. If not or if the `BackupEntry` is being deleted, it sets the `status.migrationStartTime` to `nil`.
-The controller updates the status to force restoration in the following cases:
-1. If the `BackupEntry` is annotated with `shoot.gardener.cloud/force-restore=true`.
-2. If the grace period for migration has elapsed (which is set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration).
-3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the `lastUpdateTime` of the operation.
-
 ### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
 
 The `Bastion` controller reconciles those `operations.gardener.cloud/v1alpha1.Bastion` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
@@ -309,7 +300,7 @@ This condition is taken into account by the `ControllerRegistration` controller 
 
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
-The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to the Kubernetes API server. 
+The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to the Kubernetes API server.
 
 The controller resolves the IP address of the Kubernetes service in the `default` namespace and creates an egress `NetworkPolicy`s for it.
 

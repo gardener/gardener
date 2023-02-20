@@ -47,7 +47,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ShootClientConnection).NotTo(BeNil())
 			Expect(obj.Controllers.BackupBucket).NotTo(BeNil())
 			Expect(obj.Controllers.BackupEntry).NotTo(BeNil())
-			Expect(obj.Controllers.BackupEntryMigration).NotTo(BeNil())
 			Expect(obj.Controllers.Bastion).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallation).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallationCare).NotTo(BeNil())
@@ -391,23 +390,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
 			Expect(obj.DeletionGracePeriodHours).To(PointTo(Equal(0)))
 			Expect(obj.DeletionGracePeriodShootPurposes).To(BeEmpty())
-		})
-	})
-
-	Describe("#SetDefaults_BackupEntryMigrationControllerConfiguration", func() {
-		var obj *BackupEntryMigrationControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &BackupEntryMigrationControllerConfiguration{}
-		})
-
-		It("should default the configuration", func() {
-			SetDefaults_BackupEntryMigrationControllerConfiguration(obj)
-
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
-			Expect(obj.GracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
-			Expect(obj.LastOperationStaleDuration).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 		})
 	})
 
