@@ -1243,6 +1243,9 @@ func cleanupOrphanIstioNamespace(
 	return nil
 }
 
+// WaitUntilLoadBalancerIsReady is an alias for kubernetesutils.WaitUntilLoadBalancerIsReady. Exposed for tests.
+var WaitUntilLoadBalancerIsReady = kubernetesutils.WaitUntilLoadBalancerIsReady
+
 func waitForNginxIngressServiceAndGetDNSComponent(
 	ctx context.Context,
 	log logr.Logger,
@@ -1277,7 +1280,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 			return nil, err
 		}
 
-		ingressLoadBalancerAddress, err = kubernetesutils.WaitUntilLoadBalancerIsReady(
+		ingressLoadBalancerAddress, err = WaitUntilLoadBalancerIsReady(
 			ctx,
 			log,
 			seedClient,

@@ -119,15 +119,19 @@ func (n *nginxIngress) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, n.client, n.namespace, ManagedResourceName)
 }
 
-// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
-// or deleted.
-var TimeoutWaitForManagedResource = 2 * time.Minute
+var (
+	// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+	// or deleted.
+	TimeoutWaitForManagedResource = 2 * time.Minute
+	// WaitUntilHealthy is an alias for managedresources.WaitUntilHealthy. Exposed for tests.
+	WaitUntilHealthy = managedresources.WaitUntilHealthy
+)
 
 func (n *nginxIngress) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, ManagedResourceName)
+	return WaitUntilHealthy(timeoutCtx, n.client, n.namespace, ManagedResourceName)
 }
 
 func (n *nginxIngress) WaitCleanup(ctx context.Context) error {

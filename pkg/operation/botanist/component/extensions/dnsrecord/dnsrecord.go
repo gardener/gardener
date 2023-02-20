@@ -245,9 +245,12 @@ func (c *dnsRecord) Destroy(ctx context.Context) error {
 	)
 }
 
+// WaitUntilExtensionObjectReady is an alias for extensions.WaitUntilExtensionObjectReady. Exposed for tests.
+var WaitUntilExtensionObjectReady = extensions.WaitUntilExtensionObjectReady
+
 // Wait waits until the DNSRecord resource is ready.
 func (c *dnsRecord) Wait(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectReady(
+	return WaitUntilExtensionObjectReady(
 		ctx,
 		c.client,
 		c.log,
