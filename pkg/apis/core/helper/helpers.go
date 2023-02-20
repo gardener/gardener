@@ -208,6 +208,11 @@ func SeedSettingOwnerChecksEnabled(settings *core.SeedSettings) bool {
 	return settings == nil || settings.OwnerChecks == nil || settings.OwnerChecks.Enabled
 }
 
+// SeedSettingTopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.
+func SeedSettingTopologyAwareRoutingEnabled(settings *core.SeedSettings) bool {
+	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
+}
+
 // ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
 func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
 	if shoot.Spec.DNS == nil {
@@ -479,4 +484,34 @@ func DeterminePrimaryIPFamily(ipFamilies []core.IPFamily) core.IPFamily {
 		return core.IPFamilyIPv4
 	}
 	return ipFamilies[0]
+}
+
+// KubeAPIServerFeatureGateEnabled returns whether the given feature gate is enabled for the kube-apiserver for the given Shoot spec.
+func KubeAPIServerFeatureGateEnabled(shoot *core.Shoot, featureGate string) bool {
+	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
+	if kubeAPIServer != nil && kubeAPIServer.FeatureGates != nil {
+		return kubeAPIServer.FeatureGates[featureGate]
+	}
+
+	return false
+}
+
+// KubeControllerManagerFeatureGateEnabled returns whether the given feature gate is enabled for the kube-controller-manager for the given Shoot spec.
+func KubeControllerManagerFeatureGateEnabled(shoot *core.Shoot, featureGate string) bool {
+	kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager
+	if kubeControllerManager != nil && kubeControllerManager.FeatureGates != nil {
+		return kubeControllerManager.FeatureGates[featureGate]
+	}
+
+	return false
+}
+
+// KubeProxyFeatureGateEnabled returns whether the given feature gate is enabled for the kube-proxy for the given Shoot spec.
+func KubeProxyFeatureGateEnabled(shoot *core.Shoot, featureGate string) bool {
+	kubeProxy := shoot.Spec.Kubernetes.KubeProxy
+	if kubeProxy != nil && kubeProxy.FeatureGates != nil {
+		return kubeProxy.FeatureGates[featureGate]
+	}
+
+	return false
 }

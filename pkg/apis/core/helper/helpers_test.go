@@ -521,6 +521,17 @@ var _ = Describe("helper", func() {
 		Entry("owner checks disabled", &core.SeedSettings{OwnerChecks: &core.SeedSettingOwnerChecks{Enabled: false}}, false),
 	)
 
+	DescribeTable("#SeedSettingTopologyAwareRoutingEnabled",
+		func(settings *core.SeedSettings, expected bool) {
+			Expect(SeedSettingTopologyAwareRoutingEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, false),
+		Entry("no topology-aware routing setting", &core.SeedSettings{}, false),
+		Entry("topology-aware routing enabled", &core.SeedSettings{TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{Enabled: true}}, true),
+		Entry("topology-aware routing disabled", &core.SeedSettings{TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{Enabled: false}}, false),
+	)
+
 	classificationPreview := core.ClassificationPreview
 	classificationDeprecated := core.ClassificationDeprecated
 	classificationSupported := core.ClassificationSupported
@@ -821,4 +832,208 @@ var _ = Describe("helper", func() {
 			Expect(DeterminePrimaryIPFamily([]core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4})).To(Equal(core.IPFamilyIPv6))
 		})
 	})
+
+	DescribeTable("#KubeAPIServerFeatureGateEnabled",
+		func(shoot *core.Shoot, featureGate string, expected bool) {
+			actual := KubeAPIServerFeatureGateEnabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeAPIServerConfig=nil",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeAPIServer: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeAPIServerConfig.featureGates=nil",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeAPIServer: &core.KubeAPIServerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeAPIServer: &core.KubeAPIServerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeAPIServer: &core.KubeAPIServerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	DescribeTable("#KubeControllerManagerFeatureGateEnabled",
+		func(shoot *core.Shoot, featureGate string, expected bool) {
+			actual := KubeControllerManagerFeatureGateEnabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeControllerManager=nil",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeControllerManager: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeControllerManager.featureGates=nil",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeControllerManager: &core.KubeControllerManagerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeControllerManager: &core.KubeControllerManagerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeControllerManager: &core.KubeControllerManagerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	DescribeTable("#KubeProxyFeatureGateEnabled",
+		func(shoot *core.Shoot, featureGate string, expected bool) {
+			actual := KubeProxyFeatureGateEnabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeProxy=nil",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeProxy: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeProxy.featureGates=nil",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeProxy: &core.KubeProxyConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeProxy: &core.KubeProxyConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeProxy: &core.KubeProxyConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
 })
