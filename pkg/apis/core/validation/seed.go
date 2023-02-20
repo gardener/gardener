@@ -156,34 +156,40 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		}
 	}
 
-	if seedSpec.Settings != nil && seedSpec.Settings.LoadBalancerServices != nil {
-		allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
+	if seedSpec.Settings != nil {
+		if seedSpec.Settings.LoadBalancerServices != nil {
+			allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
 
-		if policy := seedSpec.Settings.LoadBalancerServices.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "externalTrafficPolicy"), *policy, sets.List(availableExternalTrafficPolicies)))
+			if policy := seedSpec.Settings.LoadBalancerServices.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "externalTrafficPolicy"), *policy, sets.List(availableExternalTrafficPolicies)))
+			}
+
+			if len(seedSpec.Provider.Zones) <= 1 && len(seedSpec.Settings.LoadBalancerServices.Zones) > 0 {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "loadBalancerServices", "zones"), "zone-specific load balancer settings only allowed with at least two zones in spec.provider.zones"))
+			}
+
+			zones := sets.New[string](seedSpec.Provider.Zones...)
+			specifiedZones := sets.New[string]()
+
+			for i, zoneSettings := range seedSpec.Settings.LoadBalancerServices.Zones {
+				if !zones.Has(zoneSettings.Name) {
+					allErrs = append(allErrs, field.NotFound(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("name"), zoneSettings.Name))
+				}
+				if specifiedZones.Has(zoneSettings.Name) {
+					allErrs = append(allErrs, field.Duplicate(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("name"), zoneSettings.Name))
+				}
+				specifiedZones.Insert(zoneSettings.Name)
+
+				allErrs = append(allErrs, apivalidation.ValidateAnnotations(zoneSettings.Annotations, fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("annotations"))...)
+
+				if policy := zoneSettings.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
+					allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("externalTrafficPolicy"), *policy, sets.List(availableExternalTrafficPolicies)))
+				}
+			}
 		}
 
-		if len(seedSpec.Provider.Zones) <= 1 && len(seedSpec.Settings.LoadBalancerServices.Zones) > 0 {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "loadBalancerServices", "zones"), "zone-specific load balancer settings only allowed with at least two zones in spec.provider.zones"))
-		}
-
-		zones := sets.New[string](seedSpec.Provider.Zones...)
-		specifiedZones := sets.New[string]()
-
-		for i, zoneSettings := range seedSpec.Settings.LoadBalancerServices.Zones {
-			if !zones.Has(zoneSettings.Name) {
-				allErrs = append(allErrs, field.NotFound(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("name"), zoneSettings.Name))
-			}
-			if specifiedZones.Has(zoneSettings.Name) {
-				allErrs = append(allErrs, field.Duplicate(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("name"), zoneSettings.Name))
-			}
-			specifiedZones.Insert(zoneSettings.Name)
-
-			allErrs = append(allErrs, apivalidation.ValidateAnnotations(zoneSettings.Annotations, fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("annotations"))...)
-
-			if policy := zoneSettings.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "zones").Index(i).Child("externalTrafficPolicy"), *policy, sets.List(availableExternalTrafficPolicies)))
-			}
+		if helper.SeedSettingTopologyAwareRoutingEnabled(seedSpec.Settings) && len(seedSpec.Provider.Zones) <= 1 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone Seed cluster (with least two zones in spec.provider.zones)"))
 		}
 	}
 
