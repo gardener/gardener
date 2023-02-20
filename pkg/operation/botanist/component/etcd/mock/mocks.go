@@ -95,6 +95,20 @@ func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0)
 }
 
+// GetValues mocks base method.
+func (m *MockInterface) GetValues() etcd.Values {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValues")
+	ret0, _ := ret[0].(etcd.Values)
+	return ret0
+}
+
+// GetValues indicates an expected call of GetValues.
+func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
+}
+
 // RolloutPeerCA mocks base method.
 func (m *MockInterface) RolloutPeerCA(arg0 context.Context) error {
 	m.ctrl.T.Helper()

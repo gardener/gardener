@@ -87,7 +87,11 @@ var _ = Describe("Etcd", func() {
 			Build()
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
-		botanist = &Botanist{Operation: &operation.Operation{}}
+		botanist = &Botanist{
+			Operation: &operation.Operation{
+				Logger: logr.Discard(),
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -251,6 +255,54 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
+
+		DescribeTable("should correctly set topology-aware routing value",
+			func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.Maintenance = &gardencorev1beta1.Maintenance{
+					TimeWindow: &maintenanceTimeWindow,
+				}
+
+				botanist.Seed.SetInfo(seed)
+				botanist.Shoot.SetInfo(shoot)
+
+				etcd, err := botanist.DefaultEtcd(role, class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+				values := etcd.GetValues()
+				Expect(values.TopologyAwareRoutingEnabled).To(matcher)
+			},
+
+			Entry("seed setting is nil, shoot control plane is not HA",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+				BeFalse(),
+			),
+			Entry("seed setting is disabled, shoot control plane is not HA",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+				BeFalse(),
+			),
+			Entry("seed setting is enabled, shoot control plane is not HA",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+				BeFalse(),
+			),
+			Entry("seed setting is nil, shoot control plane is HA with failure tolerance type 'zone'",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+				BeFalse(),
+			),
+			Entry("seed setting is disabled, shoot control plane is HA with failure tolerance type 'zone'",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+				BeFalse(),
+			),
+			Entry("seed setting is enabled, shoot control plane is HA with failure tolerance type 'zone'",
+				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
+				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+				BeTrue(),
+			),
+		)
 	})
 
 	Describe("#DeployEtcd", func() {
