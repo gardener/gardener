@@ -76,18 +76,6 @@ var _ = Describe("helper", func() {
 		falseVar = false
 	)
 
-	DescribeTable("#ShootWantsBasicAuthentication",
-		func(kubeAPIServerConfig *core.KubeAPIServerConfig, wantsBasicAuth bool) {
-			actualWantsBasicAuth := ShootWantsBasicAuthentication(kubeAPIServerConfig)
-			Expect(actualWantsBasicAuth).To(Equal(wantsBasicAuth))
-		},
-
-		Entry("no kubeapiserver configuration", nil, true),
-		Entry("field not set", &core.KubeAPIServerConfig{}, true),
-		Entry("explicitly enabled", &core.KubeAPIServerConfig{EnableBasicAuthentication: &trueVar}, true),
-		Entry("explicitly disabled", &core.KubeAPIServerConfig{EnableBasicAuthentication: &falseVar}, false),
-	)
-
 	DescribeTable("#GetShootCARotationPhase",
 		func(credentials *core.ShootCredentials, expectedPhase core.CredentialsRotationPhase) {
 			Expect(GetShootCARotationPhase(credentials)).To(Equal(expectedPhase))

@@ -152,18 +152,6 @@ func ToExpirableVersions(versions []core.MachineImageVersion) []core.ExpirableVe
 	return expirableVersions
 }
 
-// ShootWantsBasicAuthentication returns true if basic authentication is not configured or
-// if it is set explicitly to 'true'.
-func ShootWantsBasicAuthentication(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
-	if kubeAPIServerConfig == nil {
-		return true
-	}
-	if kubeAPIServerConfig.EnableBasicAuthentication == nil {
-		return true
-	}
-	return *kubeAPIServerConfig.EnableBasicAuthentication
-}
-
 // TaintsHave returns true if the given key is part of the taints list.
 func TaintsHave(taints []core.SeedTaint, key string) bool {
 	for _, taint := range taints {
