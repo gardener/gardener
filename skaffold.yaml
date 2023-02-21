@@ -214,6 +214,7 @@ build:
       dependencies:
         paths:
         - cmd/gardener-controller-manager/app
+        - cmd/gardener-controller-manager/app/bootstrappers
         - cmd/utils
         - pkg/api/extensions
         - pkg/api/indexer

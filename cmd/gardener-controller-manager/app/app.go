@@ -35,6 +35,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/cmd/gardener-controller-manager/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -43,7 +44,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/garden"
 )
 
 // Name is a const for the name of this component.
@@ -170,7 +170,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	}
 
 	log.Info("Adding garden bootstrapper to manager")
-	if err := mgr.Add(&garden.Bootstrapper{
+	if err := mgr.Add(&bootstrappers.Bootstrapper{
 		Log:        log.WithName("bootstrap"),
 		Client:     mgr.GetClient(),
 		RESTConfig: mgr.GetConfig(),

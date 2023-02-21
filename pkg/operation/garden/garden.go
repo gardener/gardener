@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,8 +29,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewBuilder returns a new Builder.
@@ -305,20 +302,4 @@ func ReadGardenSecrets(
 
 	log.Info("Found secrets", "namespace", namespace, "secrets", logInfo)
 	return secretsMap, nil
-}
-
-func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.Client, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
-	credentialsSecret, err := secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
-		Name:           v1beta1constants.SecretNameObservabilityIngress,
-		Format:         secretsutils.BasicAuthFormatNormal,
-		Username:       "admin",
-		PasswordLength: 32,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	patch := client.MergeFrom(credentialsSecret.DeepCopy())
-	metav1.SetMetaDataLabel(&credentialsSecret.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGlobalMonitoring)
-	return credentialsSecret, k8sGardenClient.Patch(ctx, credentialsSecret, patch)
 }
