@@ -134,31 +134,6 @@ data:
         Reserve_Data        True
 ```
 
-#### How to Expose Logs to the Users
-
-To expose logs from extension components to the users, the extension owners have to specify a `modify` filter which will add `__gardener_multitenant_id__=operator;user` entry to the log record. This entry contains all of the tenants, which have to receive this log. The tenants are semicolon separated. This specific dedicated entry will be extracted and removed from the log in the `gardener fluent-bit-to-loki` output plugin and added to the label set of that log. Then it will be parsed and removed from the label set. Any whitespace will be truncated during the parsing. The extension components logs can be found in `Controlplane Logs Dashboard` Grafana dashboard.
-
-**Example:** In this example we configure fluent-bit when it finds a log with field `tag`, which matches the `Condition`, to add `__gardener_multitenant_id__=operator;user` into the log record.
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: gardener-extension-provider-aws-logging-config
-  namespace: garden
-  labels:
-    extensions.gardener.cloud/configuration: logging
-data:
-  filter-kubernetes.conf: |
-    [FILTER]
-        Name          modify
-        Match         kubernetes.*
-        Condition     Key_value_matches tag ^kubernetes\.var\.log\.containers\.(cloud-controller-manager-.+?_.+?_aws-cloud-controller-manager|csi-driver-controller-.+?_.+?_aws-csi)_.+?
-        Add           __gardener_multitenant_id__ operator;user
-```
-In this case we have predefined filter which copies the log's tag into the log record under the `tag` field. The tag consists of the container logs directories path, plus `<pod_name>_<shoot_controlplane_namespace>_<container_name>_<container_id>`, so here we say:
-> When you see a record from pod `cloud-controller-manager` and some of the `aws-cloud-controller-manager`, `csi-driver-controller` or  `aws-csi` containers add `__gardener_multitenant_id__` key with `operator;user` value into the log record.
-
 Further details how to define parsers and use them with examples can be found in the following [guide](../development/log_parsers.md).
 
 ### Grafana

@@ -59,7 +59,7 @@ const (
 	lokiConfigDiskName            = "config"
 	garden                        = "garden"
 	fluentBitClusterRoleName      = "fluent-bit-read"
-	simulatesShootNamespacePrefix = "shoot--logging--test-"
+	simulatedShootNamespacePrefix = "shoot--logging--test-"
 )
 
 var _ = ginkgo.Describe("Seed logging testing", func() {
@@ -133,24 +133,16 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			emptyDirSize             = "500Mi"
 			lokiPersistentVolumeName = "loki"
 			shootLokiName            = "loki-shoots"
-			userLoggerName           = "kube-apiserver"
-			operatorLoggerName       = "logger"
-			userLoggerRegex          = userLoggerName + "-.*"
-			operatorLoggerRegex      = operatorLoggerName + "-.*"
+			loggerRegex              = loggerName + "-.*"
 		)
 		var (
-			operatorLoggerLabels = labels.SelectorFromSet(map[string]string{
-				"app": operatorLoggerName,
-			})
-
-			shootLoggerLabels = labels.SelectorFromSet(map[string]string{
-				"app": userLoggerName,
+			loggerLabels = labels.SelectorFromSet(map[string]string{
+				"app": loggerName,
 			})
 		)
 
 		ginkgo.By("Get Loki tenant IDs")
-		userID := "user" // TODO(vlvasilev): we have a single Grafana now, so the multi-tenancy feature in Loki shall be removed
-		operatorID := getXScopeOrgID(grafanaIngress.GetAnnotations())
+		id := getXScopeOrgID(grafanaIngress.GetAnnotations())
 
 		ginkgo.By("Deploy the garden Namespace")
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), newGardenNamespace(v1beta1constants.GardenNamespace)))
@@ -211,21 +203,15 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 			ginkgo.By(fmt.Sprintf("Deploy the logger application in namespace %s", shootNamespace.Name))
 			loggerParams := map[string]interface{}{
-				"LoggerName":          operatorLoggerName,
+				"LoggerName":          loggerName,
 				"HelmDeployNamespace": shootNamespace.Name,
-				"AppLabel":            operatorLoggerName,
+				"AppLabel":            loggerName,
 				"DeltaLogsCount":      deltaLogsCount,
 				"DeltaLogsDuration":   deltaLogsDuration,
 				"LogsCount":           logsCount,
 				"LogsDuration":        logsDuration,
 			}
 
-			// Half of the shoots will produce user and operators logs.
-			// The other half will produce only operator logs
-			if i&1 == 1 {
-				loggerParams["LoggerName"] = userLoggerName
-				loggerParams["AppLabel"] = userLoggerName
-			}
 			// Try to distrubute the loggers even between nodes
 			if len(nodeList.Items) > 0 {
 				loggerParams["NodeName"] = nodeList.Items[i%len(nodeList.Items)].Name
@@ -235,41 +221,26 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}
 
 		for i := 0; i < numberOfSimulatedClusters; i++ {
-			shootNamespace := fmt.Sprintf("%s%v", simulatesShootNamespacePrefix, i)
-			var l labels.Selector
+			shootNamespace := fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, i)
 
-			if i&1 == 1 {
-				l = shootLoggerLabels
-			} else {
-				l = operatorLoggerLabels
-			}
 			ginkgo.By(fmt.Sprintf("Wait until logger application is ready in namespace %s", shootNamespace))
-			framework.ExpectNoError(f.WaitUntilDeploymentsWithLabelsIsReady(ctx, l, shootNamespace, f.ShootClient))
+			framework.ExpectNoError(f.WaitUntilDeploymentsWithLabelsIsReady(ctx, loggerLabels, shootNamespace, f.ShootClient))
 		}
 
-		ginkgo.By("Verify loki received all operator's logs from operator's logger application for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, operatorID, v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
-		ginkgo.By("Verify loki received all operator's logs from user's logger application for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, operatorID, v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
-		ginkgo.By("Verify loki received user logger application logs for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, userID, v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
+		ginkgo.By("Verify loki received all operator's logs for all shoot namespaces")
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, id, v1beta1constants.GardenNamespace, "pod_name", loggerRegex, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
+
 		ginkgo.By("Verify loki didn't get the logs from the operator's application as user's logs for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, userID, v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, 0, 0, f.ShootClient))
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, "user", v1beta1constants.GardenNamespace, "pod_name", loggerRegex, 0, 0, f.ShootClient))
 
 		ginkgo.By("Verify loki received logger application logs for garden namespace")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
-		ginkgo.By("Verify loki received user application logs for garden namespace")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", loggerRegex, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
 
 	}, getLogsFromLokiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("Cleanup logger app resources")
 		for i := 0; i < numberOfSimulatedClusters; i++ {
 			shootNamespace := getShootNamesapce(i)
-			loggerName := operatorLoggerName
-			if i&1 == 1 {
-				loggerName = userLoggerName
 
-			}
 			loggerDeploymentToDelete := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: shootNamespace.Name,
