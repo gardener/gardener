@@ -122,17 +122,15 @@ func (r *Reconciler) AddToManager(
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.
 func (r *Reconciler) ManagedSeedPredicate(seedName string) predicate.Predicate {
 	return &managedSeedPredicate{
-		reader:          r.GardenClient,
-		gardenNamespace: r.GardenNamespaceGarden,
-		seedName:        seedName,
+		reader:   r.GardenClient,
+		seedName: seedName,
 	}
 }
 
 type managedSeedPredicate struct {
-	ctx             context.Context
-	reader          client.Reader
-	gardenNamespace string
-	seedName        string
+	ctx      context.Context
+	reader   client.Reader
+	seedName string
 }
 
 func (p *managedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
@@ -162,7 +160,7 @@ func (p *managedSeedPredicate) filterManagedSeed(obj client.Object) bool {
 		return false
 	}
 
-	return filterManagedSeed(p.ctx, p.reader, managedSeed, p.gardenNamespace, p.seedName)
+	return filterManagedSeed(p.ctx, p.reader, managedSeed, p.seedName)
 }
 
 // SeedOfManagedSeedPredicate returns the predicate for Seed events.
@@ -213,10 +211,10 @@ func (p *seedOfManagedSeedPredicate) filterSeedOfManagedSeed(obj client.Object) 
 		return false
 	}
 
-	return filterManagedSeed(p.ctx, p.reader, managedSeed, p.gardenNamespace, p.seedName)
+	return filterManagedSeed(p.ctx, p.reader, managedSeed, p.seedName)
 }
 
-func filterManagedSeed(ctx context.Context, reader client.Reader, managedSeed *seedmanagementv1alpha1.ManagedSeed, gardenNamespace, seedName string) bool {
+func filterManagedSeed(ctx context.Context, reader client.Reader, managedSeed *seedmanagementv1alpha1.ManagedSeed, seedName string) bool {
 	if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
 		return false
 	}
