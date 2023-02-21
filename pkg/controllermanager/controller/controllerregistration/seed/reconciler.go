@@ -36,7 +36,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/extensions"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -175,7 +174,7 @@ func computeKindTypesForBackupBuckets(
 
 	for _, backupBucket := range backupBucketList.Items {
 		buckets[backupBucket.Name] = backupBucket
-		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations, buckets
@@ -197,7 +196,7 @@ func computeKindTypesForBackupEntries(
 			continue
 		}
 
-		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations
@@ -265,7 +264,7 @@ func computeKindTypesForSeed(
 	}
 
 	if seed.Spec.DNS.Provider != nil {
-		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
+		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations
@@ -323,7 +322,7 @@ func computeWantedControllerRegistrationNames(
 		}
 
 		for _, resource := range controllerRegistration.obj.Spec.Resources {
-			id := extensions.Id(resource.Kind, resource.Type)
+			id := gardenerutils.ExtensionsID(resource.Kind, resource.Type)
 			kindTypeToControllerRegistrationNames[id] = append(kindTypeToControllerRegistrationNames[id], name)
 		}
 	}

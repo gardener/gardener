@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/extensions"
 )
 
 var availablePolicies = sets.New[string](
@@ -91,7 +90,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "field is required"))
 		}
 		if t, ok := resources[resource.Kind]; ok && t == resource.Type {
-			allErrs = append(allErrs, field.Duplicate(idxPath, extensions.Id(resource.Kind, resource.Type)))
+			allErrs = append(allErrs, field.Duplicate(idxPath, fmt.Sprintf("%s/%s", resource.Kind, resource.Type)))
 		}
 		if resource.Kind != extensionsv1alpha1.ExtensionResource {
 			if resource.GloballyEnabled != nil {

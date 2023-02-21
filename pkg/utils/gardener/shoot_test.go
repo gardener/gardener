@@ -1221,4 +1221,10 @@ var _ = Describe("Shoot", func() {
 			)))
 		})
 	})
+
+	Describe("#ExtensionsID", func() {
+		It("should return the expected identifier", func() {
+			Expect(ExtensionsID("foo", "bar")).To(Equal("foo/bar"))
+		})
+	})
 })

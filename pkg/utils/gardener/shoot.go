@@ -682,3 +682,8 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 
 	return requiredExtensions
 }
+
+// ExtensionsID returns an identifier for the given extension kind/type.
+func ExtensionsID(extensionKind, extensionType string) string {
+	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
+}
