@@ -86,7 +86,7 @@ However, some other resources (mostly without namespaces) might still trigger th
 - certificatesigningrequests
 - priorityclasses
 
-In these cases, please make sure that your `rules` don't overlap with one of those resources (and their subresources).
+If one of the above resources triggers the remediator, the only way to resolve it is to remove that particular resource from your webhook's `rules`s.
 
 You can also find help from the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings)
 
