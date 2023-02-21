@@ -3,8 +3,10 @@ kind: Service
 metadata:
   name: {{ .Values.serviceName }}
   namespace: {{ .Release.Namespace }}
-{{- if .Values.ignoreMode }}
   annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"port":{{ toString .Values.ports.https }},"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"gardener.cloud/role":"exposureclass-handler"}}]'
+{{- if .Values.ignoreMode }}
     resources.gardener.cloud/mode: Ignore
 {{- end }}
   labels:
