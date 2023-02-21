@@ -5,9 +5,6 @@ gardener:
     istio:
       listenAddresses:
       - 127.0.0.2
-      - 127.0.0.20
-      - 127.0.0.21
-      - 127.0.0.22
 
 registry:
   deployed: false
