@@ -1212,6 +1212,49 @@ resources:
 				Entry("encrypting with current", true),
 				Entry("encrypting with old", false),
 			)
+
+			Context("TLS SNI", func() {
+				It("should successfully deploy the needed secret resources", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version, SNI: SNIConfig{TLS: []TLSSNIConfig{
+						{SecretName: pointer.String("foo")},
+						{Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+						{SecretName: pointer.String("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+					}}})
+
+					expectedSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-tls-sni-1", Namespace: namespace},
+						Data:       map[string][]byte{"tls.crt": []byte("foo"), "tls.key": []byte("bar")},
+					}
+					Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+					actualSecret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+					Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            expectedSecret.Name,
+							Namespace:       expectedSecret.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      expectedSecret.Data,
+					}))
+				})
+
+				It("should return an error for invalid configuration", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeVersion: runtimeVersion, Version: version, SNI: SNIConfig{TLS: []TLSSNIConfig{{}}}})
+
+					Expect(kapi.Deploy(ctx)).To(MatchError(ContainSubstring("either the name of an existing secret or both certificate and private key must be provided for TLS SNI config")))
+				})
+			})
 		})
 
 		Describe("ConfigMaps", func() {
@@ -3183,6 +3226,50 @@ rules:
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
 						"--shutdown-send-retry-after=true",
+					))
+				})
+
+				It("should properly set the TLS SNI flag if necessary", func() {
+					values.SNI.TLS = []TLSSNIConfig{
+						{SecretName: pointer.String("existing-secret")},
+						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatterns: []string{"foo1.com", "*.foo2.com"}},
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/0/tls.crt,/srv/kubernetes/tls-sni/0/tls.key",
+						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/1/tls.crt,/srv/kubernetes/tls-sni/1/tls.key:foo1.com,*.foo2.com",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "tls-sni-0",
+							MountPath: "/srv/kubernetes/tls-sni/0",
+							ReadOnly:  true,
+						},
+						corev1.VolumeMount{
+							Name:      "tls-sni-1",
+							MountPath: "/srv/kubernetes/tls-sni/1",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "tls-sni-0",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "existing-secret",
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "tls-sni-1",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-tls-sni-1-ec321de5",
+								},
+							},
+						},
 					))
 				})
 			})
