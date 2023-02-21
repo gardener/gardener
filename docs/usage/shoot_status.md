@@ -52,7 +52,7 @@ That's because most control-plane API calls are made with a client-side timeout 
 the overall request might still fail as there is overhead in communication with the API server and potential other webhooks.
 Generally, it's [best pratice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts) to specify low timeouts in WebhookConfigs.
 
-As an effort to correct this common problem, the webhook remediator has been created. This feature simply checks whether a customer's webhook matches a set of rules, described [here](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L66-L180). If at least one of the rule matches, it will change the constraints (`HibernationPossible` and `MaintenancePreconditionsSatisfied`) statuses.
+As an effort to correct this common problem, the webhook remediator has been created. This feature simply checks whether a customer's webhook matches a set of rules, described [here](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go). If at least one of the rule matches, it will change the constraints (`HibernationPossible` and `MaintenancePreconditionsSatisfied`) statuses.
 
 In most cases, you can avoid this by simply excluding the `kube-system` namespace from your webhook:
 
