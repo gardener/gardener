@@ -54,7 +54,8 @@ Generally, it's [best pratice](https://kubernetes.io/docs/reference/access-authn
 
 As an effort to correct this common problem, the webhook remediator has been created. This feature simply checks whether a customer's webhook matches a set of rules, described [here](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L66-L180). If at least one of the rule matches, it will change the constraints (`HibernationPossible` and `MaintenancePreconditionsSatisfied`) statuses.
 
-In most cases, you can avoid this by simply excluding the kube-system namespace from your webhook.
+In most cases, you can avoid this by simply excluding the `kube-system` namespace from your webhook:
+
 ```yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
