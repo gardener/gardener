@@ -47,10 +47,10 @@ retries=0
 while [ "${retries}" -lt "${TIMEOUT}" ]; do
   if [ -z "$NAMESPACE" ]; then
     # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
-    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" --request-timeout='1s' -o json | yq '.status.conditions') || true
+    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -o json | yq '.status.conditions') || true
   else
     # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
-    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" --request-timeout='1s' -o json | yq '.status.conditions') || true
+    CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" -o json | yq '.status.conditions') || true
   fi
 
   # A flag to indicate if all conditions have passed
