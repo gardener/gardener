@@ -987,11 +987,18 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 
 	Describe("Immutable resources", func() {
-		It("should recreate the resource if the update is invalid", func() {
-			newData := map[string]string{
-				"foo": "bar",
+		BeforeEach(func() {
+			configMap.Immutable = pointer.Bool(true)
+			secretForManagedResource = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: testNamespace.Name,
+				},
+				Data: secretDataForObject(configMap, dataKey),
 			}
+		})
 
+		It("should recreate the resource if the update is invalid", func() {
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
@@ -1001,9 +1008,15 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 			Expect(testClient.Delete(ctx, configMap)).To(Succeed())
 
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+			}).Should(BeNotFoundError())
+
+			newData := map[string]string{
+				"foo": "bar",
+			}
 			oldData := configMap.Data
 			configMap.Data = newData
-			configMap.Immutable = pointer.Bool(true)
 			Expect(testClient.Create(ctx, configMap)).To(Succeed())
 
 			Eventually(func(g Gomega) error {
