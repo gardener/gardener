@@ -4750,9 +4750,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
-Defaults to false.
-Deprecated: basic authentication has been removed in Kubernetes v1.19+. This field will be removed in a future version.</p>
+<p>EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.</p>
+<p>Deprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.</p>
 </td>
 </tr>
 <tr>

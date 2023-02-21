@@ -3433,7 +3433,7 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 					},
 					"enableBasicAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not. Defaults to false. Deprecated: basic authentication has been removed in Kubernetes v1.19+. This field will be removed in a future version.",
+							Description: "EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.\n\nDeprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -11104,7 +11104,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"enableBasicAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not. Defaults to false. Deprecated: basic authentication has been removed in Kubernetes v1.19+. This field will be removed in a future version.",
+							Description: "EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.\n\nDeprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
