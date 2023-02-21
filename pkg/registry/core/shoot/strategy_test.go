@@ -36,6 +36,80 @@ import (
 )
 
 var _ = Describe("Strategy", func() {
+
+	Describe("#PrepareForCreate", func() {
+		var (
+			shoot *core.Shoot
+		)
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{}
+		})
+
+		DescribeTable("HAControlPlanes feature gate on shoot creation",
+			func(featureGateEnabled bool, shootCP, resultingShootCP *core.ControlPlane) {
+
+				testFeatureGate := featuregate.NewFeatureGate()
+				Expect(testFeatureGate.Add(features.GetFeatures(
+					features.HAControlPlanes,
+				))).To(Succeed())
+				Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
+
+				DeferCleanup(test.WithVars(
+					&utilfeature.DefaultFeatureGate,
+					testFeatureGate,
+				))
+
+				shoot.Spec.ControlPlane = shootCP
+
+				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+				Expect(shoot.Spec.ControlPlane).To(Equal(resultingShootCP))
+			},
+
+			Entry("HAControlPlanes false, new shoot HA",
+				false,
+				newControlPlaneWithFailureTypeNode(),
+				newControlPlaneWithHighAvailabilityNil(),
+			),
+			Entry("HAControlPlanes true, new shoot HA",
+				true,
+				newControlPlaneWithFailureTypeNode(),
+				newControlPlaneWithFailureTypeNode(),
+			),
+			Entry("HAControlPlanes false, new shoot no HA",
+				false,
+				nil,
+				nil,
+			),
+			Entry("HAControlPlanes true, new shoot no HA",
+				true,
+				nil,
+				nil,
+			),
+		)
+
+		Context("enableBasicAuthentication field", func() {
+			It("should drop the enableBasicAuthentication field when the kubeAPIServer is not nil", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					EnableBasicAuthentication: pointer.Bool(false),
+				}
+
+				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(BeNil())
+			})
+
+			It("should do nothing when kubeAPIServer is nil", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = nil
+
+				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
+			})
+		})
+	})
+
 	Describe("#PrepareForUpdate", func() {
 		Context("seedName change", func() {
 			var (
@@ -244,49 +318,6 @@ var _ = Describe("Strategy", func() {
 				)
 			})
 
-			DescribeTable("HAControlPlanes feature gate on shoot creation",
-				func(featureGateEnabled bool, newShootCP, resultingShootCP *core.ControlPlane) {
-
-					testFeatureGate := featuregate.NewFeatureGate()
-					Expect(testFeatureGate.Add(features.GetFeatures(
-						features.HAControlPlanes,
-					))).To(Succeed())
-					Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
-
-					DeferCleanup(test.WithVars(
-						&utilfeature.DefaultFeatureGate,
-						testFeatureGate,
-					))
-
-					newShoot.Spec.ControlPlane = newShootCP
-
-					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), newShoot)
-
-					Expect(newShoot.Spec.ControlPlane).To(Equal(resultingShootCP))
-				},
-
-				Entry("HAControlPlanes false, new shoot HA",
-					false,
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithHighAvailabilityNil(),
-				),
-				Entry("HAControlPlanes true, new shoot HA",
-					true,
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithFailureTypeNode(),
-				),
-				Entry("HAControlPlanes false, new shoot no HA",
-					false,
-					nil,
-					nil,
-				),
-				Entry("HAControlPlanes true, new shoot no HA",
-					true,
-					nil,
-					nil,
-				),
-			)
-
 			DescribeTable("HAControlPlanes feature gate on shoot update",
 				func(featureGateEnabled bool, oldShootCP, newShootCP, resultingShootCP *core.ControlPlane) {
 
@@ -485,6 +516,36 @@ var _ = Describe("Strategy", func() {
 					true,
 				),
 			)
+		})
+
+		Context("enableBasicAuthentication field", func() {
+			var (
+				oldShoot *core.Shoot
+				newShoot *core.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = &core.Shoot{}
+				newShoot = oldShoot.DeepCopy()
+			})
+
+			It("should drop the enableBasicAuthentication field when the kubeAPIServer is not nil", func() {
+				newShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					EnableBasicAuthentication: pointer.Bool(false),
+				}
+
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(BeNil())
+			})
+
+			It("should do nothing when kubeAPIServer is nil", func() {
+				newShoot.Spec.Kubernetes.KubeAPIServer = nil
+
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
+			})
 		})
 	})
 

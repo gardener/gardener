@@ -67,6 +67,7 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	shoot.Status = core.ShootStatus{}
 
 	dropDisabledFields(shoot, nil)
+	dropEnableBasicAuthenticationField(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -81,6 +82,7 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	}
 
 	dropDisabledFields(newShoot, oldShoot)
+	dropEnableBasicAuthenticationField(newShoot)
 }
 
 // dropDisabledFields removes disabled fields from shoot.
@@ -89,6 +91,13 @@ func dropDisabledFields(newShoot, oldShoot *core.Shoot) {
 	oldShootIsHA := oldShoot != nil && helper.IsHAControlPlaneConfigured(oldShoot)
 	if !utilfeature.DefaultFeatureGate.Enabled(features.HAControlPlanes) && !oldShootIsHA && newShoot.Spec.ControlPlane != nil {
 		newShoot.Spec.ControlPlane.HighAvailability = nil
+	}
+}
+
+// dropEnableBasicAuthenticationField sets the enableBasicAuthentication to nil.
+func dropEnableBasicAuthenticationField(shoot *core.Shoot) {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+		shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = nil
 	}
 }
 
