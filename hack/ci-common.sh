@@ -16,7 +16,7 @@
 
 set -o errexit
 
-export_logs() {
+export_artifacts() {
   cluster_name="${1}"
   echo "> Exporting logs of kind cluster '$cluster_name'"
   kind export logs "${ARTIFACTS:-}/$cluster_name" --name "$cluster_name" || true

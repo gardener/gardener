@@ -28,7 +28,7 @@ make kind-ha-single-zone-up
 
 # export all container logs and events after test execution
 trap '{
-  export_logs "gardener-local-ha-single-zone"
+  export_artifacts "gardener-local-ha-single-zone"
   make kind-ha-single-zone-down
 }' EXIT
 

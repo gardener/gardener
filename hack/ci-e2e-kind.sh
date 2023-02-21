@@ -27,7 +27,7 @@ make kind-up
 
 # export all container logs and events after test execution
 trap '{
-  export_logs "gardener-local"
+  export_artifacts "gardener-local"
   make kind-down
 }' EXIT
 

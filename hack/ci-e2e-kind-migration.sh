@@ -28,8 +28,8 @@ make kind2-up
 
 # export all container logs and events after test execution
 trap '{
-  KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG export_logs "gardener-local"
-  KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_logs "gardener-local2"
+  KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG export_artifacts "gardener-local"
+  KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2"
   make kind-down
   make kind2-down
 }' EXIT
