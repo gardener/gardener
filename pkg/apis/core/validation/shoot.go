@@ -405,10 +405,6 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, sets.List(availableKubernetesDashboardAuthenticationModes)))
 			}
-
-			if *authMode == core.KubernetesDashboardAuthModeBasic && !helper.ShootWantsBasicAuthentication(kubernetes.KubeAPIServer) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, "cannot use basic auth mode when basic auth is not enabled in kube-apiserver configuration"))
-			}
 		}
 	}
 
@@ -737,10 +733,6 @@ func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, 
 	}
 
 	if kubeAPIServer := kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		if helper.ShootWantsBasicAuthentication(kubeAPIServer) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "enableBasicAuthentication"), "basic authentication has been removed in Kubernetes v1.19+"))
-		}
-
 		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
 			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
 

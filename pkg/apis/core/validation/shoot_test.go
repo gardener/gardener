@@ -216,7 +216,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 									},
 								},
 							},
-							EnableBasicAuthentication: pointer.Bool(false),
 						},
 						KubeControllerManager: &core.KubeControllerManagerConfig{
 							NodeCIDRMaskSize: pointer.Int32(22),
@@ -503,7 +502,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shootCopy := shoot.DeepCopy()
 				shootCopy.Spec.Purpose = &purpose
 				shootCopy.Spec.Kubernetes.Version = version
-				shootCopy.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 
 				errorList := ValidateShoot(shootCopy)
 
@@ -564,18 +562,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("spec.addons.nginxIngress.externalTrafficPolicy"),
-			}))))
-		})
-
-		It("should forbid using basic auth mode for kubernetes dashboard when it's disabled in kube-apiserver config", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String(core.KubernetesDashboardAuthModeBasic)
-			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
 			}))))
 		})
 
@@ -1453,29 +1439,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
 				Entry("should add error if issuerURL is set but clientID is empty string ", 2, pointer.String("")),
 			)
-		})
-
-		Context("basic authentication", func() {
-			It("should forbid basic authentication for kubernetes v1.19+", func() {
-				shoot.Spec.Kubernetes.Version = "1.23.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.enableBasicAuthentication"),
-				}))))
-			})
-
-			It("should allow disabling basic authentication for kubernetes v1.19+", func() {
-				shoot.Spec.Kubernetes.Version = "1.23.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(BeEmpty())
-			})
 		})
 
 		Context("admission plugin validation", func() {
