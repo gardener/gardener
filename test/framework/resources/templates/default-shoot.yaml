@@ -15,8 +15,6 @@ spec:
     # the enableStaticTokenKubeconfig field cannot parse the K8s version and sets the field always to false.
     # We should consider switching to UniversalDeserializer or use other approach that will allow the desired behaviour to be achieved.
     enableStaticTokenKubeconfig: true
-    kubeAPIServer:
-      enableBasicAuthentication: false
   dns: {}
   networking:
     type: calico
