@@ -24,6 +24,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/core/seed"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
@@ -107,7 +108,7 @@ func (Strategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []stri
 
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (Strategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
-	return nil
+	return seed.GetWarnings(ctx, obj.(*core.Seed))
 }
 
 // StatusStrategy defines the strategy for storing seeds statuses.
