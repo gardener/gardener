@@ -50,9 +50,9 @@ For example, if a webhook has rules for `CREATE/UPDATE` Pods or Nodes and `failu
 Even if the `failurePolicy` is set to `Ignore`, high timeouts (`>15s`) can lead to blocking requests of control plane components.
 That's because most control-plane API calls are made with a client-side timeout of `30s`, so if a webhook has `timeoutSeconds=30`
 the overall request might still fail as there is overhead in communication with the API server and potential other webhooks.
-Generally, it's [best pratice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts) to specify low timeouts in WebhookConfigs.
+Generally, it's [best practice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts) to specify low timeouts in WebhookConfigs.
 
-As an effort to correct this common problem, the webhook remediator has been created. This feature simply checks whether a customer's webhook matches a set of rules, described [here](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go). If at least one of the rule matches, it will change the constraints (`HibernationPossible` and `MaintenancePreconditionsSatisfied`) statuses.
+As an effort to correct this common problem, the webhook remediator has been created. This is enabled by setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the Gardenlet configuration. This feature simply checks whether a customer's webhook matches a set of rules, described [here](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go). If at least one of the rule matches, it will change the constraints (`HibernationPossible` and `MaintenancePreconditionsSatisfied`) statuses. In such cases, the `failurePolicy` will be set from `Fail` to `Ignore`. Gardenlet will also add an annotation to make it visible to end-users that their webhook configurations were mutated and should be fixed by them in the first place.
 
 In most cases, you can avoid this by simply excluding the `kube-system` namespace from your webhook:
 
@@ -86,18 +86,9 @@ However, some other resources (mostly without namespaces) might still trigger th
 - certificatesigningrequests
 - priorityclasses
 
-If one of the above resources triggers the remediator, the only way to resolve it is to remove that particular resource from your webhook's `rules`s.
+If one of the above resources triggers the remediator, the preferred solution is to remove that particular resource from your webhook's `rules`. You can also use the `objectSelector` to reduce the scope of webhook's `rules`. However, in special cases where a webhook is absolutely needed for the workload, it is possible to add the `remediation.webhook.shoot.gardener.cloud/exclude=true` annotation to your webhook so that the remediator ignores it. This annotation **should not use to silence an alert**, but rather to confirm that a webhook won't cause problems. Note that all of this is no perfect solution and just done on a best effort basis, and only the owner of the webhook can know whether it indeed is problematic and configured correctly.
 
-You can also find help from the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings)
-
-> By setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the gardenlet configuration, the auto-remediation of webhooks not following the best practices can be turned on in the shoot clusters.
-> Concretely, missing `namespaceSelector`s or `objectSelector`s will be added and too high `timeoutSeconds` will be lowered.
-> In some cases, the `failurePolicy` will be set from `Fail` to `Ignore`.
-> Gardenlet will also add an annotation to make it visible to end-users that their webhook configurations were mutated and should be fixed by them in the first place.
-> Note that all of this is no perfect solution and just done on a best effort basis.
-> Only the owner of the webhook can know whether it indeed is problematic and configured correctly.
-> 
-> Webhooks labeled with `remediation.webhook.shoot.gardener.cloud/exclude=true` will be excluded from auto-remediation.
+You can also find more help from the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings)
 
 **`MaintenancePreconditionsSatisfied`**:
 
