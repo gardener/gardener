@@ -217,8 +217,6 @@ If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller del
 The `BackupEntry` controller reconciles those `core.gardener.cloud/v1beta1.BackupEntry` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 Those resources are created by the `Shoot` controller (only if backup is enabled for the respective `Seed`) and there is exactly one `BackupEntry` per `Shoot`.
 
-#### "Main" Reconciler
-
 The controller creates an `extensions.gardener.cloud/v1alpha1.BackupEntry` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [Contract: BackupEntry Resource](../extensions/backupentry.md) for more details).
 The status is populated in the `.status.lastOperation` field.
 
