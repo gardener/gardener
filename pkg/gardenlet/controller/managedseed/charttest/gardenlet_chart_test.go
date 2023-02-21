@@ -349,13 +349,13 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				ValidateGardenletChartVPA(ctx, c)
 			}
 		},
-		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", pointer.String("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
-			"gardenlet-configmap":         "gardenlet-configmap-3ece3894",
+			"gardenlet-configmap":         "gardenlet-configmap-8181475a",
 			"gardenlet-kubeconfig-garden": "gardenlet-kubeconfig-garden-8c9ae097",
 		}),
 		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, pointer.String("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
-			"gardenlet-configmap":       "gardenlet-configmap-6f1a0279",
+			"gardenlet-configmap":       "gardenlet-configmap-8ec89870",
 			"gardenlet-kubeconfig-seed": "gardenlet-kubeconfig-seed-662d92ae",
 		}),
 		Entry("verify Gardenlet with component config having a Bootstrap kubeconfig set", nil, nil, &corev1.SecretReference{
@@ -365,7 +365,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			Name:      "gardenlet-kubeconfig",
 			Namespace: v1beta1constants.GardenNamespace,
 		}, pointer.String("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil, map[string]string{
-			"gardenlet-configmap": "gardenlet-configmap-6486c4e9",
+			"gardenlet-configmap": "gardenlet-configmap-02b0072d",
 		}),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
@@ -377,7 +377,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						Provider: gardencorev1beta1.SeedProvider{},
 					},
 				},
-			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-78a128d6"}),
+			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-0b86ba50"}),
 		Entry("verify deployment with two replica and three zones", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -392,7 +392,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, &seedmanagement.GardenletDeployment{
 				ReplicaCount: pointer.Int32(2),
-			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-0b0ba2c7"}),
+			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-e4f5329f"}),
 		Entry("verify deployment with only one replica", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -407,7 +407,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, &seedmanagement.GardenletDeployment{
 				ReplicaCount: pointer.Int32(1),
-			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-0b0ba2c7"}),
+			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-e4f5329f"}),
 		Entry("verify deployment with only one zone", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -420,23 +420,23 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						},
 					},
 				},
-			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-4ebe02d1"}),
+			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-2ae6f940"}),
 		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil, nil, map[string]string{
-			"gardenlet-configmap":             "gardenlet-configmap-3f18b660",
+			"gardenlet-configmap":             "gardenlet-configmap-5cbb3efe",
 			"gardenlet-imagevector-overwrite": "gardenlet-imagevector-overwrite-32ecb769",
 		}),
 		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil, map[string]string{
-			"gardenlet-configmap":                        "gardenlet-configmap-3f18b660",
+			"gardenlet-configmap":                        "gardenlet-configmap-5cbb3efe",
 			"gardenlet-imagevector-overwrite-components": "gardenlet-imagevector-overwrite-components-53f94952",
 		}),
 
 		Entry("verify deployment with custom replica count", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ReplicaCount: pointer.Int32(3),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ServiceAccountName: pointer.String("ax"),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with resources", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Resources: &corev1.ResourceRequirements{
@@ -448,19 +448,19 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					corev1.ResourceMemory: resource.MustParse("25Mi"),
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with pod labels", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodLabels: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with pod annotations", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodAnnotations: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with additional volumes", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumes: []corev1.Volume{
@@ -469,7 +469,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					VolumeSource: corev1.VolumeSource{},
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with additional volume mounts", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumeMounts: []corev1.VolumeMount{
@@ -477,7 +477,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Name: "a",
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with env variables", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Env: []corev1.EnvVar{
@@ -486,14 +486,14 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Value: "XY",
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
 
 		Entry("verify deployment with VPA enabled", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			VPA: pointer.Bool(true),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3f18b660"}),
-		Entry("verify Gardenlet RBACs when ManagedIstio is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.ManagedIstio): true}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-7521d0ae"}),
-		Entry("verify Gardenlet RBACs when APIServerSNI is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): true}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-d592ce57"}),
-		Entry("verify Gardenlet RBACs when APIServerSNI is disabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): false}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-0bbed120"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5cbb3efe"}),
+		Entry("verify Gardenlet RBACs when ManagedIstio is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.ManagedIstio): true}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-e31125e2"}),
+		Entry("verify Gardenlet RBACs when APIServerSNI is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): true}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5f214020"}),
+		Entry("verify Gardenlet RBACs when APIServerSNI is disabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): false}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-84af476b"}),
 	)
 })
 
