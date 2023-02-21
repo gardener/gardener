@@ -29,6 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
+	"github.com/gardener/gardener/pkg/utils"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -207,12 +208,9 @@ var _ = Describe("#Service", func() {
 	Context("SNI disabled", func() {
 		BeforeEach(func() {
 			sniPhase = component.PhaseDisabled
-			expected.Annotations = map[string]string{
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo": "bar",
-				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
-				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
-			}
+			}, netpolAnnotations())
 		})
 
 		assertDisabledSNI()
@@ -221,13 +219,10 @@ var _ = Describe("#Service", func() {
 	Context("SNI being disabled", func() {
 		BeforeEach(func() {
 			sniPhase = component.PhaseDisabling
-			expected.Annotations = map[string]string{
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
-				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
-				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
-			}
+			}, netpolAnnotations())
 			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
 		})
@@ -238,13 +233,10 @@ var _ = Describe("#Service", func() {
 	Context("SNI enabled", func() {
 		BeforeEach(func() {
 			sniPhase = component.PhaseEnabled
-			expected.Annotations = map[string]string{
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
-				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
-				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
-			}
+			}, netpolAnnotations())
 			expected.Spec.Type = corev1.ServiceTypeClusterIP
 			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
 		})
@@ -255,16 +247,23 @@ var _ = Describe("#Service", func() {
 	Context("SNI being enabled", func() {
 		BeforeEach(func() {
 			sniPhase = component.PhaseEnabling
-			expected.Annotations = map[string]string{
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
-				"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-				"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
-				"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
-			}
+			}, netpolAnnotations())
 			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 		})
 
 		assertEnabledSNI()
 	})
 })
+
+func netpolAnnotations() map[string]string {
+	return map[string]string{
+		"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
+		"networking.resources.gardener.cloud/from-world-to-ports":                `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"gardener.cloud/role":"exposureclass-handler"}}]`,
+		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
+	}
+}

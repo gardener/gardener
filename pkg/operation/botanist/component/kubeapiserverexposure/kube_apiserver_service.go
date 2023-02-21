@@ -154,6 +154,10 @@ func (s *service) Deploy(ctx context.Context) error {
 		if s.values.enableSNI {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		}
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj,
+			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler}}))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 		// TODO(rfranzke): Drop this annotation once the APIServerSNI feature gate is dropped (then API servers are only
 		//  exposed indirectly via Istio) and the NetworkPolicy controller in gardener-resource-manager is enabled for
