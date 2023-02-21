@@ -974,27 +974,18 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 
-			It("should succeed if ingress domain stays the same when migrating from ingress.domain to dns.ingressDomain", func() {
+			It("should fail if tried to migrate from ingress.domain to dns.ingressDomain", func() {
 				newSeed := prepareSeedForUpdate(seed)
 				currentDomain := seed.Spec.Ingress.Domain
 				newSeed.Spec.Ingress = nil
 				newSeed.Spec.DNS.IngressDomain = &currentDomain
-
-				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
-			})
-
-			It("should fail if ingress domain changed when migrating from ingress.domain to dns.ingressDomain", func() {
-				newSeed := prepareSeedForUpdate(seed)
-				otherDomain := "other-domain"
-				newSeed.Spec.Ingress = nil
-				newSeed.Spec.DNS.IngressDomain = &otherDomain
 
 				errorList := ValidateSeedUpdate(newSeed, seed)
 
 				Expect(errorList).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.dns.ingressDomain"),
-					"Detail": Equal(`field is immutable`),
+					"Detail": ContainSubstring("this field is deprecated and will be removed in a future version. Migration from spec.ingress to spec.dns.ingressDomain is not permitted"),
 				}))
 			})
 
@@ -1167,6 +1158,28 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.networks.pods"),
 					"Detail": Equal("field is immutable"),
+				})),
+			))
+		})
+	})
+
+	Describe("#ValidateIngressDomain", func() {
+		It("should allow if spec.dns.ingressDomain is not set", func() {
+			seed.Spec.DNS.IngressDomain = nil
+
+			errorList := ValidateIngressDomain(seed)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should deny if spec.dns.ingressDomain is set", func() {
+			errorList := ValidateIngressDomain(seed)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.ingressDomain"),
+					"Detail": Equal("this field is deprecated and will be removed in a future version. Use spec.ingress.domain instead"),
 				})),
 			))
 		})

@@ -197,7 +197,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 
 	if seedSpec.Ingress != nil {
 		if seedSpec.DNS.IngressDomain != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), "",
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), seedSpec.DNS.IngressDomain,
 				"Either specify spec.ingress.domain or spec.dns.ingressDomain"),
 			)
 		} else {
@@ -286,7 +286,7 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, oldSeedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
 	}
 	if oldSeedSpec.Ingress != nil && newSeedSpec.DNS.IngressDomain != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(*newSeedSpec.DNS.IngressDomain, oldSeedSpec.Ingress.Domain, fldPath.Child("dns", "ingressDomain"))...)
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), *newSeedSpec.DNS.IngressDomain, "this field is deprecated and will be removed in a future version. Migration from spec.ingress to spec.dns.ingressDomain is not permitted"))
 	}
 	if oldSeedSpec.DNS.IngressDomain != nil && newSeedSpec.Ingress != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, *oldSeedSpec.DNS.IngressDomain, fldPath.Child("ingress", "domain"))...)
@@ -330,6 +330,17 @@ func ValidateSeedStatusUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 
 	if oldStatus.ClusterIdentity != nil && !apiequality.Semantic.DeepEqual(oldStatus.ClusterIdentity, newStatus.ClusterIdentity) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.ClusterIdentity, oldStatus.ClusterIdentity, fldPath.Child("clusterIdentity"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateIngressDomain validates .spec.dns.ingressDomain field on creation.
+func ValidateIngressDomain(seed *core.Seed) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if seed.Spec.DNS.IngressDomain != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dns", "ingressDomain"), seed.Spec.DNS.IngressDomain, "this field is deprecated and will be removed in a future version. Use spec.ingress.domain instead"))
 	}
 
 	return allErrs
