@@ -803,18 +803,6 @@ func ComputeExpectedGardenletConfiguration(
 					},
 				},
 			},
-			ShootMigration: &gardenletv1alpha1.ShootMigrationControllerConfiguration{
-				ConcurrentSyncs: &five,
-				SyncPeriod: &metav1.Duration{
-					Duration: time.Minute,
-				},
-				GracePeriod: &metav1.Duration{
-					Duration: 2 * time.Hour,
-				},
-				LastOperationStaleDuration: &metav1.Duration{
-					Duration: 10 * time.Minute,
-				},
-			},
 			ShootSecret: &gardenletv1alpha1.ShootSecretControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},

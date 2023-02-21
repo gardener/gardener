@@ -149,8 +149,6 @@ type GardenletControllerConfiguration struct {
 	Shoot *ShootControllerConfiguration
 	// ShootCare defines the configuration of the ShootCare controller.
 	ShootCare *ShootCareControllerConfiguration
-	// ShootMigration defines the configuration of the ShootMigration controller.
-	ShootMigration *ShootMigrationControllerConfiguration
 	// ShootStateSync defines the configuration of the ShootState controller.
 	ShootStateSync *ShootStateSyncControllerConfiguration
 	// NetworkPolicy defines the configuration of the NetworkPolicy controller.
@@ -287,21 +285,6 @@ type SeedCareControllerConfiguration struct {
 	SyncPeriod *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
-}
-
-// ShootMigrationControllerConfiguration defines the configuration of the ShootMigration
-// controller.
-type ShootMigrationControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs *int
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	// It is only relevant for shoots that are currently being migrated.
-	SyncPeriod *metav1.Duration
-	// GracePeriod is the period to wait before forcing the restoration after the migration has started.
-	GracePeriod *metav1.Duration
-	// LastOperationStaleDuration is the duration to consider the last operation stale after it was last updated.
-	LastOperationStaleDuration *metav1.Duration
 }
 
 // ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.

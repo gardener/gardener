@@ -123,11 +123,6 @@ config:
       waitSyncPeriod: 15s
       syncJitterPeriod: 5m
       jitterUpdates: false
-    shootMigration:
-      concurrentSyncs: 5
-      syncPeriod: 1m
-      gracePeriod: 2h
-      lastOperationStaleDuration: 10m
   resources:
     capacity:
       shoots: 250

@@ -83,11 +83,6 @@ controllers:
     syncPeriod: 1h
     waitSyncPeriod: 15s
     syncJitterPeriod: 5m
-  shootMigration:
-    concurrentSyncs: 5
-    syncPeriod: 1m
-    gracePeriod: 2h
-    lastOperationStaleDuration: 10m
 resources:
   capacity:
     shoots: 200

@@ -55,7 +55,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Shoot).NotTo(BeNil())
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
 			Expect(obj.Controllers.SeedCare).NotTo(BeNil())
-			Expect(obj.Controllers.ShootMigration).NotTo(BeNil())
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
@@ -343,23 +342,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
 			Expect(obj.StaleExtensionHealthChecks).To(PointTo(Equal(StaleExtensionHealthChecks{Enabled: true})))
-		})
-	})
-
-	Describe("#SetDefaults_ShootMigrationControllerConfiguration", func() {
-		var obj *ShootMigrationControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &ShootMigrationControllerConfiguration{}
-		})
-
-		It("should default the configuration", func() {
-			SetDefaults_ShootMigrationControllerConfiguration(obj)
-
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
-			Expect(obj.GracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
-			Expect(obj.LastOperationStaleDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
 		})
 	})
 
