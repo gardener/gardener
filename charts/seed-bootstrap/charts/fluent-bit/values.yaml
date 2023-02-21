@@ -28,7 +28,7 @@ lokiLabels:
     container_name: "container_name"
     namespace_name: "namespace_name"
     pod_name: "pod_name"
-    docker_id: "docker_id"
+    container_id: "container_id"
   systemdLabels:
     hostname: "host_name"
     unit: "systemd_component"

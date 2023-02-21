@@ -128,7 +128,7 @@ func create(ctx context.Context, c client.Client, obj client.Object) error {
 func getShootNamesapce(number int) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s%v", simulatesShootNamespacePrefix, number),
+			Name: fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, number),
 		},
 	}
 }
@@ -149,7 +149,7 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 			APIVersion: "extensions.gardener.cloud/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s%v", simulatesShootNamespacePrefix, number),
+			Name: fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, number),
 		},
 		Spec: extensionsv1alpha1.ClusterSpec{
 			Shoot: runtime.RawExtension{
@@ -169,7 +169,7 @@ func getLokiShootService(number int) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lokiName,
-			Namespace: fmt.Sprintf("%s%v", simulatesShootNamespacePrefix, number),
+			Namespace: fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, number),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceType(corev1.ServiceTypeExternalName),
