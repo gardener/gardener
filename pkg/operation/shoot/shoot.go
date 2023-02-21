@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -131,13 +130,13 @@ func (b *Builder) WithProjectName(projectName string) *Builder {
 }
 
 // WithInternalDomain sets the internalDomain attribute at the Builder.
-func (b *Builder) WithInternalDomain(internalDomain *garden.Domain) *Builder {
+func (b *Builder) WithInternalDomain(internalDomain *gardenerutils.Domain) *Builder {
 	b.internalDomain = internalDomain
 	return b
 }
 
 // WithDefaultDomains sets the defaultDomains attribute at the Builder.
-func (b *Builder) WithDefaultDomains(defaultDomains []*garden.Domain) *Builder {
+func (b *Builder) WithDefaultDomains(defaultDomains []*gardenerutils.Domain) *Builder {
 	b.defaultDomains = defaultDomains
 	return b
 }

@@ -33,8 +33,8 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("KubeAPIServerExposure", func() {
@@ -66,7 +66,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				Shoot: &shoot.Shoot{
 					SeedNamespace: namespace,
 				},
-				Garden: &garden.Garden{},
+				Garden: &gardenerutils.Garden{},
 				Logger: logr.Discard(),
 			},
 		}
@@ -94,10 +94,10 @@ var _ = Describe("KubeAPIServerExposure", func() {
 		Context("sni enabled", func() {
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
-				botanist.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
+				botanist.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 				botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 				botanist.Shoot.ExternalClusterDomain = pointer.String("baz")
-				botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
+				botanist.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 			})
 
 			It("returns Enabled for not existing services", func() {

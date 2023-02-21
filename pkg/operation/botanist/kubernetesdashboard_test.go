@@ -29,8 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockkubernetesdashboard "github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard/mock"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -46,7 +46,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		botanist = &Botanist{Operation: &operation.Operation{
-			Garden: &garden.Garden{},
+			Garden: &gardenerutils.Garden{},
 			Shoot:  &shootpkg.Shoot{},
 		}}
 		shoot = &gardencorev1beta1.Shoot{

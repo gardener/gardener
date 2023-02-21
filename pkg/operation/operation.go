@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -56,7 +55,7 @@ func NewBuilder() *Builder {
 		configFunc: func() (*config.GardenletConfiguration, error) {
 			return nil, fmt.Errorf("config is required but not set")
 		},
-		gardenFunc: func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error) {
+		gardenFunc: func(context.Context, map[string]*corev1.Secret) (*gardenerutils.Garden, error) {
 			return nil, fmt.Errorf("garden object is required but not set")
 		},
 		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
@@ -77,7 +76,7 @@ func NewBuilder() *Builder {
 		seedFunc: func(context.Context) (*seed.Seed, error) {
 			return nil, fmt.Errorf("seed object is required but not set")
 		},
-		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shootpkg.Shoot, error) {
+		shootFunc: func(context.Context, client.Reader, *gardenerutils.Garden, *seed.Seed) (*shootpkg.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 	}
@@ -90,15 +89,15 @@ func (b *Builder) WithConfig(cfg *config.GardenletConfiguration) *Builder {
 }
 
 // WithGarden sets the gardenFunc attribute at the Builder.
-func (b *Builder) WithGarden(g *garden.Garden) *Builder {
-	b.gardenFunc = func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error) { return g, nil }
+func (b *Builder) WithGarden(g *gardenerutils.Garden) *Builder {
+	b.gardenFunc = func(context.Context, map[string]*corev1.Secret) (*gardenerutils.Garden, error) { return g, nil }
 	return b
 }
 
 // WithGardenFrom sets the gardenFunc attribute at the Builder which will build a new Garden object.
 func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builder {
-	b.gardenFunc = func(ctx context.Context, secrets map[string]*corev1.Secret) (*garden.Garden, error) {
-		return garden.
+	b.gardenFunc = func(ctx context.Context, secrets map[string]*corev1.Secret) (*gardenerutils.Garden, error) {
+		return gardenerutils.
 			NewBuilder().
 			WithProjectFrom(reader, namespace).
 			WithInternalDomainFromSecrets(secrets).
@@ -157,7 +156,7 @@ func (b *Builder) WithSeedFrom(gardenClient client.Reader, seedName string) *Bui
 
 // WithShoot sets the shootFunc attribute at the Builder.
 func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
-	b.shootFunc = func(_ context.Context, _ client.Reader, _ *garden.Garden, _ *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(_ context.Context, _ client.Reader, _ *gardenerutils.Garden, _ *seed.Seed) (*shootpkg.Shoot, error) {
 		return s, nil
 	}
 	return b
@@ -166,7 +165,7 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *gardenerutils.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
 		shootNamespace := shootpkg.ComputeTechnicalID(gardenObj.Project.Name, s)
 
 		shoot, err := shootpkg.

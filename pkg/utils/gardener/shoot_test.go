@@ -41,7 +41,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -887,7 +886,7 @@ var _ = Describe("Shoot", func() {
 
 	DescribeTable("#ConstructInternalClusterDomain",
 		func(shootName, shootProject, internalDomain, expected string) {
-			Expect(ConstructInternalClusterDomain(shootName, shootProject, &garden.Domain{Domain: internalDomain})).To(Equal(expected))
+			Expect(ConstructInternalClusterDomain(shootName, shootProject, &Domain{Domain: internalDomain})).To(Equal(expected))
 		},
 
 		Entry("with internal domain key", "foo", "bar", "internal.nip.io", "foo.bar.internal.nip.io"),
@@ -918,7 +917,7 @@ var _ = Describe("Shoot", func() {
 	var (
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
-		defaultDomain           = &garden.Domain{
+		defaultDomain           = &Domain{
 			Domain:     "bar.com",
 			Provider:   defaultDomainProvider,
 			SecretData: defaultDomainSecretData,
@@ -983,7 +982,7 @@ var _ = Describe("Shoot", func() {
 
 			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
 
-			Expect(externalDomain).To(Equal(&garden.Domain{
+			Expect(externalDomain).To(Equal(&Domain{
 				Domain:     domain,
 				Provider:   provider,
 				SecretData: dnsSecretData,
@@ -1009,9 +1008,9 @@ var _ = Describe("Shoot", func() {
 				}
 			)
 
-			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, []*garden.Domain{defaultDomain})
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, []*Domain{defaultDomain})
 
-			Expect(externalDomain).To(Equal(&garden.Domain{
+			Expect(externalDomain).To(Equal(&Domain{
 				Domain:     domain,
 				Provider:   defaultDomainProvider,
 				SecretData: defaultDomainSecretData,
@@ -1042,7 +1041,7 @@ var _ = Describe("Shoot", func() {
 
 			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, shootSecret, nil)
 
-			Expect(externalDomain).To(Equal(&garden.Domain{
+			Expect(externalDomain).To(Equal(&Domain{
 				Domain:     domain,
 				Provider:   provider,
 				SecretData: shootSecretData,
@@ -1071,8 +1070,8 @@ var _ = Describe("Shoot", func() {
 			shoot                      *gardencorev1beta1.Shoot
 			seed                       *gardencorev1beta1.Seed
 			controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList
-			internalDomain             *garden.Domain
-			externalDomain             *garden.Domain
+			internalDomain             *Domain
+			externalDomain             *Domain
 		)
 
 		BeforeEach(func() {
@@ -1111,8 +1110,8 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			}
-			internalDomain = &garden.Domain{Provider: dnsProviderType1}
-			externalDomain = &garden.Domain{Provider: dnsProviderType2}
+			internalDomain = &Domain{Provider: dnsProviderType1}
+			externalDomain = &Domain{Provider: dnsProviderType2}
 			seed = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					Backup: &gardencorev1beta1.SeedBackup{

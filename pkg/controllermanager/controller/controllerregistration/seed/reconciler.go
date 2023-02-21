@@ -36,7 +36,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -104,7 +103,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false)
+	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -113,11 +112,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("garden secrets for seed %q have not been synchronized yet", seed.Name)
 	}
 
-	internalDomain, err := gardenpkg.GetInternalDomain(secrets)
+	internalDomain, err := gardenerutils.GetInternalDomain(secrets)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	defaultDomains, err := gardenpkg.GetDefaultDomains(secrets)
+	defaultDomains, err := gardenerutils.GetDefaultDomains(secrets)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -211,8 +210,8 @@ func computeKindTypesForShoots(
 	shootList []gardencorev1beta1.Shoot,
 	seed *gardencorev1beta1.Seed,
 	controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList,
-	internalDomain *gardenpkg.Domain,
-	defaultDomains []*gardenpkg.Domain,
+	internalDomain *gardenerutils.Domain,
+	defaultDomains []*gardenerutils.Domain,
 ) sets.Set[string] {
 	var (
 		wantedKindTypeCombinations = sets.New[string]()

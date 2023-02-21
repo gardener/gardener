@@ -44,7 +44,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -537,7 +536,7 @@ func IsIncompleteDNSConfigError(err error) bool {
 // already contains "internal", the result is constructed as "<shootName>.<shootProject>.<internalDomain>."
 // In case it does not, the word "internal" will be appended, resulting in
 // "<shootName>.<shootProject>.internal.<internalDomain>".
-func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *garden.Domain) string {
+func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *Domain) string {
 	if internalDomain == nil {
 		return ""
 	}
@@ -558,15 +557,15 @@ func ConstructExternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
 
 // ConstructExternalDomain constructs an object containing all relevant information of the external domain that
 // shall be used for a shoot cluster - based on the configuration of the Garden cluster and the shoot itself.
-func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.Domain) (*garden.Domain, error) {
+func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*Domain) (*Domain, error) {
 	externalClusterDomain := ConstructExternalClusterDomain(shoot)
 	if externalClusterDomain == nil {
 		return nil, nil
 	}
 
 	var (
-		externalDomain  = &garden.Domain{Domain: *shoot.Spec.DNS.Domain}
-		defaultDomain   = garden.DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
+		externalDomain  = &Domain{Domain: *shoot.Spec.DNS.Domain}
+		defaultDomain   = DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
 		primaryProvider = v1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
 	)
 
@@ -614,7 +613,7 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 
 // ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
 // reconciliation flow.
-func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain) utilsets.Set[string] {
+func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) utilsets.Set[string] {
 	requiredExtensions := utilsets.New[string]()
 
 	if seed.Spec.Backup != nil {

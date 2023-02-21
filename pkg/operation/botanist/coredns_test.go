@@ -37,8 +37,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockcoredns "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/mock"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -77,7 +77,7 @@ var _ = Describe("CoreDNS", func() {
 				CoreDNS: net.ParseIP("18.19.20.21"),
 				Pods:    &net.IPNet{IP: net.ParseIP("22.23.24.25")},
 			}
-			botanist.Garden = &garden.Garden{}
+			botanist.Garden = &gardenerutils.Garden{}
 		})
 
 		It("should successfully create a coredns interface", func() {

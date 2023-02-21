@@ -50,9 +50,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
-	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -113,7 +113,7 @@ var _ = Describe("KubeAPIServer", func() {
 				GardenClient:   gardenClient,
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
-				Garden:         &gardenpkg.Garden{},
+				Garden:         &gardenerutils.Garden{},
 				Seed:           &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
@@ -1718,7 +1718,7 @@ exemptions:
 					func() {
 						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: pointer.String("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
-						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
+						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
@@ -1727,8 +1727,8 @@ exemptions:
 				),
 				Entry("SNI and both DNS enabled",
 					func() {
-						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
-						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
+						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
+						botanist.Shoot.ExternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalClusterDomain = pointer.String("some-domain")
 						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 							Domain:    pointer.String("some-domain"),

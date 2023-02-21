@@ -50,7 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
-	"github.com/gardener/gardener/pkg/operation/garden"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Builder is an object that builds Shoot objects.
@@ -59,8 +59,8 @@ type Builder struct {
 	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
 	shootSecretFunc  func(context.Context, string, string) (*corev1.Secret, error)
 	projectName      string
-	internalDomain   *garden.Domain
-	defaultDomains   []*garden.Domain
+	internalDomain   *gardenerutils.Domain
+	defaultDomains   []*gardenerutils.Domain
 }
 
 // Shoot is an object containing information about a Shoot cluster.
@@ -77,7 +77,7 @@ type Shoot struct {
 
 	InternalClusterDomain string
 	ExternalClusterDomain *string
-	ExternalDomain        *garden.Domain
+	ExternalDomain        *gardenerutils.Domain
 
 	Purpose                                 gardencorev1beta1.ShootPurpose
 	WantsClusterAutoscaler                  bool

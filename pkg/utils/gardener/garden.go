@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package garden
+package gardener
 
 import (
 	"context"
@@ -28,8 +28,33 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
+
+// Builder is an object that builds Garden objects.
+type Builder struct {
+	projectFunc        func(context.Context) (*gardencorev1beta1.Project, error)
+	internalDomainFunc func() (*Domain, error)
+	defaultDomainsFunc func() ([]*Domain, error)
+}
+
+// Garden is an object containing Garden cluster specific data.
+type Garden struct {
+	Project        *gardencorev1beta1.Project
+	DefaultDomains []*Domain
+	InternalDomain *Domain
+}
+
+// Domain contains information about a domain configured in the garden cluster.
+type Domain struct {
+	Domain         string
+	Provider       string
+	Zone           string
+	SecretData     map[string][]byte
+	IncludeDomains []string
+	ExcludeDomains []string
+	IncludeZones   []string
+	ExcludeZones   []string
+}
 
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
@@ -50,7 +75,7 @@ func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
 // WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
 func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Builder {
 	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
-		project, _, err := gardenerutils.ProjectAndNamespaceFromReader(ctx, reader, namespace)
+		project, _, err := ProjectAndNamespaceFromReader(ctx, reader, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +167,7 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, zone, includeZones, excludeZones, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+	provider, domain, zone, includeZones, excludeZones, err := GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +224,7 @@ func ReadGardenSecrets(
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
@@ -213,7 +238,7 @@ func ReadGardenSecrets(
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
