@@ -365,12 +365,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Maintenance).NotTo(BeNil())
 		})
 
-		It("should disable basic auth", func() {
-			obj.Spec.Kubernetes.Version = "1.20.1"
-			SetObjectDefaults_Shoot(obj)
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(PointTo(BeFalse()))
-		})
-
 		It("should default the max inflight requests fields", func() {
 			SetObjectDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(pointer.Int32(400)))
