@@ -182,17 +182,3 @@ type Networks struct {
 	// CoreDNS is the ClusterIP of kube-system/coredns Service
 	CoreDNS net.IP
 }
-
-// IncompleteDNSConfigError is a custom error type.
-type IncompleteDNSConfigError struct{}
-
-// Error prints the error message of the IncompleteDNSConfigError error.
-func (e *IncompleteDNSConfigError) Error() string {
-	return "unable to figure out which secret should be used for dns"
-}
-
-// IsIncompleteDNSConfigError returns true if the error indicates that not the DNS config is incomplete.
-func IsIncompleteDNSConfigError(err error) bool {
-	_, ok := err.(*IncompleteDNSConfigError)
-	return ok
-}

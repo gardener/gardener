@@ -814,7 +814,7 @@ func (r *Reconciler) isHibernationActive(ctx context.Context, shootSeedNamespace
 }
 
 func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.LastError, err error) []gardencorev1beta1.LastError {
-	var incompleteDNSConfigError *shootpkg.IncompleteDNSConfigError
+	var incompleteDNSConfigError *gardenerutils.IncompleteDNSConfigError
 
 	if errors.As(err, &incompleteDNSConfigError) {
 		return v1beta1helper.UpsertLastError(lastErrors, gardencorev1beta1.LastError{

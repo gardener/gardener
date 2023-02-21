@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -232,12 +231,12 @@ func computeKindTypesForShoots(
 		go func(shoot *gardencorev1beta1.Shoot) {
 			defer wg.Done()
 
-			externalDomain, err := shootpkg.ConstructExternalDomain(ctx, c, shoot, &corev1.Secret{}, defaultDomains)
-			if err != nil && !(shootpkg.IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
+			externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shoot, &corev1.Secret{}, defaultDomains)
+			if err != nil && !(gardenerutils.IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
 				log.Info("Could not determine external domain for shoot", "err", err, "shoot", client.ObjectKeyFromObject(shoot))
 			}
 
-			out <- shootpkg.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			out <- gardenerutils.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 		}(shoot.DeepCopy())
 	}
 

@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -39,6 +40,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -879,6 +882,343 @@ var _ = Describe("Shoot", func() {
 					Effect:   corev1.TaintEffectNoSchedule,
 				},
 			))
+		})
+	})
+
+	DescribeTable("#ConstructInternalClusterDomain",
+		func(shootName, shootProject, internalDomain, expected string) {
+			Expect(ConstructInternalClusterDomain(shootName, shootProject, &garden.Domain{Domain: internalDomain})).To(Equal(expected))
+		},
+
+		Entry("with internal domain key", "foo", "bar", "internal.nip.io", "foo.bar.internal.nip.io"),
+		Entry("without internal domain key", "foo", "bar", "nip.io", "foo.bar.internal.nip.io"),
+	)
+
+	Describe("#ConstructExternalClusterDomain", func() {
+		It("should return nil", func() {
+			Expect(ConstructExternalClusterDomain(&gardencorev1beta1.Shoot{})).To(BeNil())
+		})
+
+		It("should return the constructed domain", func() {
+			var (
+				domain = "foo.bar.com"
+				shoot  = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+						},
+					},
+				}
+			)
+
+			Expect(ConstructExternalClusterDomain(shoot)).To(Equal(&domain))
+		})
+	})
+
+	var (
+		defaultDomainProvider   = "default-domain-provider"
+		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
+		defaultDomain           = &garden.Domain{
+			Domain:     "bar.com",
+			Provider:   defaultDomainProvider,
+			SecretData: defaultDomainSecretData,
+		}
+	)
+
+	Describe("#ConstructExternalDomain", func() {
+		var (
+			namespace = "default"
+			provider  = "my-dns-provider"
+			domain    = "foo.bar.com"
+
+			fakeClient client.Client
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		})
+
+		It("returns nil because no external domain is used", func() {
+			var (
+				ctx   = context.TODO()
+				shoot = &gardencorev1beta1.Shoot{}
+			)
+
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
+
+			Expect(externalDomain).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the referenced secret", func() {
+			var (
+				ctx = context.TODO()
+
+				dnsSecretName = "my-secret"
+				dnsSecretData = map[string][]byte{"foo": []byte("bar")}
+
+				shoot = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+							Providers: []gardencorev1beta1.DNSProvider{
+								{
+									Type:       &provider,
+									SecretName: &dnsSecretName,
+									Primary:    pointer.Bool(true),
+								},
+							},
+						},
+					},
+				}
+			)
+
+			Expect(fakeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: dnsSecretName, Namespace: namespace},
+				Data:       dnsSecretData,
+			})).To(Succeed())
+
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
+
+			Expect(externalDomain).To(Equal(&garden.Domain{
+				Domain:     domain,
+				Provider:   provider,
+				SecretData: dnsSecretData,
+			}))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the default domain secret", func() {
+			var (
+				ctx = context.TODO()
+
+				shoot = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+							Providers: []gardencorev1beta1.DNSProvider{
+								{
+									Type: &provider,
+								},
+							},
+						},
+					},
+				}
+			)
+
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, []*garden.Domain{defaultDomain})
+
+			Expect(externalDomain).To(Equal(&garden.Domain{
+				Domain:     domain,
+				Provider:   defaultDomainProvider,
+				SecretData: defaultDomainSecretData,
+			}))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the shoot secret", func() {
+			var (
+				ctx = context.TODO()
+
+				shootSecretData = map[string][]byte{"foo": []byte("bar")}
+				shootSecret     = &corev1.Secret{Data: shootSecretData}
+				shoot           = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+							Providers: []gardencorev1beta1.DNSProvider{
+								{
+									Type:    &provider,
+									Primary: pointer.Bool(true),
+								},
+							},
+						},
+					},
+				}
+			)
+
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, shootSecret, nil)
+
+			Expect(externalDomain).To(Equal(&garden.Domain{
+				Domain:     domain,
+				Provider:   provider,
+				SecretData: shootSecretData,
+			}))
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("#ComputeRequiredExtensions", func() {
+		const (
+			backupProvider       = "backupprovider"
+			seedProvider         = "seedprovider"
+			shootProvider        = "providertype"
+			networkingType       = "networkingtype"
+			extensionType1       = "extension1"
+			extensionType2       = "extension2"
+			extensionType3       = "extension3"
+			oscType              = "osctype"
+			containerRuntimeType = "containerruntimetype"
+			dnsProviderType1     = "dnsprovider1"
+			dnsProviderType2     = "dnsprovider2"
+			dnsProviderType3     = "dnsprovider3"
+		)
+
+		var (
+			shoot                      *gardencorev1beta1.Shoot
+			seed                       *gardencorev1beta1.Seed
+			controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList
+			internalDomain             *garden.Domain
+			externalDomain             *garden.Domain
+		)
+
+		BeforeEach(func() {
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind: extensionsv1alpha1.ContainerRuntimeResource,
+									Type: extensionType3,
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind: extensionsv1alpha1.ExtensionResource,
+									Type: extensionType1,
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:            extensionsv1alpha1.ExtensionResource,
+									Type:            extensionType2,
+									GloballyEnabled: pointer.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			}
+			internalDomain = &garden.Domain{Provider: dnsProviderType1}
+			externalDomain = &garden.Domain{Provider: dnsProviderType2}
+			seed = &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Backup: &gardencorev1beta1.SeedBackup{
+						Provider: backupProvider,
+					},
+					Provider: gardencorev1beta1.SeedProvider{
+						Type: seedProvider,
+					},
+				},
+			}
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Type: shootProvider,
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Machine: gardencorev1beta1.Machine{
+									Image: &gardencorev1beta1.ShootMachineImage{
+										Name: oscType,
+									},
+								},
+								CRI: &gardencorev1beta1.CRI{
+									ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+										{Type: containerRuntimeType},
+									},
+								},
+							},
+						},
+					},
+					Networking: gardencorev1beta1.Networking{
+						Type: networkingType,
+					},
+					Extensions: []gardencorev1beta1.Extension{
+						{Type: extensionType1},
+					},
+					DNS: &gardencorev1beta1.DNS{
+						Providers: []gardencorev1beta1.DNSProvider{
+							{Type: pointer.String(dnsProviderType3)},
+						},
+					},
+				},
+			}
+		})
+
+		It("should compute the correct list of required extensions", func() {
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+
+			Expect(result).To(Equal(sets.New[string](
+				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
+				ExtensionsID(extensionsv1alpha1.WorkerResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType1),
+				ExtensionsID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				ExtensionsID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType2),
+			)))
+		})
+
+		It("should compute the correct list of required extensions (no seed backup)", func() {
+			seed.Spec.Backup = nil
+
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+
+			Expect(result).To(Equal(sets.New[string](
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
+				ExtensionsID(extensionsv1alpha1.WorkerResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType1),
+				ExtensionsID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				ExtensionsID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType2),
+			)))
+		})
+
+		It("should compute the correct list of required extensions (shoot explicitly disables globally enabled extension)", func() {
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{
+				Type:     extensionType2,
+				Disabled: pointer.Bool(true),
+			})
+
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+
+			Expect(result).To(Equal(sets.New[string](
+				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
+				ExtensionsID(extensionsv1alpha1.WorkerResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType1),
+				ExtensionsID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				ExtensionsID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+			)))
 		})
 	})
 })

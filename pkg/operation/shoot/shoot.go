@@ -19,19 +19,14 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -171,8 +166,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.SeedNamespace = ComputeTechnicalID(b.projectName, shootObject)
-	shoot.InternalClusterDomain = ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
-	shoot.ExternalClusterDomain = ConstructExternalClusterDomain(shootObject)
+	shoot.InternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
+	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
 	shoot.WantsAlertmanager = v1beta1helper.ShootWantsAlertManager(shootObject)
 	shoot.WantsVerticalPodAutoscaler = v1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
@@ -185,7 +180,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 
 	// Determine information about external domain for shoot cluster.
-	externalDomain, err := ConstructExternalDomain(ctx, c, shootObject, secret, b.defaultDomains)
+	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shootObject, secret, b.defaultDomains)
 	if err != nil {
 		return nil, err
 	}
@@ -440,87 +435,6 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
 }
 
-// ConstructInternalClusterDomain constructs the internal base domain pof this shoot cluster.
-// It is only used for internal purposes (all kubeconfigs except the one which is received by the
-// user will only talk with the kube-apiserver via a DNS record of domain). In case the given <internalDomain>
-// already contains "internal", the result is constructed as "<shootName>.<shootProject>.<internalDomain>."
-// In case it does not, the word "internal" will be appended, resulting in
-// "<shootName>.<shootProject>.internal.<internalDomain>".
-func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *garden.Domain) string {
-	if internalDomain == nil {
-		return ""
-	}
-	if strings.Contains(internalDomain.Domain, gardenerutils.InternalDomainKey) {
-		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain)
-	}
-	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, gardenerutils.InternalDomainKey, internalDomain.Domain)
-}
-
-// ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put
-// into the Kubeconfig handed out to the user.
-func ConstructExternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
-	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
-		return nil
-	}
-	return shoot.Spec.DNS.Domain
-}
-
-// ConstructExternalDomain constructs an object containing all relevant information of the external domain that
-// shall be used for a shoot cluster - based on the configuration of the Garden cluster and the shoot itself.
-func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.Domain) (*garden.Domain, error) {
-	externalClusterDomain := ConstructExternalClusterDomain(shoot)
-	if externalClusterDomain == nil {
-		return nil, nil
-	}
-
-	var (
-		externalDomain  = &garden.Domain{Domain: *shoot.Spec.DNS.Domain}
-		defaultDomain   = garden.DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
-		primaryProvider = v1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
-	)
-
-	switch {
-	case defaultDomain != nil:
-		externalDomain.SecretData = defaultDomain.SecretData
-		externalDomain.Provider = defaultDomain.Provider
-		externalDomain.Zone = defaultDomain.Zone
-		externalDomain.IncludeDomains = defaultDomain.IncludeDomains
-		externalDomain.ExcludeDomains = defaultDomain.ExcludeDomains
-		externalDomain.IncludeZones = defaultDomain.IncludeZones
-		externalDomain.ExcludeZones = defaultDomain.ExcludeZones
-
-	case primaryProvider != nil:
-		if primaryProvider.SecretName != nil {
-			secret := &corev1.Secret{}
-			if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, *primaryProvider.SecretName), secret); err != nil {
-				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
-			}
-			externalDomain.SecretData = secret.Data
-		} else {
-			externalDomain.SecretData = shootSecret.Data
-		}
-		if primaryProvider.Type != nil {
-			externalDomain.Provider = *primaryProvider.Type
-		}
-		if domains := primaryProvider.Domains; domains != nil {
-			externalDomain.IncludeDomains = domains.Include
-			externalDomain.ExcludeDomains = domains.Exclude
-		}
-		if zones := primaryProvider.Zones; zones != nil {
-			externalDomain.IncludeZones = zones.Include
-			externalDomain.ExcludeZones = zones.Exclude
-			if len(zones.Include) == 1 {
-				externalDomain.Zone = zones.Include[0]
-			}
-		}
-
-	default:
-		return nil, &IncompleteDNSConfigError{}
-	}
-
-	return externalDomain, nil
-}
-
 // ToNetworks return a network with computed cidrs and ClusterIPs
 // for a Shoot
 func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
@@ -558,75 +472,4 @@ func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
 		Services:  svc,
 		APIServer: apiserver,
 	}, nil
-}
-
-// ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
-// reconciliation flow.
-func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain) sets.Set[string] {
-	requiredExtensions := sets.New[string]()
-
-	if seed.Spec.Backup != nil {
-		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
-		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
-	}
-	// Hint: This is actually a temporary work-around to request the control plane extension of the seed provider type as
-	// it might come with webhooks that are configuring the exposure of shoot control planes. The ControllerRegistration resource
-	// does not reflect this today.
-	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
-
-	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
-	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
-	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
-	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
-
-	disabledExtensions := sets.New[string]()
-	for _, extension := range shoot.Spec.Extensions {
-		id := gardenerextensions.Id(extensionsv1alpha1.ExtensionResource, extension.Type)
-
-		if pointer.BoolDeref(extension.Disabled, false) {
-			disabledExtensions.Insert(id)
-		} else {
-			requiredExtensions.Insert(id)
-		}
-	}
-
-	for _, pool := range shoot.Spec.Provider.Workers {
-		if pool.Machine.Image != nil {
-			requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
-		}
-		if pool.CRI != nil {
-			for _, cr := range pool.CRI.ContainerRuntimes {
-				requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
-			}
-		}
-	}
-
-	if shoot.Spec.DNS != nil {
-		for _, provider := range shoot.Spec.DNS.Providers {
-			if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
-				if provider.Primary != nil && *provider.Primary {
-					requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, *provider.Type))
-				}
-			}
-		}
-	}
-
-	if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
-		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
-	}
-
-	if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
-		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
-	}
-
-	for _, controllerRegistration := range controllerRegistrationList.Items {
-		for _, resource := range controllerRegistration.Spec.Resources {
-			id := gardenerextensions.Id(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.GloballyEnabled != nil && *resource.GloballyEnabled && !disabledExtensions.Has(id) {
-				requiredExtensions.Insert(id)
-			}
-		}
-	}
-
-	return requiredExtensions
 }
