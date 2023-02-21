@@ -74,7 +74,13 @@ var _ = Describe("Replica", func() {
 							Config: runtime.RawExtension{
 								Object: &gardenletv1alpha1.GardenletConfiguration{
 									SeedConfig: &gardenletv1alpha1.SeedConfig{
-										SeedTemplate: gardencorev1beta1.SeedTemplate{},
+										SeedTemplate: gardencorev1beta1.SeedTemplate{
+											Spec: gardencorev1beta1.SeedSpec{
+												Ingress: &gardencorev1beta1.Ingress{
+													Domain: "ingress.replica-name.example.com",
+												},
+											},
+										},
 									},
 								},
 							},
@@ -367,7 +373,11 @@ var _ = Describe("Replica", func() {
 									Object: &gardenletv1alpha1.GardenletConfiguration{
 										SeedConfig: &gardenletv1alpha1.SeedConfig{
 											SeedTemplate: gardencorev1beta1.SeedTemplate{
-												Spec: gardencorev1beta1.SeedSpec{},
+												Spec: gardencorev1beta1.SeedSpec{
+													Ingress: &gardencorev1beta1.Ingress{
+														Domain: "ingress." + replicaName + ".example.com",
+													},
+												},
 											},
 										},
 									},
