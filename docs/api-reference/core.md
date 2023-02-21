@@ -8345,7 +8345,7 @@ string
 <em>(Optional)</em>
 <p>IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
 to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
-This will be removed in the next API version and replaced by spec.ingress.domain.</p>
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.</p>
 </td>
 </tr>
 <tr>
