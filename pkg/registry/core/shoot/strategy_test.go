@@ -108,6 +108,41 @@ var _ = Describe("Strategy", func() {
 				Expect(shoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
 			})
 		})
+
+		DescribeTable("kubernetesDashboard.authenticationMode field",
+			func(addons *core.Addons, expected *core.Addons) {
+				shoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Addons: addons,
+					},
+				}
+
+				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+				Expect(shoot.Spec.Addons).To(Equal(expected))
+			},
+
+			Entry("addons field is nil",
+				nil,
+				nil,
+			),
+			Entry("kubernetesDashboard field is nil",
+				&core.Addons{KubernetesDashboard: nil},
+				&core.Addons{KubernetesDashboard: nil},
+			),
+			Entry("authMode is nil",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
+			),
+			Entry("authMode is basic",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("basic")}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+			),
+			Entry("authMode is token",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+			),
+		)
 	})
 
 	Describe("#PrepareForUpdate", func() {
@@ -547,6 +582,42 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
 			})
 		})
+
+		DescribeTable("kubernetesDashboard.authenticationMode field",
+			func(addons *core.Addons, expected *core.Addons) {
+				newShoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Addons: addons,
+					},
+				}
+				oldShoot := &core.Shoot{}
+
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Addons).To(Equal(expected))
+			},
+
+			Entry("addons field is nil",
+				nil,
+				nil,
+			),
+			Entry("kubernetesDashboard field is nil",
+				&core.Addons{KubernetesDashboard: nil},
+				&core.Addons{KubernetesDashboard: nil},
+			),
+			Entry("authMode is nil",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
+			),
+			Entry("authMode is basic",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("basic")}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+			),
+			Entry("authMode is token",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+			),
+		)
 	})
 
 	Describe("#Canonicalize", func() {
