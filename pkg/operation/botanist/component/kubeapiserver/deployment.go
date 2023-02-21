@@ -79,6 +79,7 @@ const (
 	volumeNameServiceAccountKey          = "service-account-key"
 	volumeNameServiceAccountKeyBundle    = "service-account-key-bundle"
 	volumeNameStaticToken                = "static-token"
+	volumeNamePrefixTLSSNISecret         = "tls-sni-"
 	volumeNameVPNSeedClient              = "vpn-seed-client"
 	volumeNameAPIServerAccess            = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth             = "vpn-seed-tlsauth"
@@ -109,6 +110,7 @@ const (
 	volumeMountPathServiceAccountKey          = "/srv/kubernetes/service-account-key"
 	volumeMountPathServiceAccountKeyBundle    = "/srv/kubernetes/service-account-key-bundle"
 	volumeMountPathStaticToken                = "/srv/kubernetes/token"
+	volumeMountPathPrefixTLSSNISecret         = "/srv/kubernetes/tls-sni/"
 	volumeMountPathVPNSeedClient              = "/srv/secrets/vpn-client"
 	volumeMountPathAPIServerAccess            = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth             = "/srv/secrets/tlsauth"
@@ -142,6 +144,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
+	tlsSNISecrets []tlsSNISecret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -462,6 +465,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleLifecycleSettings(deployment)
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
+		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handlePodMutatorSettings(deployment)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
@@ -704,6 +708,35 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 
 	deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
+}
+
+func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsSNISecrets []tlsSNISecret) {
+	for i, sni := range tlsSNISecrets {
+		var (
+			volumeName      = fmt.Sprintf("%s%d", volumeNamePrefixTLSSNISecret, i)
+			volumeMountPath = fmt.Sprintf("%s%d", volumeMountPathPrefixTLSSNISecret, i)
+			flag            = fmt.Sprintf("--tls-sni-cert-key=%s/tls.crt,%s/tls.key", volumeMountPath, volumeMountPath)
+		)
+
+		if len(sni.domainPatterns) > 0 {
+			flag += ":" + strings.Join(sni.domainPatterns, ",")
+		}
+
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, flag)
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: volumeMountPath,
+			ReadOnly:  true,
+		})
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: sni.secretName,
+				},
+			},
+		})
+	}
 }
 
 func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
