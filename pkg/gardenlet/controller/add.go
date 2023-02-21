@@ -104,7 +104,10 @@ func AddToManager(
 		return fmt.Errorf("failed adding BackupBucket controller: %w", err)
 	}
 
-	if err := backupentry.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
+	if err := (&backupentry.Reconciler{
+		Config:   *cfg.Controllers.BackupEntry,
+		SeedName: cfg.SeedConfig.Name,
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupEntry controller: %w", err)
 	}
 
