@@ -26,11 +26,10 @@ clamp_mss_to_pmtu
 make kind-up
 
 # export all container logs and events after test execution
-trap "
-  ( export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig; export_logs 'gardener-local';
-    export_events_for_kind 'gardener-local'; export_events_for_shoots )
-  ( make kind-down )
-" EXIT
+trap '{
+  export_artifacts "gardener-local"
+  make kind-down
+}' EXIT
 
 make gardener-up
 make test-e2e-local PARALLEL_E2E_TESTS=10

@@ -27,11 +27,10 @@ clamp_mss_to_pmtu
 make kind-ha-multi-zone-up
 
 # export all container logs and events after test execution
-trap "
-  ( export_logs 'gardener-local-ha-multi-zone';
-    export_events_for_kind 'gardener-local-ha-multi-zone'; export_events_for_shoots )
-  ( make kind-ha-multi-zone-down )
-" EXIT
+trap '{
+  export_artifacts "gardener-local-ha-multi-zone"
+  make kind-ha-multi-zone-down
+}' EXIT
 
 make gardener-ha-multi-zone-up
 make test-e2e-local-ha-multi-zone PARALLEL_E2E_TESTS=10

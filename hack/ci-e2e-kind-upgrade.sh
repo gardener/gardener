@@ -183,11 +183,11 @@ export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener
 kind_up
 
 # export all container logs and events after test execution
-trap "
-( rm -rf $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases);
-( export_logs '$CLUSTER_NAME'; export_events_for_kind '$CLUSTER_NAME'; export_events_for_shoots )
-( kind_down;)
-" EXIT
+trap '{
+  rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases"
+  export_artifacts "$CLUSTER_NAME"
+  kind_down
+}' EXIT
 
 echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
 install_previous_release
