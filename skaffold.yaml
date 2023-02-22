@@ -868,8 +868,6 @@ build:
         - pkg/gardenlet/controller
         - pkg/gardenlet/controller/backupbucket
         - pkg/gardenlet/controller/backupentry
-        - pkg/gardenlet/controller/backupentry/backupentry
-        - pkg/gardenlet/controller/backupentry/migration
         - pkg/gardenlet/controller/bastion
         - pkg/gardenlet/controller/controllerinstallation
         - pkg/gardenlet/controller/controllerinstallation/care
@@ -886,7 +884,6 @@ build:
         - pkg/gardenlet/controller/seed/seed
         - pkg/gardenlet/controller/shoot
         - pkg/gardenlet/controller/shoot/care
-        - pkg/gardenlet/controller/shoot/migration
         - pkg/gardenlet/controller/shoot/shoot
         - pkg/gardenlet/controller/shoot/shoot/helper
         - pkg/gardenlet/controller/shootstate
