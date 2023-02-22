@@ -77,13 +77,6 @@ const (
 	// beta: v1.53.0
 	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
 
-	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
-	// if the preparation for migration in the source seed is not finished after a certain grace period
-	// and is considered unlikely to succeed ("bad case" scenario).
-	// owner: @plkokanov
-	// alpha: v1.39.0
-	ForceRestore featuregate.Feature = "ForceRestore"
-
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
@@ -119,7 +112,6 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
-	ForceRestore:                    {Default: false, PreRelease: featuregate.Alpha},
 	HAControlPlanes:                 {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},

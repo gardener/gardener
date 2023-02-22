@@ -112,7 +112,7 @@ featureGates:
   ManagedIstio: true
   APIServerSNI: true
   CopyEtcdBackupsDuringControlPlaneMigration: true
-  ForceRestore: false
+
   DefaultSeccompProfile: true
   CoreDNSQueryRewriting: true
 # seedConfig:
