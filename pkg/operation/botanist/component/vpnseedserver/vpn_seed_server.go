@@ -69,8 +69,9 @@ const (
 	OpenVPNPort = 1194
 	// HighAvailabilityReplicaCount is the replica count used when highly available VPN is configured.
 	HighAvailabilityReplicaCount = 2
-	metricsPort                  = 15000
 	metricsPortName              = "metrics"
+	// MetricsPort is the port metrics can be scraped at.
+	MetricsPort = 15000
 
 	secretNameDH            = "vpn-seed-server-dh"
 	envoyProxyContainerName = "envoy-proxy"
@@ -539,12 +540,12 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 				"-openvpn.status_paths",
 				statusPath,
 				"-web.listen-address",
-				fmt.Sprintf(":%d", metricsPort),
+				fmt.Sprintf(":%d", MetricsPort),
 			},
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          metricsPortName,
-					ContainerPort: metricsPort,
+					ContainerPort: MetricsPort,
 					Protocol:      corev1.ProtocolTCP,
 				},
 			},
@@ -558,14 +559,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt(metricsPort),
+						Port: intstr.FromInt(MetricsPort),
 					},
 				},
 			},
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt(metricsPort),
+						Port: intstr.FromInt(MetricsPort),
 					},
 				},
 			},
@@ -716,10 +717,8 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
 
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
-			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(metricsPort), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(MetricsPort), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
@@ -735,8 +734,8 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 			},
 			{
 				Name:       metricsPortName,
-				Port:       metricsPort,
-				TargetPort: intstr.FromInt(metricsPort),
+				Port:       MetricsPort,
+				TargetPort: intstr.FromInt(MetricsPort),
 			},
 		}
 
@@ -1001,7 +1000,7 @@ var envoyConfig = `static_resources:
     address:
       socket_address:
         address: 0.0.0.0
-        port_value: ` + fmt.Sprintf("%d", metricsPort) + `
+        port_value: ` + fmt.Sprintf("%d", MetricsPort) + `
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager

@@ -28,9 +28,11 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
@@ -53,6 +55,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -65,6 +68,8 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -375,6 +380,14 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	// Migrate all relevant services in shoot control planes once, so that we don't have to wait for their reconciliation
+	// and can ensure the required policies are created.
+	// TODO(timuthy, rfranzke): To be removed in a future release.
+	log.Info("Migrating all relevant shoot control plane services to create required network policies")
+	if err := g.migrateAllShootServicesForNetworkPolicies(ctx, log); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -464,15 +477,66 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	})
 }
 
+func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, log logr.Logger) error {
+	var (
+		taskFns                  []flow.TaskFn
+		kubeApiServerServiceList = &corev1.ServiceList{}
+	)
+
+	// Kube-Apiserver services
+	if err := g.mgr.GetClient().List(ctx, kubeApiServerServiceList, client.MatchingLabels{v1beta1constants.LabelApp: v1beta1constants.LabelKubernetes, v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer}); err != nil {
+		return err
+	}
+
+	taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), kubeApiServerServiceList.Items, kubeapiserverconstants.Port)...)
+
+	// VPN-Seed-Server services
+	for _, serviceName := range []string{vpnseedserver.ServiceName, fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, 0), fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, 0)} {
+		serviceList := &corev1.ServiceList{}
+		// Use APIReader here because an index on `metadata.name` is not available in the runtime client.
+		if err := g.mgr.GetAPIReader().List(ctx, serviceList, client.MatchingFieldsSelector{
+			Selector: fields.OneTermEqualSelector(metav1.ObjectNameField, serviceName),
+		}); err != nil {
+			return err
+		}
+
+		taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), serviceList.Items, vpnseedserver.MetricsPort)...)
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+func migrationTasksForServices(cl client.Client, services []corev1.Service, port int) []flow.TaskFn {
+	var taskFns []flow.TaskFn
+
+	for _, svc := range services {
+		service := svc
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(service.DeepCopy())
+
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(&service,
+				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler}}))
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(&service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+
+			return cl.Patch(ctx, &service, patch)
+		})
+	}
+
+	return taskFns
+}
+
 func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, gardenClient client.Client) error {
-	shoots := &gardencorev1beta1.ShootList{}
-	if err := gardenClient.List(ctx, shoots); err != nil {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := gardenClient.List(ctx, shootList); err != nil {
 		return err
 	}
 
 	var taskFns []flow.TaskFn
 
-	for _, s := range shoots.Items {
+	for _, s := range shootList.Items {
 		shoot := s
 
 		if specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(&shoot); gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) != g.config.SeedConfig.Name {

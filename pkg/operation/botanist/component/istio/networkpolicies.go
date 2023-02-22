@@ -22,9 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -99,80 +97,7 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 				}
 			},
 		},
-		{
-			name: "allow-to-shoot-apiserver",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to shoot api servers with label '%s=%s'.", v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.LabelRole, v1beta1constants.LabelAPIServer),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-									},
-								},
-								NamespaceSelector: &metav1.LabelSelector{},
-							}},
-							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(kubeapiserverconstants.Port),
-							}},
-						}},
-					}
-					return nil
-				}
-			},
-		},
-		// TODO(rfranzke): Delete this network policy in a future release.
-		{
-			name: "allow-to-shoot-vpn-seed-server",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to shoot vpn servers with label '%s=%s'.", v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.LabelApp, v1beta1constants.DeploymentNameVPNSeedServer),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameVPNSeedServer,
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-									},
-								},
-								NamespaceSelector: &metav1.LabelSelector{},
-							}},
-							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(vpnseedserver.OpenVPNPort),
-							}},
-						}},
-					}
-					return nil
-				}
-			},
-		},
+		// TODO(timuthy, rfranzke): Replace rule as soon as Networkpolicy controller is activated for the 'garden' namespace.
 		{
 			name: "allow-to-reversed-vpn-auth-server",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
