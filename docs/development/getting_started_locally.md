@@ -51,7 +51,7 @@ In these cases, you might want to check out one of the following options that ru
 make kind-up KIND_ENV=local
 ```
 
-> If you want to setup an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
+> If you want to setup an IPv6 KinD cluster, use `make kind-up KIND_ENV=local IPFAMILY=ipv6` instead.
 
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
@@ -102,6 +102,8 @@ kubectl wait --for=condition=ready pod -l run=etcd -n garden --timeout 2m     # 
 make start-apiserver                                                          # starting gardener-apiserver
 ```
 
+> For IPv6 use `make dev-setup IPFAMILY=ipv6` instead.
+
 In a new terminal pane, run:
 
 ```bash
@@ -109,12 +111,16 @@ kubectl wait --for=condition=available apiservice v1beta1.core.gardener.cloud # 
 make start-admission-controller                                               # starting gardener-admission-controller
 ```
 
+> For IPv6 use `make start-admission-controller IPFAMILY=ipv6` instead.
+
 In a new terminal pane, run:
 
 ```bash
 make dev-setup DEV_SETUP_WITH_WEBHOOKS=true                                   # preparing the environment with webhooks
 make start-controller-manager                                                 # starting gardener-controller-manager
 ```
+
+> For IPv6 append `IPFAMILY=ipv6` to both commands.
 
 (Optional): In a new terminal pane, run:
 
@@ -128,6 +134,8 @@ In a new terminal pane, run:
 make register-local-env                                                       # registering the local environment (CloudProfile, Seed, etc.)
 make start-gardenlet SEED_NAME=local                                          # starting gardenlet
 ```
+
+> For IPv6 append `IPFAMILY=ipv6` to both commands.
 
 In a new terminal pane, run:
 
