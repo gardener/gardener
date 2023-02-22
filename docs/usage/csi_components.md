@@ -13,6 +13,7 @@ In such situations, there are multiple controllers acting on the `VolumeSnapshot
 However, this might lead to operational conflicts that cannot be overcome by Gardener alone.
 Concretely, Gardener cannot know which custom CSI components were installed by end-users which can lead to issues, especially during shoot cluster deletion.
 You can add a label to your custom CSI components indicating that Gardener should not try to remove them during shoot cluster deletion. This means you have to take care of the lifecycle for these components yourself!
+
 ## Recommendations
 
 Custom CSI components are typically regular `Deployment`s running in the shoot clusters.
@@ -22,7 +23,6 @@ Custom CSI components are typically regular `Deployment`s running in the shoot c
 ## Background Information
 
 When a shoot cluster is deleted, Gardener deletes most Kubernetes resources (`Deployment`s, `DaemonSet`s, `StatefulSet`s, etc.). Gardener will also try to delete CSI components if they are not marked with the above mentioned label.
-
 
 This can result in `VolumeSnapshot` resources still having finalizers that will never be cleaned up.
 Consequently, manual intervention is required to clean them up before the cluster deletion can continue.

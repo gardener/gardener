@@ -14,7 +14,7 @@ Using a OpenIDConnectPresets allows project owners to not have to explicitly pro
 
 For more information about the background, see the [issue](https://github.com/gardener/gardener/issues/1161) for OpenIDConnectPreset.
 
-### How OpenIDConnectPreset works
+### How OpenIDConnectPreset Works
 
 Gardener provides an admission controller (OpenIDConnectPreset) which, when enabled, applies OpenIDConnectPresets to incoming `Shoot` creation requests. When a `Shoot` creation request occurs, the system does the following:
 
@@ -23,13 +23,13 @@ Gardener provides an admission controller (OpenIDConnectPreset) which, when enab
 - If multiple presets are matched then only one is chosen and results are sorted based on:
 
   1. `.spec.weight` value.
-  1. lexicographically ordering their names ( e.g. `002preset` > `001preset` )
+  1. lexicographically ordering their names (e.g., `002preset` > `001preset`)
 
-- If the `Shoot` already has a `.spec.kubernetes.kubeAPIServer.oidcConfig` then no mutation occurs.
+- If the `Shoot` already has a `.spec.kubernetes.kubeAPIServer.oidcConfig`, then no mutation occurs.
 
-### Simple OpenIDConnectPreset example
+### Simple OpenIDConnectPreset Example
 
-This is a simple example to show how a `Shoot` is modified by the OpenIDConnectPreset
+This is a simple example to show how a `Shoot` is modified by the OpenIDConnectPreset:
 
 ```yaml
 apiVersion: settings.gardener.cloud/v1alpha1
@@ -140,7 +140,7 @@ spec:
 
 ### Disable OpenIDConnectPreset
 
-The OpenIDConnectPreset admission control is enabled by default. To disable it use the `--disable-admission-plugins` flag on the gardener-apiserver.
+The OpenIDConnectPreset admission control is enabled by default. To disable it, use the `--disable-admission-plugins` flag on the gardener-apiserver.
 
 For example:
 
@@ -150,13 +150,13 @@ For example:
 
 ## ClusterOpenIDConnectPreset
 
-A ClusterOpenIDConnectPreset is an API resource for injecting additional runtime OIDC requirements into a Shoot at creation time. In contrast to OpenIDConnect it's a cluster-scoped resource. You use label selectors to specify the `Project` and `Shoot` to which a given OpenIDCConnectPreset applies.
+A ClusterOpenIDConnectPreset is an API resource for injecting additional runtime OIDC requirements into a Shoot at creation time. In contrast to OpenIDConnect, it's a cluster-scoped resource. You use label selectors to specify the `Project` and `Shoot` to which a given OpenIDCConnectPreset applies.
 
 Using a OpenIDConnectPresets allows cluster owners to not have to explicitly provide the same OIDC configuration for every `Shoot` in specific `Project`.
 
 For more information about the background, see the [issue](https://github.com/gardener/gardener/issues/1161) for ClusterOpenIDConnectPreset.
 
-### How ClusterOpenIDConnectPreset works
+### How ClusterOpenIDConnectPreset Works
 
 Gardener provides an admission controller (ClusterOpenIDConnectPreset) which, when enabled, applies ClusterOpenIDConnectPresets to incoming `Shoot` creation requests. When a `Shoot` creation request occurs, the system does the following:
 
@@ -170,11 +170,11 @@ Gardener provides an admission controller (ClusterOpenIDConnectPreset) which, wh
 
 - If the `Shoot` already has a `.spec.kubernetes.kubeAPIServer.oidcConfig` then no mutation occurs.
 
-> Note: Due to the previous requirement if a `Shoot` is matched by both `OpenIDConnectPreset` and `ClusterOpenIDConnectPreset` then `OpenIDConnectPreset` takes precedence over `ClusterOpenIDConnectPreset`.
+> **Note:** Due to the previous requirement, if a `Shoot` is matched by both `OpenIDConnectPreset` and `ClusterOpenIDConnectPreset`, then `OpenIDConnectPreset` takes precedence over `ClusterOpenIDConnectPreset`.
 
-### Simple ClusterOpenIDConnectPreset example
+### Simple ClusterOpenIDConnectPreset Example
 
-This is a simple example to show how a `Shoot` is modified by the ClusterOpenIDConnectPreset
+This is a simple example to show how a `Shoot` is modified by the ClusterOpenIDConnectPreset:
 
 ```yaml
 apiVersion: settings.gardener.cloud/v1alpha1
@@ -223,7 +223,7 @@ NAME     ISSUER            PROJECT-SELECTOR   SHOOT-SELECTOR   AGE
 test     https://foo.bar   <none>             oidc=enabled     1s
 ```
 
-This is a sample of a `Shoot` with some fields omitted:
+This is a sample of a `Shoot`, with some fields omitted:
 
 ```yaml
 kind: Shoot
@@ -283,7 +283,7 @@ spec:
 
 ### Disable ClusterOpenIDConnectPreset
 
-The ClusterOpenIDConnectPreset admission control is enabled by default. To disable it use the `--disable-admission-plugins` flag on the gardener-apiserver.
+The ClusterOpenIDConnectPreset admission control is enabled by default. To disable it, use the `--disable-admission-plugins` flag on the gardener-apiserver.
 
 For example:
 

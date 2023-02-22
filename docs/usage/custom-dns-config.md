@@ -4,7 +4,7 @@ title: Custom DNS Configuration
 
 # Custom DNS Configuration
 
-Gardener provides Kubernetes-Clusters-As-A-Service where all the system components (e.g., kube-proxy, networking, dns, ...) are managed.
+Gardener provides Kubernetes-Clusters-As-A-Service where all the system components (e.g., kube-proxy, networking, dns) are managed.
 As a result, Gardener needs to ensure and auto-correct additional configuration to those system components to avoid unnecessary down-time.
 
 In some cases, auto-correcting system components can prevent users from deploying applications on top of the cluster that requires bits of customization, DNS configuration can be a good example.

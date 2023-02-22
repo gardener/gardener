@@ -8,27 +8,28 @@ A highly available shoot control plane can be setup with either a failure tolera
 
 ### `Node` Failure Tolerance
 
-Failure tolerance of `node` will have the following characteristics:
+The failure tolerance of a `node` will have the following characteristics:
 
 * Control plane components will be spread across different nodes within a single availability zone. There will not be
   more than one replica per node for each control plane component which has more than one replica.
 * `Worker pool` should have a minimum of 3 nodes.
-* A multi-node etcd (quorum size of 3) will be provisioned offering zero-downtime capabilities with each member in a
+* A multi-node etcd (quorum size of 3) will be provisioned, offering zero-downtime capabilities with each member in a
   different node within a single availability zone.
 
 ### `Zone` Failure Tolerance
 
-Failure tolerance of `zone` will have the following characteristics:
+The failure tolerance of a `zone` will have the following characteristics:
 
 * Control plane components will be spread across different availability zones. There will be at least
   one replica per zone for each control plane component which has more than one replica.
 * Gardener scheduler will automatically select a `seed` which has a minimum of 3 zones to host the shoot control plane.
-* A multi-node etcd (quorum size of 3) will be provisioned offering zero-downtime capabilities with each member in a
+* A multi-node etcd (quorum size of 3) will be provisioned, offering zero-downtime capabilities with each member in a
   different zone.
 
 ## Shoot Spec
 
-To request for a highly available shoot control plane gardener provides the following configuration in the shoot spec.
+To request for a highly available shoot control plane Gardener provides the following configuration in the shoot spec:
+
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
@@ -41,15 +42,15 @@ spec:
 
 **Allowed Transitions**
 
-If you already have a shoot cluster with non-HA control plane then following upgrades are possible:
+If you already have a shoot cluster with non-HA control plane, then the following upgrades are possible:
 * Upgrade of non-HA shoot control plane to HA shoot control plane with `node` failure tolerance.
-* Upgrade of non-HA shoot control plane to HA shoot control plane with `zone` failure tolerance. However, it is essential that the `seed` which is currently hosting the shoot control plane should be `multi-zonal`. If it is not then request to upgrade will be rejected.
+* Upgrade of non-HA shoot control plane to HA shoot control plane with `zone` failure tolerance. However, it is essential that the `seed` which is currently hosting the shoot control plane should be `multi-zonal`. If it is not, then the request to upgrade will be rejected.
 
-> NOTE: There will be a small downtime during the upgrade especially for etcd which will transition from a single node etcd cluster to a multi-node etcd cluster.
+> **Note:** There will be a small downtime during the upgrade, especially for etcd, which will transition from a single node etcd cluster to a multi-node etcd cluster.
 
 **Disallowed Transitions**
 
-If you have already set-up an HA shoot control plane with `node` failure tolerance, then an upgrade to `zone` failure tolerance is currently not supported, mainly because already existing volumes are bound to the zone they were created in originally.
+If you have already set-up an HA shoot control plane with `node` failure tolerance, then an upgrade to a `zone` failure tolerance is currently not supported, mainly because already existing volumes are bound to the zone they were created in originally.
 
 ## Zone Outage Situation
 
@@ -58,7 +59,7 @@ For instance, if the shoot cluster has worker nodes across three zones where one
 Changing the worker pool (`shoot.spec.provider.workers[]`) and infrastructure (`shoot.spec.provider.infrastructureConfig`) configuration can eliminate this disbalance, having enough machines in healthy availability zones that can cope with the requests of your applications.
 
 Gardener relies on a sophisticated reconciliation flow with several dependencies for which various flow steps wait for the _readiness_ of prior ones.
-During a zone outage, this can block the entire flow, e.g. because all three `etcd` replicas can never be ready when a zone is down, and required changes mentioned above can never be accomplished.
+During a zone outage, this can block the entire flow, e.g., because all three `etcd` replicas can never be ready when a zone is down, and required changes mentioned above can never be accomplished.
 For this, a special one-off annotation `shoot.gardener.cloud/skip-readiness` helps to skip any readiness checks in the flow.
 
 > The `shoot.gardener.cloud/skip-readiness` annotation serves as a last resort if reconciliation is stuck because of important changes during an AZ outage. Use it with caution, only in exceptional cases and after a case-by-case evaluation with your Gardener landscape administrator. If used together with other operations like Kubernetes version upgrades or credential rotation, the annotation may lead to a severe outage of your shoot control plane.

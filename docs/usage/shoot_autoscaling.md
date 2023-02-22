@@ -2,8 +2,8 @@
 
 There are two parts that relate to auto-scaling in Kubernetes clusters in general:
 
-* Horizontal node auto-scaling, i.e., dynamically adding and removing worker nodes
-* Vertical pod auto-scaling, i.e., dynamically raising or shrinking the resource requests/limits of pods
+* Horizontal node auto-scaling, i.e., dynamically adding and removing worker nodes.
+* Vertical pod auto-scaling, i.e., dynamically raising or shrinking the resource requests/limits of pods.
 
 This document provides an overview of both scenarios.
 
@@ -45,5 +45,5 @@ The `Shoot` API allows to configure a few flags of the `vertical-pod-autoscaler`
 * `.spec.kubernetes.verticalPodAutoscaler.updaterInterval` is the interval how often the updater should run (default: `1m0s`).
 * `.spec.kubernetes.verticalPodAutoscaler.recommenderInterval` is the interval how often metrics should be fetched (default: `1m0s`).
 
-⚠️ Please note that if you disable the VPA again then the related `CustomResourceDefinition`s will remain in your shoot cluster (although, nobody will act on them).
+⚠️ Please note that if you disable the VPA again, then the related `CustomResourceDefinition`s will remain in your shoot cluster (although, nobody will act on them).
 This will also keep all existing `VerticalPodAutoscaler` objects in the system, including those that might be created by you. You can delete the `CustomResourceDefinition`s yourself using `kubectl delete crd` if you want to get rid of them.

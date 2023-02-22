@@ -8,9 +8,8 @@ For instance, the Kubernetes community releases **minor** versions roughly every
 Patch releases are done more frequently.
 
 When using the term `Machine image` in the following, we refer to the OS version that comes with the machine image of the node/worker pool of a Gardener Shoot cluster.
-As such we are not referring to the `CloudProvider` specific machine image like the [`AMI`](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) for AWS.
-For more information how Gardener maps machine image versions to `CloudProvider` specific machine images, take a look at the individual gardener extension providers
-such as the [provider for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-operator.md).
+As such, we are not referring to the `CloudProvider` specific machine image like the [`AMI`](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) for AWS.
+For more information on how Gardener maps machine image versions to `CloudProvider` specific machine images, take a look at the individual gardener extension providers, such as the [provider for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-operator.md).
 
 Gardener should be configured accordingly to reflect the "logical state" of a version.
 It should be possible to define the Kubernetes or Machine image versions that still receive bug fixes and security patches, and also vice-versa to define the version that are out-of-maintenance and are potentially vulnerable.
@@ -20,7 +19,7 @@ Moreover, this allows Gardener to "understand" the current state of a version an
 
 **As a Gardener operator**:
 
-- I can classify a version based on it's logical state (`preview`, `supported`, `deprecated` and `expired` see [Version Classification](#version-classifications)).
+- I can classify a version based on it's logical state (`preview`, `supported`, `deprecated`, and `expired`; see [Version Classification](#version-classifications)).
 - I can define which Machine image and Kubernetes versions are eligible for the auto update of clusters during the maintenance time.
 - I can disallow the creation of clusters having a certain version (think of severe security issues).
 
@@ -32,7 +31,7 @@ Moreover, this allows Gardener to "understand" the current state of a version an
 
 ## Version Classifications
 
-Administrators can classify versions into four distinct "logical states": `preview`, `supported`, `deprecated` and `expired`.
+Administrators can classify versions into four distinct "logical states": `preview`, `supported`, `deprecated`, and `expired`.
 The version classification serves as a "point-of-reference" for end-users and also has implications during shoot creation and the maintenance time.
 
 If a version is unclassified, Gardener cannot make those decision based on the "logical state".
@@ -43,22 +42,22 @@ This information is programmatically available in the `CloudProfiles` of the Gar
 
 - **preview:** A `preview` version is a new version that has not yet undergone thorough testing, possibly a new release, and needs time to be validated.
 Due to its short early age, there is a higher probability of undiscovered issues and is therefore not yet recommended for production usage.
-A Shoot does not update (neither `auto-update` or `force-update`) to  a `preview` version during the maintenance time.
-Also `preview` versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
-Typically, after a fresh release of a new Kubernetes (e.g. v1.25.0) or Machine image version (e.g. suse-chost 15.4.20220818), the operator tags it as `preview` until he has gained sufficient experience and regards this version to be reliable.
-After the operator gained sufficient trust, the version can be manually promoted to `supported`.
+A Shoot does not update (neither `auto-update` or `force-update`) to a `preview` version during the maintenance time.
+Also, `preview` versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
+Typically, after a fresh release of a new Kubernetes (e.g., v1.25.0) or Machine image version (e.g., suse-chost 15.4.20220818), the operator tags it as `preview` until he has gained sufficient experience and regards this version to be reliable.
+After the operator has gained sufficient trust, the version can be manually promoted to `supported`.
 
-- **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. New Shoot clusters should use and existing clusters should update to this version.
-Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g. v1.24.6, v1.23.12 and v1.22.15).
+- **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. This is the version that new Shoot clusters should use and existing clusters should update to.
+Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g., v1.24.6, v1.23.12, and v1.22.15).
 
 - **deprecated:** A `deprecated` version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version.
-New Shoots should not use this version any more.
+New Shoots should not use this version anymore.
 Existing Shoots will be updated to a newer version if `auto-update` is enabled (`.spec.maintenance.autoUpdate.kubernetesVersion` for Kubernetes version `auto-update`, or `.spec.maintenance.autoUpdate.machineImageVersion` for machine image version `auto-update`).
 Using automatic upgrades, however, does not guarantee that a Shoot runs a non-deprecated version, as the latest version (overall or of the minor version) can be deprecated as well.
 Deprecated versions **should** have an expiration date set for eventual expiration.
 
 - **expired:** An `expired` versions has an expiration date (based on the [Golang time package](https://golang.org/src/time/time.go)) in the past.
- New clusters with that version cannot be created and existing clusters are forcefully migrated to a higher version during the maintenance time.
+New clusters with that version cannot be created and existing clusters are forcefully migrated to a higher version during the maintenance time.
 
 Below is an example how the relevant section of the `CloudProfile` might look like:
 
@@ -88,24 +87,24 @@ spec:
         version: 1.21.14
 ```
 
-## Version Requirements (Kubernetes and Machine image)
+## Version Requirements (Kubernetes and Machine Image)
 
 The Gardener API server enforces the following requirements for versions:
 
-### Deletion of a version
+### Deletion of a Version
 
 - A version that is in use by a Shoot cannot be deleted from the `CloudProfile`.
 
-### Adding a version
+### Adding a Version
 
 - A version must not have an expiration date in the past.
 - There can be only one `supported` version per minor version.
 - The latest Kubernetes version cannot have an expiration date.
 - The latest version for a machine image can have an expiration date. [*]
 
-<sub>[*] Useful for cases in which support for given machine image needs to be deprecated and removed (for example the machine image reaches end of life).</sub>
+<sub>[*] Useful for cases in which support for A given machine image needs to be deprecated and removed (for example, the machine image reaches end of life).</sub>
 
-## Forceful migration of expired versions
+## Forceful Migration of Expired Versions
 
 If a Shoot is running a version after its expiration date has passed, it will be forcefully migrated during its maintenance time.
 This happens **even if the owner has opted out of automatic cluster updates!**
@@ -115,10 +114,10 @@ For **Machine images**, the Shoots worker pools will be updated to the latest `n
 For **Kubernetes versions**, the forceful update picks the latest `non-preview` patch version of the current minor version.
 
 If the cluster is already on the latest patch version and the latest patch version is also expired,
-it will continue with the latest patch version of the **next consecutive minor Kubernetes version**, so **it will result in an
-update of a minor Kubernetes version!**
+it will continue with the latest patch version of the **next consecutive minor Kubernetes version**, 
+so **it will result in an update of a minor Kubernetes version!**
 
-Please note, that multiple consecutive minor version upgrades are possible.
+Please note that multiple consecutive minor version upgrades are possible.
 This can occur if the Shoot is updated to a version that in turn is also `expired`.
 In this case, the version is again upgraded in the **next** maintenance time.
 
@@ -126,8 +125,8 @@ In this case, the version is again upgraded in the **next** maintenance time.
 
 Kubernetes "minor version jumps" are not allowed - meaning to skip the update to the consecutive minor version and directly update to any version after that.
 For instance, the version `1.20.x` can only update to a version `1.21.x`, not to `1.22.x` or any other version.
-This is because Kubernetes does not guarantee upgradeability in this case, leading to possibly broken Shoot clusters.
-The administrator has to set up the `CloudProfile` in such a way, that consecutive Kubernetes minor versions are available.
+This is because Kubernetes does not guarantee upgradability in this case, leading to possibly broken Shoot clusters.
+The administrator has to set up the `CloudProfile` in such a way that consecutive Kubernetes minor versions are available.
 Otherwise, Shoot clusters will fail to upgrade during the maintenance time.
 
 Consider the `CloudProfile` below with a Shoot using the Kubernetes version `1.20.12`.

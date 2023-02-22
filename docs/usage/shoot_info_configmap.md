@@ -2,7 +2,7 @@
 
 ## Overview
 
-Gardenlet maintains a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) inside the Shoot cluster that contains information about the cluster itself. The ConfigMap is named `shoot-info` and located in the `kube-system` namespace.
+The gardenlet maintains a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) inside the Shoot cluster that contains information about the cluster itself. The ConfigMap is named `shoot-info` and located in the `kube-system` namespace.
 
 ## Fields
 

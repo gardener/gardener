@@ -34,7 +34,7 @@ spec:
     name: test-machine
 ```
 
-Currently, Gardener supports two most widely used CPU architectures:
+Currently, Gardener supports two of the most widely used CPU architectures:
 
 * `amd64`
 * `arm64`

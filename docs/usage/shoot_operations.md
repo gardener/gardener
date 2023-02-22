@@ -3,9 +3,9 @@
 You can trigger a few explicit operations by annotating the `Shoot` with an operation annotation.
 This might allow you to induct certain behavior without the need to change the `Shoot` specification.
 Some of the operations can also not be caused by changing something in the shoot specification because they can't properly be reflected here.
-Note, once the triggered operation is considered by the controllers, the annotation will be automatically removed and you have to add it each time you want to trigger the operation.
+Note that once the triggered operation is considered by the controllers, the annotation will be automatically removed and you have to add it each time you want to trigger the operation.
 
-Please note: If `.spec.maintenance.confineSpecUpdateRollout=true` then the only way to trigger a shoot reconciliation is by setting the `reconcile` operation, see below.
+Please note: If `.spec.maintenance.confineSpecUpdateRollout=true`, then the only way to trigger a shoot reconciliation is by setting the `reconcile` operation, see below.
 
 ## Immediate Reconciliation
 
@@ -18,7 +18,7 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 ## Immediate Maintenance
 
 Annotate the shoot with `gardener.cloud/operation=maintain` to make the `gardener-controller-manager` start maintaining your shoot immediately (possibly without being in its maintenance time window).
-If no reconciliation starts then nothing needed to be maintained:
+If no reconciliation starts, then nothing needs to be maintained:
 
 ```bash
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=maintain
@@ -27,7 +27,7 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 ## Retry Failed Reconciliation
 
 Annotate the shoot with `gardener.cloud/operation=retry` to make the `gardenlet` start a new reconciliation loop on a failed shoot.
-Failed shoots are only reconciled again if a new Gardener version is deployed, the shoot specification is changed or this annotation is set
+Failed shoots are only reconciled again if a new Gardener version is deployed, the shoot specification is changed or this annotation is set:
 
 ```bash
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=retry
@@ -35,9 +35,9 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 
 ## Credentials Rotation Operations
 
-Please consult [this document](shoot_credentials_rotation.md) for more information.
+Please consult [Credentials Rotation for Shoot Clusters](shoot_credentials_rotation.md) for more information.
 
-## Restart `systemd` Services On Particular Worker Nodes
+## Restart `systemd` Services on Particular Worker Nodes
 
 It is possible to make Gardener restart particular systemd services on your shoot worker nodes if needed.
 The annotation is not set on the `Shoot` resource but directly on the `Node` object you want to target.

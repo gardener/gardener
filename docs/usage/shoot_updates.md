@@ -9,13 +9,13 @@ Updates to all aspects of the shoot cluster happen when the gardenlet reconciles
 ### When are Reconciliations Triggered
 
 Generally, when you change the specification of your `Shoot` the reconciliation will start immediately, potentially updating your cluster.
-Please note that you can also confine the reconciliation triggered due to your specification updates to the cluster's maintenance time window. Please find more information [here](shoot_maintenance.md#confine-specification-changesupdates-roll-out).
+Please note that you can also confine the reconciliation triggered due to your specification updates to the cluster's maintenance time window. Please find more information in [Confine Specification Changes/Updates Roll Out](shoot_maintenance.md#confine-specification-changesupdates-roll-out).
 
-You can also annotate your shoot with special operation annotations (see [this document](shoot_operations.md)) which will cause the reconciliation to start due to your actions.
+You can also annotate your shoot with special operation annotations (for more information, see [Trigger Shoot Operations](shoot_operations.md)), which will cause the reconciliation to start due to your actions.
 
 There is also an automatic reconciliation by Gardener.
 The period, i.e., how often it is performed, depends on the configuration of the Gardener administrators/operators.
-In some Gardener installations the operators might enable "reconciliation in maintenance time window only" ([more information](shoot_maintenance.md#cluster-reconciliation)) which will result in at least one reconciliation during the time configured in the `Shoot`'s `.spec.maintenance.timeWindow` field.
+In some Gardener installations the operators might enable "reconciliation in maintenance time window only" (for more information, see [Cluster Reconciliation](shoot_maintenance.md#cluster-reconciliation)), which will result in at least one reconciliation during the time configured in the `Shoot`'s `.spec.maintenance.timeWindow` field.
 
 ### Which Updates are Applied
 
@@ -32,32 +32,32 @@ Some examples for such shoot updates are:
 ### Behavioural Changes
 
 Generally, some of such updates (e.g., configuration changes) could theoretically result in different behaviour of controllers.
-If such changes would be backwards-incompatible then we usually follow one of those approaches (depends on the concrete change):
+If such changes would be backwards-incompatible, then we usually follow one of those approaches (depends on the concrete change):
 
 * Only apply the change for new clusters.
 * Expose a new field in the `Shoot` resource that lets users control this changed behaviour to enable it at a convenient point in time.
-* Put the change behind an alpha feature gate (disabled by default) in the gardenlet (only controllable by Gardener operators) which will be promoted to beta (enabled by default) in subsequent releases (in this case, end-users have no influence on when the behaviour changes - Gardener operators should inform their end-users and provide clear timelines when they will enable the feature gate).
+* Put the change behind an alpha feature gate (disabled by default) in the gardenlet (only controllable by Gardener operators), which will be promoted to beta (enabled by default) in subsequent releases (in this case, end-users have no influence on when the behaviour changes - Gardener operators should inform their end-users and provide clear timelines when they will enable the feature gate).
 
 ## Upgrades
 
-We consider shoot upgrades to change either the
+We consider shoot upgrades to change either the:
 
 * Kubernetes version (`.spec.kubernetes.version`)
 * Kubernetes version of the worker pool if specified (`.spec.provider.workers[].kubernetes.version`)
 * Machine image version of at least one worker pool (`.spec.provider.workers[].machine.image.version`)
 
-Generally, an upgrade is also performed through a reconciliation of the `Shoot` resource, i.e., the same concepts like for [shoot updates](#updates) apply.
+Generally, an upgrade is also performed through a reconciliation of the `Shoot` resource, i.e., the same concepts as for [shoot updates](#updates) apply.
 If an end-user triggers an upgrade (e.g., by changing the Kubernetes version) after a new Gardener version was deployed but before the shoot was reconciled again, then this upgrade might incorporate the changes delivered with this new Gardener version.
 
 ### In-Place vs. Rolling Updates
 
-If the Kubernetes patch version is changed then the upgrade happens in-place.
+If the Kubernetes patch version is changed, then the upgrade happens in-place.
 This means that the shoot worker nodes remain untouched and only the `kubelet` process restarts with the new Kubernetes version binary.
 The same applies for configuration changes of the kubelet.
 
-If the Kubernetes minor version is changed then the upgrade is done in a "rolling update" fashion, similar to how pods in Kubernetes are updated (when backed by a `Deployment`).
+If the Kubernetes minor version is changed, then the upgrade is done in a "rolling update" fashion, similar to how pods in Kubernetes are updated (when backed by a `Deployment`).
 The worker nodes will be terminated one after another and replaced by new machines.
-The existing workload is gracefully drained and evicted from the old worker nodes to new worker nodes, respecting the configured `PodDisruptionBudget`s (see [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)).
+The existing workload is gracefully drained and evicted from the old worker nodes to new worker nodes, respecting the configured `PodDisruptionBudget`s (see [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)).
 
 #### Customize Rolling Update Behaviour of Shoot Worker Nodes
 
@@ -65,10 +65,10 @@ The `.spec.provider.workers[]` list exposes two fields that you might configure 
 The same concepts [like in Kubernetes](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment) apply.
 Additionally, you might customize how the machine-controller-manager (abbrev.: MCM; the component instrumenting this rolling update) is behaving. You can configure the following fields in `.spec.provider.worker[].machineControllerManager`:
 
-* `machineDrainTimeout`: Timeout (in duration) used while draining of machine before deletion, beyond which MCM forcefully deletes machine (default: `10m`).
-* `machineHealthTimeout`: Timeout (in duration) used while re-joining (in case of temporary health issues) of machine before it is declared as failed (default: `10m`).
-* `machineCreationTimeout`: Timeout (in duration) used while joining (during creation) of machine before it is declared as failed (default: `10m`).
-* `maxEvictRetries`: Maximum number of times evicts would be attempted on a pod before it is forcibly deleted during draining of a machine (default: `10`).
+* `machineDrainTimeout`: Timeout (in duration) used while draining of machine before deletion, beyond which MCM forcefully deletes the machine (default: `10m`).
+* `machineHealthTimeout`: Timeout (in duration) used while re-joining (in case of temporary health issues) of a machine before it is declared as failed (default: `10m`).
+* `machineCreationTimeout`: Timeout (in duration) used while joining (during creation) of a machine before it is declared as failed (default: `10m`).
+* `maxEvictRetries`: Maximum number of times evicts would be attempted on a pod before it is forcibly deleted during the draining of a machine (default: `10`).
 * `nodeConditions`: List of case-sensitive node-conditions which will change a machine to a `Failed` state after the `machineHealthTimeout` duration. It may further be replaced with a new machine if the machine is backed by a machine-set object (defaults: `KernelDeadlock`, `ReadonlyFilesystem` , `DiskPressure`).
 
 #### Rolling Update Triggers
@@ -85,8 +85,8 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].providerConfig`
 * `.spec.provider.workers[].cri.name`
 * `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
-* `.status.credentials.rotation.certificateAuthorities.lastInitiationTime` (changed by gardener when a shoot CA rotation is initiated)
-* `.status.credentials.rotation.serviceAccountKey.lastInitiationTime` (changed by gardener when a shoot service account signing key rotation is initiated)
+* `.status.credentials.rotation.certificateAuthorities.lastInitiationTime` (changed by Gardener when a shoot CA rotation is initiated)
+* `.status.credentials.rotation.serviceAccountKey.lastInitiationTime` (changed by Gardener when a shoot service account signing key rotation is initiated)
 
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
 

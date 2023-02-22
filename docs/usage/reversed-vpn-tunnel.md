@@ -24,27 +24,27 @@ The feature gate `ReversedVPN` is GA and will be removed in a future release.
 
 ## High Availability for Reversed VPN Tunnel
 
-Shoots which define `spec.controlPlane.highAvailability.failureTolerance: {node, zone}` get an HA control-plane including a
+Shoots which define `spec.controlPlane.highAvailability.failureTolerance: {node, zone}` get an HA control-plane, including a
 highly available VPN connection by deploying redundant VPN servers and clients. 
 
 Please note that it is not possible to move an open connection to another VPN tunnel. Especially long-running
 commands like `kubectl exec -it ...` or `kubectl logs -f ...` will still break if the routing path must be switched 
-because either VPN server or client are not reachable anymore. New request should be possible within seconds.
+because either VPN server or client are not reachable anymore. A new request should be possible within seconds.
 
 ### HA Architecture for VPN
 
 Establishing a connection from the VPN client on the shoot to the server in the control plane works nearly the same
 way as in the non-HA case. The only difference is that the VPN client targets one of two VPN servers, represented by two services 
 `vpn-seed-server-0` and `vpn-seed-server-1` with endpoints in pods with the same name.
-The VPN tunnel is used by a `kube-apiserver` to reach nodes, services, or pods in the shoot cluster. 
+The VPN tunnel is used by a `kube-apiserver` to reach nodes, services, or pods in the shoot cluster.
 In the non-HA case, a kube-apiserver uses an HTTP proxy running as a side-car in the VPN server to address
 the shoot networks via the VPN tunnel and the `vpn-shoot` acts as a router.
 In the HA case, the setup is more complicated. Instead of an HTTP proxy in the VPN server, the kube-apiserver has
-additional side-cars. One side-car for each VPN client to connect to the corresponding VPN server.
+additional side-cars, one side-car for each VPN client to connect to the corresponding VPN server.
 On the shoot side, there are now two `vpn-shoot` pods, each with two VPN clients for each VPN server.
 With this setup, there would be four possible routes, but only one can be used. Switching the route kills all
 open connections. Therefore, another layer is introduced: link aggregation, also named [bonding](https://www.kernel.org/doc/Documentation/networking/bonding.txt).
-In Linux, you can create a network link by using several other links as slaves. Bonding is here used with
+In Linux, you can create a network link by using several other links as slaves. Bonding here is used with
 active-backup mode. This means the traffic only goes through the active sublink and is only changed if the active one
 becomes unavailable. Switching happens in the bonding network driver without changing any routes. So with this layer, 
 vpn-seed-server pods can be rolled without disrupting open connections.
@@ -61,4 +61,4 @@ the routing is switched to the other responsive routing path.
 
 ![Four possible routing paths](images/vpn-ha-routing-paths.png)
 
-For general information about HA control-plane see [GEP-20](../proposals/20-ha-control-planes.md). 
+For general information about HA control-plane, see [GEP-20](../proposals/20-ha-control-planes.md). 
