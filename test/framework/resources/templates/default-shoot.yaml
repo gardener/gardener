@@ -5,12 +5,6 @@ metadata:
   namespace: abc
 spec:
   kubernetes:
-    # Enable the static token kubeconfig for the test-machinery integration tests until we figure out
-    # which test/components need the Shoot kubeconfig that is downloaded to $TM_KUBECONFIG_PATH/shoot.config in the Shoot creation integration test.
-    # See https://github.com/gardener/gardener/blob/7c63e2a6c5d46f9f1cb676602f864275ab8cab40/test/framework/shootcreationframework.go#L423-L425
-    # TODO(ialidzhikov): Remove the enableStaticTokenKubeconfig field after we figure out which tests/components need it
-    # and let the default gardener-apiserver value to be used.
-    enableStaticTokenKubeconfig: true
     kubeAPIServer:
       enableBasicAuthentication: false
   dns: {}
