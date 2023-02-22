@@ -2110,7 +2110,7 @@ string
 </em>
 </td>
 <td>
-<p>Name is an an availability zone name.</p>
+<p>Name is an availability zone name.</p>
 </td>
 </tr>
 <tr>

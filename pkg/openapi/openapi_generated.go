@@ -990,7 +990,7 @@ func schema_pkg_apis_core_v1alpha1_AvailabilityZone(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Name is an an availability zone name.",
+							Description: "Name is an availability zone name.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -8661,7 +8661,7 @@ func schema_pkg_apis_core_v1beta1_AvailabilityZone(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Name is an an availability zone name.",
+							Description: "Name is an availability zone name.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
