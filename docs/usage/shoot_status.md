@@ -21,6 +21,7 @@ Currently the available Shoot condition types are:
 - `APIServerAvailable`
 - `ControlPlaneHealthy`
 - `EveryNodeReady`
+- `ObservabilityComponentsHealthy`
 - `SystemComponentsHealthy`
 
 The Shoot conditions are maintained by the [shoot care reconciler](../../pkg/gardenlet/controller/shoot/care/reconciler.go) of gardenlet.

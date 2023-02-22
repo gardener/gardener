@@ -199,7 +199,7 @@ type Region struct {
 
 // AvailabilityZone is an availability zone.
 type AvailabilityZone struct {
-	// Name is an an availability zone name.
+	// Name is an availability zone name.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// UnavailableMachineTypes is a list of machine type names that are not availability in this zone.
 	// +optional

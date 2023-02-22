@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -56,10 +57,10 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 
 	f := framework.NewShootFramework(nil)
 
-	f.Default().Release().CIt("should download shoot kubeconfig successfully", func(ctx context.Context) {
-		err := framework.DownloadKubeconfig(ctx, f.SeedClient, f.ShootSeedNamespace(), v1beta1constants.SecretNameGardener, "")
+	f.Default().Release().CIt("should fetch the shoot kubeconfig from the Seed cluster successfully", func(ctx context.Context) {
+		kubeconfig, err := framework.GetObjectFromSecret(ctx, f.SeedClient, f.ShootSeedNamespace(), v1beta1constants.SecretNameGardener, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
-
+		gomega.Expect(kubeconfig).ToNot(gomega.BeNil())
 		ginkgo.By("Shoot Kubeconfig downloaded successfully from seed")
 	}, downloadKubeconfigTimeout)
 
