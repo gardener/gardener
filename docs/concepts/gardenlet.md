@@ -401,7 +401,7 @@ This reconciler performs three "care" actions related to `Shoot`s.
 
 ##### Conditions
 
-It maintains four conditions and performs the following checks:
+It maintains five conditions and performs the following checks:
 
 - `APIServerAvailable`: The `/healthz` endpoint of the shoot's `kube-apiserver` is called and considered healthy when it responds with `200 OK`.
 - `ControlPlaneHealthy`: The control plane is considered healthy when the respective `Deployment`s (for example `kube-apiserver`,`kube-controller-manager`), and `Etcd`s (for example `etcd-main`) exist and are healthy.
