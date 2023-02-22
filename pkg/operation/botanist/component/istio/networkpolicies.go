@@ -83,6 +83,48 @@ func getIstioSystemNetworkPolicyTransformers() []networkPolicyTransformer {
 
 func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 	return []networkPolicyTransformer{
+		// TODO(timuthy, rfranzke): Replace later when all egress rules for Aggregate Prometheus can be changed.
+		{
+			name: "allow-from-aggregate-prometheus",
+			transform: func(obj *networkingv1.NetworkPolicy) func() error {
+				return func() error {
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from pods with label "+
+							"'%s=%s'", v1beta1constants.LabelApp, "aggregate-prometheus"),
+					}
+					obj.Spec = networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
+							},
+						},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+						Ingress: []networkingv1.NetworkPolicyIngressRule{{
+							From: []networkingv1.NetworkPolicyPeer{{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelApp:  "aggregate-prometheus",
+										v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
+									},
+								},
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelRole: v1beta1constants.GardenNamespace,
+									},
+								},
+							}},
+							Ports: []networkingv1.NetworkPolicyPort{{
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+								Port:     utils.IntStrPtrFromInt(15020),
+							}},
+						},
+						},
+					}
+					return nil
+				}
+			},
+		},
+		// TODO(timuthy, rfranzke): Remove this rule once created by automatically by Gardenlet.
 		{
 			name: "deny-all-egress",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
