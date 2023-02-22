@@ -27,29 +27,28 @@ spec:
       name: backup-secret
       namespace: garden
   dns:
-    ingressDomain: ingress.dev.my-seed.example.com
-#   provider:
-#     type: aws-route53
-#     secretRef:
-#       name: ingress-secret
-#       namespace: garden
-#     domains:
-#       include:
-#       - my-custom-domain.com
-#       - my-other-custom-domain.com
-#       exclude:
-#       - yet-another-custom-domain.com
-#     zones:
-#       include:
-#       - zone-id-1
-#       exclude:
-#       - zone-id-2
-# ingress: # If set then `.spec.dns.ingressDomain` must be nil and `.spec.dns.provider` must be set.
-#   domain: ingress.dev.my-seed.example.com
-#   controller:
-#     kind: nginx
-#     providerConfig:
-#       <some-optional-config-for-the-nginx-ingress-controller>
+    provider:
+      type: aws-route53
+      secretRef:
+        name: ingress-secret
+        namespace: garden
+      # domains:
+      #   include:
+      #   - my-custom-domain.com
+      #   - my-other-custom-domain.com
+      #   exclude:
+      #   - yet-another-custom-domain.com
+      # zones:
+      #   include:
+      #   - zone-id-1
+      #   exclude:
+      #   - zone-id-2
+  ingress: 
+    domain: ingress.dev.my-seed.example.com
+    controller:
+      kind: nginx
+      providerConfig:
+        <some-optional-config-for-the-nginx-ingress-controller>
   networks: # seed and shoot networks must be disjunct
     ipFamilies:
     - IPv4
