@@ -513,8 +513,9 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 		}
 	}
 
-	// If secret reference is specified, create or update the corresponding secret
-	if spec.SecretRef != nil {
+	// If secret reference is specified and the static token kubeconfig is enabled,
+	// create or update the corresponding secret with the kubeconfig from the static token kubeconfig secret.
+	if spec.SecretRef != nil && pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
 		// Get shoot kubeconfig secret
 		shootKubeconfigSecret, err := a.getShootKubeconfigSecret(ctx, shoot)
 		if err != nil {
