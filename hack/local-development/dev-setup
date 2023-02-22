@@ -57,6 +57,14 @@ cp ${EXAMPLE_DIR}/20-componentconfig-*.yaml ${DEV_DIR}/
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
 
+LISTEN_CLIENT_URL="0.0.0.0"
+
+if [[ "$IPFAMILY" == "ipv6" ]]; then
+  LOCAL_K8S_HOST_IP="[$LOCAL_K8S_HOST_IP]"
+  LISTEN_CLIENT_URL="[::]"
+fi
+
+
 if [ "${kubernetes_env}" != $NODELESS ] && [ "${kubernetes_env}" != $REMOTE ] ; then
   cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
@@ -80,7 +88,7 @@ spec:
         command:
         - etcd
         - -advertise-client-urls=http://${LOCAL_K8S_HOST_IP}:2379
-        - -listen-client-urls=http://0.0.0.0:2379
+        - -listen-client-urls=http://${LISTEN_CLIENT_URL}:2379
         - -data-dir=/etcd-data
         volumeMounts:
         - mountPath: /etcd-data

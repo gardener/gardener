@@ -72,6 +72,8 @@ GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 # Rules for local development scenarios #
 #########################################
 
+dev-setup start-admission-controller start-controller-manager start-gardenlet register-local-env: export IPFAMILY := $(IPFAMILY)
+
 .PHONY: dev-setup
 dev-setup:
 	@if [ "$(DEV_SETUP_WITH_WEBHOOKS)" = "true" ]; then ./hack/local-development/dev-setup --with-webhooks; else ./hack/local-development/dev-setup; fi
@@ -375,7 +377,8 @@ gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local
+	@if [[ -z "$(IPFAMILY)" ]]; then $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local; else $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local-ipv6; fi
+
 tear-down-local-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind/local

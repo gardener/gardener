@@ -113,7 +113,7 @@ featureGates:
   APIServerSNI: true
   DefaultSeccompProfile: true
   CoreDNSQueryRewriting: true
-  IPv6SingleStack: true
+  IPv6SingleStack: false
 # seedConfig:
 #   metadata:
 #     name: my-seed
