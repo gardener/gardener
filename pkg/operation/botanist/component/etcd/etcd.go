@@ -276,7 +276,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		peerServerSecretName string
 	)
 
-	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx); err != nil {
+	peerTLSAlreadyEnabled := existingEtcd != nil && existingEtcd.Spec.Etcd.PeerUrlTLS != nil
+	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx, peerTLSAlreadyEnabled); err != nil {
 		return err
 	}
 
@@ -456,7 +457,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
-		if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
+		if pointer.Int32Deref(e.values.Replicas, 0) > 1 || peerTLSAlreadyEnabled {
 			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
@@ -916,9 +917,9 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 	return fullSnapshotSchedule
 }
 
-func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
+func (e *etcd) handlePeerCertificates(ctx context.Context, peerTLSAlreadyEnabled bool) (caSecretName, peerSecretName string, err error) {
 	// TODO(timuthy): Remove this once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved.
-	if pointer.Int32Deref(e.values.Replicas, 0) != 3 {
+	if pointer.Int32Deref(e.values.Replicas, 0) != 3 && !peerTLSAlreadyEnabled {
 		return
 	}
 
