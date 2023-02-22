@@ -1,0 +1,38 @@
+config:
+  featureGates:
+    IPv6SingleStack: true
+  gardenClientConnection:
+    bootstrapKubeconfig:
+      kubeconfig: |
+        apiVersion: v1
+        kind: Config
+        current-context: gardenlet-bootstrap
+        clusters:
+        - cluster:
+            insecure-skip-tls-verify: true
+            server: https://kubernetes.default.svc:443 
+          name: default
+        contexts:
+        - context:
+            cluster: default
+            user: gardenlet-bootstrap
+          name: gardenlet-bootstrap
+        users:
+        - name: gardenlet-bootstrap
+          user:
+            token: 07401b.f395accd246ae52d
+  seedConfig:
+    spec:
+      networks:
+        ipFamilies:
+        - IPv6
+        nodes: fc00:f853:ccd:e793::/64
+        # Those CIDRs must match those specified in the kind Cluster configuration.
+        pods: fd00:10:1::/56
+        services: fd00:10:2::/112
+        shootDefaults:
+          ipFamilies:
+          - IPv6
+          pods: fd00:10:3::/56
+          services: fd00:10:4::/112
+
