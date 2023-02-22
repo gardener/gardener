@@ -295,7 +295,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 #####################################################################
 
 kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
-kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-single-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
