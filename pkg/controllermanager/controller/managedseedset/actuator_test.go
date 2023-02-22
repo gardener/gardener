@@ -34,7 +34,7 @@ import (
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
 	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -151,7 +151,7 @@ var _ = Describe("Actuator", func() {
 			}
 		}
 
-		expectReplica = func(r *mockmanagedseedset.MockReplica, ordinal int, status ReplicaStatus, seedReady bool, shs shootpkg.Status, deletable bool) {
+		expectReplica = func(r *mockmanagedseedset.MockReplica, ordinal int, status ReplicaStatus, seedReady bool, shs gardenerutils.ShootStatus, deletable bool) {
 			r.EXPECT().GetName().Return(getReplicaName(ordinal)).AnyTimes()
 			r.EXPECT().GetFullName().Return(getReplicaFullName(ordinal)).AnyTimes()
 			r.EXPECT().GetObjectKey().Return(getReplicaObjectKey(ordinal)).AnyTimes()
@@ -182,7 +182,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should retry the shoot and return correct status if a replica has status ShootReconcileFailed and max retries not yet reached",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconcileFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, pointer.Int32(1)),
@@ -191,7 +191,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(maxShootRetries)),
 				func() {
-					expectReplica(r0, 0, StatusShootReconcileFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, pointer.Int32(maxShootRetries)),
 				EventNotRetryingShootReconciliation, "Not retrying Shoot %s reconciliation since max retries have been reached", getReplicaFullName(0),
@@ -199,7 +199,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleteFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32(1)),
@@ -208,7 +208,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(maxShootRetries)),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleteFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32(maxShootRetries)),
 				EventNotRetryingShootDeletion, "Not retrying Shoot %s deletion since max retries have been reached", getReplicaFullName(0),
@@ -216,7 +216,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootReconciling",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconciling, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootReconciling, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, before, nil),
 				EventWaitingForShootReconciled, "Waiting for Shoot %s to be reconciled", getReplicaFullName(0),
@@ -224,7 +224,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootDeleting",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleting, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootDeleting, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, before, nil),
 				EventWaitingForShootDeleted, "Waiting for Shoot %s to be deleted", getReplicaFullName(0),
@@ -232,7 +232,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should create the managed seed and return correct status if a replica has status ShootReconciled",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconciled, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootReconciled, false, gardenerutils.ShootStatusHealthy, true)
 					r0.EXPECT().CreateManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, now, nil),
@@ -241,7 +241,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ManagedSeedPreparing",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedPreparing, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedPreparing, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, before, nil),
 				EventWaitingForManagedSeedRegistered, "Waiting for ManagedSeed %s to be registered", getReplicaFullName(0),
@@ -249,7 +249,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ManagedSeedDeleting",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedDeleting, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedDeleting, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, before, nil),
 				EventWaitingForManagedSeedDeleted, "Waiting for ManagedSeed %s to be deleted", getReplicaFullName(0),
@@ -257,7 +257,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica seed is not ready",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, now, nil),
 				EventWaitingForSeedReady, "Waiting for Seed %s to be ready", getReplicaName(0),
@@ -265,7 +265,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica shoot is not healthy",
 				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootNotHealthyReason, now, nil),
 				EventWaitingForShootHealthy, "Waiting for Shoot %s to be healthy", getReplicaFullName(0),
@@ -273,7 +273,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if all replicas are ready",
 				managedSeedSet(1, 1, "", "", nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 1, 1, "", "", now, nil),
 				"", "",
@@ -297,7 +297,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should retry the shoot and return correct status if a replica has status ShootReconcileFailed and max retries not yet reached",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconcileFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, pointer.Int32(1)),
@@ -306,7 +306,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(maxShootRetries)),
 				func() {
-					expectReplica(r0, 0, StatusShootReconcileFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, pointer.Int32(maxShootRetries)),
 				EventNotRetryingShootReconciliation, "Not retrying Shoot %s reconciliation since max retries have been reached", getReplicaFullName(0),
@@ -314,7 +314,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleteFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32(1)),
@@ -323,7 +323,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(maxShootRetries)),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleteFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32(maxShootRetries)),
 				EventNotRetryingShootDeletion, "Not retrying Shoot %s deletion since max retries have been reached", getReplicaFullName(0),
@@ -331,7 +331,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootReconciling",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconciling, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootReconciling, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, before, nil),
 				EventWaitingForShootReconciled, "Waiting for Shoot %s to be reconciled", getReplicaFullName(0),
@@ -339,7 +339,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootDeleting",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleting, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootDeleting, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, before, nil),
 				EventWaitingForShootDeleted, "Waiting for Shoot %s to be deleted", getReplicaFullName(0),
@@ -347,7 +347,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should create the managed seed and return correct status if a replica has status ShootReconciled",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconciled, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootReconciled, false, gardenerutils.ShootStatusHealthy, true)
 					r0.EXPECT().CreateManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, now, nil),
@@ -356,7 +356,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ManagedSeedPreparing",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedPreparing, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedPreparing, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, before, nil),
 				EventWaitingForManagedSeedRegistered, "Waiting for ManagedSeed %s to be registered", getReplicaFullName(0),
@@ -364,7 +364,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ManagedSeedDeleting",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedDeleting, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedDeleting, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, before, nil),
 				EventWaitingForManagedSeedDeleted, "Waiting for ManagedSeed %s to be deleted", getReplicaFullName(0),
@@ -372,7 +372,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica seed is not ready",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, now, nil),
 				EventWaitingForSeedReady, "Waiting for Seed %s to be ready", getReplicaName(0),
@@ -380,7 +380,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica shoot is not healthy",
 				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootNotHealthyReason, now, nil),
 				EventWaitingForShootHealthy, "Waiting for Shoot %s to be healthy", getReplicaFullName(0),
@@ -388,7 +388,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should create the shoot of a new replica and return correct status if all replicas are ready",
 				managedSeedSet(2, 1, "", "", nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusHealthy, true)
 					r1 := mockmanagedseedset.NewMockReplica(ctrl)
 					rf.EXPECT().NewReplica(managedSeedSet(2, 1, "", "", nil), nil, nil, nil, false).Return(r1)
 					r1.EXPECT().CreateShoot(ctx, gc, 1).Return(nil)
@@ -400,7 +400,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should create the shoot of a new replica and return correct status if all replicas are ready and nextReplicaNumber is invalid",
 				managedSeedSet(2, 0, "", "", nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusHealthy, true)
 					r1 := mockmanagedseedset.NewMockReplica(ctrl)
 					rf.EXPECT().NewReplica(managedSeedSet(2, 0, "", "", nil), nil, nil, nil, false).Return(r1)
 					r1.EXPECT().CreateShoot(ctx, gc, 1).Return(nil)
@@ -436,7 +436,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should delete the shoot and return correct status if a replica has status ShootReconcileFailed",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconcileFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().DeleteShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, nil), true,
@@ -445,7 +445,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleteFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32(1)), true,
@@ -454,7 +454,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(maxShootRetries)),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleteFailed, false, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32(maxShootRetries)), true,
 				EventNotRetryingShootDeletion, "Not retrying Shoot %s deletion since max retries have been reached", getReplicaFullName(0),
@@ -462,7 +462,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should delete the shoot and return correct status if a replica has status ShootReconciling",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconciling, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootReconciling, false, gardenerutils.ShootStatusHealthy, true)
 					r0.EXPECT().DeleteShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, nil), true,
@@ -471,7 +471,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ShootDeleting",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootDeleting, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootDeleting, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, before, nil), true,
 				EventWaitingForShootDeleted, "Waiting for Shoot %s to be deleted", getReplicaFullName(0),
@@ -479,7 +479,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should delete the shoot and return correct status if a replica has status ShootReconciled",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusShootReconciled, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusShootReconciled, false, gardenerutils.ShootStatusHealthy, true)
 					r0.EXPECT().DeleteShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, nil), true,
@@ -488,7 +488,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should delete the managed seed and return correct status if a replica has status ManagedSeedPreparing",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedPreparing, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedPreparing, false, gardenerutils.ShootStatusHealthy, true)
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
@@ -497,7 +497,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should return correct status if a replica has status ManagedSeedDeleting",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedDeleting, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedDeleting, false, gardenerutils.ShootStatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, before, nil), true,
 				EventWaitingForManagedSeedDeleted, "Waiting for ManagedSeed %s to be deleted", getReplicaFullName(0),
@@ -505,7 +505,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should delete the managed seed and return correct status if a replica seed is not ready",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, false, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, false, gardenerutils.ShootStatusHealthy, true)
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
@@ -514,7 +514,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should delete the managed seed and return correct status if a replica shoot is not healthy",
 				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusUnhealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
@@ -523,7 +523,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should delete the managed seed of a deletable replica and return correct status if all replicas are ready",
 				managedSeedSet(0, 1, "", "", nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusHealthy, true)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusHealthy, true)
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
@@ -532,7 +532,7 @@ var _ = Describe("Actuator", func() {
 			Entry("should fail if all replicas are ready and there are no deletable replicas",
 				managedSeedSet(0, 1, "", "", nil),
 				func() {
-					expectReplica(r0, 0, StatusManagedSeedRegistered, true, shootpkg.StatusHealthy, false)
+					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusHealthy, false)
 				},
 				status(1, 1, 1, "", "", now, nil), false,
 				gardencorev1beta1.EventReconcileError, "no deletable replicas found",

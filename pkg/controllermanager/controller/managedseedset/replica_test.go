@@ -32,7 +32,6 @@ import (
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -112,7 +111,7 @@ var _ = Describe("Replica", func() {
 			deletionTimestamp *metav1.Time,
 			lastOperationType gardencorev1beta1.LastOperationType,
 			lastOperationState gardencorev1beta1.LastOperationState,
-			shs shootpkg.Status,
+			shs gardenerutils.ShootStatus,
 			protected bool,
 		) *gardencorev1beta1.Shoot {
 			labels := make(map[string]string)
@@ -280,22 +279,22 @@ var _ = Describe("Replica", func() {
 	)
 
 	DescribeTable("#GetShootHealthStatus",
-		func(shoot *gardencorev1beta1.Shoot, shs shootpkg.Status) {
+		func(shoot *gardencorev1beta1.Shoot, shs gardenerutils.ShootStatus) {
 			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			Expect(replica.GetShootHealthStatus()).To(Equal(shs))
 		},
 		Entry("should return unhealthy",
-			nil, shootpkg.StatusUnhealthy),
+			nil, gardenerutils.ShootStatusUnhealthy),
 		Entry("should return progressing",
-			shoot(nil, "", "", "", false), shootpkg.StatusProgressing),
+			shoot(nil, "", "", "", false), gardenerutils.ShootStatusProgressing),
 		Entry("should return healthy",
-			shoot(nil, "", "", shootpkg.StatusHealthy, false), shootpkg.StatusHealthy),
+			shoot(nil, "", "", gardenerutils.ShootStatusHealthy, false), gardenerutils.ShootStatusHealthy),
 		Entry("should return progressing",
-			shoot(nil, "", "", shootpkg.StatusProgressing, false), shootpkg.StatusProgressing),
+			shoot(nil, "", "", gardenerutils.ShootStatusProgressing, false), gardenerutils.ShootStatusProgressing),
 		Entry("should return unhealthy",
-			shoot(nil, "", "", shootpkg.StatusUnhealthy, false), shootpkg.StatusUnhealthy),
+			shoot(nil, "", "", gardenerutils.ShootStatusUnhealthy, false), gardenerutils.ShootStatusUnhealthy),
 		Entry("should return unknown",
-			shoot(nil, "", "", shootpkg.StatusUnknown, false), shootpkg.StatusUnknown),
+			shoot(nil, "", "", gardenerutils.ShootStatusUnknown, false), gardenerutils.ShootStatusUnknown),
 	)
 
 	DescribeTable("#IsDeletable",
