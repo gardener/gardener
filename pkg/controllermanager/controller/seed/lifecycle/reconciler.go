@@ -132,8 +132,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 	}
 
+	var gardenletOfflineSince interface{} = "Unknown"
+	if conditionGardenletReady != nil {
+		gardenletOfflineSince = conditionGardenletReady.LastTransitionTime.UTC()
+	}
+
 	log.Info("Gardenlet has not sent heartbeats for at least the configured shoot monitor period, setting shoot conditions and constraints to 'Unknown' for all shoots on this seed",
-		"gardenletOfflineSince", conditionGardenletReady.LastTransitionTime.UTC(),
+		"gardenletOfflineSince", gardenletOfflineSince,
 		"now", r.Clock.Now().UTC(),
 		"shootMonitorPeriod", r.Config.ShootMonitorPeriod.Duration,
 	)
