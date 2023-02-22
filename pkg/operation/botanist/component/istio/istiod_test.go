@@ -1606,6 +1606,7 @@ metadata:
   annotations:
     service.alpha.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"port":8132,"protocol":"TCP"},{"port":8443,"protocol":"TCP"},{"port":9443,"protocol":"TCP"}]'
     foo: bar
     
   labels:
