@@ -123,8 +123,10 @@ var _ = BeforeSuite(func() {
 
 	Expect((&managedresource.Reconciler{
 		Config: config.ManagedResourceControllerConfig{
-			ConcurrentSyncs:     pointer.Int(5),
-			SyncPeriod:          &metav1.Duration{Duration: 500 * time.Millisecond},
+			ConcurrentSyncs: pointer.Int(5),
+			// Higher sync period is used because in some tests, we want to assert an intermediate state of the
+			// resource, which won't be possible if the controller reconciles it back too quickly.
+			SyncPeriod:          &metav1.Duration{Duration: time.Minute},
 			ManagedByLabelValue: pointer.String("gardener"),
 		},
 		Clock:                         fakeClock,
