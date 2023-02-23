@@ -330,7 +330,7 @@ github.com/munnerz/goautoneg
 # github.com/nwaples/rardecode v1.1.2
 ## explicit
 github.com/nwaples/rardecode
-# github.com/onsi/ginkgo/v2 v2.6.1
+# github.com/onsi/ginkgo/v2 v2.8.3
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -352,7 +352,7 @@ github.com/onsi/ginkgo/v2/internal/parallel_support
 github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
-# github.com/onsi/gomega v1.24.2
+# github.com/onsi/gomega v1.27.1
 ## explicit; go 1.18
 github.com/onsi/gomega
 github.com/onsi/gomega/format
