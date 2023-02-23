@@ -183,7 +183,8 @@ When the `Shoot` got created successfully, you can acquire a `kubeconfig` by usi
 
 There are cases where you would want to create a second seed cluster in your local setup. For example, if you want to test the [control plane migration](../usage/control_plane_migration.md) feature. The following steps describe how to do that.
 
-Add a new IP address on your loopback device which will be necessary for the new KinD cluster that you will create. On Mac, the default loopback device is `lo0`.
+If you are on macOS, add a new IP address on your loopback device which will be necessary for the new KinD cluster that you will create. On macOS, the default loopback device is `lo0`.
+
 
 ```bash
 sudo ip addr add 127.0.0.2 dev lo0                                     # adding 127.0.0.2 ip to the loopback interface
