@@ -1870,14 +1870,15 @@ rules:
 						IsNodeless:     true,
 						RuntimeVersion: runtimeVersion,
 						Version:        version,
-						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+						VPN:            VPNConfig{Enabled: true, HighAvailabilityEnabled: true, HighAvailabilityNumberOfSeedServers: 2},
 					})
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
-						"networking.gardener.cloud/to-shoot-networks":                     "allowed",
-						"networking.gardener.cloud/to-runtime-apiserver":                  "allowed",
-						"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-1194": "allowed",
+						"networking.gardener.cloud/to-shoot-networks":                       "allowed",
+						"networking.gardener.cloud/to-runtime-apiserver":                    "allowed",
+						"networking.resources.gardener.cloud/to-vpn-seed-server-0-tcp-1194": "allowed",
+						"networking.resources.gardener.cloud/to-vpn-seed-server-1-tcp-1194": "allowed",
 					})))
 				})
 			})
@@ -2122,10 +2123,11 @@ rules:
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
-				Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("networking.resources.gardener.cloud/to-vpn-seed-server-tcp-1194", "allowed"))
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
 				Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
+					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
+					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
 					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
 				}
 				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(corev1.Container{

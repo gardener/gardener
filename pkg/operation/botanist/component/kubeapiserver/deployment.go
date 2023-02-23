@@ -770,18 +770,11 @@ func (k *kubeAPIServer) handleVPNSettings(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
 	}
 
-	var portVPNSeedServer int
 	if k.values.VPN.HighAvailabilityEnabled {
 		k.handleVPNSettingsHA(deployment, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
-		portVPNSeedServer = vpnseedserver.OpenVPNPort
 	} else {
 		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxy, configMapEgressSelector)
-		portVPNSeedServer = vpnseedserver.EnvoyPort
 	}
-
-	deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-		gardenerutils.NetworkPolicyLabel(vpnseedserver.ServiceName, portVPNSeedServer): v1beta1constants.LabelNetworkPolicyAllowed,
-	})
 
 	return nil
 }
@@ -792,6 +785,9 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 	secretHTTPProxy *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
 ) {
+	deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
+		gardenerutils.NetworkPolicyLabel(vpnseedserver.ServiceName, vpnseedserver.EnvoyPort): v1beta1constants.LabelNetworkPolicyAllowed,
+	})
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 		{
@@ -843,6 +839,14 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
 ) {
+	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
+		serviceName := fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, i)
+
+		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
+			gardenerutils.NetworkPolicyLabel(serviceName, vpnseedserver.OpenVPNPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+	}
+
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToShootNetworks] = v1beta1constants.LabelNetworkPolicyAllowed
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
