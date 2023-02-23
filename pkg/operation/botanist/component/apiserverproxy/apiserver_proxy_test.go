@@ -430,7 +430,7 @@ metadata:
   name: apiserver-proxy.networking.gardener.cloud
 webhooks:
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     caBundle: Rk9PQkFS
     url: https://127.0.0.1:9443/webhook/pod-apiserver-env

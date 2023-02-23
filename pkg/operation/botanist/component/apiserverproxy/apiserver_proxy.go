@@ -430,7 +430,7 @@ environment variable to all containers and init containers matched by it.`,
 				},
 				Webhooks: []admissionregistrationv1.MutatingWebhook{
 					{
-						AdmissionReviewVersions: []string{"v1beta1"},
+						AdmissionReviewVersions: []string{"v1"},
 						ClientConfig: admissionregistrationv1.WebhookClientConfig{
 							CABundle: clusterCASecret.Data[secrets.DataKeyCertificateBundle],
 							URL:      pointer.String("https://127.0.0.1:9443/webhook/pod-apiserver-env"),
