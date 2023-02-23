@@ -2037,10 +2037,12 @@ message SeedDNSProvider {
   optional k8s.io.api.core.v1.SecretReference secretRef = 2;
 
   // Domains contains information about which domains shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener.
   // +optional
   optional DNSIncludeExclude domains = 3;
 
   // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener.
   // +optional
   optional DNSIncludeExclude zones = 4;
 }

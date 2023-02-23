@@ -139,8 +139,10 @@ type SeedDNSProvider struct {
 	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
 	SecretRef corev1.SecretReference
 	// Domains contains information about which domains shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener.
 	Domains *DNSIncludeExclude
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener.
 	Zones *DNSIncludeExclude
 }
 

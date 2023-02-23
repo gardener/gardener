@@ -32,17 +32,6 @@ spec:
       secretRef:
         name: ingress-secret
         namespace: garden
-      # domains:
-      #   include:
-      #   - my-custom-domain.com
-      #   - my-other-custom-domain.com
-      #   exclude:
-      #   - yet-another-custom-domain.com
-      # zones:
-      #   include:
-      #   - zone-id-1
-      #   exclude:
-      #   - zone-id-2
   ingress: 
     domain: ingress.dev.my-seed.example.com
     controller:

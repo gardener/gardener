@@ -6164,13 +6164,13 @@ func schema_pkg_apis_core_v1alpha1_SeedDNSProvider(ref common.ReferenceCallback)
 					},
 					"domains": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
+							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
 						},
 					},
 					"zones": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.",
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
 						},
 					},
@@ -13835,13 +13835,13 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 					},
 					"domains": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
+							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
 					"zones": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.",
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},

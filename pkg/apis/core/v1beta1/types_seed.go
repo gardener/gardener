@@ -142,8 +142,8 @@ type SeedBackup struct {
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
 	// to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
-	// +optional
 	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.
+	// +optional
 	IngressDomain *string `json:"ingressDomain,omitempty" protobuf:"bytes,1,opt,name=ingressDomain"`
 	// Provider configures a DNSProvider
 	// +optional
@@ -157,9 +157,11 @@ type SeedDNSProvider struct {
 	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
 	// Domains contains information about which domains shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener.
 	// +optional
 	Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,3,opt,name=domains"`
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener.
 	// +optional
 	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,4,opt,name=zones"`
 }

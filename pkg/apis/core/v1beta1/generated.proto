@@ -2022,8 +2022,8 @@ message SeedBackup {
 message SeedDNS {
   // IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
   // to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
-  // +optional
   // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.
+  // +optional
   optional string ingressDomain = 1;
 
   // Provider configures a DNSProvider
@@ -2040,10 +2040,12 @@ message SeedDNSProvider {
   optional k8s.io.api.core.v1.SecretReference secretRef = 2;
 
   // Domains contains information about which domains shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener.
   // +optional
   optional DNSIncludeExclude domains = 3;
 
   // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener.
   // +optional
   optional DNSIncludeExclude zones = 4;
 }
