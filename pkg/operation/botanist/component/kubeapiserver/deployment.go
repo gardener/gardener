@@ -64,6 +64,7 @@ const (
 	volumeNameAuditPolicy                     = "audit-policy-config"
 	volumeNameAuditWebhookKubeconfig          = "audit-webhook-kubeconfig"
 	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
+	volumeNameAuthorizationWebhookKubeconfig  = "authorization-webhook-kubeconfig"
 	volumeNameCA                              = "ca"
 	volumeNameCAClient                        = "ca-client"
 	volumeNameCAEtcd                          = "ca-etcd"
@@ -97,6 +98,7 @@ const (
 	volumeMountPathAuditPolicy                     = "/etc/kubernetes/audit"
 	volumeMountPathAuditWebhookKubeconfig          = "/etc/kubernetes/webhook/audit"
 	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
+	volumeMountPathAuthorizationWebhookKubeconfig  = "/etc/kubernetes/webhook/authorization"
 	volumeMountPathCA                              = "/srv/kubernetes/ca"
 	volumeMountPathCAClient                        = "/srv/kubernetes/ca-client"
 	volumeMountPathCAEtcd                          = "/srv/kubernetes/etcd/ca"
@@ -150,6 +152,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
 	secretAuditWebhookKubeconfig *corev1.Secret,
 	secretAuthenticationWebhookKubeconfig *corev1.Secret,
+	secretAuthorizationWebhookKubeconfig *corev1.Secret,
 	tlsSNISecrets []tlsSNISecret,
 ) error {
 	var (
@@ -463,6 +466,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleServiceAccountSigningKeySettings(deployment)
 		k.handleAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig)
 		k.handleAuthenticationSettings(deployment, secretAuthenticationWebhookKubeconfig)
+		k.handleAuthorizationSettings(deployment, secretAuthorizationWebhookKubeconfig)
 		if err := k.handleVPNSettings(deployment, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
@@ -492,7 +496,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
-	out = append(out, "--authorization-mode=Node,RBAC")
 
 	if len(k.values.APIAudiences) > 0 {
 		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
@@ -1354,4 +1357,46 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 	if v := k.values.AuthenticationWebhook.Version; v != nil {
 		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-version=%s", *v))
 	}
+}
+
+func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
+	authModes := []string{"RBAC"}
+
+	if !k.values.IsNodeless {
+		authModes = append([]string{"Node"}, authModes...)
+	}
+
+	if k.values.AuthorizationWebhook != nil {
+		authModes = append(authModes, "Webhook")
+
+		if len(k.values.AuthorizationWebhook.Kubeconfig) > 0 {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathAuthorizationWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				Name:      volumeNameAuthorizationWebhookKubeconfig,
+				MountPath: volumeMountPathAuthorizationWebhookKubeconfig,
+				ReadOnly:  true,
+			})
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameAuthorizationWebhookKubeconfig,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretWebhookKubeconfig.Name,
+					},
+				},
+			})
+		}
+
+		if v := k.values.AuthorizationWebhook.CacheAuthorizedTTL; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", v.String()))
+		}
+		if v := k.values.AuthorizationWebhook.CacheUnauthorizedTTL; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", v.String()))
+		}
+
+		if v := k.values.AuthorizationWebhook.Version; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-version=%s", *v))
+		}
+	}
+
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--authorization-mode="+strings.Join(authModes, ","))
 }

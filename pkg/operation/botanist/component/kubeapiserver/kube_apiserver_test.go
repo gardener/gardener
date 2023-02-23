@@ -1327,6 +1327,42 @@ resources:
 					Data:      expectedSecret.Data,
 				}))
 			})
+
+			It("should successfully deploy the authorization webhook kubeconfig secret resource", func() {
+				var (
+					kubeconfig        = []byte("some-kubeconfig")
+					authWebhookConfig = &AuthorizationWebhook{Kubeconfig: kubeconfig}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{AuthorizationWebhook: authWebhookConfig, RuntimeVersion: runtimeVersion, Version: version})
+
+				expectedSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-webhook-kubeconfig", Namespace: namespace},
+					Data:       map[string][]byte{"kubeconfig.yaml": kubeconfig},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+				actualSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            expectedSecret.Name,
+						Namespace:       expectedSecret.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: pointer.Bool(true),
+					Data:      expectedSecret.Data,
+				}))
+			})
 		})
 
 		Describe("ConfigMaps", func() {
@@ -2489,7 +2525,7 @@ rules:
 						"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
 						"--audit-log-maxsize=100",
 						"--audit-log-maxbackup=5",
-						"--authorization-mode=Node,RBAC",
+						"--authorization-mode=RBAC",
 						"--client-ca-file=/srv/kubernetes/ca-client/bundle.crt",
 						"--enable-aggregator-routing=true",
 						"--enable-bootstrap-token-auth=true",
@@ -3407,6 +3443,42 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: "kube-apiserver-authentication-webhook-kubeconfig-50522102",
+								},
+							},
+						},
+					))
+				})
+
+				It("should properly configure the authorization settings with webhook", func() {
+					values.AuthorizationWebhook = &AuthorizationWebhook{
+						Kubeconfig:           []byte("foo"),
+						CacheAuthorizedTTL:   pointer.Duration(13 * time.Second),
+						CacheUnauthorizedTTL: pointer.Duration(37 * time.Second),
+						Version:              pointer.String("v1alpha1"),
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+						"--authorization-webhook-config-file=/etc/kubernetes/webhook/authorization/kubeconfig.yaml",
+						"--authorization-webhook-cache-authorized-ttl=13s",
+						"--authorization-webhook-cache-unauthorized-ttl=37s",
+						"--authorization-webhook-version=v1alpha1",
+						"--authorization-mode=RBAC,Webhook",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "authorization-webhook-kubeconfig",
+							MountPath: "/etc/kubernetes/webhook/authorization",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "authorization-webhook-kubeconfig",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-authorization-webhook-kubeconfig-50522102",
 								},
 							},
 						},
