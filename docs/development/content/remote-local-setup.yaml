@@ -21,8 +21,9 @@ spec:
         - |
           set -ex
           cd
-          apk add bash bash-completion curl fzf gcompat git jq less lsof make mandoc mc parallel procps sed strace tar tmux tmux-doc yq vim
+          apk add bash bash-completion curl fzf gcompat git jq less lsof make mandoc mc parallel procps sed strace tar tmux tmux-doc yq vim go
           apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main mount
+          apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/k9s k9s
           echo golang            && curl -sLO "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text).linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz
           echo helm              && curl -sLO "https://get.helm.sh/helm-$(curl -sL https://api.github.com/repos/helm/helm/releases/latest | jq .tag_name -r)-linux-amd64.tar.gz" && tar -xzf helm-*-linux-amd64.tar.gz && mv linux-amd64/helm /usr/local/bin/helm
           echo kind              && curl -sL  "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" -o /usr/local/bin/kind && chmod +x /usr/local/bin/kind
@@ -44,7 +45,9 @@ spec:
             complete -o default -F __start_kubectl k
             source ~/.kube-ps1.sh
             export PS1='[\w $(printf "$(kube_ps1)")]\$ '
+            export TERM=xterm-256color
             cd ~/gardener
+            echo -e "\e[1;33mTo attach to the \e[1;36mgardener\e[1;33m tmux session, run '\e[1;32mtmux attach -t gardener\e[1;33m'\e[0m"
           EOF
           cat > ~/.tmux.conf <<"EOF"
             set -g mouse on
@@ -86,8 +89,14 @@ spec:
           step local           'KUBECONFIG=${KUBECONFIG%:*} USER=root make start-extension-provider-local'
           step shoot           "kubectl apply -f example/provider-local/shoot.yaml"
           step shoot           "kubectl -n garden-local get secret local.kubeconfig -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/kubeconfig-shoot-local.yaml"
+          touch /tmp/ready
           read
         stdin: true
+        startupProbe:
+          exec:
+            command:
+            - cat
+            - /tmp/ready
         resources:
           requests: {cpu: 8, memory: 16G}
           limits:   {cpu: 8, memory: 16G}
