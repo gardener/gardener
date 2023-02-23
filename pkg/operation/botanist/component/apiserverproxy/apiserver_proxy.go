@@ -55,13 +55,13 @@ const (
 	webhookExpressionsKey = "apiserver-proxy.networking.gardener.cloud/inject"
 
 	adminPort           = 16910
-	proxySeedServerPort = "8443"
+	proxySeedServerPort = 8443
 
 	volumeNameConfig   = "proxy-config"
 	volumeNameAdminUDS = "admin-uds"
 
-	configDirectory = "/etc/apiserver-proxy"
-	configFile      = "envoy.yaml"
+	volumeMountPathConfig = "/etc/apiserver-proxy"
+	dataKeyConfig         = "envoy.yaml"
 
 	clusterRoleName = "gardener.cloud:psp:kube-system:apiserver-proxy"
 	roleBindingName = "gardener.cloud:psp:apiserver-proxy"
@@ -85,12 +85,13 @@ func init() {
 
 // Values is a set of configuration values for the apiserver-proxy component.
 type Values struct {
-	AdvertiseIPAddress  string
 	ProxySeedServerHost string
 	PodMutatorEnabled   bool
 	PSPDisabled         bool
 	Image               string
 	SidecarImage        string
+
+	advertiseIPAddress string
 }
 
 // New creates a new instance of DeployWaiter for apiserver-proxy
@@ -117,7 +118,7 @@ type apiserverProxy struct {
 }
 
 func (a *apiserverProxy) Deploy(ctx context.Context) error {
-	if a.values.AdvertiseIPAddress == "" {
+	if a.values.advertiseIPAddress == "" {
 		return fmt.Errorf("run SetAdvertiseIPAddress before deploying")
 	}
 
@@ -152,13 +153,13 @@ func (a *apiserverProxy) WaitCleanup(ctx context.Context) error {
 }
 
 func (a *apiserverProxy) SetAdvertiseIPAddress(advertiseIPAddress string) {
-	a.values.AdvertiseIPAddress = advertiseIPAddress
+	a.values.advertiseIPAddress = advertiseIPAddress
 }
 
 func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 	var envoyYAML bytes.Buffer
 	if err := tplEnvoy.Execute(&envoyYAML, map[string]interface{}{
-		"advertiseIPAddress":  a.values.AdvertiseIPAddress,
+		"advertiseIPAddress":  a.values.advertiseIPAddress,
 		"adminPort":           adminPort,
 		"proxySeedServerHost": a.values.ProxySeedServerHost,
 		"proxySeedServerPort": proxySeedServerPort,
@@ -172,7 +173,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 			Labels:    getDefaultLabels(),
 			Namespace: metav1.NamespaceSystem,
 		},
-		Data: map[string]string{configFile: envoyYAML.String()},
+		Data: map[string]string{dataKeyConfig: envoyYAML.String()},
 	}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
@@ -257,7 +258,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								Image:           a.values.SidecarImage,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
-									fmt.Sprintf("--ip-address=%s", a.values.AdvertiseIPAddress),
+									fmt.Sprintf("--ip-address=%s", a.values.advertiseIPAddress),
 									"--setup-iptables=false",
 									"--daemon=false",
 									"--interface=lo",
@@ -286,7 +287,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								Image:           a.values.SidecarImage,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
-									fmt.Sprintf("--ip-address=%s", a.values.AdvertiseIPAddress),
+									fmt.Sprintf("--ip-address=%s", a.values.advertiseIPAddress),
 									"--setup-iptables=false",
 									"--interface=lo",
 								},
@@ -317,7 +318,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									"2",
 									"--use-dynamic-base-id",
 									"-c",
-									fmt.Sprintf("%s/%s", configDirectory, configFile),
+									fmt.Sprintf("%s/%s", volumeMountPathConfig, dataKeyConfig),
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Capabilities: &corev1.Capabilities{
@@ -371,7 +372,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      volumeNameConfig,
-										MountPath: configDirectory,
+										MountPath: volumeMountPathConfig,
 									},
 									{
 										Name:      volumeNameAdminUDS,
