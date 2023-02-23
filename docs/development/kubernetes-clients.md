@@ -161,7 +161,7 @@ Also, [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251)
 
 ## Cache Types: Informers, Listers, Controller-Runtime Caches
 
-Similarly to the different types of client(set)s, there are also different kinds of Kubernetes client caches.
+Similar to the different types of client(set)s, there are also different kinds of Kubernetes client caches.
 However, all of them are based on the same concept: `Informer`s.
 An `Informer` is a watch-based cache implementation, meaning it opens [watch connections](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes) to the API server and continuously updates cached objects based on the received watch events (`ADDED`, `MODIFIED`, `DELETED`).
 `Informer`s offer to add indices to the cache for efficient object lookup (e.g., by name or labels) and to add `EventHandler`s for the watch events.
