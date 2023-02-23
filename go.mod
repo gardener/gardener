@@ -32,7 +32,7 @@ require (
 	go.uber.org/automaxprocs v1.4.0
 	go.uber.org/goleak v1.2.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.1.0
+	golang.org/x/crypto v0.6.0
 	golang.org/x/time v0.3.0
 	golang.org/x/tools v0.6.0
 	gomodules.xyz/jsonpatch/v2 v2.2.0
