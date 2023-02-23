@@ -38,6 +38,9 @@ data:
          whoami
 ```
 
+The port number 8053 in `global:8053` is the specific port that CoreDN is bound to and cannot be changed to any other port. 
+In order for the destination DNS server to be reachable, it must listen on port 53 as it is required by network policies.
+
 It is important to have the `ConfigMap` keys ending with `*.server` (if you would like to add a new server) or `*.override`
 if you want to customize the current server configuration (it is optional setting both).
 
