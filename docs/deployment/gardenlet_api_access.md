@@ -8,10 +8,10 @@ By default, `gardenlet`s have administrative access in the garden cluster.
 They are able to execute any API request on any object independent of whether the object is related to the seed cluster the `gardenlet` is responsible for.
 As RBAC is not powerful enough for fine-grained checks and for the sake of security, Gardener provides two optional but recommended configurations for your environments that scope the API access for `gardenlet`s.
 
-Similarly to the [`Node` authorization mode in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/node/), Gardener features a `SeedAuthorizer` plugin.
+Similar to the [`Node` authorization mode in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/node/), Gardener features a `SeedAuthorizer` plugin.
 It is a special-purpose authorization plugin that specifically authorizes API requests made by the `gardenlet`s.
 
-Likewise, similar to the [`NodeRestriction` admission plugin in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction), Gardener features a `SeedRestriction` plugin.
+Likewise, similarly to the [`NodeRestriction` admission plugin in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction), Gardener features a `SeedRestriction` plugin.
 It is a special-purpose admission plugin that specifically limits the Kubernetes objects `gardenlet`s can modify.
 
 📚 You might be interested to look into the [design proposal for scoped Kubelet API access](https://github.com/kubernetes/design-proposals-archive/blob/main/node/kubelet-authorizer.md) from the Kubernetes community.

@@ -17,7 +17,7 @@ Decoupling the API server and the scheduler comes with greater flexibility to de
 ### 2. Extensibility
 
 It should be possible to easily extend and tweak the scheduler in the future.
-Possibly, similar to the Kubernetes scheduler, hooks could be provided which influence the scheduling decisions.
+Possibly, similarly to the Kubernetes scheduler, hooks could be provided which influence the scheduling decisions.
 It should be also possible to completely replace the standard Gardener Scheduler with a custom implementation.
 
 ## Algorithm Overview

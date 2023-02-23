@@ -21,7 +21,7 @@ in the Kubernetes architecture:
 | `gardener-scheduler` | `kube-scheduler` |
 | `gardenlet` | `kubelet` |
 
-Similarly to how the `kube-scheduler` of Kubernetes finds an appropriate node
+Similar to how the `kube-scheduler` of Kubernetes finds an appropriate node
 for newly created pods, the `gardener-scheduler` of Gardener finds an appropriate seed cluster
 to host the control plane for newly ordered clusters.
 By providing multiple seed clusters for a region or provider, and distributing the workload,

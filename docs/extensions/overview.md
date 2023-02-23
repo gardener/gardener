@@ -84,7 +84,7 @@ status:
 ```
 
 Gardener waits until the `.status.lastOperation` / `.status.lastError` indicates that the operation reached a final state and either continuous with the next step, or stops and reports the potential error.
-The extension-specific output in `.status.providerStatus` is - similar to `.spec.providerConfig` - not evaluated, and simply forwarded to CRDs in subsequent steps.
+The extension-specific output in `.status.providerStatus` is - similarly to `.spec.providerConfig` - not evaluated, and simply forwarded to CRDs in subsequent steps.
 
 **Example 2**:
 

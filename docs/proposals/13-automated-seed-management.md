@@ -23,7 +23,7 @@ An initial discussion of this topic is available in [Issue #2938](https://github
 
 Initially, the only resource considered would be the maximum number of shoots that can be scheduled onto a seed. Later, more resources could be added to make more precise scheduling calculations.
 
-> **Note:** Resources could also be requested by shoots, similar to how pods can request node resources, and the scheduler could then ensure that such requests are taken into account when scheduling shoots onto seeds. However, the user is rarely, if at all, concerned with what resources a shoot consumes from a seed, and this should also be regarded as an implementation detail that could change in the future. Therefore, such resource requests are not included in this GEP.
+> **Note:** Resources could also be requested by shoots, similarly to how pods can request node resources, and the scheduler could then ensure that such requests are taken into account when scheduling shoots onto seeds. However, the user is rarely, if at all, concerned with what resources a shoot consumes from a seed, and this should also be regarded as an implementation detail that could change in the future. Therefore, such resource requests are not included in this GEP.
 
 In addition, an extensibility plugin framework could be introduced in the future in order to advertise custom resources, including provider-specific resources, so that the `gardenlet` would be able to update the seed status with their capacity and allocatable values, for example, load balancers on Azure. Such a concept is not described here in further details as it is sufficiently complex to require a separate GEP. 
 

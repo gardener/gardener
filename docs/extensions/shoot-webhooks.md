@@ -6,7 +6,7 @@ In either case, some provider extensions might need to mutate these resources an
 
 ## What's the approach to implement such mutations?
 
-Similarly to how [control plane components in the seed](controlplane-webhooks.md) are modified, we are using `MutatingWebhookConfiguration`s to achieve the same for resources in the shoot.
+Similar to how [control plane components in the seed](controlplane-webhooks.md) are modified, we are using `MutatingWebhookConfiguration`s to achieve the same for resources in the shoot.
 Both the provider extension and the kube-apiserver of the shoot cluster are running in the same seed.
 Consequently, the kube-apiserver can talk cluster-internally to the provider extension webhook, which makes such operations even faster.
 
