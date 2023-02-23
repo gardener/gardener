@@ -195,6 +195,18 @@ type AdmissionPluginConfig struct {
 type AuditConfig struct {
 	// Policy is the audit policy document in YAML format.
 	Policy *string
+	// Webhook contains configuration for the audit webhook.
+	Webhook *AuditWebhook
+}
+
+// AuditWebhook contains configuration for the audit webhook.
+type AuditWebhook struct {
+	// Kubeconfig contains the kubeconfig formatted file that defines the audit webhook configuration.
+	Kubeconfig []byte
+	// BatchMaxSize is the maximum size of a batch.
+	BatchMaxSize *int
+	// Version is the API group and version used for serializing audit events written to webhook.
+	Version *string
 }
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the kube-apiserver.
@@ -339,6 +351,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 		secretETCDEncryptionConfiguration    = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
+		secretAuditWebhookKubeconfig         = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
 		configMapAdmissionConfigs            = k.emptyConfigMap(configMapAdmissionNamePrefix)
 		secretAdmissionKubeconfigs           = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
 		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
@@ -384,6 +397,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretOIDCCABundle(ctx, secretOIDCCABundle); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretAuditWebhookKubeconfig(ctx, secretAuditWebhookKubeconfig); err != nil {
 		return err
 	}
 
@@ -492,6 +509,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretHTTPProxy,
 		secretHAVPNSeedClient,
 		secretHAVPNClientSeedTLSAuth,
+		secretAuditWebhookKubeconfig,
 		tlsSNISecrets,
 	); err != nil {
 		return err

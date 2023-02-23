@@ -62,6 +62,7 @@ const (
 	volumeNameAdmissionConfiguration     = "admission-config"
 	volumeNameAdmissionKubeconfigSecrets = "admission-kubeconfigs"
 	volumeNameAuditPolicy                = "audit-policy-config"
+	volumeNameAuditWebhookKubeconfig     = "audit-webhook-kubeconfig"
 	volumeNameCA                         = "ca"
 	volumeNameCAClient                   = "ca-client"
 	volumeNameCAEtcd                     = "ca-etcd"
@@ -93,6 +94,7 @@ const (
 	volumeMountPathAdmissionConfiguration     = "/etc/kubernetes/admission"
 	volumeMountPathAdmissionKubeconfigSecrets = "/etc/kubernetes/admission-kubeconfigs"
 	volumeMountPathAuditPolicy                = "/etc/kubernetes/audit"
+	volumeMountPathAuditWebhookKubeconfig     = "/etc/kubernetes/webhook/audit"
 	volumeMountPathCA                         = "/srv/kubernetes/ca"
 	volumeMountPathCAClient                   = "/srv/kubernetes/ca-client"
 	volumeMountPathCAEtcd                     = "/srv/kubernetes/etcd/ca"
@@ -144,6 +146,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
+	secretAuditWebhookKubeconfig *corev1.Secret,
 	tlsSNISecrets []tlsSNISecret,
 ) error {
 	var (
@@ -282,10 +285,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      volumeNameAuditPolicy,
-								MountPath: volumeMountPathAuditPolicy,
-							},
-							{
 								Name:      volumeNameAdmissionConfiguration,
 								MountPath: volumeMountPathAdmissionConfiguration,
 							},
@@ -341,16 +340,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						},
 					}},
 					Volumes: []corev1.Volume{
-						{
-							Name: volumeNameAuditPolicy,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapAuditPolicy.Name,
-									},
-								},
-							},
-						},
 						{
 							Name: volumeNameAdmissionConfiguration,
 							VolumeSource: corev1.VolumeSource{
@@ -469,6 +458,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handlePodMutatorSettings(deployment)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
+		k.handleAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig)
 		if err := k.handleVPNSettings(deployment, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
@@ -498,10 +488,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
-	out = append(out, "--audit-log-path=/var/lib/audit.log")
-	out = append(out, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
-	out = append(out, "--audit-log-maxsize=100")
-	out = append(out, "--audit-log-maxbackup=5")
 	out = append(out, "--authorization-mode=Node,RBAC")
 
 	if len(k.values.APIAudiences) > 0 {
@@ -1280,4 +1266,57 @@ func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, con
 			},
 		},
 	})
+}
+
+func (k *kubeAPIServer) handleAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *corev1.ConfigMap, secretWebhookKubeconfig *corev1.Secret) {
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      volumeNameAuditPolicy,
+		MountPath: volumeMountPathAuditPolicy,
+	})
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: volumeNameAuditPolicy,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configMapAuditPolicy.Name,
+				},
+			},
+		},
+	})
+
+	if k.values.Audit == nil || k.values.Audit.Webhook == nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command,
+			"--audit-log-path=/var/lib/audit.log",
+			"--audit-log-maxsize=100",
+			"--audit-log-maxbackup=5",
+		)
+		return
+	}
+
+	if len(k.values.Audit.Webhook.Kubeconfig) > 0 {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-config-file=%s/%s", volumeMountPathAuditWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameAuditWebhookKubeconfig,
+			MountPath: volumeMountPathAuditWebhookKubeconfig,
+			ReadOnly:  true,
+		})
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameAuditWebhookKubeconfig,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretWebhookKubeconfig.Name,
+				},
+			},
+		})
+	}
+
+	if v := k.values.Audit.Webhook.BatchMaxSize; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-batch-max-size=%d", *v))
+	}
+
+	if v := k.values.Audit.Webhook.Version; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-version=%s", *v))
+	}
 }
