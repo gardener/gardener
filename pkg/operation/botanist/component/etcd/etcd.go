@@ -160,6 +160,7 @@ type Values struct {
 	BackupConfig            *BackupConfig
 	HvpaConfig              *HVPAConfig
 	PriorityClassName       string
+	HighAvailabilityEnabled bool
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -258,8 +259,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		peerServerSecretName string
 	)
 
-	peerTLSAlreadyEnabled := existingEtcd != nil && existingEtcd.Spec.Etcd.PeerUrlTLS != nil
-	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx, peerTLSAlreadyEnabled); err != nil {
+	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx); err != nil {
 		return err
 	}
 
@@ -276,7 +276,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		// create peer network policy only if there are 3 replicas
 		// TODO(rfranzke): When https://github.com/gardener/etcd-druid/pull/521 is resolved then drop this NetworkPolicy
 		//  and replace it with the new labels instead.
-		if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
+		if e.values.HighAvailabilityEnabled {
 			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
 				peerNetworkPolicy.Annotations = map[string]string{
 					v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
@@ -411,7 +411,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
-		if pointer.Int32Deref(e.values.Replicas, 0) > 1 || peerTLSAlreadyEnabled {
+		if e.values.HighAvailabilityEnabled {
 			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
@@ -611,8 +611,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			hvpa.Spec.WeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
 				{
 					VpaWeight:         hvpav1alpha1.VpaOnly,
-					StartReplicaCount: int32(replicas),
-					LastReplicaCount:  int32(replicas),
+					StartReplicaCount: replicas,
+					LastReplicaCount:  replicas,
 				},
 			}
 			hvpa.Spec.TargetRef = &autoscalingv2beta1.CrossVersionObjectReference{
@@ -644,7 +644,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		e.emptyNetworkPolicy(NetworkPolicyNameClient),
 	}
 
-	if pointer.Int32Deref(e.values.Replicas, 0) > 1 {
+	if e.values.HighAvailabilityEnabled {
 		objects = append(objects, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
 	}
 
@@ -761,7 +761,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
-	if pointer.Int32Deref(e.values.Replicas, 0) != 3 {
+	if !e.values.HighAvailabilityEnabled {
 		return nil
 	}
 
@@ -871,9 +871,9 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 	return fullSnapshotSchedule
 }
 
-func (e *etcd) handlePeerCertificates(ctx context.Context, peerTLSAlreadyEnabled bool) (caSecretName, peerSecretName string, err error) {
+func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
 	// TODO(timuthy): Remove this once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved.
-	if pointer.Int32Deref(e.values.Replicas, 0) != 3 && !peerTLSAlreadyEnabled {
+	if !e.values.HighAvailabilityEnabled {
 		return
 	}
 
