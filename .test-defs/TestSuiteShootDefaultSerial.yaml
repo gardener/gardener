@@ -24,4 +24,4 @@ spec:
       -ginkgo.skip="\[DISRUPTIVE\]"
       -ginkgo.timeout=2h
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.19.6
+  image: eu.gcr.io/gardener-project/3rd/golang:1.20.1

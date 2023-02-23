@@ -41,4 +41,4 @@ spec:
 #    -machine-type=$MACHINE_TYPE
 #    -external-domain=
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.19.6
+  image: eu.gcr.io/gardener-project/3rd/golang:1.20.1

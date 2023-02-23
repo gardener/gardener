@@ -16,4 +16,4 @@ spec:
     --project-namespace=$PROJECT_NAMESPACE
     --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.19.6
+  image: eu.gcr.io/gardener-project/3rd/golang:1.20.1
