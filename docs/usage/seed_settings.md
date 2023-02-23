@@ -54,7 +54,7 @@ It defaults to `true`.
 
 ℹ️ In previous Gardener versions (< 1.5) these settings were controlled via taint keys (`seed.gardener.cloud/{disable-capacity-reservation,invisible}`).
 The taint keys are no longer supported and removed in version 1.12.
-The rationale behind it is the implementation of tolerations, similarly to Kubernetes tolerations.
+The rationale behind it is the implementation of tolerations, similar to Kubernetes tolerations.
 More information about it can be found in [#2193](https://github.com/gardener/gardener/issues/2193).
 
 ## Load Balancer Services

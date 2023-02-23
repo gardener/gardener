@@ -160,7 +160,7 @@ spec:
     - 10.0.3.0/24
 ```
 
-The new and existing CIDR API fields are immutable, similarly to the `Service.spec.clusterIP` field ([ref](https://github.com/kubernetes/kubernetes/blob/release-1.24/pkg/apis/core/validation/validation.go#L4828-L4831)).
+The new and existing CIDR API fields are immutable, similar to the `Service.spec.clusterIP` field ([ref](https://github.com/kubernetes/kubernetes/blob/release-1.24/pkg/apis/core/validation/validation.go#L4828-L4831)).
 Hence, there won't be any complex logic for syncing the primary CIDR to the list and vice-versa.
 
 Corresponding changes may be performed to the other relevant APIs, e.g., the `Seed` and `Network` APIs.
@@ -255,7 +255,7 @@ For these, IPv6-equivalents of the IPv4 CIDRs are added, e.g., `::/0` as an equi
 #### Shoot Worker Node Kernel Configuration
 
 Kubernetes networking requires IPv6 forwarding to be enabled on the OS level.
-Hence, the gardenlet explicitly enables the corresponding kernel setting for shoot worker nodes via `OperatingSystemConfigurations`, similarly to IPv4 (ref [gardener/gardener#7046](https://github.com/gardener/gardener/pull/7046)).
+Hence, the gardenlet explicitly enables the corresponding kernel setting for shoot worker nodes via `OperatingSystemConfigurations`, similar to IPv4 (ref [gardener/gardener#7046](https://github.com/gardener/gardener/pull/7046)).
 
 #### Docker Hub Images
 
@@ -272,7 +272,7 @@ Hence, [e2e tests](../development/testing.md#end-to-end-e2e-tests-using-provider
 
 Networking extensions need to support the configuration of IPv6-related settings of the networking implementation in their `NetworkConfig` API.
 The concrete API changes and implementation thereof are not specified any further by this GEP.
-It is expected that IPv6 support will be implemented differently in different extensions, similarly to differences in the `NetworkConfig` API design that are already present today.
+It is expected that IPv6 support will be implemented differently in different extensions, similar to differences in the `NetworkConfig` API design that are already present today.
 In general, extensions need to respect the `Shoot.spec.networking.ipFamilies` settings in all aspects: API validation, defaulting, and corresponding handling in code (i.e., configuring IPAM, etc.).
 
 As this GEP aims for creating IPv6 single-stack shoots in the local environment, it depends on the IPv6 implementation in networking-calico, which is currently used as the networking extension for local shoots.

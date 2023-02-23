@@ -65,6 +65,6 @@ For proper functioning of Gardener, `kube-system` namespace will also be automat
 
 ## `.spec.kubernetes.allowPrivilegedContainers` in the Shoot Spec
 
-If this field is set to `true` then all authenticated users can use the "gardener.privileged" `PodSecurityPolicy`, allowing full unrestricted access to Pod features. However, the `PodSecurityPolicy` admission plugin is removed in Kubernetes `v1.25` and `PodSecurity` has taken its place as its successor. Therefore, this field doesn't have any relevance in versions `>= v1.25` anymore. If you need to set a default pod admission level for your cluster, follow [this documentation](#admission-configuration-for-the-podsecurity-admission-plugin).
+If this field is set to `true`, then all authenticated users can use the "gardener.privileged" `PodSecurityPolicy`, allowing full unrestricted access to Pod features. However, the `PodSecurityPolicy` admission plugin is removed in Kubernetes `v1.25` and `PodSecurity` has taken its place as its successor. Therefore, this field doesn't have any relevance in versions `>= v1.25` anymore. If you need to set a default pod admission level for your cluster, follow [this documentation](#admission-configuration-for-the-podsecurity-admission-plugin).
 
 > **Note:** You should remove this field from the `Shoot` spec for `v1.24` clusters after migrating to the new `PodSecurity` admission controller, before upgrading your cluster to `v1.25`.
