@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
 // ShootMigrationTest represents a shoot migration test.
@@ -112,16 +113,10 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 	}
 
 	if !shoot.Status.IsHibernated && !t.Config.SkipShootClientCreation {
-		kubecfgSecret := corev1.Secret{}
-		if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
-			t.GardenerFramework.Logger.Error(err, "Unable to get kubeconfig from secret")
+		t.ShootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, t.GardenerFramework.GardenClient, shoot)
+		if err != nil {
 			return err
 		}
-		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
-
-		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.ShootScheme,
-		}), kubernetes.WithDisabledCachedClient())
 	}
 	t.Shoot = *shoot
 	return
