@@ -59,7 +59,6 @@ var (
 		string(core.ProxyModeIPVS),
 	)
 	availableKubernetesDashboardAuthenticationModes = sets.New[string](
-		core.KubernetesDashboardAuthModeBasic,
 		core.KubernetesDashboardAuthModeToken,
 	)
 	availableNginxIngressExternalTrafficPolicies = sets.New[string](

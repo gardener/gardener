@@ -36,7 +36,6 @@ import (
 )
 
 var _ = Describe("Strategy", func() {
-
 	Describe("#PrepareForCreate", func() {
 		var (
 			shoot *core.Shoot

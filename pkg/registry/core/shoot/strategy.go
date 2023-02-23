@@ -103,10 +103,10 @@ func dropEnableBasicAuthenticationField(shoot *core.Shoot) {
 	}
 }
 
-// setKubernetesDashboardAuthMode sets the kubernetes-dashboard authentication mode to "token", if its current value is "basic".
+// setKubernetesDashboardAuthMode sets the kubernetes-dashboard authentication mode to "token", if its current value is not "token" (for example "basic").
 func setKubernetesDashboardAuthMode(shoot *core.Shoot) {
 	if shoot.Spec.Addons != nil && shoot.Spec.Addons.KubernetesDashboard != nil {
-		if authMode := shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode; authMode != nil && *authMode == core.KubernetesDashboardAuthModeBasic {
+		if authMode := shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode; authMode != nil && *authMode != core.KubernetesDashboardAuthModeToken {
 			defaultAuthMode := core.KubernetesDashboardAuthModeToken
 			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
 		}

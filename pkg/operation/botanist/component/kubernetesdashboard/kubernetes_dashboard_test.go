@@ -548,7 +548,7 @@ status: {}
 			Context("w/ apiserver host, w/ authentication mode, w/ vpa", func() {
 				var (
 					apiserverHost      = "apiserver.host"
-					authenticationMode = "basic"
+					authenticationMode = "token"
 				)
 
 				BeforeEach(func() {
@@ -577,7 +577,7 @@ status: {}
 			Context("w/ apiserver host w/ authentication mode, w/ vpa", func() {
 				var (
 					apiserverHost      = "apiserver.host"
-					authenticationMode = "basic"
+					authenticationMode = "token"
 				)
 
 				BeforeEach(func() {
