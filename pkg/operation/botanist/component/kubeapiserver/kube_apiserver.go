@@ -133,6 +133,8 @@ type Values struct {
 	APIAudiences []string
 	// Audit contains information for configuring audit settings for the kube-apiserver.
 	Audit *AuditConfig
+	// AuthenticationWebhook contains configuration for the authentication webhook.
+	AuthenticationWebhook *AuthenticationWebhook
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
@@ -206,6 +208,17 @@ type AuditWebhook struct {
 	// BatchMaxSize is the maximum size of a batch.
 	BatchMaxSize *int
 	// Version is the API group and version used for serializing audit events written to webhook.
+	Version *string
+}
+
+// AuthenticationWebhook contains configuration for the authentication webhook.
+type AuthenticationWebhook struct {
+	// Kubeconfig contains the webhook configuration for token authentication in kubeconfig format. The API server will
+	// query the remote service to determine authentication for bearer tokens.
+	Kubeconfig []byte
+	// CacheTTL is the duration to cache responses from the webhook token authenticator.
+	CacheTTL *time.Duration
+	// Version is the API version of the authentication.k8s.io TokenReview to send to and expect from the webhook.
 	Version *string
 }
 
@@ -341,22 +354,23 @@ type kubeAPIServer struct {
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
-		deployment                           = k.emptyDeployment()
-		podDisruptionBudget                  client.Object
-		horizontalPodAutoscaler              client.Object
-		verticalPodAutoscaler                = k.emptyVerticalPodAutoscaler()
-		hvpa                                 = k.emptyHVPA()
-		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
-		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
-		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
-		secretETCDEncryptionConfiguration    = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
-		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
-		secretAuditWebhookKubeconfig         = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
-		configMapAdmissionConfigs            = k.emptyConfigMap(configMapAdmissionNamePrefix)
-		secretAdmissionKubeconfigs           = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
-		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
-		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
-		configMapTerminationHandler          = k.emptyConfigMap(watchdogConfigMapNamePrefix)
+		deployment                            = k.emptyDeployment()
+		podDisruptionBudget                   client.Object
+		horizontalPodAutoscaler               client.Object
+		verticalPodAutoscaler                 = k.emptyVerticalPodAutoscaler()
+		hvpa                                  = k.emptyHVPA()
+		networkPolicyAllowFromShootAPIServer  = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
+		networkPolicyAllowToShootAPIServer    = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
+		networkPolicyAllowKubeAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretETCDEncryptionConfiguration     = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
+		secretOIDCCABundle                    = k.emptySecret(secretOIDCCABundleNamePrefix)
+		secretAuditWebhookKubeconfig          = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
+		secretAuthenticationWebhookKubeconfig = k.emptySecret(secretAuthenticationWebhookKubeconfigNamePrefix)
+		configMapAdmissionConfigs             = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		secretAdmissionKubeconfigs            = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
+		configMapAuditPolicy                  = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
+		configMapEgressSelector               = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		configMapTerminationHandler           = k.emptyConfigMap(watchdogConfigMapNamePrefix)
 	)
 
 	podDisruptionBudget = k.emptyPodDisruptionBudget()
@@ -401,6 +415,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretAuditWebhookKubeconfig(ctx, secretAuditWebhookKubeconfig); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretAuthenticationWebhookKubeconfig(ctx, secretAuthenticationWebhookKubeconfig); err != nil {
 		return err
 	}
 
@@ -510,6 +528,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretHAVPNSeedClient,
 		secretHAVPNClientSeedTLSAuth,
 		secretAuditWebhookKubeconfig,
+		secretAuthenticationWebhookKubeconfig,
 		tlsSNISecrets,
 	); err != nil {
 		return err

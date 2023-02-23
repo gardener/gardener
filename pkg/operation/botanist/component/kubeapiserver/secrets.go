@@ -47,8 +47,9 @@ const (
 	secretOIDCCABundleNamePrefix   = "kube-apiserver-oidc-cabundle"
 	secretOIDCCABundleDataKeyCaCrt = "ca.crt"
 
-	secretAuditWebhookKubeconfigNamePrefix = "kube-apiserver-audit-webhook-kubeconfig"
-	secretWebhookKubeconfigDataKey         = "kubeconfig.yaml"
+	secretAuditWebhookKubeconfigNamePrefix          = "kube-apiserver-audit-webhook-kubeconfig"
+	secretAuthenticationWebhookKubeconfigNamePrefix = "kube-apiserver-authentication-webhook-kubeconfig"
+	secretWebhookKubeconfigDataKey                  = "kubeconfig.yaml"
 
 	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
 	secretAdmissionKubeconfigsNamePrefix     = "kube-apiserver-admission-kubeconfigs"
@@ -392,4 +393,14 @@ func (k *kubeAPIServer) reconcileSecretAuditWebhookKubeconfig(ctx context.Contex
 	}
 
 	return k.reconcileSecretWebhookKubeconfig(ctx, secret, k.values.Audit.Webhook.Kubeconfig)
+}
+
+func (k *kubeAPIServer) reconcileSecretAuthenticationWebhookKubeconfig(ctx context.Context, secret *corev1.Secret) error {
+	if k.values.AuthenticationWebhook == nil || len(k.values.AuthenticationWebhook.Kubeconfig) == 0 {
+		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
+		// garbage collection for unique secrets/configmaps.
+		return nil
+	}
+
+	return k.reconcileSecretWebhookKubeconfig(ctx, secret, k.values.AuthenticationWebhook.Kubeconfig)
 }
