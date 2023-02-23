@@ -72,10 +72,7 @@ func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object)
 // Validate validates the given object.
 func (Strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	seed := obj.(*core.Seed)
-	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validation.ValidateSeed(seed)...)
-	allErrs = append(allErrs, validation.ValidateIngressDomain(seed)...)
-	return allErrs
+	return validation.ValidateSeed(seed)
 }
 
 // Canonicalize allows an object to be mutated into a canonical form. This

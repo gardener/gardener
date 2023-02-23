@@ -192,7 +192,7 @@ var _ = Describe("Seed controller tests", func() {
 		))
 		DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
 
-		By("Create dns provider secret in garden namespace")
+		By("Create DNS provider secret in garden namespace")
 		dnsProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "secret-",
 			Namespace:    testNamespace.Name,
@@ -202,7 +202,7 @@ var _ = Describe("Seed controller tests", func() {
 		}}
 		Expect(testClient.Create(ctx, dnsProviderSecret)).To(Succeed())
 
-		By("Wait until the manager cache observes the dns provider secret")
+		By("Wait until the manager cache observes the DNS provider secret")
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(dnsProviderSecret), dnsProviderSecret)
 		}).Should(Succeed())
