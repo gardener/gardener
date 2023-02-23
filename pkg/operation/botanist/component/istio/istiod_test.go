@@ -1631,7 +1631,15 @@ metadata:
 automountServiceAccountToken: false
 `
 
-		istioIngressDeployment = `apiVersion: apps/v1
+		istioIngressDeployment = func(haVPNEnabled bool) string {
+			var additionalLabels string
+			if haVPNEnabled {
+				additionalLabels = `
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194: allowed
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194: allowed`
+			}
+
+			return `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: istio-ingressgateway
@@ -1661,7 +1669,7 @@ spec:
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
         networking.gardener.cloud/to-dns: allowed
-        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed` + additionalLabels + `
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: a357fe81829c12ad57e92721b93fd6efa1670d19e4cab94dfb7c792f9665c51a
@@ -1848,6 +1856,8 @@ spec:
                   - bar
               topologyKey: "kubernetes.io/hostname"
 `
+		}
+
 		istioSystemNetworkPolicyAllowFromAggregatePrometheus = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -2333,7 +2343,7 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
-			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment))
+			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(false)))
 
 			By("Verify istio-ingress network policies")
 			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__deny-all-egress.yaml"])).To(Equal(istioIngressNetworkPolicyDenyAllEgress))
@@ -2520,6 +2530,38 @@ spec:
 			It("should successfully deploy correct external traffic policy", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(&externalTrafficPolicy)))
+			})
+		})
+
+		Context("VPN HA enabled", func() {
+			BeforeEach(func() {
+				for i := range igw {
+					igw[i].VPNHAEnabled = true
+					igw[i].VPNHAEnabled = true
+				}
+
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(41))
+
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true)))
 			})
 		})
 

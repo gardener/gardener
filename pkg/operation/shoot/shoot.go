@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -203,12 +204,12 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.GardenerVersion = gardenerVersion
 
-	shoot.VPNHighAvailabilityEnabled = shoot.GetInfo().Spec.ControlPlane != nil && shoot.GetInfo().Spec.ControlPlane.HighAvailability != nil
+	shoot.VPNHighAvailabilityEnabled = v1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo())
 	if haVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneHAVPN]); err == nil {
 		shoot.VPNHighAvailabilityEnabled = haVPNEnabled
 	}
-	shoot.VPNHighAvailabilityNumberOfSeedServers = 2
-	shoot.VPNHighAvailabilityNumberOfShootClients = 2
+	shoot.VPNHighAvailabilityNumberOfSeedServers = vpnseedserver.HighAvailabilityReplicaCount
+	shoot.VPNHighAvailabilityNumberOfShootClients = vpnseedserver.HighAvailabilityReplicaCount
 
 	needsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {

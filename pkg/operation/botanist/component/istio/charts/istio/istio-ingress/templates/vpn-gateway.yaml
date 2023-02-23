@@ -1,4 +1,4 @@
-{{- if eq .Values.vpnEnabled true -}}
+{{- if eq .Values.vpn.enabled true -}}
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:

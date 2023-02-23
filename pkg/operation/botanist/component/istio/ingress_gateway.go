@@ -23,6 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 )
 
 var (
@@ -46,6 +47,7 @@ type IngressGatewayValues struct {
 	TrustDomain           string
 	ProxyProtocolEnabled  bool
 	VPNEnabled            bool
+	VPNHAEnabled          bool
 	Zones                 []string
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
@@ -70,7 +72,11 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"loadBalancerIP":        istioIngressGateway.LoadBalancerIP,
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
 			"proxyProtocolEnabled":  istioIngressGateway.ProxyProtocolEnabled,
-			"vpnEnabled":            istioIngressGateway.VPNEnabled,
+			"vpn": map[string]interface{}{
+				"enabled":                  istioIngressGateway.VPNEnabled,
+				"highAvailabilityEnabled":  istioIngressGateway.VPNHAEnabled,
+				"highAvailabilityReplicas": vpnseedserver.HighAvailabilityReplicaCount,
+			},
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

@@ -125,6 +125,7 @@ func defaultIstio(
 		Namespace:             *conf.SNI.Ingress.Namespace,
 		ProxyProtocolEnabled:  gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
 		VPNEnabled:            true,
+		VPNHAEnabled:          len(seed.GetInfo().Spec.Provider.Zones) > 1,
 	}
 
 	// even if SNI is being disabled, the existing ports must stay the same

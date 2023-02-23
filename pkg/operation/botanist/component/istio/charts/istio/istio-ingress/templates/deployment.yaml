@@ -23,6 +23,11 @@ spec:
         service.istio.io/canonical-revision: "1.7"
         networking.gardener.cloud/to-dns: allowed
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
+{{- if .Values.vpn.highAvailabilityEnabled }}
+{{- range $i := until (int .Values.vpn.highAvailabilityReplicas) }}
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-{{$i}}-tcp-1194: allowed
+{{- end }}
+{{- end }}
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}
