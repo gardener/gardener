@@ -277,6 +277,7 @@ var _ = Describe("Garden controller tests", func() {
 			"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+			"networking.resources.gardener.cloud/namespace-selectors":            `["matchLabel":"gardener.cloud/role":"istio-ingres"}}]`,
 		})))
 
 		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in

@@ -45,6 +45,7 @@ var _ = Describe("#Service", func() {
 
 		ingressIP        string
 		clusterIP        string
+		isShootService   bool
 		sniPhase         component.Phase
 		clusterIPFunc    func(string)
 		ingressIPFunc    func(string)
@@ -62,6 +63,7 @@ var _ = Describe("#Service", func() {
 
 		ingressIP = ""
 		clusterIP = ""
+		isShootService = false
 		sniPhase = component.PhaseUnknown
 		serviceObjKey = client.ObjectKey{Name: "test-deploy", Namespace: "test-namespace"}
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
@@ -120,6 +122,7 @@ var _ = Describe("#Service", func() {
 			c,
 			&ServiceValues{
 				AnnotationsFunc: func() map[string]string { return map[string]string{"foo": "bar"} },
+				IsShootService:  isShootService,
 				SNIPhase:        sniPhase,
 			},
 			func() client.ObjectKey { return serviceObjKey },
@@ -256,9 +259,32 @@ var _ = Describe("#Service", func() {
 
 		assertEnabledSNI()
 	})
+
+	Context("when service is designed for shoots", func() {
+		BeforeEach(func() {
+			isShootService = true
+			sniPhase = component.PhaseEnabling
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
+				"foo":                          "bar",
+				"networking.istio.io/exportTo": "*",
+			}, shootNetpolAnnotations())
+			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
+		})
+
+		assertEnabledSNI()
+	})
 })
 
 func netpolAnnotations() map[string]string {
+	return map[string]string{
+		"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+		"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/namespace-selectors":            `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
+	}
+}
+
+func shootNetpolAnnotations() map[string]string {
 	return map[string]string{
 		"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":443}]`,
 		"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
