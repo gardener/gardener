@@ -35,13 +35,11 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 	}
 
 	values := apiserverproxy.Values{
-		APIServerProxyImage:        image.String(),
-		APIServerProxySidecarImage: sidecarImage.String(),
-		ProxySeedServerHost:        b.outOfClusterAPIServerFQDN(),
-		ProxySeedServerPort:        "8443",
-		AdminPort:                  16910,
-		PodMutatorEnabled:          b.APIServerSNIPodMutatorEnabled(),
-		PSPDisabled:                b.Shoot.PSPDisabled,
+		Image:               image.String(),
+		SidecarImage:        sidecarImage.String(),
+		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
+		PodMutatorEnabled:   b.APIServerSNIPodMutatorEnabled(),
+		PSPDisabled:         b.Shoot.PSPDisabled,
 	}
 
 	return apiserverproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.SecretsManager, values), nil
@@ -49,11 +47,11 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 
 // DeployAPIServerProxy deploys the apiserver-proxy.
 func (b *Botanist) DeployAPIServerProxy(ctx context.Context) error {
-	b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPAddress(b.APIServerClusterIP)
-
 	if !b.APIServerSNIEnabled() {
 		return b.Shoot.Components.SystemComponents.APIServerProxy.Destroy(ctx)
 	}
+
+	b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPAddress(b.APIServerClusterIP)
 
 	return b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx)
 }

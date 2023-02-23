@@ -23,5 +23,5 @@ import (
 
 func TestAPIServerProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component apiserver-proxy Suite")
+	RunSpecs(t, "Botanist Component APIServerProxy Suite")
 }

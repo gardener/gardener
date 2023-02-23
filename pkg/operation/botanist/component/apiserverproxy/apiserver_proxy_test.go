@@ -39,7 +39,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("apiserver-proxy", func() {
+var _ = Describe("APIServerProxy", func() {
 	var (
 		ctx = context.TODO()
 
@@ -57,9 +57,7 @@ var _ = Describe("apiserver-proxy", func() {
 		image               = "some-image:some-tag"
 		sidecarImage        = "sidecar-image:some-tag"
 		advertiseIPAddress  = "10.2.170.21"
-		adminPort           = 16910
 		proxySeedServerHost = "api.internal.local."
-		proxySeedServerPort = "8443"
 
 		configMapYAML = `apiVersion: v1
 data:
@@ -229,153 +227,11 @@ metadata:
   namespace: kube-system
 `
 
-		daemonSetWithPSPYAML = `apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    node.gardener.cloud/critical-component: "true"
-    origin: gardener
-    role: apiserver-proxy
-  name: apiserver-proxy
-  namespace: kube-system
-spec:
-  selector:
-    matchLabels:
-      app: kubernetes
-      role: apiserver-proxy
-  template:
-    metadata:
-      annotations:
-        checksum/psp: 88e942e106221df42adea87d136a5c95ea8f21c368e7753c27fd8ae27e218e93
-        reference.resources.gardener.cloud/configmap-12f893dc: apiserver-proxy-config-4baf1826
-      creationTimestamp: null
-      labels:
-        app: kubernetes
-        gardener.cloud/role: system-component
-        networking.gardener.cloud/from-seed: allowed
-        networking.gardener.cloud/to-apiserver: allowed
-        networking.gardener.cloud/to-dns: allowed
-        node.gardener.cloud/critical-component: "true"
-        origin: gardener
-        role: apiserver-proxy
-    spec:
-      automountServiceAccountToken: false
-      containers:
-      - args:
-        - --ip-address=10.2.170.21
-        - --setup-iptables=false
-        - --interface=lo
-        image: sidecar-image:some-tag
-        imagePullPolicy: IfNotPresent
-        name: sidecar
-        resources:
-          limits:
-            memory: 90Mi
-          requests:
-            cpu: 20m
-            memory: 20Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-      - command:
-        - envoy
-        - --concurrency
-        - "2"
-        - --use-dynamic-base-id
-        - -c
-        - /etc/apiserver-proxy/envoy.yaml
-        image: some-image:some-tag
-        imagePullPolicy: IfNotPresent
-        livenessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /ready
-            port: 16910
-          initialDelaySeconds: 1
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        name: proxy
-        ports:
-        - containerPort: 16910
-          hostPort: 16910
-          name: metrics
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 16910
-          initialDelaySeconds: 1
-          periodSeconds: 2
-          successThreshold: 1
-          timeoutSeconds: 1
-        resources:
-          limits:
-            memory: 1Gi
-          requests:
-            cpu: 20m
-            memory: 20Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_BIND_SERVICE
-          runAsUser: 0
-        volumeMounts:
-        - mountPath: /etc/apiserver-proxy
-          name: proxy-config
-        - mountPath: /etc/admin-uds
-          name: admin-uds
-      hostNetwork: true
-      initContainers:
-      - args:
-        - --ip-address=10.2.170.21
-        - --setup-iptables=false
-        - --daemon=false
-        - --interface=lo
-        image: sidecar-image:some-tag
-        imagePullPolicy: IfNotPresent
-        name: setup
-        resources:
-          limits:
-            memory: 200Mi
-          requests:
-            cpu: 20m
-            memory: 20Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-      priorityClassName: system-node-critical
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-      serviceAccountName: apiserver-proxy
-      tolerations:
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
-      volumes:
-      - configMap:
-          name: apiserver-proxy-config-4baf1826
-        name: proxy-config
-      - emptyDir: {}
-        name: admin-uds
-  updateStrategy:
-    type: RollingUpdate
-status:
-  currentNumberScheduled: 0
-  desiredNumberScheduled: 0
-  numberMisscheduled: 0
-  numberReady: 0
-`
-
 		daemonSetYAML = `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+  annotations:
+    reference.resources.gardener.cloud/configmap-12f893dc: apiserver-proxy-config-4baf1826
   creationTimestamp: null
   labels:
     app: kubernetes
@@ -561,7 +417,7 @@ kind: MutatingWebhookConfiguration
 metadata:
   annotations:
     networking.gardener.cloud/description: |-
-      This webhook adds KUBERNETES_SERVICE_HOST
+      This webhook adds "KUBERNETES_SERVICE_HOST"
       environment variable to all containers and init containers matched by it.
   creationTimestamp: null
   labels:
@@ -699,11 +555,9 @@ subjects:
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("FOOBAR")}})).To(Succeed())
 
 		values = Values{
-			APIServerProxyImage:        image,
-			APIServerProxySidecarImage: sidecarImage,
-			AdminPort:                  int32(adminPort),
-			ProxySeedServerHost:        proxySeedServerHost,
-			ProxySeedServerPort:        proxySeedServerPort,
+			Image:               image,
+			SidecarImage:        sidecarImage,
+			ProxySeedServerHost: proxySeedServerHost,
 		}
 
 		component = New(c, namespace, sm, values)
@@ -762,11 +616,8 @@ subjects:
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			expectedLen := 4
-			if pspDisabled {
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(daemonSetYAML))
-			} else {
+			if !pspDisabled {
 				expectedLen += 3
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(daemonSetWithPSPYAML))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_apiserver-proxy.yaml"])).To(Equal(clusterRoleYAML))
 				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.apiserver-proxy.yaml"])).To(Equal(pspYAML))
 				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_apiserver-proxy.yaml"])).To(Equal(roleBindingYAML))
@@ -777,6 +628,7 @@ subjects:
 			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-4baf1826.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(daemonSetYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceAccountYAML))
 		}

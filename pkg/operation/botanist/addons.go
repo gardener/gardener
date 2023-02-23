@@ -158,18 +158,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		return nil, err
 	}
 
-	// TODO(oliver-goetz): Remove this config in a future version.
-	apiServerProxy := map[string]interface{}{
-		"advertiseIPAddress": b.APIServerClusterIP,
-		"proxySeedServer": map[string]interface{}{
-			"host": b.outOfClusterAPIServerFQDN(),
-			"port": "8443",
-		},
-	}
-
 	values := map[string]interface{}{
 		"global":          global,
-		"apiserver-proxy": common.GenerateAddonConfig(apiServerProxy, b.APIServerSNIEnabled()),
+		"apiserver-proxy": common.GenerateAddonConfig(nil, b.APIServerSNIEnabled()),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

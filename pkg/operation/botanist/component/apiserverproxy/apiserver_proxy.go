@@ -38,6 +38,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -46,25 +47,29 @@ import (
 )
 
 const (
-	// ManagedResourceName is the name of the apiserver-proxy managed resource.
-	ManagedResourceName = "shoot-core-apiserver-proxy"
-
+	managedResourceName   = "shoot-core-apiserver-proxy"
 	configMapName         = "apiserver-proxy-config"
 	serviceAcountName     = "apiserver-proxy"
 	daemonSetName         = "apiserver-proxy"
 	mutatingWebhookName   = "apiserver-proxy.networking.gardener.cloud"
 	webhookExpressionsKey = "apiserver-proxy.networking.gardener.cloud/inject"
 
-	proxyConfigVolume = "proxy-config"
-	adminUDSVolume    = "admin-uds"
+	adminPort           = 16910
+	proxySeedServerPort = "8443"
+
+	volumeNameConfig   = "proxy-config"
+	volumeNameAdminUDS = "admin-uds"
+
+	configDirectory = "/etc/apiserver-proxy"
+	configFile      = "envoy.yaml"
 
 	clusterRoleName = "gardener.cloud:psp:kube-system:apiserver-proxy"
 	roleBindingName = "gardener.cloud:psp:apiserver-proxy"
 )
 
 var (
-	tplNameEnvoy = "envoy.yaml"
-	//go:embed templates/envoy.yaml
+	tplNameEnvoy = "envoy.yaml.tpl"
+	//go:embed templates/envoy.yaml.tpl
 	tplContentEnvoy string
 	tplEnvoy        *template.Template
 )
@@ -80,13 +85,12 @@ func init() {
 
 // Values is a set of configuration values for the apiserver-proxy component.
 type Values struct {
-	APIServerProxyImage        string
-	APIServerProxySidecarImage string
-	ProxySeedServerHost        string
-	ProxySeedServerPort        string
-	AdminPort                  int32
-	PodMutatorEnabled          bool
-	PSPDisabled                bool
+	AdvertiseIPAddress  string
+	ProxySeedServerHost string
+	PodMutatorEnabled   bool
+	PSPDisabled         bool
+	Image               string
+	SidecarImage        string
 }
 
 // New creates a new instance of DeployWaiter for apiserver-proxy
@@ -106,15 +110,14 @@ type Interface interface {
 }
 
 type apiserverProxy struct {
-	client             client.Client
-	namespace          string
-	secretsManager     secretsmanager.Interface
-	values             Values
-	advertiseIPAddress string
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 func (a *apiserverProxy) Deploy(ctx context.Context) error {
-	if a.advertiseIPAddress == "" {
+	if a.values.AdvertiseIPAddress == "" {
 		return fmt.Errorf("run SetAdvertiseIPAddress before deploying")
 	}
 
@@ -123,11 +126,11 @@ func (a *apiserverProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, a.client, a.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShoot(ctx, a.client, a.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (a *apiserverProxy) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, a.client, a.namespace, ManagedResourceName)
+	return managedresources.DeleteForShoot(ctx, a.client, a.namespace, managedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -138,27 +141,27 @@ func (a *apiserverProxy) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, a.client, a.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, a.client, a.namespace, managedResourceName)
 }
 
 func (a *apiserverProxy) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, a.client, a.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, a.client, a.namespace, managedResourceName)
 }
 
 func (a *apiserverProxy) SetAdvertiseIPAddress(advertiseIPAddress string) {
-	a.advertiseIPAddress = advertiseIPAddress
+	a.values.AdvertiseIPAddress = advertiseIPAddress
 }
 
 func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 	var envoyYAML bytes.Buffer
 	if err := tplEnvoy.Execute(&envoyYAML, map[string]interface{}{
-		"advertiseIPAddress":  a.advertiseIPAddress,
-		"adminPort":           a.values.AdminPort,
+		"advertiseIPAddress":  a.values.AdvertiseIPAddress,
+		"adminPort":           adminPort,
 		"proxySeedServerHost": a.values.ProxySeedServerHost,
-		"proxySeedServerPort": a.values.ProxySeedServerPort,
+		"proxySeedServerPort": proxySeedServerPort,
 	}); err != nil {
 		return nil, err
 	}
@@ -169,7 +172,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 			Labels:    getDefaultLabels(),
 			Namespace: metav1.NamespaceSystem,
 		},
-		Data: map[string]string{"envoy.yaml": envoyYAML.String()},
+		Data: map[string]string{configFile: envoyYAML.String()},
 	}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
@@ -196,12 +199,12 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				Ports: []corev1.ServicePort{
 					{
 						Name:       "metrics",
-						Port:       a.values.AdminPort,
+						Port:       adminPort,
 						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(int(a.values.AdminPort)),
+						TargetPort: intstr.FromInt(int(adminPort)),
 					},
 				},
-				Selector: getSelectors(),
+				Selector: getSelector(),
 			},
 		}
 		daemonSet = &appsv1.DaemonSet{
@@ -220,13 +223,10 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 					Type: appsv1.RollingUpdateDaemonSetStrategyType,
 				},
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getSelectors(),
+					MatchLabels: getSelector(),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							fmt.Sprintf("reference.resources.gardener.cloud/configmap-%s", utils.ComputeSHA256Hex([]byte(configMap.Name))[:8]): configMap.Name,
-						},
 						Labels: utils.MergeStringMaps(
 							getDefaultLabels(),
 							map[string]string{
@@ -254,10 +254,10 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 						InitContainers: []corev1.Container{
 							{
 								Name:            "setup",
-								Image:           a.values.APIServerProxySidecarImage,
+								Image:           a.values.SidecarImage,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
-									fmt.Sprintf("--ip-address=%s", a.advertiseIPAddress),
+									fmt.Sprintf("--ip-address=%s", a.values.AdvertiseIPAddress),
 									"--setup-iptables=false",
 									"--daemon=false",
 									"--interface=lo",
@@ -283,10 +283,10 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 						Containers: []corev1.Container{
 							{
 								Name:            "sidecar",
-								Image:           a.values.APIServerProxySidecarImage,
+								Image:           a.values.SidecarImage,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
-									fmt.Sprintf("--ip-address=%s", a.advertiseIPAddress),
+									fmt.Sprintf("--ip-address=%s", a.values.AdvertiseIPAddress),
 									"--setup-iptables=false",
 									"--interface=lo",
 								},
@@ -309,7 +309,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 							},
 							{
 								Name:            "proxy",
-								Image:           a.values.APIServerProxyImage,
+								Image:           a.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command: []string{
 									"envoy",
@@ -317,7 +317,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									"2",
 									"--use-dynamic-base-id",
 									"-c",
-									"/etc/apiserver-proxy/envoy.yaml",
+									fmt.Sprintf("%s/%s", configDirectory, configFile),
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Capabilities: &corev1.Capabilities{
@@ -340,7 +340,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.FromInt(int(a.values.AdminPort)),
+											Port: intstr.FromInt(int(adminPort)),
 										},
 									},
 									InitialDelaySeconds: 1,
@@ -352,7 +352,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.FromInt(int(a.values.AdminPort)),
+											Port: intstr.FromInt(int(adminPort)),
 										},
 									},
 									InitialDelaySeconds: 1,
@@ -364,17 +364,17 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								Ports: []corev1.ContainerPort{
 									{
 										Name:          "metrics",
-										ContainerPort: a.values.AdminPort,
-										HostPort:      a.values.AdminPort,
+										ContainerPort: adminPort,
+										HostPort:      adminPort,
 									},
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
-										Name:      proxyConfigVolume,
-										MountPath: "/etc/apiserver-proxy",
+										Name:      volumeNameConfig,
+										MountPath: configDirectory,
 									},
 									{
-										Name:      adminUDSVolume,
+										Name:      volumeNameAdminUDS,
 										MountPath: "/etc/admin-uds",
 									},
 								},
@@ -382,7 +382,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 						},
 						Volumes: []corev1.Volume{
 							{
-								Name: proxyConfigVolume,
+								Name: volumeNameConfig,
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
@@ -392,7 +392,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								},
 							},
 							{
-								Name: adminUDSVolume,
+								Name: volumeNameAdminUDS,
 								VolumeSource: corev1.VolumeSource{
 									EmptyDir: &corev1.EmptyDirVolumeSource{},
 								},
@@ -420,7 +420,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: mutatingWebhookName,
 					Annotations: map[string]string{
-						"networking.gardener.cloud/description": `This webhook adds KUBERNETES_SERVICE_HOST
+						"networking.gardener.cloud/description": `This webhook adds "KUBERNETES_SERVICE_HOST"
 environment variable to all containers and init containers matched by it.`,
 					},
 					Labels: utils.MergeStringMaps(
@@ -473,8 +473,7 @@ environment variable to all containers and init containers matched by it.`,
 				},
 			}
 		)
-		err := registry.Add(mutatingWebhook)
-		if err != nil {
+		if err := registry.Add(mutatingWebhook); err != nil {
 			return nil, err
 		}
 	}
@@ -534,7 +533,7 @@ environment variable to all containers and init containers matched by it.`,
 					HostNetwork: true,
 					HostPorts: []policyv1beta1.HostPortRange{
 						{Min: 443, Max: 443},
-						{Min: a.values.AdminPort, Max: a.values.AdminPort},
+						{Min: adminPort, Max: adminPort},
 					},
 					AllowedHostPaths:    []policyv1beta1.AllowedHostPath{},
 					AllowedCapabilities: []corev1.Capability{"NET_ADMIN", "NET_BIND_SERVICE"},
@@ -554,15 +553,12 @@ environment variable to all containers and init containers matched by it.`,
 				},
 			}
 		)
-		err := registry.Add(clusterRole, roleBinding, podSecurityPolicy)
-		if err != nil {
+		if err := registry.Add(clusterRole, roleBinding, podSecurityPolicy); err != nil {
 			return nil, err
 		}
-		daemonSet.Spec.Template.Annotations = utils.MergeStringMaps(
-			daemonSet.Spec.Template.Annotations,
-			map[string]string{"checksum/psp": utils.ComputeChecksum(podSecurityPolicy)},
-		)
 	}
+
+	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
 	return registry.AddAllAndSerialize(
 		configMap,
@@ -575,14 +571,14 @@ environment variable to all containers and init containers matched by it.`,
 func getDefaultLabels() map[string]string {
 	return utils.MergeStringMaps(
 		map[string]string{
-			"gardener.cloud/role": "system-component",
-			"origin":              "gardener",
-		}, getSelectors())
+			v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
+			managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+		}, getSelector())
 }
 
-func getSelectors() map[string]string {
+func getSelector() map[string]string {
 	return map[string]string{
-		"app":  "kubernetes",
-		"role": "apiserver-proxy",
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: "apiserver-proxy",
 	}
 }

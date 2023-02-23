@@ -1,9 +1,0 @@
-# TODO(oliver-goetz): Delete this Helm chart in a future version.
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "apiserver-proxy.config.name" . }}
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-
