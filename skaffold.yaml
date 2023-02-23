@@ -30,6 +30,7 @@ build:
         - cmd/gardener-apiserver/app
         - cmd/utils
         - pkg/api
+        - pkg/api/core/seed
         - pkg/api/core/shoot
         - pkg/apis/authentication
         - pkg/apis/authentication/install
