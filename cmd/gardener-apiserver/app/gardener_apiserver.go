@@ -329,11 +329,20 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-cluster-identity", func(context genericapiserver.PostStartHookContext) error {
-		if _, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(ctx, v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
+		if clusterIdentity, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(ctx, v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {
-			// TODO(oliver-goetz): set immutable flag to true and origin to gardener-apiserver if the origin is empty in a future release when shoot clusters have been reconciled at least once
-			// Cluster identity ConfigMap already exists
+			// Set immutable flag to true and origin to gardener-apiserver if cluster-identity config map is not immutable, its origin is empty and the cluster-identity is equal the one set by gardener-apiserver
+			if clusterIdentity.Immutable != nil && *clusterIdentity.Immutable {
+				return nil
+			}
+			if clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] == "" && clusterIdentity.Data[v1beta1constants.ClusterIdentity] == o.ExtraOptions.ClusterIdentity {
+				clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] = v1beta1constants.ClusterIdentityOriginGardenerAPIServer
+				clusterIdentity.Immutable = pointer.Bool(true)
+				if _, err = kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Update(ctx, clusterIdentity, kubernetesclient.DefaultUpdateOptions()); err != nil {
+					return err
+				}
+			}
 			return nil
 		}
 
