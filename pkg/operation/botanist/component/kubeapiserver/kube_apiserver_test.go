@@ -2909,6 +2909,23 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--advertise-address=")))
 				})
 
+				It("should configure the correct etcd overrides for etcd-events", func() {
+					var (
+						resourcesToStoreInETCDEvents = []schema.GroupResource{
+							{Group: "networking.k8s.io", Resource: "networkpolicies"},
+							{Group: "", Resource: "events"},
+							{Group: "apps", Resource: "daemonsets"},
+						}
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{ResourcesToStoreInETCDEvents: resourcesToStoreInETCDEvents, Images: images, RuntimeVersion: runtimeVersion, Version: version})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+						"--etcd-servers-overrides=networking.k8s.io/networkpolicies#https://etcd-events-client:2379,/events#https://etcd-events-client:2379,apps/daemonsets#https://etcd-events-client:2379",
+					))
+				})
+
 				It("should configure the api audiences if provided", func() {
 					var (
 						apiAudience1 = "foo"

@@ -161,6 +161,9 @@ type Values struct {
 	OIDC *gardencorev1beta1.OIDCConfig
 	// Requests contains configuration for the kube-apiserver requests.
 	Requests *gardencorev1beta1.KubeAPIServerRequests
+	// ResourcesToStoreInETCDEvents is a list of resources which should be stored in the etcd-events instead of the
+	// etcd-main. The `events` resource in the `core` group is always stored in etcd-events.
+	ResourcesToStoreInETCDEvents []schema.GroupResource
 	// RuntimeConfig is the set of runtime configurations.
 	RuntimeConfig map[string]bool
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.

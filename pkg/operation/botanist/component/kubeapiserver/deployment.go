@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
@@ -516,7 +517,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--etcd-certfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--etcd-keyfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--etcd-servers=https://%s:%d", etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient))
-	out = append(out, fmt.Sprintf("--etcd-servers-overrides=/events#https://%s:%d", etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
+	out = append(out, "--etcd-servers-overrides="+k.etcdServersOverrides())
 	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
 
@@ -611,6 +612,23 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	return out
+}
+
+func (k *kubeAPIServer) etcdServersOverrides() string {
+	addGroupResourceIfNotPresent := func(groupResources []schema.GroupResource, groupResource schema.GroupResource) []schema.GroupResource {
+		for _, resource := range groupResources {
+			if resource.Group == groupResource.Group && resource.Resource == groupResource.Resource {
+				return groupResources
+			}
+		}
+		return append([]schema.GroupResource{groupResource}, groupResources...)
+	}
+
+	var overrides []string
+	for _, resource := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
+		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", resource.Group, resource.Resource, etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
+	}
+	return strings.Join(overrides, ",")
 }
 
 func (k *kubeAPIServer) admissionPluginNames() []string {
