@@ -274,7 +274,7 @@ _Important points about concurrency control and conflicts:_
 
 ### Don’t Retry on Conflict
 
-Similarly to how a human would typically handle a conflict error, there are helper functions implementing `RetryOnConflict`-semantics, i.e., try an update call, then re-read the object if a conflict occurs, apply the modification again and retry the update.
+Similar to how a human would typically handle a conflict error, there are helper functions implementing `RetryOnConflict`-semantics, i.e., try an update call, then re-read the object if a conflict occurs, apply the modification again and retry the update.
 However, controllers should generally *not* use `RetryOnConflict`-semantics. Instead, controllers should abort their current reconciliation run and let the queue handle the conflict error with exponential backoff.
 The reasoning behind this is that a conflict error indicates that the controller has operated on stale data and might have made wrong decisions earlier on in the reconciliation.
 When using a helper function that implements `RetryOnConflict`-semantics, the controller doesn't check which fields were changed and doesn't revise its previous decisions accordingly.

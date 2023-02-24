@@ -331,7 +331,7 @@ In addition, the pods of the above mentioned components will be configured with 
 
 ## Shoot Control Plane Components
 
-Similarly to the [Seed System Components](#seed-system-components), the following shoot control plane components are considered critical so that Gardener ought to avoid any downtime. Thus, [current recovery mechanisms](#current-recovery-mechanisms) are considered insufficient if only one replica is involved.
+Similar to the [Seed System Components](#seed-system-components), the following shoot control plane components are considered critical so that Gardener ought to avoid any downtime. Thus, [current recovery mechanisms](#current-recovery-mechanisms) are considered insufficient if only one replica is involved.
 
 ### Kube Apiserver
 

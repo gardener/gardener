@@ -35,7 +35,7 @@ Please check out the [tool's documentation](../../hack/tools/logcheck) for a det
 
 ## Structured Logging
 
-Similarly to [efforts in the Kubernetes project](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/migration-to-structured-logging.md), we want to migrate our component logs to structured logging.
+Similar to [efforts in the Kubernetes project](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/migration-to-structured-logging.md), we want to migrate our component logs to structured logging.
 As motivated above, we will use the logr interface instead of klog though.
 
 You can read more about the motivation behind structured logging in [logr's background and FAQ](https://github.com/go-logr/logr#background) (also see [this blog post by Dave Cheney](http://dave.cheney.net/2015/11/05/lets-talk-about-logging)).

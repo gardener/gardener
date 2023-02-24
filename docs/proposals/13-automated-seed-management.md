@@ -23,7 +23,7 @@ An initial discussion of this topic is available in [Issue #2938](https://github
 
 Initially, the only resource considered would be the maximum number of shoots that can be scheduled onto a seed. Later, more resources could be added to make more precise scheduling calculations.
 
-> **Note:** Resources could also be requested by shoots, similarly to how pods can request node resources, and the scheduler could then ensure that such requests are taken into account when scheduling shoots onto seeds. However, the user is rarely, if at all, concerned with what resources a shoot consumes from a seed, and this should also be regarded as an implementation detail that could change in the future. Therefore, such resource requests are not included in this GEP.
+> **Note:** Resources could also be requested by shoots, similar to how pods can request node resources, and the scheduler could then ensure that such requests are taken into account when scheduling shoots onto seeds. However, the user is rarely, if at all, concerned with what resources a shoot consumes from a seed, and this should also be regarded as an implementation detail that could change in the future. Therefore, such resource requests are not included in this GEP.
 
 In addition, an extensibility plugin framework could be introduced in the future in order to advertise custom resources, including provider-specific resources, so that the `gardenlet` would be able to update the seed status with their capacity and allocatable values, for example, load balancers on Azure. Such a concept is not described here in further details as it is sufficiently complex to require a separate GEP. 
 
@@ -105,7 +105,7 @@ Although in this proposal a ManagedSeed is always a "shooted seed", that is a Sh
 
 Last but not least, ManagedSeeds could be used as the basis for creating and deleting seeds automatically via the `ManagedSeedSet` resource that is described in [ManagedSeedSets](#managedseedsets).
 
-Unlike the `Seed` resource, the `ManagedSeed` resource is namespaced. If created in the `garden` namespace, the resulting seed is globally available. If created in a project namespace, the resulting seed can be used as a "private seed" by shoots in the project, either by being decorated with project-specific taints and labels, or by being of the special `PrivateSeed` kind that is also namespaced. The concept of private seeds / cloudprofiles is described in [Issue #2874](https://github.com/gardener/gardener/issues/2874). Until this concept is implemented, `ManagedSeed` resources might need to be restricted to the `garden` namespace, similarly to how shoots with the `use-as-seed` annotation currently are.
+Unlike the `Seed` resource, the `ManagedSeed` resource is namespaced. If created in the `garden` namespace, the resulting seed is globally available. If created in a project namespace, the resulting seed can be used as a "private seed" by shoots in the project, either by being decorated with project-specific taints and labels, or by being of the special `PrivateSeed` kind that is also namespaced. The concept of private seeds / cloudprofiles is described in [Issue #2874](https://github.com/gardener/gardener/issues/2874). Until this concept is implemented, `ManagedSeed` resources might need to be restricted to the `garden` namespace, similar to how shoots with the `use-as-seed` annotation currently are.
 
 Example `ManagedSeed` resource with a `seedTemplate` section:
 
@@ -218,7 +218,7 @@ The introduction of the `ManagedSeed` resource would also require no changes to 
 
 ## ManagedSeedSets
 
-Similarly to a [ReplicaSet](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/), the purpose of a ManagedSeedSet is to maintain a stable set of replica [ManagedSeeds](#managedseeds) available at any given time. As such, it is used to guarantee the availability of a specified number of identical ManagedSeeds, on an equal number of identical Shoots.
+Similar to a [ReplicaSet](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/), the purpose of a ManagedSeedSet is to maintain a stable set of replica [ManagedSeeds](#managedseeds) available at any given time. As such, it is used to guarantee the availability of a specified number of identical ManagedSeeds, on an equal number of identical Shoots.
 
 ### ManagedSeedSet Resource
 
@@ -287,8 +287,8 @@ ManagedSeedSets are reconciled by a new *managed seed set controller* in `garden
 
 To manage ManagedSeed updates, we considered two possible approaches:
 
-* A ManagedSeedSet, similarly to a ReplicaSet, does not manage updates to its replicas in any way. In the future, we might introduce ManagedSeedDeployments, a higher-level concept that manages ManagedSeedSets and provides declarative updates to ManagedSeeds along with other useful features, similarly to a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/). Such a mechanism would involve creating new ManagedSeedSets, and therefore new seeds, behind the scenes, and moving existing shoots to them.
-* A ManagedSeedSet does manage updates to its replicas, similarly to a [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). Updates are performed "in-place", without creating new seeds and moving existing shoots to them. Such a mechanism could also take advantage of other StatefulSet features, such as ordered rolling updates and phased rollouts. 
+* A ManagedSeedSet, similar to a ReplicaSet, does not manage updates to its replicas in any way. In the future, we might introduce ManagedSeedDeployments, a higher-level concept that manages ManagedSeedSets and provides declarative updates to ManagedSeeds along with other useful features, similar to a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/). Such a mechanism would involve creating new ManagedSeedSets, and therefore new seeds, behind the scenes, and moving existing shoots to them.
+* A ManagedSeedSet does manage updates to its replicas, similar to a [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). Updates are performed "in-place", without creating new seeds and moving existing shoots to them. Such a mechanism could also take advantage of other StatefulSet features, such as ordered rolling updates and phased rollouts. 
 
 There is an important difference between seeds and pods or nodes in that seeds are more "heavyweight" and therefore updating a set of seeds by introducing new seeds and moving shoots to them tends to be much more complex, time-consuming, and prone to failures compared to updating the seeds "in place". Furthermore, updating seeds in this way depends on a mature implementation of [GEP-7: Shoot Control Plane Migration](07-shoot-control-plane-migration.md), which is not available right now. Due to these considerations, we favor the second approach over the first one.
 
@@ -333,7 +333,7 @@ The `RollingUpdate` update strategy can be partitioned by specifying a `.spec.up
 
 #### Keeping Track of Revision History and Performing Rollbacks
 
-Similarly to a StatefulSet, the ManagedSeedSet controller uses [ControllerRevisions](https://pkg.go.dev/k8s.io/api/apps/v1#ControllerRevision) to keep track of the revision history, and `controller-revision-hash` labels to maintain an association between a ManagedSeed or a Shoot and the concrete template revisions based on which they were created or last updated. These are used for the following purposes:
+Similar to a StatefulSet, the ManagedSeedSet controller uses [ControllerRevisions](https://pkg.go.dev/k8s.io/api/apps/v1#ControllerRevision) to keep track of the revision history, and `controller-revision-hash` labels to maintain an association between a ManagedSeed or a Shoot and the concrete template revisions based on which they were created or last updated. These are used for the following purposes:
 
 * During an update, determine which replicas are still not on the latest revision and therefore should be updated.
 * Display the revision history of a ManagedSeedSet via `kubectl rollout history`.
@@ -364,7 +364,7 @@ Besides this annotation, the controller should take into account also other fact
 
 The most interesting and advanced automated seed management feature is making sure that a Garden cluster has enough seeds registered to schedule new shoots (and, in the future, reschedule shoots from drained seeds) without exceeding the seeds capacity for shoots, but not more than actually needed at any given moment. This would involve introducing an auto-scaling mechanism for seeds in Garden clusters. 
 
-The proposed solution builds upon the ideas introduced earlier. The [`ManagedSeedSet`](#managedseeds) resource (and in the future, also the `ManagedSeedDeployment` resource) could have a `scale` subresource that changes the `replicas` field. This would allow a new "seed autoscaler" controller to scale these resources via a special "autoscaler" resource (for example `SeedAutoscaler`), similarly to how the Kubernetes [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) controller scales pods, as described in [Horizontal Pod Autoscaler Walkthrough](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/).
+The proposed solution builds upon the ideas introduced earlier. The [`ManagedSeedSet`](#managedseeds) resource (and in the future, also the `ManagedSeedDeployment` resource) could have a `scale` subresource that changes the `replicas` field. This would allow a new "seed autoscaler" controller to scale these resources via a special "autoscaler" resource (for example `SeedAutoscaler`), similar to how the Kubernetes [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) controller scales pods, as described in [Horizontal Pod Autoscaler Walkthrough](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/).
 
 The primary metric used for scaling should be the number of shoots already scheduled onto that seed either as a direct value or as a percentage of the seed's capacity for shoots introduced in [Ensuring Seeds Capacity for Shoots Is Not Exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded) (*utilization*). Later, custom metrics based on other resources, including provider-specific resources, could be considered as well.
 

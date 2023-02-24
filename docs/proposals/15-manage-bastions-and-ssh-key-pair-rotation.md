@@ -60,7 +60,7 @@ The following is a list of involved components that either need to be newly intr
   - Is configured with `timeToLive`, the time to add to the current time on each heartbeat
 - `gardenlet`
   - Deploys `Bastion` CRD under the `extensions.gardener.cloud` API Group to the Seed, see [resource example](#resource-example) below
-  - Similarly to `BackupBucket`s or `BackupEntry`, the `gardenlet` watches the `Bastion` resource in the garden cluster and creates a seed-local `Bastion` resource, on which the provider specific bastion controller acts upon
+  - Similar to `BackupBucket`s or `BackupEntry`, the `gardenlet` watches the `Bastion` resource in the garden cluster and creates a seed-local `Bastion` resource, on which the provider specific bastion controller acts upon
 - `gardenctlv2` (or any other client)
   - Creates `Bastion` resource in the garden cluster
   - Establishes an `ssh` connection to a shoot node, using a bastion host as proxy

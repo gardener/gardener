@@ -8,7 +8,7 @@ Extensions are registered in the garden cluster via [`ControllerRegistration`](.
 Deployment for respective extensions are specified via [`ControllerDeployment`](../../example/25-controllerdeployment.yaml) resources.
 Gardener evaluates the registrations and deployments and creates [`ControllerInstallation`](../../example/25-controllerinstallation.yaml) resources which describe the request "please install this controller `X` to this seed `Y`".
 
-Similarly to how `CloudProfile` or `Seed` resources get into the system, the Gardener administrator must deploy the `ControllerRegistration` and `ControllerDeployment` resources (this does not happen automatically in any way - the administrator decides which extensions shall be enabled).
+Similar to how `CloudProfile` or `Seed` resources get into the system, the Gardener administrator must deploy the `ControllerRegistration` and `ControllerDeployment` resources (this does not happen automatically in any way - the administrator decides which extensions shall be enabled).
 
 The specification mainly describes which of Gardener's extension CRDs are managed, for example:
 
@@ -182,7 +182,7 @@ spec:
 In the above example, Gardener itself does not understand the AWS-specific provider configuration for the infrastructure.
 However, if this part of the `Shoot` resource should be validated, then you should run an AWS-specific component in the garden cluster that registers a webhook. You can do it similarly if you want to default some fields of a resource (by using a `MutatingWebhookConfiguration`).
 
-Again, similarly to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
+Again, similar to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
 
 ### `Extension` Resource Configurations
 

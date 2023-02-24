@@ -15,7 +15,7 @@ It is deployed by gardenlet once per seed (in the `garden` namespace) and once p
 
 ## Component Configuration
 
-Similarly to other Gardener components, the `gardener-resource-manager` uses a so-called component configuration file.
+Similar to other Gardener components, the `gardener-resource-manager` uses a so-called component configuration file.
 It allows specifying certain central settings like log level and formatting, client connection configuration, server ports and bind addresses, etc.
 In addition, controllers and webhooks can be configured and sometimes even disabled.
 

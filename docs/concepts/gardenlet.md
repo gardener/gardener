@@ -170,7 +170,7 @@ More information: [Example gardenlet Component Configuration](../../example/20-c
 
 ## Heartbeats
 
-Similarly to how Kubernetes uses `Lease` objects for node heart beats
+Similar to how Kubernetes uses `Lease` objects for node heart beats
 (see [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/589-efficient-node-heartbeats/README.md)),
 the gardenlet is using `Lease` objects for heart beats of the seed cluster.
 Every two seconds, the gardenlet checks that the seed cluster's `/healthz`
@@ -178,7 +178,7 @@ endpoint returns HTTP status code 200.
 If that is the case, the gardenlet renews the lease in the Garden cluster in the `gardener-system-seed-lease` namespace and updates
 the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource. For more information, see [this section](#lease-reconciler).
 
-Similarly to the `node-lifecycle-controller` inside the `kube-controller-manager`,
+Similar to the `node-lifecycle-controller` inside the `kube-controller-manager`,
 the `gardener-controller-manager` features a `seed-lifecycle-controller` that sets
 the `GardenletReady` condition to `Unknown` in case the gardenlet fails to renew the lease.
 As a consequence, the `gardener-scheduler` doesn’t consider this seed cluster for newly created shoot clusters anymore.

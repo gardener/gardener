@@ -17,7 +17,7 @@ Decoupling the API server and the scheduler comes with greater flexibility to de
 ### 2. Extensibility
 
 It should be possible to easily extend and tweak the scheduler in the future.
-Possibly, similarly to the Kubernetes scheduler, hooks could be provided which influence the scheduling decisions.
+Possibly, similar to the Kubernetes scheduler, hooks could be provided which influence the scheduling decisions.
 It should be also possible to completely replace the standard Gardener Scheduler with a custom implementation.
 
 ## Algorithm Overview
@@ -88,11 +88,11 @@ The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creat
 Only an operator with the necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, please see [Triggering the Migration](../usage/control_plane_migration.md#triggering-the-migration).
 
 ## `spec.seedName` Field in the `Shoot` Specification
-Similarly to the `.spec.nodeName` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedName` field. If this field is set on creation, the shoot will be scheduled to this seed. However, this field can only be set by users having RBAC for the `shoots/binding` subresource. If this field is not set, the `scheduler` will assign a suitable seed automatically and populate this field with the seed name.
+Similar to the `.spec.nodeName` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedName` field. If this field is set on creation, the shoot will be scheduled to this seed. However, this field can only be set by users having RBAC for the `shoots/binding` subresource. If this field is not set, the `scheduler` will assign a suitable seed automatically and populate this field with the seed name.
 
 ## `seedSelector` Field in the `Shoot` Specification
 
-Similarly to the `.spec.nodeSelector` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedSelector` field.
+Similar to the `.spec.nodeSelector` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedSelector` field.
 It allows the user to provide a label selector that must match the labels of the `Seed`s in order to be scheduled to one of them.
 The labels on the `Seed`s are usually controlled by Gardener administrators/operators - end users cannot add arbitrary labels themselves.
 If provided, the Gardener Scheduler will only consider as "suitable" those seeds whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.

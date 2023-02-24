@@ -1,6 +1,6 @@
 # Taints and Tolerations for `Seed`s and `Shoot`s
 
-Similarly to [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for `Node`s and `Pod`s in Kubernetes, the `Seed` resource supports specifying taints (`.spec.taints`, see [this example](https://github.com/gardener/gardener/blob/master/example/50-seed.yaml#L48-L55)) while the `Shoot` resource supports specifying tolerations (`.spec.tolerations`, see [this example](https://github.com/gardener/gardener/blob/master/example/90-shoot.yaml#L268-L269)).
+Similar to [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for `Node`s and `Pod`s in Kubernetes, the `Seed` resource supports specifying taints (`.spec.taints`, see [this example](https://github.com/gardener/gardener/blob/master/example/50-seed.yaml#L48-L55)) while the `Shoot` resource supports specifying tolerations (`.spec.tolerations`, see [this example](https://github.com/gardener/gardener/blob/master/example/90-shoot.yaml#L268-L269)).
 The feature is used to control scheduling to seeds as well as decisions whether a shoot can use a certain seed.
 
 Compared to Kubernetes, Gardener's taints and tolerations are very much down-stripped right now and have some behavioral differences.
