@@ -52,10 +52,10 @@ spec:
               fieldPath: spec.nodeName
         resources:
           limits:
-            memory: 400Mi
+            memory: 650Mi
           requests:
             cpu: 150m
-            memory: 150Mi
+            memory: 200Mi
         ports:
         - name: metrics
           containerPort: {{ .Values.ports.metrics }}
