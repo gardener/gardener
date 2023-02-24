@@ -25,8 +25,8 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -40,7 +40,7 @@ var _ = Describe("MetricsServer", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{
-			Garden: &gardenerutils.Garden{},
+			Garden: &garden.Garden{},
 			Shoot:  &shoot.Shoot{},
 		}}
 	})

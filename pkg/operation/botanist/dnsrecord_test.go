@@ -45,6 +45,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -134,7 +135,7 @@ var _ = Describe("dnsrecord", func() {
 						},
 					},
 				},
-				Garden: &gardenerutils.Garden{
+				Garden: &garden.Garden{
 					InternalDomain: &gardenerutils.Domain{
 						Domain:   internalDomain,
 						Provider: internalProvider,

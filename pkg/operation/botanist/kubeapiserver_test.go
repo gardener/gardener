@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -113,7 +114,7 @@ var _ = Describe("KubeAPIServer", func() {
 				GardenClient:   gardenClient,
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
-				Garden:         &gardenerutils.Garden{},
+				Garden:         &garden.Garden{},
 				Seed:           &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,

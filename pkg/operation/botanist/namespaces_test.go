@@ -37,9 +37,9 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -104,7 +104,7 @@ var _ = Describe("Namespaces", func() {
 			SeedClientSet: seedClientSet,
 			Seed:          &seed.Seed{},
 			Shoot:         &shoot.Shoot{SeedNamespace: namespace},
-			Garden:        &gardenerutils.Garden{},
+			Garden:        &garden.Garden{},
 		}}
 
 		obj = &corev1.Namespace{

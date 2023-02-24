@@ -29,9 +29,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -39,14 +39,14 @@ import (
 // Builder is an object that builds Operation objects.
 type Builder struct {
 	configFunc                func() (*config.GardenletConfiguration, error)
-	gardenFunc                func(context.Context, map[string]*corev1.Secret) (*gardenerutils.Garden, error)
+	gardenFunc                func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error)
 	gardenerInfoFunc          func() (*gardencorev1beta1.Gardener, error)
 	gardenClusterIdentityFunc func() (string, error)
 	imageVectorFunc           func() (imagevector.ImageVector, error)
 	loggerFunc                func() (logr.Logger, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
-	shootFunc                 func(context.Context, client.Reader, *gardenerutils.Garden, *seed.Seed) (*shoot.Shoot, error)
+	shootFunc                 func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
 }
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -63,7 +63,7 @@ type Operation struct {
 	GardenerInfo          *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
 	ImageVector           imagevector.ImageVector
-	Garden                *gardenerutils.Garden
+	Garden                *garden.Garden
 	Seed                  *seed.Seed
 	Shoot                 *shoot.Shoot
 	ManagedSeed           *seedmanagementv1alpha1.ManagedSeed

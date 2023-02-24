@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -109,7 +110,7 @@ var _ = Describe("addons", func() {
 						},
 					},
 				},
-				Garden: &gardenerutils.Garden{},
+				Garden: &garden.Garden{},
 				Logger: logr.Discard(),
 			},
 		}

@@ -33,6 +33,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -66,7 +67,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				Shoot: &shoot.Shoot{
 					SeedNamespace: namespace,
 				},
-				Garden: &gardenerutils.Garden{},
+				Garden: &garden.Garden{},
 				Logger: logr.Discard(),
 			},
 		}

@@ -26,8 +26,8 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -57,7 +57,7 @@ var _ = Describe("NginxIngress", func() {
 				},
 			},
 		})
-		botanist.Garden = &gardenerutils.Garden{}
+		botanist.Garden = &garden.Garden{}
 	})
 
 	AfterEach(func() {

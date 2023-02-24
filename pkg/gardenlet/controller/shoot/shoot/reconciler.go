@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -320,7 +321,7 @@ func (r *Reconciler) initializeOperation(
 		return nil, err
 	}
 
-	gardenObj, err := gardenerutils.
+	gardenObj, err := garden.
 		NewBuilder().
 		WithProject(project).
 		WithInternalDomainFromSecrets(gardenSecrets).

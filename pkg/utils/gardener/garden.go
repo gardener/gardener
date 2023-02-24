@@ -25,24 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
-
-// Builder is an object that builds Garden objects.
-type Builder struct {
-	projectFunc        func(context.Context) (*gardencorev1beta1.Project, error)
-	internalDomainFunc func() (*Domain, error)
-	defaultDomainsFunc func() ([]*Domain, error)
-}
-
-// Garden is an object containing Garden cluster specific data.
-type Garden struct {
-	Project        *gardencorev1beta1.Project
-	DefaultDomains []*Domain
-	InternalDomain *Domain
-}
 
 // Domain contains information about a domain configured in the garden cluster.
 type Domain struct {
@@ -54,87 +39,6 @@ type Domain struct {
 	ExcludeDomains []string
 	IncludeZones   []string
 	ExcludeZones   []string
-}
-
-// NewBuilder returns a new Builder.
-func NewBuilder() *Builder {
-	return &Builder{
-		projectFunc: func(context.Context) (*gardencorev1beta1.Project, error) {
-			return nil, fmt.Errorf("project is required but not set")
-		},
-		internalDomainFunc: func() (*Domain, error) { return nil, fmt.Errorf("internal domain is required but not set") },
-	}
-}
-
-// WithProject sets the projectFunc attribute at the Builder.
-func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
-	b.projectFunc = func(context.Context) (*gardencorev1beta1.Project, error) { return project, nil }
-	return b
-}
-
-// WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
-func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Builder {
-	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
-		project, _, err := ProjectAndNamespaceFromReader(ctx, reader, namespace)
-		if err != nil {
-			return nil, err
-		}
-		if project == nil {
-			return nil, fmt.Errorf("cannot find Project for namespace '%s'", namespace)
-		}
-
-		return project, err
-	}
-	return b
-}
-
-// WithInternalDomain sets the internalDomainFunc attribute at the Builder.
-func (b *Builder) WithInternalDomain(internalDomain *Domain) *Builder {
-	b.internalDomainFunc = func() (*Domain, error) { return internalDomain, nil }
-	return b
-}
-
-// WithInternalDomainFromSecrets sets the internalDomainFunc attribute at the Builder based on the given secrets map.
-func (b *Builder) WithInternalDomainFromSecrets(secrets map[string]*corev1.Secret) *Builder {
-	b.internalDomainFunc = func() (*Domain, error) { return GetInternalDomain(secrets) }
-	return b
-}
-
-// WithDefaultDomains sets the defaultDomainsFunc attribute at the Builder.
-func (b *Builder) WithDefaultDomains(defaultDomains []*Domain) *Builder {
-	b.defaultDomainsFunc = func() ([]*Domain, error) { return defaultDomains, nil }
-	return b
-}
-
-// WithDefaultDomainsFromSecrets sets the defaultDomainsFunc attribute at the Builder based on the given secrets map.
-func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secret) *Builder {
-	b.defaultDomainsFunc = func() ([]*Domain, error) { return GetDefaultDomains(secrets) }
-	return b
-}
-
-// Build initializes a new Garden object.
-func (b *Builder) Build(ctx context.Context) (*Garden, error) {
-	garden := &Garden{}
-
-	project, err := b.projectFunc(ctx)
-	if err != nil {
-		return nil, err
-	}
-	garden.Project = project
-
-	internalDomain, err := b.internalDomainFunc()
-	if err != nil {
-		return nil, err
-	}
-	garden.InternalDomain = internalDomain
-
-	defaultDomains, err := b.defaultDomainsFunc()
-	if err != nil {
-		return nil, err
-	}
-	garden.DefaultDomains = defaultDomains
-
-	return garden, nil
 }
 
 // GetDefaultDomains finds all the default domain secrets within the given map and returns a list of

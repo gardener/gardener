@@ -39,6 +39,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -73,7 +74,7 @@ var _ = Describe("dns", func() {
 					},
 					SeedNamespace: seedNS,
 				},
-				Garden: &gardenerutils.Garden{},
+				Garden: &garden.Garden{},
 				Logger: logr.Discard(),
 			},
 		}
