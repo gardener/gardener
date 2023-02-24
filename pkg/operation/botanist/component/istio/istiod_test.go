@@ -1685,7 +1685,6 @@ spec:
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
         networking.gardener.cloud/to-dns: allowed
-        networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
         networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012: allowed` + additionalLabels + `
       annotations:
