@@ -333,7 +333,7 @@ func (o *Options) Run(ctx context.Context) error {
 			return err
 		} else if err == nil {
 			// Set immutable flag to true and origin to gardener-apiserver if cluster-identity config map is not immutable, its origin is empty and the cluster-identity is equal the one set by gardener-apiserver
-			if clusterIdentity.Immutable != nil && *clusterIdentity.Immutable {
+			if pointer.BoolDeref(clusterIdentity.Immutable, false) {
 				return nil
 			}
 			if clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] == "" && clusterIdentity.Data[v1beta1constants.ClusterIdentity] == o.ExtraOptions.ClusterIdentity {
