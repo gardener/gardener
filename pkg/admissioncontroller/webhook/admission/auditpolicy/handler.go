@@ -163,7 +163,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 
 	var errCode int32
 	if request.Operation == admissionv1.Create || request.Operation == admissionv1.Update {
-		errCode, err = validateAuditPolicySemanticsForKubernetesVersion(auditPolicy, &shoot.Spec.Kubernetes.Version)
+		errCode, err = validateAuditPolicySemanticsForKubernetesVersions(auditPolicy, map[string]string{shoot.Name: shoot.Spec.Kubernetes.Version})
 	} else {
 		errCode, err = validateAuditPolicySemantics(auditPolicy)
 	}
@@ -194,15 +194,14 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	configMapIsReferenced := false
+	var shootToKubernetesVersionMap = map[string]string{}
 	for _, shoot := range shootList.Items {
 		if v1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer) == request.Name {
-			configMapIsReferenced = true
-			break
+			shootToKubernetesVersionMap[shoot.Name] = shoot.Spec.Kubernetes.Version
 		}
 	}
 
-	if !configMapIsReferenced {
+	if len(shootToKubernetesVersionMap) == 0 {
 		return admissionwebhook.Allowed("configmap is not referenced by a Shoot")
 	}
 
@@ -219,7 +218,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admissionwebhook.Allowed("audit policy not changed")
 	}
 
-	errCode, err := validateAuditPolicySemantics(auditPolicy)
+	errCode, err := validateAuditPolicySemanticsForKubernetesVersions(auditPolicy, shootToKubernetesVersionMap)
 	if err != nil {
 		return admission.Errored(errCode, err)
 	}
@@ -235,10 +234,10 @@ func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object)
 }
 
 func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error) {
-	return validateAuditPolicySemanticsForKubernetesVersion(auditPolicy, nil)
+	return validateAuditPolicySemanticsForKubernetesVersions(auditPolicy, nil)
 }
 
-func validateAuditPolicySemanticsForKubernetesVersion(auditPolicy string, kubernetesVersion *string) (errCode int32, err error) {
+func validateAuditPolicySemanticsForKubernetesVersions(auditPolicy string, shootToKubernetesVersionMap map[string]string) (errCode int32, err error) {
 	auditPolicyObj, schemaVersion, err := policyDecoder.Decode([]byte(auditPolicy), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided audit policy: %w", err)
@@ -252,13 +251,15 @@ func validateAuditPolicySemanticsForKubernetesVersion(auditPolicy string, kubern
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid audit policy: %v", errList)
 	}
 
-	if kubernetesVersion != nil && schemaVersion.Version != "v1" {
-		v, err := semver.NewVersion(*kubernetesVersion)
-		if err != nil {
-			return http.StatusUnprocessableEntity, fmt.Errorf("unable to build version: %w", err)
-		}
-		if !version.ConstraintK8sLess124.Check(v) {
-			return http.StatusUnprocessableEntity, fmt.Errorf("audit policy with apiVersion '%s' is not supported for kubernetes version >= 1.24.0", schemaVersion.Version)
+	if len(shootToKubernetesVersionMap) > 0 && schemaVersion.Version != "v1" {
+		for shootName, k8sVersion := range shootToKubernetesVersionMap {
+			v, err := semver.NewVersion(k8sVersion)
+			if err != nil {
+				return http.StatusUnprocessableEntity, fmt.Errorf("unable to build kubernetes version for shoot '%s': %w", shootName, err)
+			}
+			if !version.ConstraintK8sLess124.Check(v) {
+				return http.StatusUnprocessableEntity, fmt.Errorf("audit policy with apiVersion '%s' is not supported for shoot '%s' with kubernetes version >= 1.24.0", schemaVersion.Version, shootName)
+			}
 		}
 	}
 
