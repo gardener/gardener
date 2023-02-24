@@ -36,6 +36,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -154,6 +155,7 @@ var _ = Describe("Etcd", func() {
 								MaintenanceTimeWindow: maintenanceTimeWindow,
 								ScaleDownUpdateMode:   pointer.String(computeUpdateMode(class, purpose)),
 							}),
+							expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 						}
 
 						oldNewEtcd := NewEtcd
@@ -193,6 +195,7 @@ var _ = Describe("Etcd", func() {
 						MaintenanceTimeWindow: maintenanceTimeWindow,
 						ScaleDownUpdateMode:   pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
 					}),
+					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
 
 				oldNewEtcd := NewEtcd
@@ -224,6 +227,7 @@ var _ = Describe("Etcd", func() {
 						MaintenanceTimeWindow: maintenanceTimeWindow,
 						ScaleDownUpdateMode:   pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
 					}),
+					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
 
 				oldNewEtcd := NewEtcd
@@ -461,6 +465,7 @@ type newEtcdValidator struct {
 	expectedStorageCapacity         gomegatypes.GomegaMatcher
 	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
 	expectedHVPAConfig              gomegatypes.GomegaMatcher
+	expectedHighAvailabilityEnabled gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -479,6 +484,7 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(values.Replicas).To(v.expectedReplicas)
 	Expect(values.StorageCapacity).To(v.expectedStorageCapacity)
 	Expect(values.DefragmentationSchedule).To(v.expectedDefragmentationSchedule)
+	Expect(values.HighAvailabilityEnabled).To(v.expectedHighAvailabilityEnabled)
 
 	return v
 }

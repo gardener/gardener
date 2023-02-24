@@ -1375,6 +1375,7 @@ var _ = Describe("Etcd", func() {
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         rotationPhase,
 					PriorityClassName:       priorityClassName,
+					HighAvailabilityEnabled: true,
 				})
 			})
 
@@ -1493,6 +1494,33 @@ var _ = Describe("Etcd", func() {
 		})
 
 		Context("when etcd cluster is hibernated", func() {
+			BeforeEach(func() {
+				secretNamesToTimes := map[string]time.Time{}
+
+				var err error
+				sm, err = secretsmanager.New(
+					ctx,
+					logr.New(logf.NullLogSink{}),
+					testclock.NewFakeClock(time.Now()),
+					fakeClient,
+					testNamespace,
+					"",
+					secretsmanager.Config{
+						SecretNamesToTimes: secretNamesToTimes,
+					})
+				Expect(err).ToNot(HaveOccurred())
+
+				// Create new etcd CA
+				_, err = sm.Generate(ctx,
+					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert})
+				Expect(err).ToNot(HaveOccurred())
+
+				// Create new peer CA
+				_, err = sm.Generate(ctx,
+					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
+				Expect(err).ToNot(HaveOccurred())
+			})
+
 			JustBeforeEach(func() {
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
@@ -1503,35 +1531,11 @@ var _ = Describe("Etcd", func() {
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         gardencorev1beta1.RotationCompleted,
 					PriorityClassName:       priorityClassName,
+					HighAvailabilityEnabled: true,
 				})
 			})
+
 			Context("when peer url secrets are present in etcd CR", func() {
-				BeforeEach(func() {
-					secretNamesToTimes := map[string]time.Time{}
-
-					var err error
-					sm, err = secretsmanager.New(
-						ctx,
-						logr.New(logf.NullLogSink{}),
-						testclock.NewFakeClock(time.Now()),
-						fakeClient,
-						testNamespace,
-						"",
-						secretsmanager.Config{
-							SecretNamesToTimes: secretNamesToTimes,
-						})
-					Expect(err).ToNot(HaveOccurred())
-
-					// Create new etcd CA
-					_, err = sm.Generate(ctx,
-						&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert})
-					Expect(err).ToNot(HaveOccurred())
-
-					// Create new peer CA
-					_, err = sm.Generate(ctx,
-						&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
-					Expect(err).ToNot(HaveOccurred())
-				})
 				It("should not remove peer URL secrets", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
@@ -1557,6 +1561,10 @@ var _ = Describe("Etcd", func() {
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, networkPolicyClientName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, networkPolicyPeerName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(peerNetworkPolicy))
+						}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
 							func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 								etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
@@ -1569,7 +1577,7 @@ var _ = Describe("Etcd", func() {
 							}),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
-							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).ToNot(BeNil())
+							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 					)
@@ -1577,8 +1585,9 @@ var _ = Describe("Etcd", func() {
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 				})
 			})
+
 			Context("when peer url secrets are not present in etcd CR", func() {
-				It("should not add peer url secrets", func() {
+				It("should add peer url secrets", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							(&druidv1alpha1.Etcd{
@@ -1598,13 +1607,17 @@ var _ = Describe("Etcd", func() {
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, networkPolicyClientName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, networkPolicyPeerName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(peerNetworkPolicy))
+						}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
 							func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 								return nil
 							}),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
-							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).To(BeNil())
+							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 					)
@@ -1924,6 +1937,8 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#RolloutPeerCA", func() {
+		var highAvailability bool
+
 		JustBeforeEach(func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
@@ -1934,6 +1949,7 @@ var _ = Describe("Etcd", func() {
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				PriorityClassName:       priorityClassName,
+				HighAvailabilityEnabled: highAvailability,
 			})
 		})
 
@@ -1948,6 +1964,10 @@ var _ = Describe("Etcd", func() {
 		})
 
 		Context("when HA control-plane is requested", func() {
+			BeforeEach(func() {
+				highAvailability = true
+			})
+
 			createEtcdObj := func(caName string) *druidv1alpha1.Etcd {
 				return &druidv1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{
