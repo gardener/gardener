@@ -26,6 +26,5 @@ maxReplicas: 5
 proxyProtocolEnabled: false
 vpn:
   enabled: false
-  highAvailabilityEnabled: false
   highAvailabilityReplicas: 2
 

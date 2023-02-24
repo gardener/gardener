@@ -47,7 +47,6 @@ type IngressGatewayValues struct {
 	TrustDomain           string
 	ProxyProtocolEnabled  bool
 	VPNEnabled            bool
-	VPNHAEnabled          bool
 	Zones                 []string
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
@@ -73,8 +72,9 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
 			"proxyProtocolEnabled":  istioIngressGateway.ProxyProtocolEnabled,
 			"vpn": map[string]interface{}{
-				"enabled":                  istioIngressGateway.VPNEnabled,
-				"highAvailabilityEnabled":  istioIngressGateway.VPNHAEnabled,
+				"enabled": istioIngressGateway.VPNEnabled,
+				// Always pass replicas here since every seed can potentially host shoot clusters with
+				// highly available control-planes.
 				"highAvailabilityReplicas": vpnseedserver.HighAvailabilityReplicaCount,
 			},
 		}
