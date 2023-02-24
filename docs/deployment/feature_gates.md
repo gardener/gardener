@@ -110,7 +110,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `false` | `Alpha`      | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`       | `1.42` | `1.62` |
 | ReversedVPN                                  | `true`  | `GA`         | `1.63` |        |
-| ForceRestore                                 | `false` | `Removed`    | `1.65` |        |
+| ForceRestore                                 | `false` | `Removed`    | `1.66` |        |
 
 ## Using a Feature
 
