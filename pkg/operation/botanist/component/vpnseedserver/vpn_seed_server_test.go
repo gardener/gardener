@@ -701,7 +701,7 @@ admin:
 				Namespace: namespace,
 				Annotations: map[string]string{
 					"networking.istio.io/exportTo":                                           "*",
-					"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]`,
+					"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"gardener.cloud/role":"exposureclass-handler"}}]`,
 					"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
 					"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
 					"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":15000}]`,
