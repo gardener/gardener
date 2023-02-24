@@ -80,7 +80,19 @@ var _ = Describe("GardenletConfiguration", func() {
 					},
 					Spec: gardencore.SeedSpec{
 						DNS: gardencore.SeedDNS{
-							IngressDomain: pointer.String("ingress.test.example.com"),
+							Provider: &gardencore.SeedDNSProvider{
+								Type: "foo",
+								SecretRef: corev1.SecretReference{
+									Name:      "secret",
+									Namespace: "namespace",
+								},
+							},
+						},
+						Ingress: &gardencore.Ingress{
+							Domain: "ingress.test.example.com",
+							Controller: gardencore.IngressController{
+								Kind: "nginx",
+							},
 						},
 						Networks: gardencore.SeedNetworks{
 							Pods:     "100.96.0.0/11",

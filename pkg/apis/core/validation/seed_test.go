@@ -159,7 +159,6 @@ var _ = Describe("Seed Validation Tests", func() {
 			seed.Spec.Provider = core.SeedProvider{
 				Zones: []string{"a", "a"},
 			}
-			seed.Spec.DNS.IngressDomain = pointer.String("invalid_dns1123-subdomain")
 			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = core.SeedNetworks{
 				Nodes:    &invalidCIDR,
@@ -225,10 +224,6 @@ var _ = Describe("Seed Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.provider.zones[1]"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.ingressDomain"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
