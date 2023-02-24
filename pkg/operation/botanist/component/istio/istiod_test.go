@@ -1631,7 +1631,16 @@ metadata:
 automountServiceAccountToken: false
 `
 
-		istioIngressDeployment = `apiVersion: apps/v1
+		istioIngressDeployment = func(vpnEnabled bool) string {
+			var additionalLabels string
+			if vpnEnabled {
+				additionalLabels = `
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194: allowed
+        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194: allowed`
+			}
+
+			return `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: istio-ingressgateway
@@ -1660,8 +1669,7 @@ spec:
         
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
-        networking.gardener.cloud/to-dns: allowed
-        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
+        networking.gardener.cloud/to-dns: allowed` + additionalLabels + `
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: a357fe81829c12ad57e92721b93fd6efa1670d19e4cab94dfb7c792f9665c51a
@@ -1848,6 +1856,8 @@ spec:
                   - bar
               topologyKey: "kubernetes.io/hostname"
 `
+		}
+
 		istioSystemNetworkPolicyAllowFromAggregatePrometheus = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -2333,7 +2343,7 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
-			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment))
+			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true)))
 
 			By("Verify istio-ingress network policies")
 			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__deny-all-egress.yaml"])).To(Equal(istioIngressNetworkPolicyDenyAllEgress))
@@ -2552,6 +2562,7 @@ spec:
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(false)))
 			})
 		})
 

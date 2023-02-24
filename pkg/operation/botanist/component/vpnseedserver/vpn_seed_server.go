@@ -66,9 +66,11 @@ const (
 	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	EnvoyPort = 9443
 	// OpenVPNPort is the port exposed by the vpn seed server for tcp tunneling.
-	OpenVPNPort     = 1194
-	metricsPort     = 15000
-	metricsPortName = "metrics"
+	OpenVPNPort = 1194
+	// HighAvailabilityReplicaCount is the replica count used when highly available VPN is configured.
+	HighAvailabilityReplicaCount = 2
+	metricsPort                  = 15000
+	metricsPortName              = "metrics"
 
 	secretNameDH            = "vpn-seed-server-dh"
 	envoyProxyContainerName = "envoy-proxy"

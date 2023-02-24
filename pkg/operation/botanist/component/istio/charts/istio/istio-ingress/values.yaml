@@ -24,4 +24,7 @@ maxReplicas: 5
 
 # Istio Ingress Configuration Resources
 proxyProtocolEnabled: false
-vpnEnabled: false
+vpn:
+  enabled: false
+  highAvailabilityReplicas: 2
+

@@ -23,6 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 )
 
 var (
@@ -70,7 +71,12 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"loadBalancerIP":        istioIngressGateway.LoadBalancerIP,
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
 			"proxyProtocolEnabled":  istioIngressGateway.ProxyProtocolEnabled,
-			"vpnEnabled":            istioIngressGateway.VPNEnabled,
+			"vpn": map[string]interface{}{
+				"enabled": istioIngressGateway.VPNEnabled,
+				// Always pass replicas here since every seed can potentially host shoot clusters with
+				// highly available control-planes.
+				"highAvailabilityReplicas": vpnseedserver.HighAvailabilityReplicaCount,
+			},
 		}
 
 		if istioIngressGateway.MinReplicas != nil {
