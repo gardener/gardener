@@ -146,8 +146,10 @@ func (r *Reconciler) newEtcd(
 		return nil, err
 	}
 
+	highAvailabilityEnabled := garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil
+
 	replicas := pointer.Int32(1)
-	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
+	if highAvailabilityEnabled {
 		replicas = pointer.Int32(3)
 	}
 
@@ -170,7 +172,8 @@ func (r *Reconciler) newEtcd(
 				MaintenanceTimeWindow: garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 				ScaleDownUpdateMode:   hvpaScaleDownUpdateMode,
 			},
-			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem500,
+			PriorityClassName:       v1beta1constants.PriorityClassNameGardenSystem500,
+			HighAvailabilityEnabled: highAvailabilityEnabled,
 		},
 	), nil
 }
