@@ -22,7 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -63,7 +62,6 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Seed = &seedpkg.Seed{}
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Seed.KubernetesVersion = semver.MustParse("v1.25.0")
 			botanist.Shoot = &shootpkg.Shoot{}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
@@ -113,56 +111,6 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 			Expect(vpa).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
-
-		DescribeTable("should correctly set topology-aware routing value",
-			func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
-				botanist.ImageVector = imagevector.ImageVector{
-					{Name: "vpa-admission-controller"},
-					{Name: "vpa-recommender"},
-					{Name: "vpa-updater"},
-				}
-
-				botanist.Seed.SetInfo(seed)
-				botanist.Shoot.SetInfo(shoot)
-
-				vpa, err := botanist.DefaultVerticalPodAutoscaler()
-				Expect(vpa).NotTo(BeNil())
-				Expect(err).NotTo(HaveOccurred())
-				values := vpa.GetValues()
-				Expect(values.AdmissionController.TopologyAwareRoutingEnabled).To(matcher)
-			},
-
-			Entry("seed setting is nil, shoot control plane is not HA",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-				BeFalse(),
-			),
-			Entry("seed setting is disabled, shoot control plane is not HA",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-				BeFalse(),
-			),
-			Entry("seed setting is enabled, shoot control plane is not HA",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-				BeFalse(),
-			),
-			Entry("seed setting is nil, shoot control plane is HA with failure tolerance type 'zone'",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-				BeFalse(),
-			),
-			Entry("seed setting is disabled, shoot control plane is HA with failure tolerance type 'zone'",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-				BeFalse(),
-			),
-			Entry("seed setting is enabled, shoot control plane is HA with failure tolerance type 'zone'",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-				BeTrue(),
-			),
-		)
 	})
 
 	Describe("#DeployVerticalPodAutoscaler", func() {

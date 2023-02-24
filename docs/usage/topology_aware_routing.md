@@ -2,7 +2,7 @@
 
 ## Motivation
 
-The enablement of [highly available shoot control-planes](shoot_high_availability.md) requires multi-zone seed clusters. The topology-aware routing is introduced to reduce costs and to improve network performance by avoiding the cross availability zone traffic, if possible. The cross availability zone traffic is charged by the cloud providers and it comes with higher latency compared to the traffic within the same zone. The topology-aware routing feature enables topology-aware routing for `Service`s deployed in the seed clusters. For the clients consuming these topology-aware services, `kube-proxy` favors the endpoints which are located in the same zone where the traffic originated from. In this way the cross availability zone traffic is avoided.
+The enablement of [highly available shoot control-planes](shoot_high_availability.md) requires multi-zone seed clusters. The topology-aware routing is introduced to reduce costs and to improve network performance by avoiding the cross availability zone traffic, if possible. The cross availability zone traffic is charged by the cloud providers and it comes with higher latency compared to the traffic within the same zone. The topology-aware routing feature enables topology-aware routing for `Service`s deployed in the seed clusters. For the clients consuming these topology-aware services, `kube-proxy` favors the endpoints which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided.
 
 ## How it works
 
@@ -15,9 +15,9 @@ The component that is responsible for providing hints in the EndpointSlices reso
    > The controller allocates a proportional amount of endpoints to each zone. This proportion is based on the allocatable CPU cores for nodes running in that zone. For example, if one zone had 2 CPU cores and another zone only had 1 CPU core, the controller would allocate twice as many endpoints to the zone with 2 CPU cores.
 
    In case it is not possible to achieve a balanced distribution of the endpoints, as a safeguard mechanism the controller removes hints from the EndpointSlice resource.
-   In our setup the clients and the servers are well-known and usually the traffic a component receives does not depend on the zone's allocatable CPU. 
+   In our setup, the clients and the servers are well-known and usually the traffic a component receives does not depend on the zone's allocatable CPU. 
    Many components deployed by Gardener are scaled automatically by VPA. In case of an overload of a replica, the VPA should provide and apply enhanced CPU and memory resources. Additionally, Gardener uses the cluster-autoscaler to upscale/downscale Nodes dynamically. Hence, it is not possible to ensure a balanced allocatable CPU across the zones.
-- TopologyAwareHints does not work at low-endpoint counts. It falls apart for a Service with less than 10 Endpoints.
+- The TopologyAwareHints feature does not work at low-endpoint counts. It falls apart for a Service with less than 10 Endpoints.
 - Hints provided by the EndpointSlice controller are not deterministic. With cluster-autoscaler running and load increasing, hints can be removed in the next moment. There is no option to enforce the zone-level topology.
 
 For more details, see the following issue [kubernetes/kubernetes#113731](https://github.com/kubernetes/kubernetes/issues/113731).
@@ -49,8 +49,8 @@ The `endpoint-slice-hints.resources.gardener.cloud/consider=true` label is neede
 The Gardener extensions can use this approach to make a Service they deploy topology-aware.
 
 Prerequisites for making a Service topology-aware:
-1. The Pods backing the Service should be spread on most of the availabel zones. This constraint should be ensured with appropriate scheduling constraints (Pod topology spread constraints, Pod (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
-1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the of the traffic is originating from a given zone) the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.
+1. The Pods backing the Service should be spread on most of the available zones. This constraint should be ensured with appropriate scheduling constraints (topology spread constraints, (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
+1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the of the traffic is originating from a given zone), the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.
 1. Consider the [`TopologyAwareHints` constraints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#constraints).
 
 > Note: The topology-aware routing feature is considered as alpha feature. Use it only for evaluation purposes.
@@ -90,4 +90,4 @@ spec:
 The topology-aware routing setting can be only enabled for a Seed cluster with more than one zone.
 gardenlet enables topology-aware Services only for Shoot control planes with failure tolerance type `zone` (`.spec.controlPlane.highAvailability.failureTolerance.type=zone`). Control plane Pods of non-HA Shoots and HA Shoots with failure tolerance type `node` are pinned to single zone. For more details, see [High Availability Of Deployed Components](../development/high-availability.md).
 
-⚠️ For K8s < 1.24 clusters, the topology-aware routing setting requires the Kubernetes `TopologyAwareHints` feature gate to be enabled for kube-apiserver, kube-controller-manager and kube-proxy. This is required because the `TopologyAwareHints` feature gate is disabled by default in K8s < 1.24. When `TopologyAwareHints` is disabled the kube-apiserver does not allow anything to be persisted in the `.endpoints[].hints` field in the EndpointSlice resource, the kube-controller-manager removes the hints and kube-proxy is not using topology-aware routing.
+⚠️ For K8s < 1.24 clusters, the topology-aware routing setting requires the Kubernetes `TopologyAwareHints` feature gate to be enabled for kube-apiserver, kube-controller-manager and kube-proxy. This is required because the `TopologyAwareHints` feature gate is disabled by default in K8s < 1.24. When `TopologyAwareHints` is disabled, the kube-apiserver does not allow anything to be persisted in the `.endpoints[].hints` field in the EndpointSlice resource. Also, the kube-controller-manager removes the hints, hence kube-proxy is not using topology-aware routing.

@@ -58,6 +58,7 @@ type Builder struct {
 	shootObjectFunc  func(context.Context) (*gardencorev1beta1.Shoot, error)
 	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
 	shootSecretFunc  func(context.Context, string, string) (*corev1.Secret, error)
+	seed             *gardencorev1beta1.Seed
 	projectName      string
 	internalDomain   *gardenerutils.Domain
 	defaultDomains   []*gardenerutils.Domain
@@ -90,6 +91,7 @@ type Shoot struct {
 	VPNHighAvailabilityNumberOfShootClients int
 	NodeLocalDNSEnabled                     bool
 	PSPDisabled                             bool
+	TopologyAwareRoutingEnabled             bool
 	Networks                                *Networks
 	BackupEntryName                         string
 	CloudConfigExecutionMaxDelaySeconds     int

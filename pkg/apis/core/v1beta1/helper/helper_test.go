@@ -2646,9 +2646,9 @@ var _ = Describe("helper", func() {
 		Entry("ingress controller kind nginx", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, Ingress: &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "nginx"}}}}, BeTrue()),
 	)
 
-	DescribeTable("#IsTopologyAwareRoutingEnabled",
+	DescribeTable("#IsTopologyAwareRoutingForShootControlPlaneEnabled",
 		func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
-			Expect(IsTopologyAwareRoutingEnabled(seed, shoot)).To(matcher)
+			Expect(IsTopologyAwareRoutingForShootControlPlaneEnabled(seed, shoot)).To(matcher)
 		},
 
 		Entry("seed setting is nil, shoot control plane is not HA",

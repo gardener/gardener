@@ -43,7 +43,7 @@ import (
 
 func TestEndpointSliceHints(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "EndpointSliceHints Integration Test Suite")
+	RunSpecs(t, "Test Integration ResourceManager EndpointSliceHints Suite")
 }
 
 const testID = "endpointslicehints-webhook-test"

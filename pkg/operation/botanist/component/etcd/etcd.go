@@ -40,7 +40,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -355,10 +354,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 	))
-	if e.values.TopologyAwareRoutingEnabled {
-		metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, corev1.AnnotationTopologyAwareHints, "auto")
-		metav1.SetMetaDataLabel(&clientService.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
-	}
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)

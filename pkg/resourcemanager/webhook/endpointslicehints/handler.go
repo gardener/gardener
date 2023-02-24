@@ -46,11 +46,9 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 	log := h.Logger.WithValues("endpointSlice", kubernetesutils.ObjectKeyForCreateWebhooks(endpointSlice, req))
 	log.Info("Mutating endpoints' hints to the corresponding endpoint's zone")
 
-	for i := range endpointSlice.Endpoints {
-		endpoint := &endpointSlice.Endpoints[i]
-
+	for i, endpoint := range endpointSlice.Endpoints {
 		if endpoint.Zone != nil && len(*endpoint.Zone) > 0 {
-			endpoint.Hints = &discoveryv1.EndpointHints{
+			endpointSlice.Endpoints[i].Hints = &discoveryv1.EndpointHints{
 				ForZones: []discoveryv1.ForZone{
 					{
 						Name: *endpoint.Zone,

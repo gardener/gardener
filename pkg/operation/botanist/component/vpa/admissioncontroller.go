@@ -148,13 +148,8 @@ func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding 
 }
 
 func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
-	if v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot {
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, corev1.AnnotationTopologyAwareHints, "auto")
-		metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
-	} else {
-		delete(service.Annotations, corev1.AnnotationTopologyAwareHints)
-		delete(service.Labels, resourcesv1alpha1.EndpointSliceHintsConsider)
-	}
+	topologAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled)
 
 	service.Spec.Selector = getAppLabel(admissionController)
 	desiredPorts := []corev1.ServicePort{

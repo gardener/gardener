@@ -178,20 +178,14 @@ func (s *service) Deploy(ctx context.Context) error {
 				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
 		}
 
-		if s.values.topologyAwareRoutingEnabled {
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, corev1.AnnotationTopologyAwareHints, "auto")
-		} else {
-			delete(obj.Annotations, corev1.AnnotationTopologyAwareHints)
-		}
-
-		obj.Labels = getLabels()
+		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
 		if s.values.gardenerManaged {
 			metav1.SetMetaDataLabel(&obj.ObjectMeta, v1beta1constants.LabelAPIServerExposure, v1beta1constants.LabelAPIServerExposureGardenerManaged)
+		} else {
+			delete(obj.Labels, v1beta1constants.LabelAPIServerExposure)
 		}
-		if s.values.topologyAwareRoutingEnabled {
-			metav1.SetMetaDataLabel(&obj.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
-			// No need to delete the consider label when topologyAwareRoutingEnabled=false as the labels are overwritten few lines above.
-		}
+
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled)
 
 		obj.Spec.Type = s.values.serviceType
 		obj.Spec.Selector = getLabels()

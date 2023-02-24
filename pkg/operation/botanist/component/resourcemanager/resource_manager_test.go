@@ -108,7 +108,6 @@ var _ = Describe("ResourceManager", func() {
 		targetDisableCache                   = true
 		maxUnavailable                       = intstr.FromInt(1)
 		failurePolicyFail                    = admissionregistrationv1.Fail
-		failurePolicyIgnore                  = admissionregistrationv1.Ignore
 		matchPolicyExact                     = admissionregistrationv1.Exact
 		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
@@ -1042,7 +1041,7 @@ var _ = Describe("ResourceManager", func() {
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					FailurePolicy:           &failurePolicyIgnore,
+					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),

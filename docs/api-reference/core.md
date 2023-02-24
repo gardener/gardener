@@ -9092,7 +9092,8 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.</p>
+<p>Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
+These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.</p>
 </td>
 </tr>
 </tbody>

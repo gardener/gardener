@@ -22,7 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -97,54 +96,6 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
-
-		DescribeTable("should correctly set topology-aware routing value",
-			func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
-				botanist.ImageVector = imagevector.ImageVector{
-					{Name: "gardener-resource-manager"},
-				}
-
-				botanist.Seed.SetInfo(seed)
-				botanist.Shoot.SetInfo(shoot)
-
-				resourceManager, err := botanist.DefaultResourceManager()
-				Expect(resourceManager).NotTo(BeNil())
-				Expect(err).NotTo(HaveOccurred())
-				values := resourceManager.GetValues()
-				Expect(values.TopologyAwareRoutingEnabled).To(matcher)
-			},
-
-			Entry("seed setting is nil, shoot control plane is not HA",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-				BeFalse(),
-			),
-			Entry("seed setting is disabled, shoot control plane is not HA",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-				BeFalse(),
-			),
-			Entry("seed setting is enabled, shoot control plane is not HA",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-				BeFalse(),
-			),
-			Entry("seed setting is nil, shoot control plane is HA with failure tolerance type 'zone'",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-				BeFalse(),
-			),
-			Entry("seed setting is disabled, shoot control plane is HA with failure tolerance type 'zone'",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-				BeFalse(),
-			),
-			Entry("seed setting is enabled, shoot control plane is HA with failure tolerance type 'zone'",
-				&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
-				&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-				BeTrue(),
-			),
-		)
 	})
 
 	Describe("#DeployGardenerResourceManager", func() {

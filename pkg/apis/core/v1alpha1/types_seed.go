@@ -335,6 +335,7 @@ type SeedSettingDependencyWatchdogProbe struct {
 // See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
 type SeedSettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
+	// These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 

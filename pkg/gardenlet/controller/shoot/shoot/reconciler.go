@@ -344,6 +344,7 @@ func (r *Reconciler) initializeOperation(
 		WithShootObject(shoot).
 		WithCloudProfileObject(cloudProfile).
 		WithShootSecretFrom(r.GardenClient).
+		WithSeedObject(seed).
 		WithProjectName(project.Name).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).

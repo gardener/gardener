@@ -681,20 +681,15 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 
 	service := r.emptyService()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
-		service.Labels = r.getLabels()
+		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt(metricsPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 
-		if r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster {
-			metav1.SetMetaDataAnnotation(&service.ObjectMeta, corev1.AnnotationTopologyAwareHints, "auto")
-			metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
-		} else {
-			delete(service.Annotations, corev1.AnnotationTopologyAwareHints)
-			// No need to delete the consider label as the labels are overwritten few lines above.
-		}
+		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
 
 		service.Spec.Selector = appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -1782,7 +1777,7 @@ func GetEndpointSliceHintsMutatingWebhook(
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
 	var (
-		failurePolicy = admissionregistrationv1.Ignore
+		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Equivalent
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
 	)

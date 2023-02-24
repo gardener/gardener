@@ -93,7 +93,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			},
 		},
 		WatchedNamespace:            pointer.String(b.Shoot.SeedNamespace),
-		TopologyAwareRoutingEnabled: v1beta1helper.IsTopologyAwareRoutingEnabled(b.Seed.GetInfo(), b.Shoot.GetInfo()),
+		TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 	}
 
 	return resourcemanager.New(

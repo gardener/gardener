@@ -304,7 +304,7 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       path: /webhooks/endpoint-slice-hints
       port: 443
-  failurePolicy: Ignore
+  failurePolicy: Fail
   matchPolicy: Equivalent
   name: endpoint-slice-hints.resources.gardener.cloud
   namespaceSelector: {}

@@ -129,7 +129,7 @@ This document provides a checklist for them that you can walk through.
 
 6. **Consider making a `Service` topology-aware** ([example](https://github.com/gardener/gardener/blob/6e5a47514b58a89355976a57ffede51b04df82e3/pkg/operation/botanist/component/vpa/admissioncontroller.go#L154-L160))
 
-   To reduce costs and to improve the network traffic latency in multi-zone Seed clusters, consider making a `Service` topology-aware, if applicable. In short, when a `Service` is topology-aware, Kubernetes routes network traffic to the `Endpoint`s (`Pod`s) which are located in the same zone where the traffic originated from. In this way the cross availability zone traffic is avoided. See [Topology-Aware Traffic Routing](../usage/topology_aware_routing.md).
+   To reduce costs and to improve the network traffic latency in multi-zone Seed clusters, consider making a `Service` topology-aware, if applicable. In short, when a `Service` is topology-aware, Kubernetes routes network traffic to the `Endpoint`s (`Pod`s) which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided. See [Topology-Aware Traffic Routing](../usage/topology_aware_routing.md).
 
 ## Scalability
 

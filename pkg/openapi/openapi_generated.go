@@ -6700,7 +6700,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingTopologyAwareRouting(ref common.Re
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.",
+							Description: "Enabled controls whether certain Services deployed in the seed cluster should be topology-aware. These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
@@ -14414,7 +14414,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingTopologyAwareRouting(ref common.Ref
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.",
+							Description: "Enabled controls whether certain Services deployed in the seed cluster should be topology-aware. These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",

@@ -216,7 +216,7 @@ webhooks:
     - CREATE
     - UPDATE
   sideEffects: None
-  failurePolicy: Ignore
+  failurePolicy: Fail
   matchPolicy: Equivalent
   objectSelector:
     matchLabels:
