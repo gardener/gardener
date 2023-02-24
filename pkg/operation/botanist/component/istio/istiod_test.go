@@ -1632,9 +1632,9 @@ automountServiceAccountToken: false
 `
 
 		istioIngressDeployment = func(vpnEnabled bool) string {
-			var additionalAnnotations string
+			var additionalLabels string
 			if vpnEnabled {
-				additionalAnnotations = `
+				additionalLabels = `
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194: allowed
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194: allowed`
@@ -1669,7 +1669,7 @@ spec:
         
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
-        networking.gardener.cloud/to-dns: allowed` + additionalAnnotations + `
+        networking.gardener.cloud/to-dns: allowed` + additionalLabels + `
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: a357fe81829c12ad57e92721b93fd6efa1670d19e4cab94dfb7c792f9665c51a
