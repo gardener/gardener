@@ -212,6 +212,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       HVPAForShootedSeed: false
       IPv6SingleStack: false
       KMSv2: false
+      MachineControllerManagerDeployment: false
       MutableShootSpecNetworkingNodes: false
       OpenAPIEnums: true
       OpenAPIV3: true
