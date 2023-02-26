@@ -31,6 +31,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -284,6 +285,9 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	}
 
 	// Initialize and validate DNS and ingress
+	if spec.Ingress == nil {
+		spec.Ingress = &core.Ingress{}
+	}
 	ingressDomain := fmt.Sprintf("%s.%s", gardenerutils.IngressPrefix, *(shoot.Spec.DNS.Domain))
 	if spec.Ingress != nil {
 		if spec.DNS.Provider == nil {
@@ -301,12 +305,6 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 			spec.Ingress.Domain = ingressDomain
 		} else if spec.Ingress.Domain != ingressDomain {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, fmt.Sprintf("seed ingress domain must be equal to shoot DNS domain %s", ingressDomain)))
-		}
-	} else {
-		if spec.DNS.IngressDomain == nil || *spec.DNS.IngressDomain == "" {
-			spec.DNS.IngressDomain = &ingressDomain
-		} else if !strings.HasSuffix(*spec.DNS.IngressDomain, *shoot.Spec.DNS.Domain) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), spec.DNS.IngressDomain, fmt.Sprintf("seed ingress domain must be a subdomain of shoot DNS domain %s", *shoot.Spec.DNS.Domain)))
 		}
 	}
 
@@ -407,8 +405,6 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencore.Shoot)
 	return &gardencore.SeedDNSProvider{
 		Type:      *primaryProvider.Type,
 		SecretRef: secretRef,
-		Domains:   primaryProvider.Domains,
-		Zones:     primaryProvider.Zones,
 	}, nil
 }
 
@@ -423,30 +419,18 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot
 
 	// Search for a default domain secret that matches the shoot domain
 	for _, secret := range defaultDomainSecrets {
-		provider, domain, _, includeZones, excludeZones, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+		provider, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get domain info from domain secret annotations: %v", err))
 		}
 
 		if strings.HasSuffix(*shoot.Spec.DNS.Domain, domain) {
-			var zones *gardencore.DNSIncludeExclude
-			if includeZones != nil || excludeZones != nil {
-				zones = &gardencore.DNSIncludeExclude{
-					Include: includeZones,
-					Exclude: excludeZones,
-				}
-			}
-
 			return &gardencore.SeedDNSProvider{
 				Type: provider,
 				SecretRef: corev1.SecretReference{
 					Name:      secret.Name,
 					Namespace: secret.Namespace,
 				},
-				Domains: &gardencore.DNSIncludeExclude{
-					Include: []string{domain},
-				},
-				Zones: zones,
 			}, nil
 		}
 	}

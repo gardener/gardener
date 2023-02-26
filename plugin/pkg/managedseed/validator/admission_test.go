@@ -62,7 +62,7 @@ var _ = Describe("ManagedSeed", func() {
 			managedSeed          *seedmanagement.ManagedSeed
 			shoot                *core.Shoot
 			secret               *corev1.Secret
-			seed                 func(bool) *core.Seed
+			seed                 *core.Seed
 			coreInformerFactory  gardencoreinformers.SharedInformerFactory
 			coreClient           *corefake.Clientset
 			seedManagementClient *fakeseedmanagement.Clientset
@@ -126,61 +126,39 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			seed = func(withIngress bool) *core.Seed {
-				var (
-					dns     core.SeedDNS
-					ingress *core.Ingress
-				)
-
-				if withIngress {
-					dns = core.SeedDNS{
+			seed = &core.Seed{
+				Spec: core.SeedSpec{
+					Backup: &core.SeedBackup{
+						Provider: provider,
+					},
+					DNS: core.SeedDNS{
 						Provider: &core.SeedDNSProvider{
 							Type: dnsProvider,
 							SecretRef: corev1.SecretReference{
 								Name:      name,
 								Namespace: namespace,
 							},
-							Domains: &core.DNSIncludeExclude{
-								Include: []string{domain},
-							},
 						},
-					}
-					ingress = &core.Ingress{
-						Domain: "ingress." + domain,
-						Controller: core.IngressController{
-							Kind: "nginx",
-						},
-					}
-				} else {
-					dns = core.SeedDNS{
-						IngressDomain: pointer.String("ingress." + domain),
-					}
-				}
-
-				return &core.Seed{
-					Spec: core.SeedSpec{
-						Backup: &core.SeedBackup{
-							Provider: provider,
-						},
-						DNS: dns,
-						Networks: core.SeedNetworks{
-							Nodes:    pointer.String("10.250.0.0/16"),
-							Pods:     "100.96.0.0/11",
-							Services: "100.64.0.0/13",
-						},
-						Provider: core.SeedProvider{
-							Type:   provider,
-							Region: region,
-							Zones:  []string{zone1, zone2},
-						},
-						Settings: &core.SeedSettings{
-							VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
-								Enabled: false,
-							},
-						},
-						Ingress: ingress,
 					},
-				}
+					Networks: core.SeedNetworks{
+						Nodes:    pointer.String("10.250.0.0/16"),
+						Pods:     "100.96.0.0/11",
+						Services: "100.64.0.0/13",
+					},
+					Provider: core.SeedProvider{
+						Type:   provider,
+						Region: region,
+						Zones:  []string{zone1, zone2},
+					},
+					Settings: &core.SeedSettings{
+						VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
+							Enabled: false,
+						},
+					},
+					Ingress: &core.Ingress{
+						Domain: "ingress." + domain,
+					},
+				},
 			}
 
 			var err error
@@ -359,17 +337,17 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				seedx, err = gardencorehelper.ConvertSeedExternal(seed(false))
+				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed", func() {
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
+
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.Gardenlet{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
@@ -404,79 +382,7 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(BeInternalServerError())
 			})
 
-			It("should forbid the ManagedSeed creation if the seed spec contains invalid values (w/o ingress)", func() {
-				seedSpec := gardencorev1beta1.SeedSpec{
-					DNS: gardencorev1beta1.SeedDNS{
-						IngressDomain: pointer.String("bar.example.com"),
-					},
-					Networks: gardencorev1beta1.SeedNetworks{
-						Nodes:    pointer.String("10.251.0.0/16"),
-						Pods:     "100.97.0.0/11",
-						Services: "100.65.0.0/13",
-					},
-					Provider: gardencorev1beta1.SeedProvider{
-						Type:   "bar-provider",
-						Region: "bar-region",
-						Zones:  []string{"foo", "bar"},
-					},
-					Settings: &gardencorev1beta1.SeedSettings{
-						VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
-							Enabled: true,
-						},
-					},
-				}
-
-				managedSeed.Spec.Gardenlet.Config = &gardenletv1alpha1.GardenletConfiguration{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "GardenletConfiguration",
-					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
-						SeedTemplate: gardencorev1beta1.SeedTemplate{
-							Spec: seedSpec,
-						},
-					},
-				}
-
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
-
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).To(BeInvalidError())
-				Expect(getErrorList(err)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.dns.ingressDomain"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.networks.nodes"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.networks.pods"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.networks.services"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.provider.type"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.provider.region"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.settings.verticalPodAutoscaler.enabled"),
-					})),
-				))
-			})
-
-			It("should forbid the ManagedSeed creation if the seed spec contains invalid values (w/ ingress)", func() {
+			It("should forbid the ManagedSeed creation if the seed spec contains invalid values", func() {
 				seedSpec := gardencorev1beta1.SeedSpec{
 					Ingress: &gardencorev1beta1.Ingress{
 						Domain: "bar.example.com",
