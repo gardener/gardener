@@ -177,6 +177,8 @@ var _ = Describe("ManagedSeed", func() {
 
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+
+			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
 
 		It("should do nothing if the resource is not a ManagedSeed", func() {
@@ -213,9 +215,7 @@ var _ = Describe("ManagedSeed", func() {
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, nil, apierrors.NewNotFound(core.Resource("shoot"), "")
-			})
+			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
@@ -229,10 +229,6 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should forbid the ManagedSeed creation if the Shoot does not specify a domain", func() {
 			shoot.Spec.DNS = nil
-
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
@@ -253,10 +249,6 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
-
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
@@ -269,10 +261,6 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should forbid the ManagedSeed creation if the Shoot does not enable VPA", func() {
 			shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
-
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
@@ -297,9 +285,6 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
 			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*anotherManagedSeed}}, nil
 			})
@@ -342,7 +327,6 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
@@ -365,10 +349,6 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should fail if config could not be converted to GardenletConfiguration", func() {
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
-
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config: &corev1.Pod{
 						TypeMeta: metav1.TypeMeta{
@@ -404,9 +384,6 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).NotTo(HaveOccurred())
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
