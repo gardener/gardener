@@ -544,6 +544,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.KubeProxy.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled).DoIf(!kubeProxyEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler),
 		})
+		deployAPIServerProxy = g.Add(flow.Task{
+			Name:         "Deploying apiserver-proxy",
+			Fn:           flow.TaskFn(botanist.DeployAPIServerProxy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
+		})
 		deployManagedResourcesForAddons = g.Add(flow.Task{
 			Name:         "Deploying managed resources for system components and optional addons",
 			Fn:           flow.TaskFn(botanist.DeployManagedResourceForAddons).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
@@ -567,6 +572,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 		syncPointAllSystemComponentsDeployed = flow.NewTaskIDs(
 			waitUntilNetworkIsReady,
+			deployAPIServerProxy,
 			deployShootSystemResources,
 			deployCoreDNS,
 			deployNodeLocalDNS,

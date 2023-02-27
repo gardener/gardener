@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -159,31 +158,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		return nil, err
 	}
 
-	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	apiServerProxyConfig := map[string]interface{}{
-		"advertiseIPAddress": b.APIServerClusterIP,
-		"proxySeedServer": map[string]interface{}{
-			"host": b.outOfClusterAPIServerFQDN(),
-			"port": "8443",
-		},
-		"webhook": map[string]interface{}{
-			"caBundle": clusterCASecret.Data[secrets.DataKeyCertificateBundle],
-		},
-		"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
-	}
-
-	apiServerProxy, err := b.InjectShootShootImages(apiServerProxyConfig, images.ImageNameApiserverProxySidecar, images.ImageNameApiserverProxy)
-	if err != nil {
-		return nil, err
-	}
-
 	values := map[string]interface{}{
 		"global":          global,
-		"apiserver-proxy": common.GenerateAddonConfig(apiServerProxy, b.APIServerSNIEnabled()),
+		"apiserver-proxy": common.GenerateAddonConfig(nil, b.APIServerSNIEnabled()),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

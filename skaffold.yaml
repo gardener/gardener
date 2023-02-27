@@ -296,6 +296,7 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/operation/botanist/component
+        - pkg/operation/botanist/component/apiserverproxy
         - pkg/operation/botanist/component/backupentry
         - pkg/operation/botanist/component/clusterautoscaler
         - pkg/operation/botanist/component/clusteridentity
@@ -895,6 +896,7 @@ build:
         - pkg/logger
         - pkg/operation
         - pkg/operation/botanist
+        - pkg/operation/botanist/component/apiserverproxy
         - pkg/operation/botanist/component/nginxingressshoot
         - pkg/operation/botanist/component
         - pkg/operation/botanist/component/backupentry

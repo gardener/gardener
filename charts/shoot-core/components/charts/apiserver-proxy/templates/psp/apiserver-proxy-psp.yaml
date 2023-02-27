@@ -1,37 +1,9 @@
+# TODO(oliver-goetz): Delete this Helm chart in a future version.
 {{- if not .Values.global.pspDisabled }}
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.apiserver-proxy
   annotations:
-    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
-  labels:
-    gardener.cloud/role: system-component
-    origin: gardener
-spec:
-  privileged: false
-  volumes:
-  - secret
-  - configMap
-  - emptyDir
-  hostNetwork: true
-  hostPorts:
-  - min: 443
-    max: 443
-  - min: {{ .Values.adminPort }}
-    max: {{ .Values.adminPort }}
-  allowedHostPaths: []
-  allowedCapabilities:
-  - NET_ADMIN
-  - NET_BIND_SERVICE
-  runAsUser:
-    rule: 'RunAsAny'
-  seLinux:
-    rule: 'RunAsAny'
-  supplementalGroups:
-    rule: 'RunAsAny'
-  fsGroup:
-    rule: 'RunAsAny'
-  readOnlyRootFilesystem: false
+    resources.gardener.cloud/mode: Ignore
 {{- end }}

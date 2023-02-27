@@ -1,20 +1,10 @@
+# TODO(oliver-goetz): Delete this Helm chart in a future version.
 {{- if not .Values.global.pspDisabled }}
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
   name: gardener.cloud:psp:apiserver-proxy
   namespace: kube-system
-  labels:
-    gardener.cloud/role: system-component
-    origin: gardener
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:apiserver-proxy
-subjects:
-- kind: ServiceAccount
-  name: apiserver-proxy
-  namespace: kube-system
+    resources.gardener.cloud/mode: Ignore
 {{- end }}
