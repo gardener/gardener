@@ -46,3 +46,61 @@ func MutateCARotation(garden *operatorv1alpha1.Garden, f func(rotation *gardenco
 
 	f(garden.Status.Credentials.Rotation.CertificateAuthorities)
 }
+
+// GetServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
+// string.
+func GetServiceAccountKeyRotationPhase(credentials *operatorv1alpha1.Credentials) gardencorev1beta1.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
+		return credentials.Rotation.ServiceAccountKey.Phase
+	}
+	return ""
+}
+
+// MutateServiceAccountKeyRotation mutates the .status.credentials.rotation.serviceAccountKey field based on the
+// provided mutation function. If the field is nil then it is initialized.
+func MutateServiceAccountKeyRotation(garden *operatorv1alpha1.Garden, f func(*gardencorev1beta1.ServiceAccountKeyRotation)) {
+	if f == nil {
+		return
+	}
+
+	if garden.Status.Credentials == nil {
+		garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+	}
+	if garden.Status.Credentials.Rotation == nil {
+		garden.Status.Credentials.Rotation = &operatorv1alpha1.CredentialsRotation{}
+	}
+	if garden.Status.Credentials.Rotation.ServiceAccountKey == nil {
+		garden.Status.Credentials.Rotation.ServiceAccountKey = &gardencorev1beta1.ServiceAccountKeyRotation{}
+	}
+
+	f(garden.Status.Credentials.Rotation.ServiceAccountKey)
+}
+
+// GetETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
+// string.
+func GetETCDEncryptionKeyRotationPhase(credentials *operatorv1alpha1.Credentials) gardencorev1beta1.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
+		return credentials.Rotation.ETCDEncryptionKey.Phase
+	}
+	return ""
+}
+
+// MutateETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
+// provided mutation function. If the field is nil then it is initialized.
+func MutateETCDEncryptionKeyRotation(garden *operatorv1alpha1.Garden, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {
+	if f == nil {
+		return
+	}
+
+	if garden.Status.Credentials == nil {
+		garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+	}
+	if garden.Status.Credentials.Rotation == nil {
+		garden.Status.Credentials.Rotation = &operatorv1alpha1.CredentialsRotation{}
+	}
+	if garden.Status.Credentials.Rotation.ETCDEncryptionKey == nil {
+		garden.Status.Credentials.Rotation.ETCDEncryptionKey = &gardencorev1beta1.ETCDEncryptionKeyRotation{}
+	}
+
+	f(garden.Status.Credentials.Rotation.ETCDEncryptionKey)
+}
