@@ -54,7 +54,7 @@ The above resources is divided into two parts (more information can be found at 
 
 ## Supporting a New Network Extension Provider
 
-To add support for another networking provider (e.g., weave, Cilium, Flannel, etc.) a network extension controller needs to be implemented which would optionally have its own custom configuration specified in the `spec.providerConfig` in the `Network` resource. For example, if support for a network plugin named `gardenet` is required, the following `Network` resource would be created:
+To add support for another networking provider (e.g., weave, Cilium, Flannel) a network extension controller needs to be implemented which would optionally have its own custom configuration specified in the `spec.providerConfig` in the `Network` resource. For example, if support for a network plugin named `gardenet` is required, the following `Network` resource would be created:
 
 ```yaml
 ---

@@ -2,22 +2,22 @@
 title: APIServer SNI Injection
 ---
 
-# APIServerSNI environment variable injection
+# APIServerSNI Environment Variable Injection
 
-If the Gardener administrator has enabled `APIServerSNI` feature gate for a particular Seed cluster, then in each Shoot cluster's `kube-system` namespace a `DaemonSet` called `apiserver-proxy` is deployed. It routes traffic to the upstream Shoot Kube APIServer. See the [APIServer SNI GEP](../proposals/08-shoot-apiserver-via-sni.md) for more details.
+If the Gardener administrator has enabled the `APIServerSNI` feature gate for a particular Seed cluster, then in each Shoot cluster's `kube-system` namespace a `DaemonSet` called `apiserver-proxy` is deployed. It routes traffic to the upstream Shoot Kube APIServer. See the [APIServer SNI GEP](../proposals/08-shoot-apiserver-via-sni.md) for more details.
 
-To skip this extra network hop, a [mutating webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook) called `apiserver-proxy.networking.gardener.cloud` is deployed next to the API server in the Seed. It adds `KUBERNETES_SERVICE_HOST` environment variable to each container and init container that do not specify it. See the webhook [repository](https://github.com/gardener/apiserver-proxy/) for more information.
+To skip this extra network hop, a [mutating webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook) called `apiserver-proxy.networking.gardener.cloud` is deployed next to the API server in the Seed. It adds a `KUBERNETES_SERVICE_HOST` environment variable to each container and init container that do not specify it. See the webhook [repository](https://github.com/gardener/apiserver-proxy/) for more information.
 
-## Opt-out of pod injection
+## Opt-Out of Pod Injection
 
 In some cases it's desirable to opt-out of Pod injection:
 
 - DNS is disabled on that individual Pod, but it still needs to talk to the kube-apiserver.
 - Want to test the `kube-proxy` and `kubelet` in-cluster discovery.
 
-### Opt-out of pod injection for specific pods
+### Opt-Out of Pod Injection for Specific Pods
 
-To opt out of the injection, the Pod should be labeled with `apiserver-proxy.networking.gardener.cloud/inject: disable` e.g.:
+To opt out of the injection, the Pod should be labeled with `apiserver-proxy.networking.gardener.cloud/inject: disable`, e.g.:
 
 ```yaml
 apiVersion: apps/v1
@@ -44,9 +44,9 @@ spec:
         - containerPort: 80
 ```
 
-### Opt-out of pod injection on namespace level
+### Opt-Out of Pod Injection on Namespace Level
 
-To opt out of the injection of **all** Pods in a namespace, you should label your namespace with `apiserver-proxy.networking.gardener.cloud/inject: disable` e.g.:
+To opt out of the injection of **all** Pods in a namespace, you should label your namespace with `apiserver-proxy.networking.gardener.cloud/inject: disable`, e.g.:
 
 ```yaml
 apiVersion: v1
@@ -63,9 +63,9 @@ or via `kubectl` for existing namespace:
 kubectl label namespace my-namespace apiserver-proxy.networking.gardener.cloud/inject=disable
 ```
 
-> NOTE: Please be aware that it's not possible to disable injection on namespace level and enable it for individual pods in it.
+> **Note:** Please be aware that it's not possible to disable injection on a namespace level and enable it for individual pods in it.
 
-### Opt-out of pod injection for the entire cluster
+### Opt-Out of Pod Injection for the Entire Cluster
 
 If the injection is causing problems for different workloads and ignoring individual pods or namespaces is not possible, then the feature could be disabled for the entire cluster with the `alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector` annotation with value `disable` on the `Shoot` resource itself:
 
@@ -84,4 +84,4 @@ or via `kubectl` for existing shoot cluster:
 kubectl label shoot my-cluster alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector=disable
 ```
 
-> NOTE: Please be aware that it's not possible to disable injection on cluster level and enable it for individual pods in it.
+> **Note:** Please be aware that it's not possible to disable injection on a cluster level and enable it for individual pods in it.

@@ -1,10 +1,10 @@
 # Control Plane Migration
 
-## Preconditions
+## Prerequisites
 
 To be able to use this feature, the `SeedChange` feature gate has to be enabled on your `gardener-apiserver`.
 
-Also, the involved Seeds need to have enabled BackupBuckets.
+Also, the involved Seeds need to have enabled `BackupBucket`s.
 
 ## ShootState
 
@@ -12,9 +12,9 @@ Also, the involved Seeds need to have enabled BackupBuckets.
 
 ## Shoot Control Plane Migration
 
-Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` `"Destination Seed"`. This action can only be performed by an operator with necessary RBAC. If the Destination `Seed` does not have a backup and restore configuration, the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
+Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` a `"Destination Seed"`. This action can only be performed by an operator with the necessary RBAC. If the Destination `Seed` does not have a backup and restore configuration, the the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
 
-If the `Shoot` has different `.spec.seedName` and `.status.seedName` a process is started to prepare the Control Plane for migration:
+If the `Shoot` has different `.spec.seedName` and `.status.seedName`, a process is started to prepare the Control Plane for migration:
 
 1. `.status.lastOperation` is changed to `Migrate`.
 2. Kubernetes API Server is stopped and the extension resources are annotated with `gardener.cloud/operation=migrate`.
@@ -22,11 +22,11 @@ If the `Shoot` has different `.spec.seedName` and `.status.seedName` a process i
 
 If the process is successful, we update the status of the `Shoot` by setting the `.status.seedName` to the null value. That way, a restoration is triggered in the `Destination Seed` and `.status.lastOperation` is changed to `Restore`. The control plane migration is completed when the `Restore` operation has completed successfully.
 
-When the `CopyEtcdBackupsDuringControlPlaneMigration` feature gate is enabled on the `gardenlet`, the etcd backups will be copied over to the `BackupBucket` of the `Destination Seed` during control plane migration and any future backups will be uploaded there. Otherwise, backups will continue to be uploaded to the `BackupBucket` of the `Source Seed`,
+When the `CopyEtcdBackupsDuringControlPlaneMigration` feature gate is enabled on the `gardenlet`, the etcd backups will be copied over to the `BackupBucket` of the `Destination Seed` during control plane migration and any future backups will be uploaded there. Otherwise, backups will continue to be uploaded to the `BackupBucket` of the `Source Seed`.
 
-## Triggering the migration
+## Triggering the Migration
 
-For controlplane migration, operators with necessary RBAC can use the [`shoots/binding`](../concepts/scheduler.md#shootsbinding-subresource) subresource to change the `.spec.seedName`, with the following commands:
+For controlplane migration, operators with the necessary RBAC can use the [`shoots/binding`](../concepts/scheduler.md#shootsbinding-subresource) subresource to change the `.spec.seedName`, with the following commands:
 
 ```
 export NAMESPACE=my-namespace

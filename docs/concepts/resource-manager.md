@@ -668,7 +668,7 @@ The components in namespace `b` now need to be labeled with `networking.resource
 
 #### `Service` Targets In Multiple Namespaces
 
-Finally, let's say there is a `Service` called `example` which exists in different namespaces whose names are not static (e.g., `foo-1`, `foo-2`, etc.), and a component in namespace `bar` wants to initiate connections with all of them.
+Finally, let's say there is a `Service` called `example` which exists in different namespaces whose names are not static (e.g., `foo-1`, `foo-2`), and a component in namespace `bar` wants to initiate connections with all of them.
 
 The `example` `Service`s in these namespaces can now be annotated with `networking.resources.gardener.cloud/namespace-selectors='[{"matchLabels":{"kubernetes.io/metadata.name":"bar"}}]'`.
 As a consequence, the component in namespace `bar` now needs to be labeled with `networking.resources.gardener.cloud/to-foo-1-example-tcp-8080=allowed`, `networking.resources.gardener.cloud/to-foo-2-example-tcp-8080=allowed`, etc.

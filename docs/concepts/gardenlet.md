@@ -178,7 +178,7 @@ endpoint returns HTTP status code 200.
 If that is the case, the gardenlet renews the lease in the Garden cluster in the `gardener-system-seed-lease` namespace and updates
 the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource. For more information, see [this section](#lease-reconciler).
 
-Similarly to the `node-lifecycle-controller` inside the `kube-controller-manager`,
+Similar to the `node-lifecycle-controller` inside the `kube-controller-manager`,
 the `gardener-controller-manager` features a `seed-lifecycle-controller` that sets
 the `GardenletReady` condition to `Unknown` in case the gardenlet fails to renew the lease.
 As a consequence, the `gardener-scheduler` doesn’t consider this seed cluster for newly created shoot clusters anymore.
@@ -406,8 +406,8 @@ It maintains five conditions and performs the following checks:
 - `APIServerAvailable`: The `/healthz` endpoint of the shoot's `kube-apiserver` is called and considered healthy when it responds with `200 OK`.
 - `ControlPlaneHealthy`: The control plane is considered healthy when the respective `Deployment`s (for example `kube-apiserver`,`kube-controller-manager`), and `Etcd`s (for example `etcd-main`) exist and are healthy.
 - `ObservabilityComponentsHealthy`: This condition is considered healthy when the respective `Deployment`s (for example `grafana`), `StatefulSet`s (for example `prometheus`,`loki`), exist and are healthy.
-- `EveryNodyReady`: The conditions of the worker nodes are checked (e.g., `Ready`, `MemoryPressure`, etc.). Also, it's checked whether the Kubernetes version of the installed `kubelet` matches the desired version specified in the `Shoot` resource.
-- `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g. `ResourcesApplied`, etc.). Also, it is verified whether the VPN tunnel connection is established (which is required for the `kube-apiserver` to communicate with the worker nodes).
+- `EveryNodyReady`: The conditions of the worker nodes are checked (e.g., `Ready`, `MemoryPressure`). Also, it's checked whether the Kubernetes version of the installed `kubelet` matches the desired version specified in the `Shoot` resource.
+- `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g., `ResourcesApplied`). Also, it is verified whether the VPN tunnel connection is established (which is required for the `kube-apiserver` to communicate with the worker nodes).
 
 Sometimes, `ManagedResource`s can have both `Healthy` and `Progressing` conditions set to `True` (e.g., when a `DaemonSet` rolls out one-by-one on a large cluster with many nodes) while this is not reflected in the `Shoot` status. In order to catch issues where the rollout gets stuck, one can set `.controllers.shootCare.managedResourceProgressingThreshold` in the `gardenlet`'s component configuration. If the `Progressing` condition is still `True` for more than the configured duration, the `SystemComponentsHealthy` condition in the `Shoot` is set to `False`, eventually.
 

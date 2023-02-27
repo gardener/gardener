@@ -1,6 +1,6 @@
 # Deploying Gardener into a Kubernetes Cluster
 
-Similarly to Kubernetes, Gardener consists out of control plane components (Gardener API server, Gardener controller manager, Gardener scheduler), and an agent component (gardenlet).
+Similar to Kubernetes, Gardener consists out of control plane components (Gardener API server, Gardener controller manager, Gardener scheduler), and an agent component (gardenlet).
 The control plane is deployed in the so-called garden cluster, while the agent is installed into every seed cluster.
 Please note that it is possible to use the garden cluster as seed cluster by simply deploying the gardenlet into it.
 

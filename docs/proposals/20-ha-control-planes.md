@@ -83,7 +83,7 @@ This GEP extends the failure domain tolerance for shoot control plane components
 
 ## Motivation
 
-High availability (HA) of Kubernetes control planes is desired to ensure continued operation, even in the case of partial failures of nodes or availability zones. Tolerance to common failure domains ranges from hardware (e.g. utility power sources and backup power sources, network switches, disk/data, racks, cooling systems etc.) to software.
+High availability (HA) of Kubernetes control planes is desired to ensure continued operation, even in the case of partial failures of nodes or availability zones. Tolerance to common failure domains ranges from hardware (e.g., utility power sources and backup power sources, network switches, disk/data, racks, cooling systems) to software.
 
 Each consumer therefore needs to decide on the degree of failure isolation that is desired for the control plane of their respective shoot clusters.
 
@@ -331,7 +331,7 @@ In addition, the pods of the above mentioned components will be configured with 
 
 ## Shoot Control Plane Components
 
-Similarly to the [Seed System Components](#seed-system-components), the following shoot control plane components are considered critical so that Gardener ought to avoid any downtime. Thus, [current recovery mechanisms](#current-recovery-mechanisms) are considered insufficient if only one replica is involved.
+Similar to the [Seed System Components](#seed-system-components), the following shoot control plane components are considered critical so that Gardener ought to avoid any downtime. Thus, [current recovery mechanisms](#current-recovery-mechanisms) are considered insufficient if only one replica is involved.
 
 ### Kube Apiserver
 

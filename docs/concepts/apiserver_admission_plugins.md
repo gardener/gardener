@@ -166,7 +166,7 @@ _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `ManagedSeeds`s.
 It validates certain configuration values in the specification against the referred `Shoot`, for example Seed provider, network ranges, DNS domain, etc.
-Similarly to `ShootValidator`, it performs validations that cannot be handled by the static API validation due to their dynamic nature.
+Similar to `ShootValidator`, it performs validations that cannot be handled by the static API validation due to their dynamic nature.
 Additionally, it performs certain defaulting tasks, making sure that configuration values that are not specified are defaulted to the values of the referred `Shoot`, for example Seed provider, network ranges, DNS domain, etc.
 
 ## `ManagedSeedShoot`

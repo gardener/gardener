@@ -132,10 +132,10 @@ All Gardener components and extensions need to respect the `ipFamilies` field an
 #### Future Dual-Stack Enhancements
 
 For supporting dual-stack networking setups in the future, the `Shoot` API must allow specifying CIDRs of both IP families.
-Similarly to the [`Service` API](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), the `Shoot` API may be extended with list equivalents of `Shoot.spec.networking.{pods,services,nodes}`.
+Similar to the [`Service` API](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), the `Shoot` API may be extended with list equivalents of `Shoot.spec.networking.{pods,services,nodes}`.
 In this case, the existing CIDR fields may specify the respective CIDR of the primary IP family while the list fields contain CIDRs of both IP families.
 The primary IP family may be determined by the first element of the `ipFamilies` field.
-Similarly to the `Service.spec.clusterIPs` field, API validation may enforce that the list only contains two entries with the primary IP family being the first one.
+Similar to the `Service.spec.clusterIPs` field, API validation may enforce that the list only contains two entries with the primary IP family being the first one.
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -167,7 +167,7 @@ Corresponding changes may be performed to the other relevant APIs, e.g., the `Se
 
 ### `Seed` API
 
-Similarly to the `Shoot` API, the `Seed.spec.networks` section is extended as follows:
+Similar to the `Shoot` API, the `Seed.spec.networks` section is extended as follows:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -187,7 +187,7 @@ spec:
 
 `ipFamilies` has the same semantics as `Shoot.spec.networking.ipFamilies`.
 Again, the existing CIDR fields are used to specify the IPv6 CIDRs instead of IPv4 CIDRs, e.g. `Seed.spec.networks.{nodes,pods,services}` and `Seed.spec.networks.shootDefaults.{pods,services}`.
-Similarly to the other networking-related fields in the `Seed` API, the `ipFamilies` field has an informational character only.
+Similar to the other networking-related fields in the `Seed` API, the `ipFamilies` field has an informational character only.
 It can be used to handle IP family-specifics (see [Docker Hub Images](#docker-hub-images)) and may be used for restricting the scheduling of shoots to seeds with matching IP families.
 
 The existing `Seed.spec.networks.blockCIDRs` field is augmented to allow IPv6 CIDR values in addition to IPv4 values.
@@ -207,7 +207,7 @@ spec:
   - IPv6
 ```
 
-Similarly to the `Shoot` API, a new `ipFamilies` field is introduced.
+Similar to the `Shoot` API, a new `ipFamilies` field is introduced.
 Again, the existing CIDR fields are used to specify the IPv6 CIDRs instead of IPv4 CIDRs, e.g., `Network.spec.{pod,service}CIDR`.
 
 ### `DNSRecord` API

@@ -5,7 +5,7 @@ This document contains network related information for Shoot clusters.
 ## Pod Network
 
 A Pod network is imperative for any kind of cluster communication with Pods not started within the Node's host network.
-More information about the Kubernetes network model can be found [here](https://kubernetes.io/docs/concepts/cluster-administration/networking/).
+More information about the Kubernetes network model can be found in the [Cluster Networking](https://kubernetes.io/docs/concepts/cluster-administration/networking/) topic.
 
 Gardener allows users to configure the Pod network's CIDR during Shoot creation:
 
@@ -79,5 +79,4 @@ Number of podCIDRs: 32 --> max. Node count
 Number of IPs per podCIDRs: 128
 ```
 
-With the configuration above a Shoot cluster can at most have **32 nodes** which are ready to run workload in the Pod network.
-
+With the configuration above, a Shoot cluster can at most have **32 nodes** which are ready to run workload in the Pod network.

@@ -9,7 +9,7 @@ The minimum version of a garden cluster that can be used to run Gardener is **`1
 ## Seed Clusters
 
 The minimum version of a seed cluster that can be connected to Gardener is **`1.20.x`**.
-Please note that Gardener does not support seeds with version **>= `1.25`** yet when the `HVPA` or `HVPAForShootedSeed` feature gate is enabled. For more details, see https://github.com/gardener/gardener/issues/6893.
+Please note that Gardener does not support seeds with version **>= `1.25`** yet when the `HVPA` or `HVPAForShootedSeed` feature gate is enabled. For more details, see [Issue #6893](https://github.com/gardener/gardener/issues/6893).
 
 ## Shoot Clusters
 
@@ -17,13 +17,13 @@ Gardener itself is capable of spinning up clusters with Kubernetes versions **`1
 However, the concrete versions that can be used for shoot clusters depend on the installed provider extension.
 Consequently, please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.
 
-> 👨🏼‍💻 Developers note: [This document](../development/new-kubernetes-version.md) explains what needs to be done in order to add support for a new Kubernetes version.
+> 👨🏼‍💻 Developers note: The [Adding Support For a New Kubernetes Version](../development/new-kubernetes-version.md) topic explains what needs to be done in order to add support for a new Kubernetes version.
 
 ## Support Timeline
 
 The Kubernetes project maintains the most recent three minor releases and releases a new minor version every 4 months.
 This means that a release has patch support for approximately 1 year.
-See [this document](https://kubernetes.io/releases/) for the official upstream information.
+See the official [Releases](https://kubernetes.io/releases/) topic for the official upstream information.
 
 In the past, the Gardener project did not have a policy regarding the number of supported Kubernetes versions at the same time.
 Beginning with 2023, a new policy has been introduced:

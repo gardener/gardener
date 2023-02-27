@@ -1,7 +1,7 @@
 # Service Account Manager
 
 ## Overview
-With Gardener `v1.47` a new role called `serviceaccountmanager` was introduced. This role allows to fully manage `ServiceAccount`'s in the project namespace and request tokens for them. This is the preferred way of managing the access to a project namespace as it aims to replace the usage of the default `ServiceAccount` secrets that will no longer be generated automatically with Kubernetes `v1.24+`.
+With Gardener `v1.47`, a new role called `serviceaccountmanager` was introduced. This role allows to fully manage `ServiceAccount`'s in the project namespace and request tokens for them. This is the preferred way of managing the access to a project namespace, as it aims to replace the usage of the default `ServiceAccount` secrets that will no longer be generated automatically with Kubernetes `v1.24+`.
 
 ## Actions
 
