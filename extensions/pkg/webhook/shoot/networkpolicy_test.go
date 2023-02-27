@@ -22,23 +22,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("NetworkPolicy", func() {
 	var (
-		ctx           = context.TODO()
-		fakeClient    client.Client
-		namespace     = "extension-foo-bar"
-		extensionName = "provider-test"
-		serverPort    = 1337
+		ctx                = context.TODO()
+		fakeClient         client.Client
+		shootNamespace     = "shoot--bar--foo"
+		extensionNamespace = "extension-foo-bar"
+		extensionName      = "provider-test"
+		serverPort         = 1337
 	)
 
 	BeforeEach(func() {
@@ -47,13 +47,10 @@ var _ = Describe("NetworkPolicy", func() {
 
 	Describe("#EnsureNetworkPolicy", func() {
 		It("should reconcile the correct network policy", func() {
-			Expect(EnsureNetworkPolicy(ctx, fakeClient, namespace, extensionName, serverPort)).To(Succeed())
+			Expect(EnsureNetworkPolicy(ctx, fakeClient, shootNamespace, extensionNamespace, extensionName, serverPort)).To(Succeed())
 
-			networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "gardener-extension-" + extensionName}}
+			networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: shootNamespace, Name: "gardener-extension-" + extensionName}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
-
-			port := intstr.FromInt(serverPort)
-			protocol := corev1.ProtocolTCP
 
 			Expect(networkPolicy.Spec).To(DeepEqual(networkingv1.NetworkPolicySpec{
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -61,15 +58,15 @@ var _ = Describe("NetworkPolicy", func() {
 					{
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
-								Port:     &port,
-								Protocol: &protocol,
+								Port:     utils.IntStrPtrFromInt(serverPort),
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 							},
 						},
 						To: []networkingv1.NetworkPolicyPeer{
 							{
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension,
+										"kubernetes.io/metadata.name": extensionNamespace,
 									},
 								},
 								PodSelector: &metav1.LabelSelector{
@@ -83,8 +80,8 @@ var _ = Describe("NetworkPolicy", func() {
 				},
 				PodSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-						v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+						"app":  "kubernetes",
+						"role": "apiserver",
 					},
 				},
 			}))
