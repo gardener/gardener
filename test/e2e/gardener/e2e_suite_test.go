@@ -36,7 +36,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2E(t *testing.T) {
-	gardener.SetupDNSForTest()
+	if os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") == "zone" {
+		gardener.SetupDNSForMultiZoneTest()
+	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test E2E Gardener Suite")
 }
