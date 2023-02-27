@@ -491,7 +491,7 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 	taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), kubeApiServerServiceList.Items, kubeapiserverconstants.Port)...)
 
 	// VPN-Seed-Server services
-	for _, serviceName := range []string{vpnseedserver.ServiceName, fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, 0), fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, 0)} {
+	for _, serviceName := range []string{vpnseedserver.ServiceName, vpnseedserver.ServiceName + "-0", vpnseedserver.ServiceName + "-1"} {
 		serviceList := &corev1.ServiceList{}
 		// Use APIReader here because an index on `metadata.name` is not available in the runtime client.
 		if err := g.mgr.GetAPIReader().List(ctx, serviceList, client.MatchingFieldsSelector{

@@ -528,6 +528,8 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 				v1beta1constants.LabelApp:       LabelValue,
 				managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				"type":                          "tunnel",
+				// ManagedSeeds run both, the VPN shoot client and Istiod in the same cluster. Thus, we need the following
+				// label to allow the VPN shoot client to reach Istiod's validating webhook.
 				gardenerutils.NetworkPolicyLabel(istio.IstiodServiceName, istio.PortWebhookServer): v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 		},
