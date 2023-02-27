@@ -354,7 +354,7 @@ spec:
     #   enable-access-log-for-default-backend: "false"
     kubernetesDashboard:
       enabled: true
-    # authenticationMode: basic # allowed values: basic,token
+    # authenticationMode: token # allowed values: token
 # tolerations:
 # - key: <some-key>
 # Explicitly specify the seed that will run the shoot control plane. Only possible for users having RBAC for 

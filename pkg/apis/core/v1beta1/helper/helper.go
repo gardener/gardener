@@ -470,19 +470,6 @@ func ShootWantsAlertManager(shoot *gardencorev1beta1.Shoot) bool {
 	return !ShootIgnoresAlerts(shoot) && shoot.Spec.Monitoring != nil && shoot.Spec.Monitoring.Alerting != nil && len(shoot.Spec.Monitoring.Alerting.EmailReceivers) > 0
 }
 
-// ShootWantsBasicAuthentication returns true if basic authentication is not configured or
-// if it is set explicitly to 'true'.
-func ShootWantsBasicAuthentication(shoot *gardencorev1beta1.Shoot) bool {
-	kubeAPIServerConfig := shoot.Spec.Kubernetes.KubeAPIServer
-	if kubeAPIServerConfig == nil {
-		return true
-	}
-	if kubeAPIServerConfig.EnableBasicAuthentication == nil {
-		return true
-	}
-	return *kubeAPIServerConfig.EnableBasicAuthentication
-}
-
 // ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
 func ShootUsesUnmanagedDNS(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
