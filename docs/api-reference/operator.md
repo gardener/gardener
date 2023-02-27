@@ -160,6 +160,30 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation
 <p>CertificateAuthorities contains information about the certificate authority credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>serviceAccountKey</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServiceAccountKey contains information about the service account key credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>etcdEncryptionKey</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.ETCD">ETCD
