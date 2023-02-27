@@ -251,6 +251,8 @@ type Values struct {
 	ConcurrentSyncs *int
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
 	HealthSyncPeriod *metav1.Duration
+	// FullNetworkPolicies makes the network policy controller to consider all relevant namespaces.
+	FullNetworkPolicies bool
 	// Image is the container image.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -581,6 +583,12 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		}
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true
+
+		if r.values.FullNetworkPolicies {
+			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
+				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
+			)
+		}
 	}
 
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
