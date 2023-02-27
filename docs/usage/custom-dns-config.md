@@ -38,6 +38,10 @@ data:
          whoami
 ```
 
+The port number 8053 in `global:8053` is the specific port that CoreDNS is bound to and cannot be changed to any other port if it should act on ordinary name resolution requests from pods. Otherwise, CoreDNS will open a second port, but you are responsible to direct the traffic to this port. `kube-dns` service in `kube-system` namespace will direct name resolution requests within the cluster to port 8053 on the CoreDNS pods.
+Moreover, additional network policies are needed to allow corresponding ingress traffic to CoreDNS pods.
+In order for the destination DNS server to be reachable, it must listen on port 53 as it is required by network policies. Other ports are only possible if additional network policies allow corresponding egress traffic from CoreDNS pods.
+
 It is important to have the `ConfigMap` keys ending with `*.server` (if you would like to add a new server) or `*.override`
 if you want to customize the current server configuration (it is optional setting both).
 
