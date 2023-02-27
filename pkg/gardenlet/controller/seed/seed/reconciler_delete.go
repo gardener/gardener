@@ -313,21 +313,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			})
 		)
 		syncPointCleanedUp.Insert(destroyClusterIdentity)
-	} else {
-		// This is the migration scenario for the "cluster-identity" managed resource.
-		// In the first step the "cluster-identity" config map is annotated with "resources.gardener.cloud/mode: Ignore"
-		// In the second step (next release) the migration managed resource will be destroyed.
-		// In the last step the migration scenario will be removed entirely.
-		// TODO(oliver-goetz): Remove this migration scenario in a future release at the second step of migration.
-		var (
-			clusterIdentity = clusteridentity.NewIgnoredManagedResourceForSeed(seedClient, r.GardenNamespace, "")
-
-			destroyClusterIdentity = g.Add(flow.Task{
-				Name: "Destroying cluster-identity migration",
-				Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
-			})
-		)
-		syncPointCleanedUp.Insert(destroyClusterIdentity)
 	}
 
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
