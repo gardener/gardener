@@ -35,5 +35,6 @@ func RegisterFeatureGates() {
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
+		features.FullNetworkPoliciesInRuntimeCluster,
 	)))
 }

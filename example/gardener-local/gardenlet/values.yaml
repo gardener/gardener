@@ -36,6 +36,7 @@ config:
     CopyEtcdBackupsDuringControlPlaneMigration: true
     DefaultSeccompProfile: true
     CoreDNSQueryRewriting: true
+    FullNetworkPoliciesInRuntimeCluster: false
   logging:
     enabled: true
     loki:
