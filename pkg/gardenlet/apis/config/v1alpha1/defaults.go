@@ -141,9 +141,6 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.BackupEntry == nil {
 		obj.BackupEntry = &BackupEntryControllerConfiguration{}
 	}
-	if obj.BackupEntryMigration == nil {
-		obj.BackupEntryMigration = &BackupEntryMigrationControllerConfiguration{}
-	}
 	if obj.Bastion == nil {
 		obj.Bastion = &BastionControllerConfiguration{}
 	}
@@ -167,9 +164,6 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	}
 	if obj.SeedCare == nil {
 		obj.SeedCare = &SeedCareControllerConfiguration{}
-	}
-	if obj.ShootMigration == nil {
-		obj.ShootMigration = &ShootMigrationControllerConfiguration{}
 	}
 	if obj.ShootSecret == nil {
 		obj.ShootSecret = &ShootSecretControllerConfiguration{}
@@ -246,29 +240,6 @@ func SetDefaults_ShootMonitoringConfig(obj *ShootMonitoringConfig) {
 	if obj.Enabled == nil {
 		v := true
 		obj.Enabled = &v
-	}
-}
-
-// SetDefaults_BackupEntryMigrationControllerConfiguration sets defaults for the backup entry migration controller.
-func SetDefaults_BackupEntryMigrationControllerConfiguration(obj *BackupEntryMigrationControllerConfiguration) {
-	if obj.ConcurrentSyncs == nil {
-		v := 5
-		obj.ConcurrentSyncs = &v
-	}
-
-	if obj.SyncPeriod == nil {
-		v := metav1.Duration{Duration: time.Minute}
-		obj.SyncPeriod = &v
-	}
-
-	if obj.GracePeriod == nil {
-		v := metav1.Duration{Duration: 10 * time.Minute}
-		obj.GracePeriod = &v
-	}
-
-	if obj.LastOperationStaleDuration == nil {
-		v := metav1.Duration{Duration: 2 * time.Minute}
-		obj.LastOperationStaleDuration = &v
 	}
 }
 
@@ -382,29 +353,6 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 	if obj.StaleExtensionHealthChecks == nil {
 		v := StaleExtensionHealthChecks{Enabled: true}
 		obj.StaleExtensionHealthChecks = &v
-	}
-}
-
-// SetDefaults_ShootMigrationControllerConfiguration sets defaults for the shoot migration controller.
-func SetDefaults_ShootMigrationControllerConfiguration(obj *ShootMigrationControllerConfiguration) {
-	if obj.ConcurrentSyncs == nil {
-		v := 5
-		obj.ConcurrentSyncs = &v
-	}
-
-	if obj.SyncPeriod == nil {
-		v := metav1.Duration{Duration: time.Minute}
-		obj.SyncPeriod = &v
-	}
-
-	if obj.GracePeriod == nil {
-		v := metav1.Duration{Duration: 2 * time.Hour}
-		obj.GracePeriod = &v
-	}
-
-	if obj.LastOperationStaleDuration == nil {
-		v := metav1.Duration{Duration: 10 * time.Minute}
-		obj.LastOperationStaleDuration = &v
 	}
 }
 

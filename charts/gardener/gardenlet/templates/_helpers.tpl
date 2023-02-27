@@ -230,16 +230,6 @@ config.yaml: |
       jitterUpdates: {{ .Values.config.controllers.managedSeed.jitterUpdates }}
       {{- end }}
     {{- end }}
-    shootMigration:
-      concurrentSyncs: {{ required ".Values.config.controllers.shootMigration.concurrentSyncs is required" .Values.config.controllers.shootMigration.concurrentSyncs }}
-      syncPeriod: {{ required ".Values.config.controllers.shootMigration.syncPeriod is required" .Values.config.controllers.shootMigration.syncPeriod }}
-      gracePeriod: {{ required ".Values.config.controllers.shootMigration.gracePeriod is required" .Values.config.controllers.shootMigration.gracePeriod }}
-      lastOperationStaleDuration: {{ required ".Values.config.controllers.shootMigration.lastOperationStaleDuration is required" .Values.config.controllers.shootMigration.lastOperationStaleDuration }}
-    backupEntryMigration:
-      concurrentSyncs: {{ required ".Values.config.controllers.backupEntryMigration.concurrentSyncs is required" .Values.config.controllers.backupEntryMigration.concurrentSyncs }}
-      syncPeriod: {{ required ".Values.config.controllers.backupEntryMigration.syncPeriod is required" .Values.config.controllers.backupEntryMigration.syncPeriod }}
-      gracePeriod: {{ required ".Values.config.controllers.backupEntryMigration.gracePeriod is required" .Values.config.controllers.backupEntryMigration.gracePeriod }}
-      lastOperationStaleDuration: {{ required ".Values.config.controllers.backupEntryMigration.lastOperationStaleDuration is required" .Values.config.controllers.backupEntryMigration.lastOperationStaleDuration }}
   resources:
     capacity:
       shoots: {{ required ".Values.config.resources.capacity.shoots is required" .Values.config.resources.capacity.shoots }}

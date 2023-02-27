@@ -47,7 +47,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ShootClientConnection).NotTo(BeNil())
 			Expect(obj.Controllers.BackupBucket).NotTo(BeNil())
 			Expect(obj.Controllers.BackupEntry).NotTo(BeNil())
-			Expect(obj.Controllers.BackupEntryMigration).NotTo(BeNil())
 			Expect(obj.Controllers.Bastion).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallation).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallationCare).NotTo(BeNil())
@@ -56,7 +55,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Shoot).NotTo(BeNil())
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
 			Expect(obj.Controllers.SeedCare).NotTo(BeNil())
-			Expect(obj.Controllers.ShootMigration).NotTo(BeNil())
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
@@ -347,23 +345,6 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
-	Describe("#SetDefaults_ShootMigrationControllerConfiguration", func() {
-		var obj *ShootMigrationControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &ShootMigrationControllerConfiguration{}
-		})
-
-		It("should default the configuration", func() {
-			SetDefaults_ShootMigrationControllerConfiguration(obj)
-
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
-			Expect(obj.GracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
-			Expect(obj.LastOperationStaleDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
-		})
-	})
-
 	Describe("#SetDefaults_ShootSecretControllerConfiguration", func() {
 		var obj *ShootSecretControllerConfiguration
 
@@ -391,23 +372,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
 			Expect(obj.DeletionGracePeriodHours).To(PointTo(Equal(0)))
 			Expect(obj.DeletionGracePeriodShootPurposes).To(BeEmpty())
-		})
-	})
-
-	Describe("#SetDefaults_BackupEntryMigrationControllerConfiguration", func() {
-		var obj *BackupEntryMigrationControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &BackupEntryMigrationControllerConfiguration{}
-		})
-
-		It("should default the configuration", func() {
-			SetDefaults_BackupEntryMigrationControllerConfiguration(obj)
-
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
-			Expect(obj.GracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
-			Expect(obj.LastOperationStaleDuration).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 		})
 	})
 

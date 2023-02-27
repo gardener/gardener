@@ -45,7 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -53,7 +53,7 @@ import (
 
 func TestBackupEntry(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Gardenlet BackupEntry Main Suite")
+	RunSpecs(t, "Test Integration Gardenlet BackupEntry Suite")
 }
 
 const testID = "backupentry-controller-test"

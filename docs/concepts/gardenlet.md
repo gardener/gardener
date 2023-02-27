@@ -217,8 +217,6 @@ If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller del
 The `BackupEntry` controller reconciles those `core.gardener.cloud/v1beta1.BackupEntry` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 Those resources are created by the `Shoot` controller (only if backup is enabled for the respective `Seed`) and there is exactly one `BackupEntry` per `Shoot`.
 
-#### "Main" Reconciler
-
 The controller creates an `extensions.gardener.cloud/v1alpha1.BackupEntry` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [Contract: BackupEntry Resource](../extensions/backupentry.md) for more details).
 The status is populated in the `.status.lastOperation` field.
 
@@ -238,15 +236,6 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
-
-#### "Migration" Reconciler
-
-This reconciler is only active if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the `gardenlet` and if the seed has owner checks enabled (i.e., `spec.setttings.ownerChecks.enabled=true`).
-It checks if the source `Seed` also has owner checks enabled. If not or if the `BackupEntry` is being deleted, it sets the `status.migrationStartTime` to `nil`.
-The controller updates the status to force restoration in the following cases:
-1. If the `BackupEntry` is annotated with `shoot.gardener.cloud/force-restore=true`.
-2. If the grace period for migration has elapsed (which is set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration).
-3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the `lastUpdateTime` of the operation.
 
 ### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
 
@@ -309,7 +298,7 @@ This condition is taken into account by the `ControllerRegistration` controller 
 
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
-The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to the Kubernetes API server. 
+The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to the Kubernetes API server.
 
 The controller resolves the IP address of the Kubernetes service in the `default` namespace and creates an egress `NetworkPolicy`s for it.
 
@@ -439,17 +428,6 @@ A pod is considered stale when:
 - it was terminated with reason `Evicted`.
 - it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
 - it is stuck in termination (i.e., if its `deletionTimestamp` is more than `5m` ago).
-
-#### "Migration" Reconciler
-
-This reconciler is only active if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the `gardenlet` and if the `Seed` has owner checks enabled (i.e., `spec.setttings.ownerChecks.enabled=true`).
-It checks if the source `Seed` also has owner checks enabled.
-If not or if the `Shoot` is being deleted, it sets the `status.migrationStartTime` to `nil`.
-The controller updates the status to force restoration in the following cases:
-
-1. If the `Shoot` is annotated with `shoot.gardener.cloud/force-restore=true`.
-2. If the grace period for migration has elapsed (which is set in the `ShootMigrationControllerConfiguration` in the gardenlet's component configuration).
-3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `ShootMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the `lastUpdateTime` of the operation.
 
 ### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
 

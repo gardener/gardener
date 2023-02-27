@@ -33,7 +33,6 @@ func RegisterFeatureGates() {
 		features.APIServerSNI,
 		features.ReversedVPN,
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
-		features.ForceRestore,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 	)))

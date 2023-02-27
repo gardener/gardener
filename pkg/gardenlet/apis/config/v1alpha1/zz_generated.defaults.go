@@ -56,9 +56,6 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.BackupEntry != nil {
 			SetDefaults_BackupEntryControllerConfiguration(in.Controllers.BackupEntry)
 		}
-		if in.Controllers.BackupEntryMigration != nil {
-			SetDefaults_BackupEntryMigrationControllerConfiguration(in.Controllers.BackupEntryMigration)
-		}
 		if in.Controllers.Bastion != nil {
 			SetDefaults_BastionControllerConfiguration(in.Controllers.Bastion)
 		}
@@ -85,9 +82,6 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 			if in.Controllers.ShootCare.StaleExtensionHealthChecks != nil {
 				SetDefaults_StaleExtensionHealthChecks(in.Controllers.ShootCare.StaleExtensionHealthChecks)
 			}
-		}
-		if in.Controllers.ShootMigration != nil {
-			SetDefaults_ShootMigrationControllerConfiguration(in.Controllers.ShootMigration)
 		}
 		if in.Controllers.ShootStateSync != nil {
 			SetDefaults_ShootStateSyncControllerConfiguration(in.Controllers.ShootStateSync)

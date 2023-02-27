@@ -15,41 +15,101 @@
 package backupentry
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/extensions"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// AddToManager adds all BackupEntry controllers to the given manager.
-func AddToManager(
-	mgr manager.Manager,
-	gardenCluster cluster.Cluster,
-	seedCluster cluster.Cluster,
-	cfg config.GardenletConfiguration,
-) error {
-	if err := (&backupentry.Reconciler{
-		Config:   *cfg.Controllers.BackupEntry,
-		SeedName: cfg.SeedConfig.Name,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-		return fmt.Errorf("failed adding main reconciler: %w", err)
+// ControllerName is the name of this controller.
+const ControllerName = "backupentry"
+
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+	if r.GardenClient == nil {
+		r.GardenClient = gardenCluster.GetClient()
+	}
+	if r.SeedClient == nil {
+		r.SeedClient = seedCluster.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
+	if r.Recorder == nil {
+		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
+	}
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && gardenlethelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
-		if err := (&migration.Reconciler{
-			Config:   *cfg.Controllers.BackupEntryMigration,
-			SeedName: cfg.SeedConfig.Name,
-		}).AddToManager(mgr, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding migration reconciler: %w", err)
-		}
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			RateLimiter:             r.RateLimiter,
+		}).
+		Watches(
+			source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
+			controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
+			builder.WithPredicates(
+				&predicate.GenerationChangedPredicate{},
+				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
+			),
+		).
+		Build(r)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return c.Watch(
+		source.NewKindWithCache(&extensionsv1alpha1.BackupEntry{}, seedCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
+		predicateutils.ExtensionStatusChanged(),
+	)
+}
+
+// MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning
+// core.gardener.cloud/v1beta1.BackupEntry.
+func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	if obj.GetDeletionTimestamp() != nil {
+		return nil
+	}
+
+	shootTechnicalID, _ := gardenerutils.ExtractShootDetailsFromBackupEntryName(obj.GetName())
+	if shootTechnicalID == "" {
+		return nil
+	}
+
+	shoot, err := extensions.GetShoot(ctx, r.SeedClient, shootTechnicalID)
+	if err != nil {
+		log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", shootTechnicalID)
+		return nil
+	}
+	if shoot == nil {
+		log.Info("Shoot is missing in cluster resource", "cluster", kubernetesutils.Key(shootTechnicalID))
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
 }

@@ -38,7 +38,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 )
 
 const (
