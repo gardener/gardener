@@ -98,9 +98,6 @@ func getManagedIngressDNSRecord(
 
 	if dnsConfig.Provider != nil {
 		values.Type = dnsConfig.Provider.Type
-		if dnsConfig.Provider.Zones != nil && len(dnsConfig.Provider.Zones.Include) == 1 {
-			values.Zone = &dnsConfig.Provider.Zones.Include[0]
-		}
 	}
 
 	if loadBalancerAddress != "" {
