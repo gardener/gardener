@@ -29,6 +29,7 @@ spec:
         prometheus.io/port: "{{ .Values.metricsPort }}"
         {{- end }}
       labels:
+        networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
 {{ include "labels" . | indent 8 }}
     spec:
       priorityClassName: gardener-system-900

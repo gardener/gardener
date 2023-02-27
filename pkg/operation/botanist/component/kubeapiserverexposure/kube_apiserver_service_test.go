@@ -128,6 +128,7 @@ var _ = Describe("#Service", func() {
 			&retryfake.Ops{MaxAttempts: 1},
 			clusterIPFunc,
 			ingressIPFunc,
+			true,
 		)
 	})
 
@@ -292,6 +293,7 @@ var _ = Describe("#Service", func() {
 					&retryfake.Ops{MaxAttempts: 1},
 					clusterIPFunc,
 					ingressIPFunc,
+					false,
 				)
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
@@ -335,7 +337,7 @@ func shootNetpolAnnotations() map[string]string {
 		"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":443}]`,
 		"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
 		"networking.resources.gardener.cloud/from-world-to-ports":                `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]`,
+		"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
 		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
 	}
 }
