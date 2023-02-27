@@ -36,8 +36,8 @@ spec:
     domain: ingress.dev.my-seed.example.com
     controller:
       kind: nginx
-      providerConfig:
-        <some-optional-config-for-the-nginx-ingress-controller>
+    # providerConfig:
+    #   <some-optional-config-for-the-nginx-ingress-controller>
   networks: # seed and shoot networks must be disjunct
     ipFamilies:
     - IPv4

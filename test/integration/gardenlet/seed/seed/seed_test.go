@@ -257,6 +257,9 @@ var _ = Describe("Seed controller tests", func() {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 			}).Should(BeNotFoundError())
 
+			By("Delete DNS provider secret in garden namespace")
+			Expect(testClient.Delete(ctx, dnsProviderSecret)).To(Succeed())
+
 			By("Cleanup all labels/annotations from test namespace")
 			patch := client.MergeFrom(testNamespace)
 			testNamespace.Annotations = nil

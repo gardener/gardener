@@ -288,24 +288,23 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	if spec.Ingress == nil {
 		spec.Ingress = &core.Ingress{}
 	}
-	ingressDomain := fmt.Sprintf("%s.%s", gardenerutils.IngressPrefix, *(shoot.Spec.DNS.Domain))
-	if spec.Ingress != nil {
-		if spec.DNS.Provider == nil {
-			dnsProvider, err := v.getSeedDNSProvider(shoot)
-			if err != nil {
-				if apierrors.IsInternalError(err) {
-					return allErrs, err
-				}
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress"), spec.Ingress, err.Error()))
-			}
-			spec.DNS.Provider = dnsProvider
-		}
 
-		if spec.Ingress.Domain == "" {
-			spec.Ingress.Domain = ingressDomain
-		} else if spec.Ingress.Domain != ingressDomain {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, fmt.Sprintf("seed ingress domain must be equal to shoot DNS domain %s", ingressDomain)))
+	if spec.DNS.Provider == nil {
+		dnsProvider, err := v.getSeedDNSProvider(shoot)
+		if err != nil {
+			if apierrors.IsInternalError(err) {
+				return allErrs, err
+			}
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress"), spec.Ingress, err.Error()))
 		}
+		spec.DNS.Provider = dnsProvider
+	}
+
+	ingressDomain := fmt.Sprintf("%s.%s", gardenerutils.IngressPrefix, *(shoot.Spec.DNS.Domain))
+	if spec.Ingress.Domain == "" {
+		spec.Ingress.Domain = ingressDomain
+	} else if spec.Ingress.Domain != ingressDomain {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, fmt.Sprintf("seed ingress domain must be equal to shoot DNS domain %s", ingressDomain)))
 	}
 
 	// Initialize and validate networks
