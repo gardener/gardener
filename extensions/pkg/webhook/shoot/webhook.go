@@ -47,7 +47,7 @@ func ReconcileWebhookConfig(
 	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 	cluster *controller.Cluster,
 ) error {
-	if err := EnsureNetworkPolicy(ctx, c, shootNamespace, extensionNamespace, extensionName, serverPort); err != nil {
+	if err := EnsureEgressNetworkPolicy(ctx, c, shootNamespace, extensionNamespace, extensionName, serverPort); err != nil {
 		return fmt.Errorf("could not create or update network policy for shoot webhooks in namespace '%s': %w", shootNamespace, err)
 	}
 
@@ -89,7 +89,11 @@ func ReconcileWebhooksForAllNamespaces(
 		return err
 	}
 
-	fns := make([]flow.TaskFn, 0, len(namespaceList.Items))
+	fns := make([]flow.TaskFn, 0, len(namespaceList.Items)+1)
+
+	fns = append(fns, func(ctx context.Context) error {
+		return EnsureIngressNetworkPolicy(ctx, c, extensionNamespace, extensionName, port)
+	})
 
 	for _, namespace := range namespaceList.Items {
 		var (

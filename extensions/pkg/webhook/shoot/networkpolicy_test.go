@@ -45,9 +45,9 @@ var _ = Describe("NetworkPolicy", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	})
 
-	Describe("#EnsureNetworkPolicy", func() {
+	Describe("#EnsureEgressNetworkPolicy", func() {
 		It("should reconcile the correct network policy", func() {
-			Expect(EnsureNetworkPolicy(ctx, fakeClient, shootNamespace, extensionNamespace, extensionName, serverPort)).To(Succeed())
+			Expect(EnsureEgressNetworkPolicy(ctx, fakeClient, shootNamespace, extensionNamespace, extensionName, serverPort)).To(Succeed())
 
 			networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: shootNamespace, Name: "gardener-extension-" + extensionName}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
@@ -82,6 +82,49 @@ var _ = Describe("NetworkPolicy", func() {
 					MatchLabels: map[string]string{
 						"app":  "kubernetes",
 						"role": "apiserver",
+					},
+				},
+			}))
+		})
+	})
+
+	Describe("#EnsureIngressNetworkPolicy", func() {
+		It("should reconcile the correct network policy", func() {
+			Expect(EnsureIngressNetworkPolicy(ctx, fakeClient, extensionNamespace, extensionName, serverPort)).To(Succeed())
+
+			networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: extensionNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+
+			Expect(networkPolicy.Spec).To(DeepEqual(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{
+					{
+						Ports: []networkingv1.NetworkPolicyPort{
+							{
+								Port:     utils.IntStrPtrFromInt(serverPort),
+								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+							},
+						},
+						From: []networkingv1.NetworkPolicyPeer{
+							{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"gardener.cloud/role": "shoot",
+									},
+								},
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app":  "kubernetes",
+										"role": "apiserver",
+									},
+								},
+							},
+						},
+					},
+				},
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app.kubernetes.io/name": "gardener-extension-" + extensionName,
 					},
 				},
 			}))
