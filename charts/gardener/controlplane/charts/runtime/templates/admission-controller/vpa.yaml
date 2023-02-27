@@ -15,6 +15,5 @@ spec:
     containerPolicies:
       - containerName: '*'
         minAllowed:
-          cpu: 20m
           memory: 25Mi
 {{- end }}

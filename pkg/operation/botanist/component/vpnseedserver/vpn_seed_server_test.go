@@ -757,7 +757,6 @@ admin:
 						{
 							ContainerName: DeploymentName,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
 							ControlledValues: &controlledValues,
@@ -765,7 +764,6 @@ admin:
 						{
 							ContainerName: "envoy-proxy",
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
 							ControlledValues: &controlledValues,

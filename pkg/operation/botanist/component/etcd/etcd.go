@@ -212,7 +212,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
 		minAllowed          = corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("50m"),
 			corev1.ResourceMemory: resource.MustParse("200M"),
 		}
 	)
@@ -222,7 +221,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		minAllowed = corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("200m"),
 			corev1.ResourceMemory: resource.MustParse("700M"),
 		}
 	}

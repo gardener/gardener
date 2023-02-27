@@ -89,7 +89,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		KubernetesVersion:                    version,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("20m"),
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},

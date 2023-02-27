@@ -79,7 +79,6 @@ spec:
                 cpu: "8"
               minAllowed:
                 memory: 400M
-                cpu: 400m
   weightBasedScalingIntervals:
 {{- if gt (int .Values.global.apiserver.hvpa.maxReplicas) (int .Values.global.apiserver.hvpa.minReplicas) }}
     - vpaWeight: 0

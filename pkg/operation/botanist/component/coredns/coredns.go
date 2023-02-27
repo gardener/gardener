@@ -629,7 +629,6 @@ import custom/*.server
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("10Mi"),
 							},
 							ControlledValues: &controlledValues,

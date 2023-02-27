@@ -278,7 +278,6 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 					ContainerName:    "*",
 					ControlledValues: &controlledValues,
 					MinAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("50m"),
 						corev1.ResourceMemory: resource.MustParse("100Mi"),
 					},
 				},

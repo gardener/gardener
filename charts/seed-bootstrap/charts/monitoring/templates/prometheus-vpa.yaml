@@ -9,7 +9,6 @@ spec:
     containerPolicies:
     - containerName: '*'
       minAllowed:
-        cpu: 100m
         memory: 400Mi
   targetRef:
     apiVersion: {{ include "statefulsetversion" . }}

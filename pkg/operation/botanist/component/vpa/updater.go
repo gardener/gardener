@@ -210,7 +210,6 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 					ContainerName:    "*",
 					ControlledValues: &controlledValues,
 					MinAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("10m"),
 						corev1.ResourceMemory: resource.MustParse("50Mi"),
 					},
 				},

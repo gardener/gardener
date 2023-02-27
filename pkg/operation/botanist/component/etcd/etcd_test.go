@@ -514,7 +514,6 @@ var _ = Describe("Etcd", func() {
 										{
 											ContainerName: "etcd",
 											MinAllowed: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("50m"),
 												corev1.ResourceMemory: resource.MustParse("200M"),
 											},
 											MaxAllowed: corev1.ResourceList{
@@ -550,7 +549,6 @@ var _ = Describe("Etcd", func() {
 
 			if class == ClassImportant {
 				obj.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies[0].MinAllowed = corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("200m"),
 					corev1.ResourceMemory: resource.MustParse("700M"),
 				}
 			}

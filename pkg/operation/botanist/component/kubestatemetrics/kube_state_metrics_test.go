@@ -455,7 +455,6 @@ var _ = Describe("KubeStateMetrics", func() {
 							ContainerName:    "*",
 							ControlledValues: &vpaControlledValues,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("32Mi"),
 							},
 						},

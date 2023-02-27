@@ -432,7 +432,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName: name,
 				MinAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("10Mi"),
 				},
 				ControlledValues: &controlledValues,

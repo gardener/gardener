@@ -77,7 +77,6 @@ func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
 			{
 				ContainerName: "*",
 				MinAllowed: corev1.ResourceList{
-					"cpu":    resource.MustParse("50m"),
 					"memory": resource.MustParse("200Mi"),
 				},
 			},

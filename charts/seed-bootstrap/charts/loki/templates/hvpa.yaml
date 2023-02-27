@@ -74,7 +74,6 @@ spec:
                 cpu:  "{{ .Values.hvpa.maxAllowed.cpu }}"
               minAllowed:
                 memory: {{ .Values.hvpa.minAllowed.memory }}
-                cpu: "{{ .Values.hvpa.minAllowed.cpu }}"
             - containerName: curator
               mode: "Off"
 {{- if .Values.rbacSidecarEnabled }}

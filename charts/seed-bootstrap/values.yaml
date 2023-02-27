@@ -19,7 +19,6 @@ prometheus:
   hvpa:
     enabled: false
     minAllowed:
-      cpu: 100m
       memory: 1000M
     targetAverageUtilizationCpu: 80
     targetAverageUtilizationMemory: 80
@@ -72,7 +71,6 @@ aggregatePrometheus:
   hvpa:
     enabled: false
     minAllowed:
-      cpu: 100m
       memory: 1000M
     targetAverageUtilizationCpu: 80
     targetAverageUtilizationMemory: 80

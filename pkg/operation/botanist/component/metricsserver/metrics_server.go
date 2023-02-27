@@ -435,7 +435,6 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("50m"),
 								corev1.ResourceMemory: resource.MustParse("60Mi"),
 							},
 							ControlledValues: &controlledValues,
