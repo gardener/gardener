@@ -1344,7 +1344,7 @@ exemptions:
 					shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 					shootCopy.Status.Credentials = &gardencorev1beta1.ShootCredentials{
 						Rotation: &gardencorev1beta1.ShootCredentialsRotation{
-							ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: rotationPhase,
 							},
 						},
@@ -1563,7 +1563,7 @@ exemptions:
 						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
 						shootCopy.Status.Credentials = &gardencorev1beta1.ShootCredentials{
 							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
-								ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{
+								ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
 									Phase: gardencorev1beta1.RotationCompleting,
 								},
 							},

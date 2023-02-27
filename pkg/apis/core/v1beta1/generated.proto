@@ -692,6 +692,31 @@ message DeploymentRef {
   optional string name = 1;
 }
 
+// ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
+message ETCDEncryptionKeyRotation {
+  // Phase describes the phase of the ETCD encryption key credential rotation.
+  optional string phase = 1;
+
+  // LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+
+  // LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
+
+  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+  // triggered.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
+}
+
 // ExpirableVersion contains a version and an expiration date.
 message ExpirableVersion {
   // Version is the version identifier.
@@ -2385,6 +2410,31 @@ message ServiceAccountConfig {
   repeated string acceptedIssuers = 5;
 }
 
+// ServiceAccountKeyRotation contains information about the service account key credential rotation.
+message ServiceAccountKeyRotation {
+  // Phase describes the phase of the service account key credential rotation.
+  optional string phase = 1;
+
+  // LastCompletionTime is the most recent time when the service account key credential rotation was successfully
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+
+  // LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
+
+  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+  // triggered.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
+}
+
 // Shoot represents a Shoot cluster created and managed by Gardener.
 message Shoot {
   // Standard object metadata.
@@ -2437,36 +2487,11 @@ message ShootCredentialsRotation {
 
   // ServiceAccountKey contains information about the service account key credential rotation.
   // +optional
-  optional ShootServiceAccountKeyRotation serviceAccountKey = 5;
+  optional ServiceAccountKeyRotation serviceAccountKey = 5;
 
   // ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
   // +optional
-  optional ShootETCDEncryptionKeyRotation etcdEncryptionKey = 6;
-}
-
-// ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
-message ShootETCDEncryptionKeyRotation {
-  // Phase describes the phase of the ETCD encryption key credential rotation.
-  optional string phase = 1;
-
-  // LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
-  // completed.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
-
-  // LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
-
-  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
-  // completed.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
-
-  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
-  // triggered.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
+  optional ETCDEncryptionKeyRotation etcdEncryptionKey = 6;
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -2537,31 +2562,6 @@ message ShootSSHKeypairRotation {
   // LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
-}
-
-// ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
-message ShootServiceAccountKeyRotation {
-  // Phase describes the phase of the service account key credential rotation.
-  optional string phase = 1;
-
-  // LastCompletionTime is the most recent time when the service account key credential rotation was successfully
-  // completed.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
-
-  // LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
-
-  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
-  // completed.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
-
-  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
-  // triggered.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
 }
 
 // ShootSpec is the specification of a Shoot.

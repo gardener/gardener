@@ -1294,7 +1294,7 @@ func GetShootServiceAccountKeyRotationPhase(credentials *gardencorev1beta1.Shoot
 
 // MutateShootServiceAccountKeyRotation mutates the .status.credentials.rotation.serviceAccountKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
-func MutateShootServiceAccountKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootServiceAccountKeyRotation)) {
+func MutateShootServiceAccountKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ServiceAccountKeyRotation)) {
 	if f == nil {
 		return
 	}
@@ -1306,7 +1306,7 @@ func MutateShootServiceAccountKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 		shoot.Status.Credentials.Rotation = &gardencorev1beta1.ShootCredentialsRotation{}
 	}
 	if shoot.Status.Credentials.Rotation.ServiceAccountKey == nil {
-		shoot.Status.Credentials.Rotation.ServiceAccountKey = &gardencorev1beta1.ShootServiceAccountKeyRotation{}
+		shoot.Status.Credentials.Rotation.ServiceAccountKey = &gardencorev1beta1.ServiceAccountKeyRotation{}
 	}
 
 	f(shoot.Status.Credentials.Rotation.ServiceAccountKey)
@@ -1323,7 +1323,7 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.Shoot
 
 // MutateShootETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
-func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootETCDEncryptionKeyRotation)) {
+func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {
 	if f == nil {
 		return
 	}
@@ -1335,7 +1335,7 @@ func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 		shoot.Status.Credentials.Rotation = &gardencorev1beta1.ShootCredentialsRotation{}
 	}
 	if shoot.Status.Credentials.Rotation.ETCDEncryptionKey == nil {
-		shoot.Status.Credentials.Rotation.ETCDEncryptionKey = &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}
+		shoot.Status.Credentials.Rotation.ETCDEncryptionKey = &gardencorev1beta1.ETCDEncryptionKeyRotation{}
 	}
 
 	f(shoot.Status.Credentials.Rotation.ETCDEncryptionKey)

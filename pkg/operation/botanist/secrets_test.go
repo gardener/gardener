@@ -399,7 +399,7 @@ var _ = Describe("Secrets", func() {
 					Status: gardencorev1beta1.ShootStatus{
 						Credentials: &gardencorev1beta1.ShootCredentials{
 							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
-								ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{
+								ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
 									LastInitiationFinishedTime: &metav1.Time{Time: now.Add(time.Minute)},
 								},
 							},
