@@ -110,3 +110,7 @@ When a shoot is scheduled to a seed and actually reconciled, Gardener appoints t
 This mechanism relies on the DNS resolution of TXT DNS records being possible and highly reliable, since if the owner check fails, the shoot will be effectively disabled for the duration of the failure.
 In environments where resolving TXT DNS records is either not possible or not considered reliable enough, it may be necessary to disable the owner check mechanism, in order to avoid shoots failing to reconcile or temporary outages due to transient DNS failures.
 By setting the `.spec.settings.ownerChecks.enabled=false` (default is `true`), the creation and checking of owner DNS records can be disabled for all shoots scheduled on this seed. Note that if owner checks are disabled, migrating shoots scheduled on this seed to other seeds should be considered unsafe, and in the future will be disabled as well.
+
+## Topology-Aware Traffic Routing
+
+Refer to the [Topology-Aware Traffic Routing documentation](./topology_aware_routing.md) as this document contains the documentation for the topology-aware routing Seed setting.

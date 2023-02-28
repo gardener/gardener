@@ -65,6 +65,8 @@ The `etcd-main-client` and `etcd-events-client` Services are topology-aware. The
 
 The `kube-apiserver` Service is topology-aware. It is consumed by the controllers running in the Shoot control plane.
 
+> Note: The `istio-ingressgateway` component routes traffic in topology-aware manner - if possible, it routes traffic to the target `kube-apiserver` Pods in the same zone. If there is no healthy `kube-apiserver` Pod available in the same zone, the traffic is routed to any of the healthy Pods in the other zones. This behaviour is unconditionally enabled.
+
 ##### gardener-resource-manager
 
 The `gardener-resource-manager` Service that is part of the Shoot control plane is topology-aware. The resource-manager serves webhooks and the Service is consumed by the kube-apiserver for the webhook communication.

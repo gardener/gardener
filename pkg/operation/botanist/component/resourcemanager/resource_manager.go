@@ -292,7 +292,7 @@ type Values struct {
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
 	DefaultSeccompProfileEnabled bool
-	// EndpointSliceHintsEnabled specifies if the defaulting EndpointSlice hints webhook of GRM should be enabled or not.
+	// EndpointSliceHintsEnabled specifies if the EndpointSlice hints webhook of GRM should be enabled or not.
 	EndpointSliceHintsEnabled bool
 	// PodTopologySpreadConstraintsEnabled specifies if the pod's TSC should be mutated to support rolling updates.
 	PodTopologySpreadConstraintsEnabled bool
@@ -1769,7 +1769,7 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 	}
 }
 
-// GetEndpointSliceHintsMutatingWebhook returns the endpoint-slice-hints mutating webhook for the resourcemanager component for reuse
+// GetEndpointSliceHintsMutatingWebhook returns the EndpointSlice hints mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetEndpointSliceHintsMutatingWebhook(
 	namespaceSelector *metav1.LabelSelector,
