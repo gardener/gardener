@@ -124,21 +124,6 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 				}
 			},
 		},
-		// TODO(timuthy, rfranzke): Remove this rule once created by automatically by Gardenlet.
-		{
-			name: "deny-all-egress",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: "Deny all egress traffic from pods in this namespace.",
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					}
-					return nil
-				}
-			},
-		},
 		// TODO(timuthy, rfranzke): Replace rule as soon as Networkpolicy controller is activated for the 'garden' namespace.
 		{
 			name: "allow-to-reversed-vpn-auth-server",

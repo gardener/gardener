@@ -1948,21 +1948,6 @@ spec:
   - Ingress
 status: {}
 `
-		istioIngressNetworkPolicyDenyAllEgress = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Deny all egress traffic from pods in this namespace.
-  creationTimestamp: null
-  name: deny-all-egress
-  namespace: ` + deployNSIngress + `
-spec:
-  podSelector: {}
-  policyTypes:
-  - Egress
-status: {}
-`
-
 		istioIngressNetworkPolicyAllowToDns = `# TODO(rfranzke): Delete this in a future version.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -2201,7 +2186,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSecret.Data).To(HaveLen(36))
+			Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
 
 			By("Verify istio-system resources in `Ignore` mode")
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap(true)))
@@ -2234,7 +2219,6 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true)))
 
 			By("Verify istio-ingress network policies")
-			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__deny-all-egress.yaml"])).To(Equal(istioIngressNetworkPolicyDenyAllEgress))
 			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__allow-to-reversed-vpn-auth-server.yaml"])).To(Equal(istioIngressNetworkPolicyToReversedVpnAuthServer))
 			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__allow-from-aggregate-prometheus.yaml"])).To(Equal(istioIngressNetworkPolicyAllowFromAggregatePrometheus))
 
@@ -2329,7 +2313,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(36))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false, true)))
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
@@ -2441,7 +2425,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(36))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
@@ -2474,7 +2458,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(36))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(BeEmpty())
@@ -2507,7 +2491,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(20))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(19))
 
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_configmap.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_deployment.yaml"))
