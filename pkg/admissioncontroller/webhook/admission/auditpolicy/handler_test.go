@@ -538,7 +538,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for kubernetes version >= 1.24.0", "")
+				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
 			})
 
 			It("references a valid auditPolicy/v1alpha1 (UPDATE kubernetes version)", func() {
@@ -554,7 +554,7 @@ rules:
 
 				newShoot := shootv1beta1.DeepCopy()
 				newShoot.Spec.Kubernetes.Version = "1.24.0"
-				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for kubernetes version >= 1.24.0", "")
+				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
 			})
 
 			It("references a valid auditPolicy/v1beta1 (CREATE k8s >= 1.24.0)", func() {
@@ -567,7 +567,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for kubernetes version >= 1.24.0", "")
+				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
 			})
 
 			It("references a valid auditPolicy/v1beta1 (UPDATE kubernetes version)", func() {
@@ -583,7 +583,7 @@ rules:
 
 				newShoot := shootv1beta1.DeepCopy()
 				newShoot.Spec.Kubernetes.Version = "1.24.0"
-				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for kubernetes version >= 1.24.0", "")
+				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
 			})
 
 		})
@@ -659,7 +659,6 @@ rules:
 				})
 
 				It("holds audit policy which breaks validation rules", func() {
-					cm.DeepCopy()
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = invalidAuditPolicy
 
@@ -667,11 +666,24 @@ rules:
 				})
 
 				It("holds audit policy with invalid YAML structure", func() {
-					cm.DeepCopy()
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = missingKeyAuditPolicy
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
+				})
+
+				It("holds audit policy with unsupported version for the kubernetes version of one of the shoots", func() {
+					patch := client.MergeFrom(shootv1beta1.DeepCopy())
+					shootv1beta1.Spec.Kubernetes.Version = "1.23"
+					Expect(fakeClient.Patch(ctx, shootv1beta1, patch)).To(Succeed())
+
+					shootv1beta1K8sV124.Name = "fake-shoot-name-2"
+					Expect(fakeClient.Create(ctx, shootv1beta1K8sV124)).To(Succeed())
+
+					newCm := cm.DeepCopy()
+					newCm.Data["policy"] = validAuditPolicyV1beta1
+
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for shoot 'fake-shoot-name-2' with Kubernetes version >= 1.24.0", "")
 				})
 			})
 		})
