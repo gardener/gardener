@@ -117,26 +117,22 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 
 // DeployManagedResourceForAddons deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
-	for name, chartRenderFunc := range map[string]func(context.Context) (*chartrenderer.RenderedChart, error){
-		common.ManagedResourceShootCoreName: b.generateCoreAddonsChart,
-		common.ManagedResourceAddonsName:    b.generateOptionalAddonsChart,
-	} {
-		renderedChart, err := chartRenderFunc(ctx)
-		if err != nil {
-			return fmt.Errorf("error rendering %q chart: %+v", name, err)
-		}
-
-		if err := managedresources.CreateForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, name, managedresources.LabelValueGardener, false, renderedChart.AsSecretData()); err != nil {
-			return err
-		}
+	// TODO(rfranzke): Delete this code in a future release.
+	if err := managedresources.DeleteForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, "addons"); err != nil {
+		return err
 	}
 
-	return nil
+	renderedChart, err := b.generateCoreAddonsChart()
+	if err != nil {
+		return fmt.Errorf("error rendering shoot-core chart: %w", err)
+	}
+
+	return managedresources.CreateForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, "shoot-core", managedresources.LabelValueGardener, false, renderedChart.AsSecretData())
 }
 
 // generateCoreAddonsChart renders the gardener-resource-manager configuration for the core addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
+func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
 		global = map[string]interface{}{
 			"vpaEnabled":  b.Shoot.WantsVerticalPodAutoscaler,
@@ -170,14 +166,4 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
-}
-
-// generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it
-// creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrenderer.RenderedChart, error) {
-	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
-		"global": map[string]interface{}{
-			"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
-		},
-	})
 }

@@ -1,8 +1,0 @@
-# TODO(acumino): Delete this Helm chart in a future version.
-apiVersion: {{ include "deploymentversion" . }}
-kind: Deployment
-metadata:
-  name: kubernetes-dashboard
-  namespace: kubernetes-dashboard
-  annotations:
-    resources.gardener.cloud/mode: Ignore

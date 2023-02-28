@@ -1,8 +1,0 @@
-# TODO(ary1992): Delete this Helm chart in a future version.
-apiVersion: {{ include "deploymentversion" . }}
-kind: Deployment
-metadata:
-  name: addons-nginx-ingress-controller
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore

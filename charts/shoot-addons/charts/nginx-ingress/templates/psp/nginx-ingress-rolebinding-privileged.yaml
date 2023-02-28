@@ -1,9 +1,0 @@
-# TODO(ary1992): Delete this Helm chart in a future version.
-apiVersion: {{ include "rbacversion" . }}
-kind: RoleBinding
-metadata:
-  name: gardener.cloud:psp:addons-nginx-ingress
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-
