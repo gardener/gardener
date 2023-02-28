@@ -1,6 +1,6 @@
 module github.com/gardener/gardener/hack/tools/logcheck
 
-go 1.19
+go 1.20
 
 // This is a separate go module to decouple the gardener codebase and production binaries from dependencies that are
 // only needed to build the logcheck tool
