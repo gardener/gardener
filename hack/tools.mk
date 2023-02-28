@@ -59,8 +59,7 @@ YQ                         := $(TOOLS_BIN_DIR)/yq
 DOCFORGE_VERSION ?= v0.33.0
 GOLANGCI_LINT_VERSION ?= v1.51.2
 GO_APIDIFF_VERSION ?= v0.5.0
-# TODO(vpnachev): Update goimports-reviser to v3.4.0 when there is a release including https://github.com/incu6us/goimports-reviser/pull/95.
-GOIMPORTSREVISER_VERSION ?= 32c80678d5d73a50b6966f06b346de58b1d018f1
+GOIMPORTSREVISER_VERSION ?= v3.3.1
 GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.6.3
 KIND_VERSION ?= v0.14.0
