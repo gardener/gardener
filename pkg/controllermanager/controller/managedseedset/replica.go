@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -101,7 +100,7 @@ type Replica interface {
 	// IsSeedReady returns true if this replica's seed is ready, false otherwise.
 	IsSeedReady() bool
 	// GetShootHealthStatus returns this replica's shoot health status (healthy, progressing, or unhealthy).
-	GetShootHealthStatus() shootpkg.Status
+	GetShootHealthStatus() gardenerutils.ShootStatus
 	// IsDeletable returns true if this replica can be deleted, false otherwise. A replica can be deleted if it has no
 	// scheduled shoots and is not protected by the "protect-from-deletion" annotation.
 	IsDeletable() bool
@@ -234,9 +233,9 @@ func (r *replica) IsSeedReady() bool {
 }
 
 // GetShootHealthStatus returns this replica's shoot health status (healthy, progressing, or unhealthy).
-func (r *replica) GetShootHealthStatus() shootpkg.Status {
+func (r *replica) GetShootHealthStatus() gardenerutils.ShootStatus {
 	if r.shoot == nil {
-		return shootpkg.StatusUnhealthy
+		return gardenerutils.ShootStatusUnhealthy
 	}
 	return shootHealthStatus(r.shoot)
 }
@@ -336,11 +335,11 @@ func seedReady(seed *gardencorev1beta1.Seed) bool {
 		(conditionBackupBucketsReady == nil || conditionBackupBucketsReady.Status == gardencorev1beta1.ConditionTrue)
 }
 
-func shootHealthStatus(shoot *gardencorev1beta1.Shoot) shootpkg.Status {
+func shootHealthStatus(shoot *gardencorev1beta1.Shoot) gardenerutils.ShootStatus {
 	if value, ok := shoot.Labels[v1beta1constants.ShootStatus]; ok {
-		return shootpkg.Status(value)
+		return gardenerutils.ShootStatus(value)
 	}
-	return shootpkg.StatusProgressing
+	return gardenerutils.ShootStatusProgressing
 }
 
 // newShoot creates a new shoot object for the given set and ordinal.

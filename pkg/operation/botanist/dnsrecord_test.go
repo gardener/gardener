@@ -37,7 +37,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -118,7 +119,7 @@ var _ = Describe("dnsrecord", func() {
 				Shoot: &shoot.Shoot{
 					SeedNamespace:         seedNamespace,
 					ExternalClusterDomain: pointer.String(externalDomain),
-					ExternalDomain: &garden.Domain{
+					ExternalDomain: &gardenerutils.Domain{
 						Domain:   externalDomain,
 						Provider: externalProvider,
 						Zone:     externalZone,
@@ -135,7 +136,7 @@ var _ = Describe("dnsrecord", func() {
 					},
 				},
 				Garden: &garden.Garden{
-					InternalDomain: &garden.Domain{
+					InternalDomain: &gardenerutils.Domain{
 						Domain:   internalDomain,
 						Provider: internalProvider,
 						Zone:     internalZone,

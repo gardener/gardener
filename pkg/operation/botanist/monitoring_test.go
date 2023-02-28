@@ -51,7 +51,7 @@ import (
 	mockvpa "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/mock"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver/mock"
 	mockvpnshoot "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot/mock"
-	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -133,7 +133,7 @@ var _ = Describe("Monitoring", func() {
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
 				Config:         &config.GardenletConfiguration{},
-				Garden: &gardenpkg.Garden{
+				Garden: &garden.Garden{
 					Project: &gardencorev1beta1.Project{},
 				},
 				Seed:                &seedpkg.Seed{},

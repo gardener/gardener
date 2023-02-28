@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("dnsrecord", func() {
@@ -58,7 +59,7 @@ var _ = Describe("dnsrecord", func() {
 			Operation: &operation.Operation{
 				Shoot: &shoot.Shoot{
 					ExternalClusterDomain: pointer.String(externalDomain),
-					ExternalDomain: &garden.Domain{
+					ExternalDomain: &gardenerutils.Domain{
 						Provider: externalProvider,
 					},
 					Components: &shoot.Components{
@@ -73,7 +74,7 @@ var _ = Describe("dnsrecord", func() {
 				Seed: &seed.Seed{},
 
 				Garden: &garden.Garden{
-					InternalDomain: &garden.Domain{
+					InternalDomain: &gardenerutils.Domain{
 						Provider: internalProvider,
 					},
 				},

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package garden
+package bootstrappers
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -28,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
@@ -116,4 +118,20 @@ func bootstrapCluster(ctx context.Context, gardenClient client.Client, discovery
 	}
 
 	return nil
+}
+
+func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.Client, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
+	credentialsSecret, err := secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           v1beta1constants.SecretNameObservabilityIngress,
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	patch := client.MergeFrom(credentialsSecret.DeepCopy())
+	metav1.SetMetaDataLabel(&credentialsSecret.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGlobalMonitoring)
+	return credentialsSecret, k8sGardenClient.Patch(ctx, credentialsSecret, patch)
 }

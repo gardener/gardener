@@ -171,7 +171,6 @@ build:
         - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
-        - pkg/extensions
         - pkg/features
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
@@ -214,7 +213,6 @@ build:
         - pkg/utils/gardener
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/health
-        - pkg/utils/kubernetes/unstructured
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/timewindow

@@ -50,7 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
-	"github.com/gardener/gardener/pkg/operation/garden"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Builder is an object that builds Shoot objects.
@@ -59,8 +59,8 @@ type Builder struct {
 	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
 	shootSecretFunc  func(context.Context, string, string) (*corev1.Secret, error)
 	projectName      string
-	internalDomain   *garden.Domain
-	defaultDomains   []*garden.Domain
+	internalDomain   *gardenerutils.Domain
+	defaultDomains   []*gardenerutils.Domain
 }
 
 // Shoot is an object containing information about a Shoot cluster.
@@ -77,7 +77,7 @@ type Shoot struct {
 
 	InternalClusterDomain string
 	ExternalClusterDomain *string
-	ExternalDomain        *garden.Domain
+	ExternalDomain        *gardenerutils.Domain
 
 	Purpose                                 gardencorev1beta1.ShootPurpose
 	WantsClusterAutoscaler                  bool
@@ -181,18 +181,4 @@ type Networks struct {
 	APIServer net.IP
 	// CoreDNS is the ClusterIP of kube-system/coredns Service
 	CoreDNS net.IP
-}
-
-// IncompleteDNSConfigError is a custom error type.
-type IncompleteDNSConfigError struct{}
-
-// Error prints the error message of the IncompleteDNSConfigError error.
-func (e *IncompleteDNSConfigError) Error() string {
-	return "unable to figure out which secret should be used for dns"
-}
-
-// IsIncompleteDNSConfigError returns true if the error indicates that not the DNS config is incomplete.
-func IsIncompleteDNSConfigError(err error) bool {
-	_, ok := err.(*IncompleteDNSConfigError)
-	return ok
 }

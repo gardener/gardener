@@ -37,8 +37,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	contextutils "github.com/gardener/gardener/pkg/utils/context"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -175,7 +175,7 @@ func (p *shootPredicate) filterShoot(obj client.Object) bool {
 	case seedmanagementv1alpha1.ShootDeleteFailedReason:
 		return !shootDeleteFailed(shoot)
 	case seedmanagementv1alpha1.ShootNotHealthyReason:
-		return shootHealthStatus(shoot) == shootpkg.StatusHealthy
+		return shootHealthStatus(shoot) == gardenerutils.ShootStatusHealthy
 	default:
 		return false
 	}

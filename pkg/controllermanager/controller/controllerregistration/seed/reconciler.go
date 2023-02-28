@@ -36,9 +36,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/extensions"
-	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -106,7 +103,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false)
+	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -115,11 +112,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("garden secrets for seed %q have not been synchronized yet", seed.Name)
 	}
 
-	internalDomain, err := gardenpkg.GetInternalDomain(secrets)
+	internalDomain, err := gardenerutils.GetInternalDomain(secrets)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	defaultDomains, err := gardenpkg.GetDefaultDomains(secrets)
+	defaultDomains, err := gardenerutils.GetDefaultDomains(secrets)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -176,7 +173,7 @@ func computeKindTypesForBackupBuckets(
 
 	for _, backupBucket := range backupBucketList.Items {
 		buckets[backupBucket.Name] = backupBucket
-		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations, buckets
@@ -198,7 +195,7 @@ func computeKindTypesForBackupEntries(
 			continue
 		}
 
-		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations
@@ -213,8 +210,8 @@ func computeKindTypesForShoots(
 	shootList []gardencorev1beta1.Shoot,
 	seed *gardencorev1beta1.Seed,
 	controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList,
-	internalDomain *gardenpkg.Domain,
-	defaultDomains []*gardenpkg.Domain,
+	internalDomain *gardenerutils.Domain,
+	defaultDomains []*gardenerutils.Domain,
 ) sets.Set[string] {
 	var (
 		wantedKindTypeCombinations = sets.New[string]()
@@ -232,12 +229,12 @@ func computeKindTypesForShoots(
 		go func(shoot *gardencorev1beta1.Shoot) {
 			defer wg.Done()
 
-			externalDomain, err := shootpkg.ConstructExternalDomain(ctx, c, shoot, &corev1.Secret{}, defaultDomains)
-			if err != nil && !(shootpkg.IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
+			externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shoot, &corev1.Secret{}, defaultDomains)
+			if err != nil && !(gardenerutils.IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
 				log.Info("Could not determine external domain for shoot", "err", err, "shoot", client.ObjectKeyFromObject(shoot))
 			}
 
-			out <- shootpkg.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			out <- gardenerutils.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 		}(shoot.DeepCopy())
 	}
 
@@ -266,7 +263,7 @@ func computeKindTypesForSeed(
 	}
 
 	if seed.Spec.DNS.Provider != nil {
-		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
+		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations
@@ -324,7 +321,7 @@ func computeWantedControllerRegistrationNames(
 		}
 
 		for _, resource := range controllerRegistration.obj.Spec.Resources {
-			id := extensions.Id(resource.Kind, resource.Type)
+			id := gardenerutils.ExtensionsID(resource.Kind, resource.Type)
 			kindTypeToControllerRegistrationNames[id] = append(kindTypeToControllerRegistrationNames[id], name)
 		}
 	}

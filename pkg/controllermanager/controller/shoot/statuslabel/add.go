@@ -24,7 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -60,7 +60,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 
 			var (
 				currentStatus, statusLabelPresent = shoot.Labels[v1beta1constants.ShootStatus]
-				status                            = string(shootpkg.ComputeStatus(shoot.Status.LastOperation, shoot.Status.LastErrors, shoot.Status.Conditions...))
+				status                            = string(gardenerutils.ComputeShootStatus(shoot.Status.LastOperation, shoot.Status.LastErrors, shoot.Status.Conditions...))
 			)
 
 			return !statusLabelPresent || currentStatus != status

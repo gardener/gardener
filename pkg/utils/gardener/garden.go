@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package garden
+package gardener
 
 import (
 	"context"
@@ -21,98 +21,24 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// NewBuilder returns a new Builder.
-func NewBuilder() *Builder {
-	return &Builder{
-		projectFunc: func(context.Context) (*gardencorev1beta1.Project, error) {
-			return nil, fmt.Errorf("project is required but not set")
-		},
-		internalDomainFunc: func() (*Domain, error) { return nil, fmt.Errorf("internal domain is required but not set") },
-	}
-}
-
-// WithProject sets the projectFunc attribute at the Builder.
-func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
-	b.projectFunc = func(context.Context) (*gardencorev1beta1.Project, error) { return project, nil }
-	return b
-}
-
-// WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
-func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Builder {
-	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
-		project, _, err := gardenerutils.ProjectAndNamespaceFromReader(ctx, reader, namespace)
-		if err != nil {
-			return nil, err
-		}
-		if project == nil {
-			return nil, fmt.Errorf("cannot find Project for namespace '%s'", namespace)
-		}
-
-		return project, err
-	}
-	return b
-}
-
-// WithInternalDomain sets the internalDomainFunc attribute at the Builder.
-func (b *Builder) WithInternalDomain(internalDomain *Domain) *Builder {
-	b.internalDomainFunc = func() (*Domain, error) { return internalDomain, nil }
-	return b
-}
-
-// WithInternalDomainFromSecrets sets the internalDomainFunc attribute at the Builder based on the given secrets map.
-func (b *Builder) WithInternalDomainFromSecrets(secrets map[string]*corev1.Secret) *Builder {
-	b.internalDomainFunc = func() (*Domain, error) { return GetInternalDomain(secrets) }
-	return b
-}
-
-// WithDefaultDomains sets the defaultDomainsFunc attribute at the Builder.
-func (b *Builder) WithDefaultDomains(defaultDomains []*Domain) *Builder {
-	b.defaultDomainsFunc = func() ([]*Domain, error) { return defaultDomains, nil }
-	return b
-}
-
-// WithDefaultDomainsFromSecrets sets the defaultDomainsFunc attribute at the Builder based on the given secrets map.
-func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secret) *Builder {
-	b.defaultDomainsFunc = func() ([]*Domain, error) { return GetDefaultDomains(secrets) }
-	return b
-}
-
-// Build initializes a new Garden object.
-func (b *Builder) Build(ctx context.Context) (*Garden, error) {
-	garden := &Garden{}
-
-	project, err := b.projectFunc(ctx)
-	if err != nil {
-		return nil, err
-	}
-	garden.Project = project
-
-	internalDomain, err := b.internalDomainFunc()
-	if err != nil {
-		return nil, err
-	}
-	garden.InternalDomain = internalDomain
-
-	defaultDomains, err := b.defaultDomainsFunc()
-	if err != nil {
-		return nil, err
-	}
-	garden.DefaultDomains = defaultDomains
-
-	return garden, nil
+// Domain contains information about a domain configured in the garden cluster.
+type Domain struct {
+	Domain         string
+	Provider       string
+	Zone           string
+	SecretData     map[string][]byte
+	IncludeDomains []string
+	ExcludeDomains []string
+	IncludeZones   []string
+	ExcludeZones   []string
 }
 
 // GetDefaultDomains finds all the default domain secrets within the given map and returns a list of
@@ -145,7 +71,7 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, zone, includeZones, excludeZones, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+	provider, domain, zone, includeZones, excludeZones, err := GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +128,7 @@ func ReadGardenSecrets(
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
@@ -216,7 +142,7 @@ func ReadGardenSecrets(
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
@@ -305,20 +231,4 @@ func ReadGardenSecrets(
 
 	log.Info("Found secrets", "namespace", namespace, "secrets", logInfo)
 	return secretsMap, nil
-}
-
-func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.Client, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
-	credentialsSecret, err := secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
-		Name:           v1beta1constants.SecretNameObservabilityIngress,
-		Format:         secretsutils.BasicAuthFormatNormal,
-		Username:       "admin",
-		PasswordLength: 32,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	patch := client.MergeFrom(credentialsSecret.DeepCopy())
-	metav1.SetMetaDataLabel(&credentialsSecret.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGlobalMonitoring)
-	return credentialsSecret, k8sGardenClient.Patch(ctx, credentialsSecret, patch)
 }

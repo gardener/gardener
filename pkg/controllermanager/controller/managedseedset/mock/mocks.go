@@ -11,7 +11,7 @@ import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	managedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
-	shoot "github.com/gardener/gardener/pkg/operation/shoot"
+	gardener "github.com/gardener/gardener/pkg/utils/gardener"
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	types "k8s.io/apimachinery/pkg/types"
@@ -193,10 +193,10 @@ func (mr *MockReplicaMockRecorder) GetOrdinal() *gomock.Call {
 }
 
 // GetShootHealthStatus mocks base method.
-func (m *MockReplica) GetShootHealthStatus() shoot.Status {
+func (m *MockReplica) GetShootHealthStatus() gardener.ShootStatus {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetShootHealthStatus")
-	ret0, _ := ret[0].(shoot.Status)
+	ret0, _ := ret[0].(gardener.ShootStatus)
 	return ret0
 }
 
