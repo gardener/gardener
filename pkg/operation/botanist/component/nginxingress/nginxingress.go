@@ -523,7 +523,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("25m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
 						},

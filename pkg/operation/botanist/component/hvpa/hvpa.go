@@ -242,7 +242,6 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
 						},

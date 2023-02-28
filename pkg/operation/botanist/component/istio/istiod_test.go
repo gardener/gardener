@@ -617,7 +617,6 @@ spec:
       - containerName: discovery
         minAllowed:
           memory: 128Mi
-          cpu: 100m
 `
 		}
 

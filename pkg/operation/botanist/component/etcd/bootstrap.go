@@ -248,7 +248,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 						MinAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("50m"),
 							corev1.ResourceMemory: resource.MustParse("100M"),
 						},
 					}},

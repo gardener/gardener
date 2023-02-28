@@ -112,7 +112,6 @@ hvpa:
     cpu: 800m
     memory: 3Gi
   minAllowed:
-    cpu: 200m
     memory: 300M
   targetAverageUtilizationCpu: 80
   targetAverageUtilizationMemory: 80

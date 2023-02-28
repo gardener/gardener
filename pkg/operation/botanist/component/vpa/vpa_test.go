@@ -399,7 +399,6 @@ var _ = Describe("VPA", func() {
 							ContainerName:    "*",
 							ControlledValues: &vpaControlledValues,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("50Mi"),
 							},
 						},
@@ -674,7 +673,6 @@ var _ = Describe("VPA", func() {
 							ContainerName:    "*",
 							ControlledValues: &vpaControlledValues,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("40Mi"),
 							},
 						},
@@ -1019,7 +1017,6 @@ var _ = Describe("VPA", func() {
 							ContainerName:    "*",
 							ControlledValues: &vpaControlledValues,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("50m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
 						},

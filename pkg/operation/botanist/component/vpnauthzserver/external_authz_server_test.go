@@ -269,7 +269,6 @@ var _ = Describe("ExtAuthzServer", func() {
 						{
 							ContainerName: "reversed-vpn-auth-server",
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
 						},

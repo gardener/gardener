@@ -362,7 +362,6 @@ spec:
     containerPolicies:
     - containerName: '*'
       minAllowed:
-        cpu: 25m
 `
 
 					if role == RoleEndpoint {

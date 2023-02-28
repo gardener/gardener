@@ -9,7 +9,6 @@ spec:
     containerPolicies:
       - containerName: '*'
         minAllowed:
-          cpu: 50m
           memory: 50Mi
         controlledValues: RequestsOnly
   targetRef:

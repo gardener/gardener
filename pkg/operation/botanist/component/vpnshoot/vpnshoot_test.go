@@ -235,7 +235,6 @@ spec:
     - containerName: vpn-shoot
       controlledValues: RequestsOnly
       minAllowed:
-        cpu: 100m
         memory: 10Mi
   targetRef:
     apiVersion: apps/v1
@@ -257,17 +256,14 @@ spec:
     - containerName: vpn-shoot-s0
       controlledValues: RequestsOnly
       minAllowed:
-        cpu: 100m
         memory: 10Mi
     - containerName: vpn-shoot-s1
       controlledValues: RequestsOnly
       minAllowed:
-        cpu: 100m
         memory: 10Mi
     - containerName: vpn-shoot-s2
       controlledValues: RequestsOnly
       minAllowed:
-        cpu: 100m
         memory: 10Mi
   targetRef:
     apiVersion: apps/v1

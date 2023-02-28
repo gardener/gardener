@@ -343,7 +343,6 @@ spec:
     - containerName: '*'
       controlledValues: RequestsOnly
       minAllowed:
-        cpu: 10m
         memory: 20Mi
   targetRef:
     apiVersion: apps/v1

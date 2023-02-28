@@ -504,7 +504,6 @@ var _ = Describe("EventLogger", func() {
 							{
 								ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 								MinAllowed: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("3m"),
 									corev1.ResourceMemory: resource.MustParse("20Mi"),
 								},
 								ControlledValues: &controlledValues,

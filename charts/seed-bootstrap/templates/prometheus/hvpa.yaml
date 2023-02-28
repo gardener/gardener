@@ -68,7 +68,6 @@ spec:
             - containerName: prometheus
               minAllowed:
                 memory: {{ .Values.prometheus.hvpa.minAllowed.memory }}
-                cpu: "{{ .Values.prometheus.hvpa.minAllowed.cpu }}"
             - containerName: prometheus-config-reloader
               mode: "Off"
   weightBasedScalingIntervals:

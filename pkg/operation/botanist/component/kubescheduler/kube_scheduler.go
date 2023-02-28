@@ -390,7 +390,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 					MinAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("20m"),
 						corev1.ResourceMemory: resource.MustParse("50Mi"),
 					},
 					MaxAllowed: corev1.ResourceList{

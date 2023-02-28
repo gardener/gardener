@@ -250,7 +250,6 @@ func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscale
 					ContainerName:    "*",
 					ControlledValues: &controlledValues,
 					MinAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("10m"),
 						corev1.ResourceMemory: resource.MustParse("40Mi"),
 					},
 				},
