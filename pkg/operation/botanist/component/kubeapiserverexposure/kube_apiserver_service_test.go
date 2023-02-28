@@ -45,7 +45,6 @@ var _ = Describe("#Service", func() {
 
 		ingressIP        string
 		clusterIP        string
-		isShootService   bool
 		sniPhase         component.Phase
 		clusterIPFunc    func(string)
 		ingressIPFunc    func(string)
@@ -63,7 +62,6 @@ var _ = Describe("#Service", func() {
 
 		ingressIP = ""
 		clusterIP = ""
-		isShootService = false
 		sniPhase = component.PhaseUnknown
 		serviceObjKey = client.ObjectKey{Name: "test-deploy", Namespace: "test-namespace"}
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
@@ -112,17 +110,17 @@ var _ = Describe("#Service", func() {
 		}
 
 		Expect(c.Create(ctx, sniService)).To(Succeed())
-		Expect(c.Create(ctx, expected)).To(Succeed())
-		expected.ResourceVersion = "2"
 	})
 
 	JustBeforeEach(func() {
+		Expect(c.Create(ctx, expected)).To(Succeed())
+		expected.ResourceVersion = "2"
+
 		defaultDepWaiter = NewService(
 			log,
 			c,
 			&ServiceValues{
 				AnnotationsFunc: func() map[string]string { return map[string]string{"foo": "bar"} },
-				IsShootService:  isShootService,
 				SNIPhase:        sniPhase,
 			},
 			func() client.ObjectKey { return serviceObjKey },
@@ -262,12 +260,15 @@ var _ = Describe("#Service", func() {
 
 	Context("when service is designed for shoots", func() {
 		BeforeEach(func() {
-			isShootService = true
+			namespace := "shoot-" + expected.Namespace
+
 			sniPhase = component.PhaseEnabling
+			serviceObjKey = client.ObjectKey{Name: serviceObjKey.Name, Namespace: namespace}
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 			}, shootNetpolAnnotations())
+			expected.Namespace = namespace
 			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 		})
 

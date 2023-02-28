@@ -17,6 +17,7 @@ package kubeapiserverexposure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -51,8 +52,6 @@ var (
 type ServiceValues struct {
 	// AnnotationsFunc is a function that returns annotations that should be added to the service.
 	AnnotationsFunc func() map[string]string
-	// IsShootService declares the service as being used for shoot clusters.
-	IsShootService bool
 	// SNIPhase is the current status of the SNI configuration.
 	SNIPhase component.Phase
 }
@@ -62,7 +61,6 @@ type ServiceValues struct {
 // from the outside.
 type serviceValues struct {
 	annotationsFunc func() map[string]string
-	isShootService  bool
 	serviceType     corev1.ServiceType
 	enableSNI       bool
 	gardenerManaged bool
@@ -126,7 +124,6 @@ func NewService(
 		}
 
 		internalValues.annotationsFunc = values.AnnotationsFunc
-		internalValues.isShootService = values.IsShootService
 	}
 
 	return &service{
@@ -167,7 +164,10 @@ func (s *service) Deploy(ctx context.Context) error {
 		if s.values.enableSNI {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		}
-		if s.values.isShootService {
+
+		// For shoot namespaces the Kube-Apiserver service needs extra labels and annotations to create required network policies
+		// which allow a connection from Istio-Ingress components to Kube-Apiserver.
+		if isShootNamespace(obj.Namespace) {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj,
 				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
@@ -240,4 +240,8 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}
+}
+
+func isShootNamespace(namespace string) bool {
+	return strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix)
 }

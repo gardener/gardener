@@ -34,7 +34,6 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 		b.SeedClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc: func() map[string]string { return b.IstioLoadBalancerAnnotations() },
-			IsShootService:  true,
 			SNIPhase:        sniPhase,
 		},
 		func() client.ObjectKey {
