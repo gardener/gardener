@@ -30,6 +30,17 @@ The kubeconfig handed out to end-users does contain this *external domain name*,
 As not every end-user has an own domain, it is possible for Gardener administrators to configure so-called *default domains*.
 If configured, shoots that do not specify a domain explicitly get an *external domain name* based on a default domain (unless explicitly stated that this shoot should not get an external domain name (`.spec.dns.provider=unmanaged`).
 
+### Ingress Domain Name (Deprecated)
+
+Gardener allows to deploy a `nginx-ingress-controller` into a shoot cluster (deprecated).
+This controller is exposed via a public load balancer (again, either IP or hostname).
+Gardener creates a wildcard DNS record pointing to this load balancer.
+`Ingress` resources can later use this wildcard DNS record to expose underlying applications.
+
+### Seed Ingress
+
+If `.spec.ingress` is configured in the Seed, Gardener deploys the ingress controller mentioned in `.spec.ingress.controller.kind` to the seed cluster. Currently, the only supported kind is "nginx". If the ingress field is set, then `.spec.dns.provider` must also be set. Gardener creates a wildcard DNS record pointing to the load balancer of the ingress controller. The `Ingress` resources of components like Grafana and Prometheus in the `garden` namespace and the shoot namespaces uses this wildcard DNS record to expose their underlying applications. 
+
 ## What needs to be implemented to support a new DNS provider?
 
 As part of the shoot flow, Gardener will create a number of `DNSRecord` resources in the seed cluster (one for each of the DNS records mentioned above) that need to be reconciled by an extension controller.
