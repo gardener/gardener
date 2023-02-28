@@ -60,6 +60,7 @@ import (
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
@@ -388,6 +389,12 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(timuthy, rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets promoted to GA.
+	log.Info("Reconciling network policies in the seed cluster")
+	if err := g.reconcileNetworkPoliciesInSeed(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -560,6 +567,49 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+func (g *garden) reconcileNetworkPoliciesInSeed(ctx context.Context, seedClient client.Client) error {
+	var (
+		peers = []networkingv1.NetworkPolicyPeer{
+			{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+		}
+		labels = map[string]string{"managed-by": "gardenlet", "purpose": "full-networkpolicies-feature-gate"}
+
+		allowAllTrafficNetworkPolicy = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "allow-all-traffic",
+				Labels: labels,
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				Ingress:     []networkingv1.NetworkPolicyIngressRule{{From: peers}},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{{To: peers}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+			},
+		}
+	)
+
+	extensionNamespaces := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, extensionNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}); err != nil {
+		return err
+	}
+
+	for _, namespace := range extensionNamespaces.Items {
+		if gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+			if err := seedClient.DeleteAllOf(ctx, &networkingv1.NetworkPolicy{}, client.MatchingLabels(labels), client.InNamespace(namespace.Name)); err != nil {
+				return fmt.Errorf("failed to delete all network policies in extension namespace %q: %w", namespace.Name, err)
+			}
+		} else {
+			networkPolicy := allowAllTrafficNetworkPolicy.DeepCopy()
+			networkPolicy.SetNamespace(namespace.Name)
+			if err := seedClient.Create(ctx, networkPolicy); client.IgnoreAlreadyExists(err) != nil {
+				return fmt.Errorf("failed to create network policy %q in extension namespace %q: %w", networkPolicy.Name, networkPolicy.Namespace, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
