@@ -16,6 +16,7 @@ package shoot
 
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -41,9 +42,14 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 	failurePolicy := admissionregistrationv1.Fail
 
 	return shoot.New(mgr, shoot.Args{
-		Types:         []extensionswebhook.Type{{Obj: &corev1.ConfigMap{}}},
-		Mutator:       NewMutator(),
-		FailurePolicy: &failurePolicy,
+		Types: []extensionswebhook.Type{
+			{Obj: &corev1.Node{}},
+			{Obj: &corev1.ConfigMap{}},
+			{Obj: &corev1.Service{}},
+			{Obj: &appsv1.Deployment{}},
+		},
+		MutatorWithShootClient: NewMutator(),
+		FailurePolicy:          &failurePolicy,
 	})
 }
 
