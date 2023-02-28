@@ -1,7 +1,0 @@
-# TODO(ary1992): Delete this Helm chart in a future version.
-apiVersion: networking.k8s.io/v1
-kind: IngressClass
-metadata:
-  name: nginx
-  annotations:
-    resources.gardener.cloud/mode: Ignore

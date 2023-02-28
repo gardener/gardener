@@ -1,7 +1,0 @@
-# TODO(ary1992): Delete this Helm chart in a future version.
-apiVersion: {{ include "rbacversion" . }}
-kind: ClusterRole
-metadata:
-  name: addons-nginx-ingress
-  annotations:
-    resources.gardener.cloud/mode: Ignore

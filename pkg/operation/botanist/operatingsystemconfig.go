@@ -42,6 +42,9 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
+const SecretLabelKeyManagedResource = "managed-resource"
+
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
 	oscImages, err := imagevector.FindImages(b.ImageVector, []string{images.ImageNameHyperkube, images.ImageNamePauseContainer, images.ImageNamePromtail}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
