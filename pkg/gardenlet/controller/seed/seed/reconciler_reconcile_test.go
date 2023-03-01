@@ -24,60 +24,19 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Reconcile", func() {
-	var (
-		ctx        context.Context
-		seedClient client.Client
-	)
-
-	BeforeEach(func() {
-		ctx = context.Background()
-		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-	})
-
-	Describe("#CleanupLegacyLokiPriorityClass", func() {
-		Context("when there is no legacy loki priority class in the cluster", func() {
-			It("should not return an error when attempting to clean the loki priority class that does not exist", func() {
-				Expect(CleanupLegacyLokiPriorityClass(ctx, seedClient)).To(Succeed())
-			})
-		})
-
-		Context("when there is legacy loki priority class in the cluster", func() {
-			var lokiPriorityClass = &schedulingv1.PriorityClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "loki",
-				},
-				Value: 1,
-			}
-
-			BeforeEach(func() {
-				Expect(seedClient.Create(ctx, lokiPriorityClass)).To(Succeed())
-			})
-
-			It("should delete the legacy loki priority class", func() {
-				Expect(CleanupLegacyLokiPriorityClass(ctx, seedClient)).To(Succeed())
-
-				err := seedClient.Get(ctx, client.ObjectKeyFromObject(lokiPriorityClass), &schedulingv1.PriorityClass{})
-				Expect(err).To(BeNotFoundError())
-			})
-		})
-	})
 
 	Describe("#ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame", func() {
 		const (
