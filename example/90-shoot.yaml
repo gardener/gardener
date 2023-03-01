@@ -43,7 +43,7 @@ spec:
           version: <some-image-version>
         # providerConfig:
         #   <some-machine-image-specific-configuration>
-        # architecture: <some-cpu-architecture>
+      # architecture: <some-cpu-architecture>
       volume:
         type: gp2
         size: 20Gi

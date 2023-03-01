@@ -244,7 +244,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			Data: secretVPNSeedServerTLSAuth.Data,
 		}
 		secretDH           *corev1.Secret
-		service            *corev1.Service
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
@@ -481,7 +480,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		deploymentOrStatefulSet,
 		clusterRole,
 		clusterRoleBinding,
-		service,
 		vpa,
 		podSecurityPolicy,
 		clusterRolePSP,
