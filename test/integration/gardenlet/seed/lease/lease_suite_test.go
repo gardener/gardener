@@ -113,13 +113,25 @@ var _ = BeforeSuite(func() {
 				Region: "region",
 				Type:   "providerType",
 			},
+			Ingress: &gardencorev1beta1.Ingress{
+				Domain: "seed.example.com",
+				Controller: gardencorev1beta1.IngressController{
+					Kind: "nginx",
+				},
+			},
+			DNS: gardencorev1beta1.SeedDNS{
+				Provider: &gardencorev1beta1.SeedDNSProvider{
+					Type: "providerType",
+					SecretRef: corev1.SecretReference{
+						Name:      "some-secret",
+						Namespace: "some-namespace",
+					},
+				},
+			},
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
 				Nodes:    pointer.String("10.2.0.0/16"),
-			},
-			DNS: gardencorev1beta1.SeedDNS{
-				IngressDomain: pointer.String("someingress.example.com"),
 			},
 		},
 	}

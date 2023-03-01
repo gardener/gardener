@@ -142,9 +142,7 @@ func (s *Seed) GetIngressFQDN(subDomain string) string {
 // IngressDomain returns the ingress domain for the seed.
 func (s *Seed) IngressDomain() string {
 	seed := s.GetInfo()
-	if seed.Spec.DNS.IngressDomain != nil {
-		return *seed.Spec.DNS.IngressDomain
-	} else if seed.Spec.Ingress != nil {
+	if seed.Spec.Ingress != nil {
 		return seed.Spec.Ingress.Domain
 	}
 	return ""

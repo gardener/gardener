@@ -188,44 +188,50 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	if seedSpec.DNS.IngressDomain != nil {
-		allErrs = append(allErrs, validateDNS1123Subdomain(*seedSpec.DNS.IngressDomain, fldPath.Child("dns", "ingressDomain"))...)
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), seedSpec.DNS.IngressDomain, "this field is deprecated and will be removed in a future version. Use spec.ingress.domain instead"))
+	}
+	if provider := seedSpec.DNS.Provider; provider != nil {
+		if provider.Domains != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "provider", "domains"), provider.Domains, "this field is deprecated and will be removed in a future version. Don't set this field"))
+		}
+		if provider.Zones != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "provider", "zones"), provider.Zones, "this field is deprecated and will be removed in a future version. Don't set this field"))
+		}
 	}
 
-	if !inTemplate && seedSpec.DNS.IngressDomain == nil && (seedSpec.Ingress == nil || len(seedSpec.Ingress.Domain) == 0) {
-		allErrs = append(allErrs, field.Invalid(fldPath, seedSpec, "either specify spec.ingress or spec.dns.ingressDomain"))
+	if !inTemplate && seedSpec.Ingress == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("ingress"), "cannot be empty"))
 	}
 
 	if seedSpec.Ingress != nil {
-		if seedSpec.DNS.IngressDomain != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), "",
-				"Either specify spec.ingress.domain or spec.dns.ingressDomain"),
-			)
+		if len(seedSpec.Ingress.Domain) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("ingress", "domain"), "cannot be empty"))
 		} else {
-			if !availableIngressKinds.Has(seedSpec.Ingress.Controller.Kind) {
-				allErrs = append(allErrs, field.NotSupported(
-					fldPath.Child("ingress", "controller", "kind"),
-					seedSpec.Ingress.Controller.Kind,
-					availableIngressKinds.UnsortedList()),
-				)
-			}
-			if seedSpec.DNS.Provider == nil {
-				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider"),
-					"ingress controller requires dns.provider to be set"))
-			} else {
-				if len(seedSpec.DNS.Provider.Type) == 0 {
-					allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "type"),
-						"DNS provider type must be set"))
-				}
-				if len(seedSpec.DNS.Provider.SecretRef.Name) == 0 {
-					allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "name"),
-						"secret reference name must be set"))
-				}
-				if len(seedSpec.DNS.Provider.SecretRef.Namespace) == 0 {
-					allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "namespace"),
-						"secret reference namespace must be set"))
-				}
-			}
 			allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
+		}
+		if !availableIngressKinds.Has(seedSpec.Ingress.Controller.Kind) {
+			allErrs = append(allErrs, field.NotSupported(
+				fldPath.Child("ingress", "controller", "kind"),
+				seedSpec.Ingress.Controller.Kind,
+				availableIngressKinds.UnsortedList()),
+			)
+		}
+		if seedSpec.DNS.Provider == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider"),
+				"ingress controller requires dns.provider to be set"))
+		} else {
+			if len(seedSpec.DNS.Provider.Type) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "type"),
+					"DNS provider type must be set"))
+			}
+			if len(seedSpec.DNS.Provider.SecretRef.Name) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "name"),
+					"secret reference name must be set"))
+			}
+			if len(seedSpec.DNS.Provider.SecretRef.Namespace) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "namespace"),
+					"secret reference namespace must be set"))
+			}
 		}
 	}
 
@@ -279,14 +285,8 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 
 	allErrs = append(allErrs, validateSeedNetworksUpdate(newSeedSpec.Networks, oldSeedSpec.Networks, fldPath.Child("networks"))...)
 
-	if oldSeedSpec.DNS.IngressDomain != nil && newSeedSpec.DNS.IngressDomain != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(*newSeedSpec.DNS.IngressDomain, *oldSeedSpec.DNS.IngressDomain, fldPath.Child("dns", "ingressDomain"))...)
-	}
 	if oldSeedSpec.Ingress != nil && newSeedSpec.Ingress != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, oldSeedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
-	}
-	if oldSeedSpec.Ingress != nil && newSeedSpec.DNS.IngressDomain != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(*newSeedSpec.DNS.IngressDomain, oldSeedSpec.Ingress.Domain, fldPath.Child("dns", "ingressDomain"))...)
 	}
 	if oldSeedSpec.DNS.IngressDomain != nil && newSeedSpec.Ingress != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, *oldSeedSpec.DNS.IngressDomain, fldPath.Child("ingress", "domain"))...)

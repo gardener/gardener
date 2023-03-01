@@ -56,7 +56,19 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 				},
 				DNS: core.SeedDNS{
-					IngressDomain: pointer.String("ingress.test.example.com"),
+					Provider: &core.SeedDNSProvider{
+						Type: "foo",
+						SecretRef: corev1.SecretReference{
+							Name:      "secret",
+							Namespace: "namespace",
+						},
+					},
+				},
+				Ingress: &core.Ingress{
+					Domain: "ingress.test.example.com",
+					Controller: core.IngressController{
+						Kind: "nginx",
+					},
 				},
 				Networks: core.SeedNetworks{
 					Nodes:    pointer.String("10.250.0.0/16"),

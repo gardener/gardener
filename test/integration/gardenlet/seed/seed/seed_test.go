@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -38,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -46,6 +48,8 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -188,6 +192,21 @@ var _ = Describe("Seed controller tests", func() {
 		))
 		DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
 
+		By("Create DNS provider secret in garden namespace")
+		dnsProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "secret-",
+			Namespace:    testNamespace.Name,
+			Labels: map[string]string{
+				testID: testRunID,
+			},
+		}}
+		Expect(testClient.Create(ctx, dnsProviderSecret)).To(Succeed())
+
+		By("Wait until the manager cache observes the DNS provider secret")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(dnsProviderSecret), dnsProviderSecret)
+		}).Should(Succeed())
+
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   seedName,
@@ -204,8 +223,20 @@ var _ = Describe("Seed controller tests", func() {
 					Services: "10.1.0.0/16",
 					Nodes:    pointer.String("10.2.0.0/16"),
 				},
+				Ingress: &gardencorev1beta1.Ingress{
+					Domain: "someingress.example.com",
+					Controller: gardencorev1beta1.IngressController{
+						Kind: "nginx",
+					},
+				},
 				DNS: gardencorev1beta1.SeedDNS{
-					IngressDomain: pointer.String("someingress.example.com"),
+					Provider: &gardencorev1beta1.SeedDNSProvider{
+						Type: "providerType",
+						SecretRef: corev1.SecretReference{
+							Name:      dnsProviderSecret.Name,
+							Namespace: dnsProviderSecret.Namespace,
+						},
+					},
 				},
 			},
 		}
@@ -225,6 +256,9 @@ var _ = Describe("Seed controller tests", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 			}).Should(BeNotFoundError())
+
+			By("Delete DNS provider secret in garden namespace")
+			Expect(testClient.Delete(ctx, dnsProviderSecret)).To(Succeed())
 
 			By("Cleanup all labels/annotations from test namespace")
 			patch := client.MergeFrom(testNamespace)
@@ -285,6 +319,16 @@ var _ = Describe("Seed controller tests", func() {
 
 		Context("when internal domain secret exists", func() {
 			JustBeforeEach(func() {
+				DeferCleanup(
+					test.WithVars(
+						&resourcemanager.Until, untilInTest,
+						&resourcemanager.TimeoutWaitForDeployment, 50*time.Millisecond,
+						&nginxingress.WaitUntilHealthy, waitUntilHealthyInTest,
+						&seedcontroller.WaitUntilLoadBalancerIsReady, waitUntilLoadBalancerIsReadyInTest,
+						&dnsrecord.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
+					),
+				)
+
 				By("Create internal domain secret in seed namespace")
 				internalDomainSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "secret-",
@@ -330,12 +374,6 @@ var _ = Describe("Seed controller tests", func() {
 				var globalMonitoringSecret *corev1.Secret
 
 				JustBeforeEach(func() {
-					DeferCleanup(
-						test.WithVars(
-							&resourcemanager.Until, untilInTest,
-							&resourcemanager.TimeoutWaitForDeployment, 50*time.Millisecond,
-						),
-					)
 					By("Create global monitoring secret in seed namespace")
 					globalMonitoringSecret = &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
@@ -449,6 +487,7 @@ var _ = Describe("Seed controller tests", func() {
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-probe")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("global-network-policies")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("nginx-ingress")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("system")})}),
 					}
 
@@ -463,6 +502,7 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
+
 						return managedResourceList.Items
 					}).Should(ConsistOf(expectedManagedResources))
 
@@ -580,5 +620,17 @@ var _ = Describe("Seed controller tests", func() {
 })
 
 func untilInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
+	return nil
+}
+
+func waitUntilHealthyInTest(_ context.Context, _ client.Client, _, _ string) error {
+	return nil
+}
+
+func waitUntilLoadBalancerIsReadyInTest(_ context.Context, _ logr.Logger, _ client.Client, _, _ string, _ time.Duration) (string, error) {
+	return "someingress.example.com", nil
+}
+
+func waitUntilExtensionObjectReadyInTest(_ context.Context, _ client.Client, _ logr.Logger, _ extensionsv1alpha1.Object, _ string, _, _, _ time.Duration, _ func() error) error {
 	return nil
 }

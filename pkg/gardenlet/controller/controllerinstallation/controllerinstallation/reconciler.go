@@ -177,11 +177,6 @@ func (r *Reconciler) reconcile(
 	}
 	seedClusterIdentity := *seed.Status.ClusterIdentity
 
-	ingressDomain := seed.Spec.DNS.IngressDomain
-	if ingressDomain == nil {
-		ingressDomain = &seed.Spec.Ingress.Domain
-	}
-
 	// Mix-in some standard values for garden and seed.
 	gardenerValues := map[string]interface{}{
 		"gardener": map[string]interface{}{
@@ -199,7 +194,7 @@ func (r *Reconciler) reconcile(
 				"region":          seed.Spec.Provider.Region,
 				"volumeProvider":  volumeProvider,
 				"volumeProviders": volumeProviders,
-				"ingressDomain":   ingressDomain,
+				"ingressDomain":   &seed.Spec.Ingress.Domain,
 				"protected":       v1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected),
 				"visible":         seed.Spec.Settings.Scheduling.Visible,
 				"taints":          seed.Spec.Taints,

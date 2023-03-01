@@ -6121,7 +6121,7 @@ func schema_pkg_apis_core_v1alpha1_SeedDNS(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6164,13 +6164,13 @@ func schema_pkg_apis_core_v1alpha1_SeedDNSProvider(ref common.ReferenceCallback)
 					},
 					"domains": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
+							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
 						},
 					},
 					"zones": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.",
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
 						},
 					},
@@ -13792,7 +13792,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -13835,13 +13835,13 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 					},
 					"domains": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
+							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
 					"zones": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.",
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},

@@ -15,9 +15,8 @@ Unlike with a self-contained Kubeconfig file, common internet browsers or operat
 
 Therefore, Gardener operators can predefine trusted wildcard certificates under which the mentioned endpoints will be served instead.
 
-## Register a Trusted Wildcard Certificate
-
-Since control plane components are published under the ingress domain (`core.gardener.cloud/v1beta1.Seed.spec.dns.ingressDomain`), a wildcard certificate is required.
+## Register a trusted wildcard certificate
+Since control plane components are published under the ingress domain (`core.gardener.cloud/v1beta1.Seed.spec.ingress.domain`) a wildcard certificate is required.
 
 For example:
 - Seed ingress domain: `dev.my-seed.example.com`

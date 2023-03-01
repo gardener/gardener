@@ -306,6 +306,21 @@ var _ = BeforeSuite(func() {
 				Region: "region",
 				Type:   "providerType",
 			},
+			Ingress: &gardencorev1beta1.Ingress{
+				Domain: "seed.example.com",
+				Controller: gardencorev1beta1.IngressController{
+					Kind: "nginx",
+				},
+			},
+			DNS: gardencorev1beta1.SeedDNS{
+				Provider: &gardencorev1beta1.SeedDNSProvider{
+					Type: "provider",
+					SecretRef: corev1.SecretReference{
+						Name:      "some-secret",
+						Namespace: "some-namespace",
+					},
+				},
+			},
 			Settings: &gardencorev1beta1.SeedSettings{
 				Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
 			},
@@ -317,9 +332,6 @@ var _ = BeforeSuite(func() {
 					Pods:     pointer.String("100.128.0.0/11"),
 					Services: pointer.String("100.72.0.0/13"),
 				},
-			},
-			DNS: gardencorev1beta1.SeedDNS{
-				IngressDomain: pointer.String("someingress.example.com"),
 			},
 		},
 	}

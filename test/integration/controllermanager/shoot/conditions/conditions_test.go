@@ -17,6 +17,7 @@ package conditions_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -103,6 +104,21 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 					Region: "region",
 					Type:   "providerType",
 				},
+				Ingress: &gardencorev1beta1.Ingress{
+					Domain: "someingress.example.com",
+					Controller: gardencorev1beta1.IngressController{
+						Kind: "nginx",
+					},
+				},
+				DNS: gardencorev1beta1.SeedDNS{
+					Provider: &gardencorev1beta1.SeedDNSProvider{
+						Type: "providerType",
+						SecretRef: corev1.SecretReference{
+							Name:      "some-secret",
+							Namespace: "some-namespace",
+						},
+					},
+				},
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
@@ -111,9 +127,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 						Pods:     pointer.String("100.128.0.0/11"),
 						Services: pointer.String("100.72.0.0/13"),
 					},
-				},
-				DNS: gardencorev1beta1.SeedDNS{
-					IngressDomain: pointer.String("someingress.example.com"),
 				},
 			},
 		}
