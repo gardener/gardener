@@ -89,7 +89,7 @@ metadata:
   namespace: test
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":10250,"protocol":"TCP"}]'
-    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"gardener.cloud/role":"exposureclass-handler"}}]'` + additionalAnnotation + `
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]'` + additionalAnnotation + `
   labels:
     app: istiod
     istio: pilot
