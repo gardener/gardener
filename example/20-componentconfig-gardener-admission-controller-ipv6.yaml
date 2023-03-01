@@ -13,10 +13,10 @@ server:
     tls:
       serverCertDir: dev/tls/gardener-admission-controller
   healthProbes:
-    bindAddress: "[::]"
+    bindAddress: "::"
     port: 2722
   metrics:
-    bindAddress: "[::]"
+    bindAddress: "::"
     port: 2723
   resourceAdmissionConfiguration:
     limits:
