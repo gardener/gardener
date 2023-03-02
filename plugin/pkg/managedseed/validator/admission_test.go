@@ -370,6 +370,21 @@ var _ = Describe("ManagedSeed", func() {
 							Kind: "nginx",
 						},
 					},
+					Networks: gardencorev1beta1.SeedNetworks{
+						Nodes:    pointer.String("10.251.0.0/16"),
+						Pods:     "100.97.0.0/11",
+						Services: "100.65.0.0/13",
+					},
+					Provider: gardencorev1beta1.SeedProvider{
+						Type:   "bar-provider",
+						Region: "bar-region",
+						Zones:  []string{"foo", "bar"},
+					},
+					Settings: &gardencorev1beta1.SeedSettings{
+						VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
+							Enabled: true,
+						},
+					},
 				}
 
 				managedSeed.Spec.Gardenlet.Config = &gardenletv1alpha1.GardenletConfiguration{
@@ -390,8 +405,39 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(BeInvalidError())
 				Expect(getErrorList(err)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.ingress.domain"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.ingress.domain"),
+						"Detail": ContainSubstring("seed ingress domain must be equal to shoot DNS domain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.networks.nodes"),
+						"Detail": ContainSubstring("seed nodes CIDR must be equal to shoot nodes CIDR"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.networks.pods"),
+						"Detail": ContainSubstring("seed pods CIDR must be equal to shoot pods CIDR"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.networks.services"),
+						"Detail": ContainSubstring("seed services CIDR must be equal to shoot services CIDR"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.type"),
+						"Detail": ContainSubstring("seed provider type must be equal to shoot provider type"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.region"),
+						"Detail": ContainSubstring("seed provider region must be equal to shoot region"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.verticalPodAutoscaler.enabled"),
+						"Detail": ContainSubstring("seed VPA is not supported for managed seeds - use the shoot VPA"),
 					})),
 				))
 			})
