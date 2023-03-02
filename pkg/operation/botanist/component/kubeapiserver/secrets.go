@@ -44,8 +44,14 @@ const (
 	// SecretStaticTokenName is a constant for the name of the static-token secret.
 	SecretStaticTokenName = "kube-apiserver-static-token"
 
-	secretOIDCCABundleNamePrefix             = "kube-apiserver-oidc-cabundle"
-	secretOIDCCABundleDataKeyCaCrt           = "ca.crt"
+	secretOIDCCABundleNamePrefix   = "kube-apiserver-oidc-cabundle"
+	secretOIDCCABundleDataKeyCaCrt = "ca.crt"
+
+	secretAuditWebhookKubeconfigNamePrefix          = "kube-apiserver-audit-webhook-kubeconfig"
+	secretAuthenticationWebhookKubeconfigNamePrefix = "kube-apiserver-authentication-webhook-kubeconfig"
+	secretAuthorizationWebhookKubeconfigNamePrefix  = "kube-apiserver-authorization-webhook-kubeconfig"
+	secretWebhookKubeconfigDataKey                  = "kubeconfig.yaml"
+
 	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
 	secretAdmissionKubeconfigsNamePrefix     = "kube-apiserver-admission-kubeconfigs"
 
@@ -372,4 +378,40 @@ func (k *kubeAPIServer) reconcileTLSSNISecrets(ctx context.Context) ([]tlsSNISec
 	}
 
 	return out, nil
+}
+
+func (k *kubeAPIServer) reconcileSecretWebhookKubeconfig(ctx context.Context, secret *corev1.Secret, kubeconfig []byte) error {
+	secret.Data = map[string][]byte{secretWebhookKubeconfigDataKey: kubeconfig}
+	utilruntime.Must(kubernetesutils.MakeUnique(secret))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func (k *kubeAPIServer) reconcileSecretAuditWebhookKubeconfig(ctx context.Context, secret *corev1.Secret) error {
+	if k.values.Audit == nil || k.values.Audit.Webhook == nil || len(k.values.Audit.Webhook.Kubeconfig) == 0 {
+		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
+		// garbage collection for unique secrets/configmaps.
+		return nil
+	}
+
+	return k.reconcileSecretWebhookKubeconfig(ctx, secret, k.values.Audit.Webhook.Kubeconfig)
+}
+
+func (k *kubeAPIServer) reconcileSecretAuthenticationWebhookKubeconfig(ctx context.Context, secret *corev1.Secret) error {
+	if k.values.AuthenticationWebhook == nil || len(k.values.AuthenticationWebhook.Kubeconfig) == 0 {
+		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
+		// garbage collection for unique secrets/configmaps.
+		return nil
+	}
+
+	return k.reconcileSecretWebhookKubeconfig(ctx, secret, k.values.AuthenticationWebhook.Kubeconfig)
+}
+
+func (k *kubeAPIServer) reconcileSecretAuthorizationWebhookKubeconfig(ctx context.Context, secret *corev1.Secret) error {
+	if k.values.AuthorizationWebhook == nil || len(k.values.AuthorizationWebhook.Kubeconfig) == 0 {
+		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
+		// garbage collection for unique secrets/configmaps.
+		return nil
+	}
+
+	return k.reconcileSecretWebhookKubeconfig(ctx, secret, k.values.AuthorizationWebhook.Kubeconfig)
 }

@@ -133,6 +133,10 @@ type Values struct {
 	APIAudiences []string
 	// Audit contains information for configuring audit settings for the kube-apiserver.
 	Audit *AuditConfig
+	// AuthenticationWebhook contains configuration for the authentication webhook.
+	AuthenticationWebhook *AuthenticationWebhook
+	// AuthorizationWebhook contains configuration for the authorization webhook.
+	AuthorizationWebhook *AuthorizationWebhook
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
@@ -198,6 +202,43 @@ type AdmissionPluginConfig struct {
 type AuditConfig struct {
 	// Policy is the audit policy document in YAML format.
 	Policy *string
+	// Webhook contains configuration for the audit webhook.
+	Webhook *AuditWebhook
+}
+
+// AuditWebhook contains configuration for the audit webhook.
+type AuditWebhook struct {
+	// Kubeconfig contains the kubeconfig formatted file that defines the audit webhook configuration.
+	Kubeconfig []byte
+	// BatchMaxSize is the maximum size of a batch.
+	BatchMaxSize *int
+	// Version is the API group and version used for serializing audit events written to webhook.
+	Version *string
+}
+
+// AuthenticationWebhook contains configuration for the authentication webhook.
+type AuthenticationWebhook struct {
+	// Kubeconfig contains the webhook configuration for token authentication in kubeconfig format. The API server will
+	// query the remote service to determine authentication for bearer tokens.
+	Kubeconfig []byte
+	// CacheTTL is the duration to cache responses from the webhook token authenticator.
+	CacheTTL *time.Duration
+	// Version is the API version of the authentication.k8s.io TokenReview to send to and expect from the webhook.
+	Version *string
+}
+
+// AuthorizationWebhook contains configuration for the authorization webhook.
+type AuthorizationWebhook struct {
+	// Kubeconfig contains the webhook configuration in kubeconfig format. The API server will query the remote service
+	// to determine access on the API server's secure port.
+	Kubeconfig []byte
+	// CacheAuthorizedTTL is the duration to cache 'authorized' responses from the webhook authorizer.
+	CacheAuthorizedTTL *time.Duration
+	// CacheUnauthorizedTTL is the duration to cache 'unauthorized' responses from the webhook authorizer.
+	CacheUnauthorizedTTL *time.Duration
+	// Version is the API version of the authorization.k8s.io SubjectAccessReview to send to and expect from the
+	// webhook.
+	Version *string
 }
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the kube-apiserver.
@@ -332,21 +373,24 @@ type kubeAPIServer struct {
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
-		deployment                           = k.emptyDeployment()
-		podDisruptionBudget                  client.Object
-		horizontalPodAutoscaler              client.Object
-		verticalPodAutoscaler                = k.emptyVerticalPodAutoscaler()
-		hvpa                                 = k.emptyHVPA()
-		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
-		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
-		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
-		secretETCDEncryptionConfiguration    = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
-		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
-		configMapAdmissionConfigs            = k.emptyConfigMap(configMapAdmissionNamePrefix)
-		secretAdmissionKubeconfigs           = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
-		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
-		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
-		configMapTerminationHandler          = k.emptyConfigMap(watchdogConfigMapNamePrefix)
+		deployment                            = k.emptyDeployment()
+		podDisruptionBudget                   client.Object
+		horizontalPodAutoscaler               client.Object
+		verticalPodAutoscaler                 = k.emptyVerticalPodAutoscaler()
+		hvpa                                  = k.emptyHVPA()
+		networkPolicyAllowFromShootAPIServer  = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
+		networkPolicyAllowToShootAPIServer    = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
+		networkPolicyAllowKubeAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretETCDEncryptionConfiguration     = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
+		secretOIDCCABundle                    = k.emptySecret(secretOIDCCABundleNamePrefix)
+		secretAuditWebhookKubeconfig          = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
+		secretAuthenticationWebhookKubeconfig = k.emptySecret(secretAuthenticationWebhookKubeconfigNamePrefix)
+		secretAuthorizationWebhookKubeconfig  = k.emptySecret(secretAuthorizationWebhookKubeconfigNamePrefix)
+		configMapAdmissionConfigs             = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		secretAdmissionKubeconfigs            = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
+		configMapAuditPolicy                  = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
+		configMapEgressSelector               = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		configMapTerminationHandler           = k.emptyConfigMap(watchdogConfigMapNamePrefix)
 	)
 
 	podDisruptionBudget = k.emptyPodDisruptionBudget()
@@ -387,6 +431,18 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretOIDCCABundle(ctx, secretOIDCCABundle); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretAuditWebhookKubeconfig(ctx, secretAuditWebhookKubeconfig); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretAuthenticationWebhookKubeconfig(ctx, secretAuthenticationWebhookKubeconfig); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretAuthorizationWebhookKubeconfig(ctx, secretAuthorizationWebhookKubeconfig); err != nil {
 		return err
 	}
 
@@ -495,6 +551,9 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretHTTPProxy,
 		secretHAVPNSeedClient,
 		secretHAVPNClientSeedTLSAuth,
+		secretAuditWebhookKubeconfig,
+		secretAuthenticationWebhookKubeconfig,
+		secretAuthorizationWebhookKubeconfig,
 		tlsSNISecrets,
 	); err != nil {
 		return err

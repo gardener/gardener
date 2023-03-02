@@ -60,67 +60,73 @@ const (
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 	containerNameWatchdog                 = "watchdog"
 
-	volumeNameAdmissionConfiguration     = "admission-config"
-	volumeNameAdmissionKubeconfigSecrets = "admission-kubeconfigs"
-	volumeNameAuditPolicy                = "audit-policy-config"
-	volumeNameCA                         = "ca"
-	volumeNameCAClient                   = "ca-client"
-	volumeNameCAEtcd                     = "ca-etcd"
-	volumeNameCAFrontProxy               = "ca-front-proxy"
-	volumeNameCAKubelet                  = "ca-kubelet"
-	volumeNameCAVPN                      = "ca-vpn"
-	volumeNameEgressSelector             = "egress-selection-config"
-	volumeNameEtcdClient                 = "etcd-client"
-	volumeNameEtcdEncryptionConfig       = "etcd-encryption-secret"
-	volumeNameHTTPProxy                  = "http-proxy"
-	volumeNameKubeAPIServerToKubelet     = "kubelet-client"
-	volumeNameKubeAggregator             = "kube-aggregator"
-	volumeNameOIDCCABundle               = "oidc-cabundle"
-	volumeNameServer                     = "kube-apiserver-server"
-	volumeNameServiceAccountKey          = "service-account-key"
-	volumeNameServiceAccountKeyBundle    = "service-account-key-bundle"
-	volumeNameStaticToken                = "static-token"
-	volumeNamePrefixTLSSNISecret         = "tls-sni-"
-	volumeNameVPNSeedClient              = "vpn-seed-client"
-	volumeNameAPIServerAccess            = "kube-api-access-gardener"
-	volumeNameVPNSeedTLSAuth             = "vpn-seed-tlsauth"
-	volumeNameDevNetTun                  = "dev-net-tun"
-	volumeNameFedora                     = "fedora-rhel6-openelec-cabundle"
-	volumeNameCentOS                     = "centos-rhel7-cabundle"
-	volumeNameEtcSSL                     = "etc-ssl"
-	volumeNameUsrShareCaCerts            = "usr-share-cacerts"
-	volumeNameWatchdog                   = "watchdog"
+	volumeNameAdmissionConfiguration          = "admission-config"
+	volumeNameAdmissionKubeconfigSecrets      = "admission-kubeconfigs"
+	volumeNameAuditPolicy                     = "audit-policy-config"
+	volumeNameAuditWebhookKubeconfig          = "audit-webhook-kubeconfig"
+	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
+	volumeNameAuthorizationWebhookKubeconfig  = "authorization-webhook-kubeconfig"
+	volumeNameCA                              = "ca"
+	volumeNameCAClient                        = "ca-client"
+	volumeNameCAEtcd                          = "ca-etcd"
+	volumeNameCAFrontProxy                    = "ca-front-proxy"
+	volumeNameCAKubelet                       = "ca-kubelet"
+	volumeNameCAVPN                           = "ca-vpn"
+	volumeNameEgressSelector                  = "egress-selection-config"
+	volumeNameEtcdClient                      = "etcd-client"
+	volumeNameEtcdEncryptionConfig            = "etcd-encryption-secret"
+	volumeNameHTTPProxy                       = "http-proxy"
+	volumeNameKubeAPIServerToKubelet          = "kubelet-client"
+	volumeNameKubeAggregator                  = "kube-aggregator"
+	volumeNameOIDCCABundle                    = "oidc-cabundle"
+	volumeNameServer                          = "kube-apiserver-server"
+	volumeNameServiceAccountKey               = "service-account-key"
+	volumeNameServiceAccountKeyBundle         = "service-account-key-bundle"
+	volumeNameStaticToken                     = "static-token"
+	volumeNamePrefixTLSSNISecret              = "tls-sni-"
+	volumeNameVPNSeedClient                   = "vpn-seed-client"
+	volumeNameAPIServerAccess                 = "kube-api-access-gardener"
+	volumeNameVPNSeedTLSAuth                  = "vpn-seed-tlsauth"
+	volumeNameDevNetTun                       = "dev-net-tun"
+	volumeNameFedora                          = "fedora-rhel6-openelec-cabundle"
+	volumeNameCentOS                          = "centos-rhel7-cabundle"
+	volumeNameEtcSSL                          = "etc-ssl"
+	volumeNameUsrShareCaCerts                 = "usr-share-cacerts"
+	volumeNameWatchdog                        = "watchdog"
 
-	volumeMountPathAdmissionConfiguration     = "/etc/kubernetes/admission"
-	volumeMountPathAdmissionKubeconfigSecrets = "/etc/kubernetes/admission-kubeconfigs"
-	volumeMountPathAuditPolicy                = "/etc/kubernetes/audit"
-	volumeMountPathCA                         = "/srv/kubernetes/ca"
-	volumeMountPathCAClient                   = "/srv/kubernetes/ca-client"
-	volumeMountPathCAEtcd                     = "/srv/kubernetes/etcd/ca"
-	volumeMountPathCAFrontProxy               = "/srv/kubernetes/ca-front-proxy"
-	volumeMountPathCAKubelet                  = "/srv/kubernetes/ca-kubelet"
-	volumeMountPathCAVPN                      = "/srv/kubernetes/ca-vpn"
-	volumeMountPathEgressSelector             = "/etc/kubernetes/egress"
-	volumeMountPathEtcdEncryptionConfig       = "/etc/kubernetes/etcd-encryption-secret"
-	volumeMountPathEtcdClient                 = "/srv/kubernetes/etcd/client"
-	volumeMountPathHTTPProxy                  = "/etc/srv/kubernetes/envoy"
-	volumeMountPathKubeAPIServerToKubelet     = "/srv/kubernetes/apiserver-kubelet"
-	volumeMountPathKubeAggregator             = "/srv/kubernetes/aggregator"
-	volumeMountPathOIDCCABundle               = "/srv/kubernetes/oidc"
-	volumeMountPathServer                     = "/srv/kubernetes/apiserver"
-	volumeMountPathServiceAccountKey          = "/srv/kubernetes/service-account-key"
-	volumeMountPathServiceAccountKeyBundle    = "/srv/kubernetes/service-account-key-bundle"
-	volumeMountPathStaticToken                = "/srv/kubernetes/token"
-	volumeMountPathPrefixTLSSNISecret         = "/srv/kubernetes/tls-sni/"
-	volumeMountPathVPNSeedClient              = "/srv/secrets/vpn-client"
-	volumeMountPathAPIServerAccess            = "/var/run/secrets/kubernetes.io/serviceaccount"
-	volumeMountPathVPNSeedTLSAuth             = "/srv/secrets/tlsauth"
-	volumeMountPathDevNetTun                  = "/dev/net/tun"
-	volumeMountPathFedora                     = "/etc/pki/tls"
-	volumeMountPathCentOS                     = "/etc/pki/ca-trust/extracted/pem"
-	volumeMountPathEtcSSL                     = "/etc/ssl"
-	volumeMountPathUsrShareCaCerts            = "/usr/share/ca-certificates"
-	volumeMountPathWatchdog                   = "/var/watchdog/bin"
+	volumeMountPathAdmissionConfiguration          = "/etc/kubernetes/admission"
+	volumeMountPathAdmissionKubeconfigSecrets      = "/etc/kubernetes/admission-kubeconfigs"
+	volumeMountPathAuditPolicy                     = "/etc/kubernetes/audit"
+	volumeMountPathAuditWebhookKubeconfig          = "/etc/kubernetes/webhook/audit"
+	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
+	volumeMountPathAuthorizationWebhookKubeconfig  = "/etc/kubernetes/webhook/authorization"
+	volumeMountPathCA                              = "/srv/kubernetes/ca"
+	volumeMountPathCAClient                        = "/srv/kubernetes/ca-client"
+	volumeMountPathCAEtcd                          = "/srv/kubernetes/etcd/ca"
+	volumeMountPathCAFrontProxy                    = "/srv/kubernetes/ca-front-proxy"
+	volumeMountPathCAKubelet                       = "/srv/kubernetes/ca-kubelet"
+	volumeMountPathCAVPN                           = "/srv/kubernetes/ca-vpn"
+	volumeMountPathEgressSelector                  = "/etc/kubernetes/egress"
+	volumeMountPathEtcdEncryptionConfig            = "/etc/kubernetes/etcd-encryption-secret"
+	volumeMountPathEtcdClient                      = "/srv/kubernetes/etcd/client"
+	volumeMountPathHTTPProxy                       = "/etc/srv/kubernetes/envoy"
+	volumeMountPathKubeAPIServerToKubelet          = "/srv/kubernetes/apiserver-kubelet"
+	volumeMountPathKubeAggregator                  = "/srv/kubernetes/aggregator"
+	volumeMountPathOIDCCABundle                    = "/srv/kubernetes/oidc"
+	volumeMountPathServer                          = "/srv/kubernetes/apiserver"
+	volumeMountPathServiceAccountKey               = "/srv/kubernetes/service-account-key"
+	volumeMountPathServiceAccountKeyBundle         = "/srv/kubernetes/service-account-key-bundle"
+	volumeMountPathStaticToken                     = "/srv/kubernetes/token"
+	volumeMountPathPrefixTLSSNISecret              = "/srv/kubernetes/tls-sni/"
+	volumeMountPathVPNSeedClient                   = "/srv/secrets/vpn-client"
+	volumeMountPathAPIServerAccess                 = "/var/run/secrets/kubernetes.io/serviceaccount"
+	volumeMountPathVPNSeedTLSAuth                  = "/srv/secrets/tlsauth"
+	volumeMountPathDevNetTun                       = "/dev/net/tun"
+	volumeMountPathFedora                          = "/etc/pki/tls"
+	volumeMountPathCentOS                          = "/etc/pki/ca-trust/extracted/pem"
+	volumeMountPathEtcSSL                          = "/etc/ssl"
+	volumeMountPathUsrShareCaCerts                 = "/usr/share/ca-certificates"
+	volumeMountPathWatchdog                        = "/var/watchdog/bin"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -145,6 +151,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
+	secretAuditWebhookKubeconfig *corev1.Secret,
+	secretAuthenticationWebhookKubeconfig *corev1.Secret,
+	secretAuthorizationWebhookKubeconfig *corev1.Secret,
 	tlsSNISecrets []tlsSNISecret,
 ) error {
 	var (
@@ -283,10 +292,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      volumeNameAuditPolicy,
-								MountPath: volumeMountPathAuditPolicy,
-							},
-							{
 								Name:      volumeNameAdmissionConfiguration,
 								MountPath: volumeMountPathAdmissionConfiguration,
 							},
@@ -342,16 +347,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						},
 					}},
 					Volumes: []corev1.Volume{
-						{
-							Name: volumeNameAuditPolicy,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapAuditPolicy.Name,
-									},
-								},
-							},
-						},
 						{
 							Name: volumeNameAdmissionConfiguration,
 							VolumeSource: corev1.VolumeSource{
@@ -470,6 +465,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handlePodMutatorSettings(deployment)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
+		k.handleAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig)
+		k.handleAuthenticationSettings(deployment, secretAuthenticationWebhookKubeconfig)
+		k.handleAuthorizationSettings(deployment, secretAuthorizationWebhookKubeconfig)
 		if err := k.handleVPNSettings(deployment, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
@@ -499,11 +497,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
-	out = append(out, "--audit-log-path=/var/lib/audit.log")
-	out = append(out, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
-	out = append(out, "--audit-log-maxsize=100")
-	out = append(out, "--audit-log-maxbackup=5")
-	out = append(out, "--authorization-mode=Node,RBAC")
 
 	if len(k.values.APIAudiences) > 0 {
 		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
@@ -1302,4 +1295,130 @@ func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, con
 			},
 		},
 	})
+}
+
+func (k *kubeAPIServer) handleAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *corev1.ConfigMap, secretWebhookKubeconfig *corev1.Secret) {
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      volumeNameAuditPolicy,
+		MountPath: volumeMountPathAuditPolicy,
+	})
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: volumeNameAuditPolicy,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configMapAuditPolicy.Name,
+				},
+			},
+		},
+	})
+
+	if k.values.Audit == nil || k.values.Audit.Webhook == nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command,
+			"--audit-log-path=/var/lib/audit.log",
+			"--audit-log-maxsize=100",
+			"--audit-log-maxbackup=5",
+		)
+		return
+	}
+
+	if len(k.values.Audit.Webhook.Kubeconfig) > 0 {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-config-file=%s/%s", volumeMountPathAuditWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameAuditWebhookKubeconfig,
+			MountPath: volumeMountPathAuditWebhookKubeconfig,
+			ReadOnly:  true,
+		})
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameAuditWebhookKubeconfig,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretWebhookKubeconfig.Name,
+				},
+			},
+		})
+	}
+
+	if v := k.values.Audit.Webhook.BatchMaxSize; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-batch-max-size=%d", *v))
+	}
+
+	if v := k.values.Audit.Webhook.Version; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-version=%s", *v))
+	}
+}
+
+func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
+	if k.values.AuthenticationWebhook == nil {
+		return
+	}
+
+	if len(k.values.AuthenticationWebhook.Kubeconfig) > 0 {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-config-file=%s/%s", volumeMountPathAuthenticationWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameAuthenticationWebhookKubeconfig,
+			MountPath: volumeMountPathAuthenticationWebhookKubeconfig,
+			ReadOnly:  true,
+		})
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameAuthenticationWebhookKubeconfig,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretWebhookKubeconfig.Name,
+				},
+			},
+		})
+	}
+
+	if v := k.values.AuthenticationWebhook.CacheTTL; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-cache-ttl=%s", v.String()))
+	}
+
+	if v := k.values.AuthenticationWebhook.Version; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-version=%s", *v))
+	}
+}
+
+func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
+	authModes := []string{"RBAC"}
+
+	if !k.values.IsNodeless {
+		authModes = append([]string{"Node"}, authModes...)
+	}
+
+	if k.values.AuthorizationWebhook != nil {
+		authModes = append(authModes, "Webhook")
+
+		if len(k.values.AuthorizationWebhook.Kubeconfig) > 0 {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathAuthorizationWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				Name:      volumeNameAuthorizationWebhookKubeconfig,
+				MountPath: volumeMountPathAuthorizationWebhookKubeconfig,
+				ReadOnly:  true,
+			})
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameAuthorizationWebhookKubeconfig,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretWebhookKubeconfig.Name,
+					},
+				},
+			})
+		}
+
+		if v := k.values.AuthorizationWebhook.CacheAuthorizedTTL; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", v.String()))
+		}
+		if v := k.values.AuthorizationWebhook.CacheUnauthorizedTTL; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", v.String()))
+		}
+
+		if v := k.values.AuthorizationWebhook.Version; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-version=%s", *v))
+		}
+	}
+
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--authorization-mode="+strings.Join(authModes, ","))
 }
