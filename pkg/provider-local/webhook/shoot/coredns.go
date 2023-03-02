@@ -21,7 +21,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,11 +72,7 @@ func (m *mutator) mutateCoreDNSDeployment(ctx context.Context, client client.Cli
 
 func (m *mutator) mutateCoreDNSHpa(ctx context.Context, shootClient client.Client) error {
 	hpa := autoscalingv2.HorizontalPodAutoscaler{}
-	if err := shootClient.Get(ctx, types.NamespacedName{Name: "coredns", Namespace: metav1.NamespaceSystem}, &hpa); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-
+	if err := shootClient.Get(ctx, types.NamespacedName{Name: "coredns", Namespace: metav1.NamespaceSystem}, &hpa); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -96,11 +91,7 @@ func (m *mutator) mutateCoreDNSHpa(ctx context.Context, shootClient client.Clien
 		resourcesv1alpha1.HighAvailabilityConfigReplicas: fmt.Sprintf("%v", requiredReplicas),
 	})
 
-	if err := shootClient.Patch(ctx, &hpa, patch); err != nil {
-		return err
-	}
-
-	return nil
+	return shootClient.Patch(ctx, &hpa, patch)
 }
 
 func (m *mutator) mutateCoreDNSService(_ context.Context, service *corev1.Service) error {
