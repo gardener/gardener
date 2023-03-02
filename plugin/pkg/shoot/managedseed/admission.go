@@ -25,9 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
@@ -167,6 +169,15 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 
 	if oldShoot.Spec.Networking.Nodes != nil && *oldShoot.Spec.Networking.Nodes != *shoot.Spec.Networking.Nodes {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "nodes"), shoot.Spec.Networking.Nodes, "field is immutable for managed seeds"))
+	}
+
+	seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("cannot extract the seed template: %w", err))
+	}
+
+	if seedTemplate.Spec.SecretRef != nil && !pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "enableStaticTokenKubeconfig"), shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, "shoot static token kubeconfig cannot be disabled when the seed secretRef is set"))
 	}
 
 	if len(allErrs) > 0 {
