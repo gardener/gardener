@@ -41,10 +41,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -528,9 +526,6 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 				v1beta1constants.LabelApp:       LabelValue,
 				managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				"type":                          "tunnel",
-				// ManagedSeeds run both, the VPN shoot client and Istiod in the same cluster. Thus, we need the following
-				// label to allow the VPN shoot client to reach Istiod's validating webhook.
-				gardenerutils.NetworkPolicyLabel(istio.IstiodServiceName, istio.PortWebhookServer): v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 		},
 		Spec: corev1.PodSpec{

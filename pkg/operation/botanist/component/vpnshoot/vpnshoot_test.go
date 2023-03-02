@@ -143,7 +143,6 @@ spec:
         matchLabels:
           app: vpn-shoot
           gardener.cloud/role: system-component
-          networking.resources.gardener.cloud/to-istiod-tcp-10250: allowed
           origin: gardener
           type: tunnel
   podSelector:
@@ -523,7 +522,6 @@ status: {}
 							"gardener.cloud/role": "system-component",
 							"origin":              "gardener",
 							"type":                "tunnel",
-							"networking.resources.gardener.cloud/to-istiod-tcp-10250": "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{
