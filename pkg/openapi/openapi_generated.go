@@ -81,6 +81,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSProvider":                            schema_pkg_apis_core_v1alpha1_DNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume":                             schema_pkg_apis_core_v1alpha1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DeploymentRef":                          schema_pkg_apis_core_v1alpha1_DeploymentRef(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ETCDEncryptionKeyRotation":              schema_pkg_apis_core_v1alpha1_ETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion":                       schema_pkg_apis_core_v1alpha1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExposureClass":                          schema_pkg_apis_core_v1alpha1_ExposureClass(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExposureClassList":                      schema_pkg_apis_core_v1alpha1_ExposureClassList(ref),
@@ -171,18 +172,17 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume":                             schema_pkg_apis_core_v1alpha1_SeedVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider":                     schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig":                   schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountKeyRotation":              schema_pkg_apis_core_v1alpha1_ServiceAccountKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Shoot":                                  schema_pkg_apis_core_v1alpha1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress":                 schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials":                       schema_pkg_apis_core_v1alpha1_ShootCredentials(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentialsRotation":               schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootETCDEncryptionKeyRotation":         schema_pkg_apis_core_v1alpha1_ShootETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation":                schema_pkg_apis_core_v1alpha1_ShootKubeconfigRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                              schema_pkg_apis_core_v1alpha1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage":                      schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                          schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation":             schema_pkg_apis_core_v1alpha1_ShootObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation":                schema_pkg_apis_core_v1alpha1_ShootSSHKeypairRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation":         schema_pkg_apis_core_v1alpha1_ShootServiceAccountKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSpec":                              schema_pkg_apis_core_v1alpha1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootState":                             schema_pkg_apis_core_v1alpha1_ShootState(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStateList":                         schema_pkg_apis_core_v1alpha1_ShootStateList(ref),
@@ -243,6 +243,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                             schema_pkg_apis_core_v1beta1_DNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                              schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                           schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":               schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                        schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                           schema_pkg_apis_core_v1beta1_ExposureClass(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassList":                       schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
@@ -334,18 +335,17 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume":                              schema_pkg_apis_core_v1beta1_SeedVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolumeProvider":                      schema_pkg_apis_core_v1beta1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig":                    schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation":               schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot":                                   schema_pkg_apis_core_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress":                  schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials":                        schema_pkg_apis_core_v1beta1_ShootCredentials(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation":                schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootETCDEncryptionKeyRotation":          schema_pkg_apis_core_v1beta1_ShootETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation":                 schema_pkg_apis_core_v1beta1_ShootKubeconfigRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                               schema_pkg_apis_core_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                       schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                           schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation":              schema_pkg_apis_core_v1beta1_ShootObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation":                 schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation":          schema_pkg_apis_core_v1beta1_ShootServiceAccountKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                               schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState":                              schema_pkg_apis_core_v1beta1_ShootState(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateList":                          schema_pkg_apis_core_v1beta1_ShootStateList(ref),
@@ -2774,6 +2774,54 @@ func schema_pkg_apis_core_v1alpha1_DeploymentRef(ref common.ReferenceCallback) c
 				Required: []string{"name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ETCDEncryptionKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the ETCD encryption key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationFinishedTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTriggeredTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -7028,6 +7076,54 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ServiceAccountKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceAccountKeyRotation contains information about the service account key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the service account key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationFinishedTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTriggeredTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_Shoot(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7163,68 +7259,20 @@ func schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref common.Reference
 					"serviceAccountKey": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ServiceAccountKey contains information about the service account key credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountKeyRotation"),
 						},
 					},
 					"etcdEncryptionKey": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootETCDEncryptionKeyRotation"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ETCDEncryptionKeyRotation"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_ShootETCDEncryptionKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"phase": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Phase describes the phase of the ETCD encryption key credential rotation.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationFinishedTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTriggeredTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
-				Required: []string{"phase"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation"},
 	}
 }
 
@@ -7417,54 +7465,6 @@ func schema_pkg_apis_core_v1alpha1_ShootSSHKeypairRotation(ref common.ReferenceC
 						},
 					},
 				},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_ShootServiceAccountKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootServiceAccountKeyRotation contains information about the service account key credential rotation.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"phase": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Phase describes the phase of the service account key credential rotation.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationFinishedTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTriggeredTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
-				Required: []string{"phase"},
 			},
 		},
 		Dependencies: []string{
@@ -10445,6 +10445,54 @@ func schema_pkg_apis_core_v1beta1_DeploymentRef(ref common.ReferenceCallback) co
 				Required: []string{"name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the ETCD encryption key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationFinishedTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTriggeredTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -14758,6 +14806,54 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceAccountKeyRotation contains information about the service account key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the service account key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationFinishedTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTriggeredTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Shoot(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -14893,68 +14989,20 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 					"serviceAccountKey": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ServiceAccountKey contains information about the service account key credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation"),
 						},
 					},
 					"etcdEncryptionKey": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootETCDEncryptionKeyRotation"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_ShootETCDEncryptionKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"phase": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Phase describes the phase of the ETCD encryption key credential rotation.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationFinishedTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTriggeredTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
-				Required: []string{"phase"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"},
 	}
 }
 
@@ -15147,54 +15195,6 @@ func schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref common.ReferenceCa
 						},
 					},
 				},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_ShootServiceAccountKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootServiceAccountKeyRotation contains information about the service account key credential rotation.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"phase": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Phase describes the phase of the service account key credential rotation.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationFinishedTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTriggeredTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
-				Required: []string{"phase"},
 			},
 		},
 		Dependencies: []string{

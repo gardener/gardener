@@ -214,6 +214,12 @@ type CredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	// +optional
 	CertificateAuthorities *gardencorev1beta1.CARotation `json:"certificateAuthorities,omitempty"`
+	// ServiceAccountKey contains information about the service account key credential rotation.
+	// +optional
+	ServiceAccountKey *gardencorev1beta1.ServiceAccountKeyRotation `json:"serviceAccountKey,omitempty"`
+	// ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
+	// +optional
+	ETCDEncryptionKey *gardencorev1beta1.ETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty"`
 }
 
 const (

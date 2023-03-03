@@ -93,6 +93,16 @@ func (in *CredentialsRotation) DeepCopyInto(out *CredentialsRotation) {
 		*out = new(v1beta1.CARotation)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ServiceAccountKey != nil {
+		in, out := &in.ServiceAccountKey, &out.ServiceAccountKey
+		*out = new(v1beta1.ServiceAccountKeyRotation)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ETCDEncryptionKey != nil {
+		in, out := &in.ETCDEncryptionKey, &out.ETCDEncryptionKey
+		*out = new(v1beta1.ETCDEncryptionKeyRotation)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

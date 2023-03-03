@@ -3116,7 +3116,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3128,7 +3128,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3152,7 +3152,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3164,7 +3164,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3188,7 +3188,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3200,7 +3200,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3224,7 +3224,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -3236,7 +3236,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -3269,10 +3269,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPreparing,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3287,10 +3287,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPreparing,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3305,10 +3305,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3323,10 +3323,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3341,10 +3341,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleting,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3359,10 +3359,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleting,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3377,10 +3377,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3395,10 +3395,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationCompleted,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3413,10 +3413,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleted,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3431,10 +3431,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CertificateAuthorities: &core.CARotation{
 								Phase: core.RotationPrepared,
 							},
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -3674,7 +3674,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3686,7 +3686,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3698,7 +3698,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3710,7 +3710,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -3740,7 +3740,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3752,7 +3752,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3764,7 +3764,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3776,7 +3776,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -3845,7 +3845,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3857,7 +3857,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3869,7 +3869,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3881,7 +3881,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},
@@ -3911,7 +3911,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -3923,7 +3923,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -3935,7 +3935,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleting,
 							},
 						},
@@ -3947,7 +3947,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},

@@ -90,8 +90,8 @@ var _ = Describe("Warnings", func() {
 						Kubeconfig:             &core.ShootKubeconfigRotation{},
 						SSHKeypair:             &core.ShootSSHKeypairRotation{},
 						Observability:          &core.ShootObservabilityRotation{},
-						ServiceAccountKey:      &core.ShootServiceAccountKeyRotation{},
-						ETCDEncryptionKey:      &core.ShootETCDEncryptionKeyRotation{},
+						ServiceAccountKey:      &core.ServiceAccountKeyRotation{},
+						ETCDEncryptionKey:      &core.ETCDEncryptionKeyRotation{},
 					}
 					mutateRotation(rotation)
 					shoot.Status.Credentials = &core.ShootCredentials{Rotation: rotation}

@@ -96,8 +96,8 @@ var _ = Describe("helper", func() {
 		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
 		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
 		Entry("serviceAccountKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
-		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ShootServiceAccountKeyRotation{}}}, core.CredentialsRotationPhase("")),
-		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ShootServiceAccountKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ServiceAccountKeyRotation{}}}, core.CredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ServiceAccountKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
 
 	DescribeTable("#GetShootETCDEncryptionKeyRotationPhase",
@@ -108,8 +108,8 @@ var _ = Describe("helper", func() {
 		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
 		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
 		Entry("etcdEncryptionKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
-		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{}}}, core.CredentialsRotationPhase("")),
-		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{}}}, core.CredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
 
 	DescribeTable("#TaintsHave",

@@ -114,7 +114,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 	gardenList := &metav1.PartialObjectMetadataList{}
 	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
-	if err := r.RuntimeClient.List(ctx, gardenList); err != nil {
+	if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(2)); err != nil {
 		return err
 	}
 
@@ -155,9 +155,13 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	case v1beta1constants.OperationRotateCredentialsStart:
 		mustRemoveOperationAnnotation = true
 		startRotationCA(garden, &now)
+		startRotationServiceAccountKey(garden, &now)
+		startRotationETCDEncryptionKey(garden, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(garden, &now)
+		completeRotationServiceAccountKey(garden, &now)
+		completeRotationETCDEncryptionKey(garden, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
@@ -165,6 +169,20 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	case v1beta1constants.OperationRotateCAComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(garden, &now)
+
+	case v1beta1constants.OperationRotateServiceAccountKeyStart:
+		mustRemoveOperationAnnotation = true
+		startRotationServiceAccountKey(garden, &now)
+	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
+		mustRemoveOperationAnnotation = true
+		completeRotationServiceAccountKey(garden, &now)
+
+	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+		mustRemoveOperationAnnotation = true
+		startRotationETCDEncryptionKey(garden, &now)
+	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
+		mustRemoveOperationAnnotation = true
+		completeRotationETCDEncryptionKey(garden, &now)
 	}
 
 	if err := r.RuntimeClient.Status().Update(ctx, garden); err != nil {
@@ -201,6 +219,38 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 		})
 	}
 
+	switch helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		helper.MutateServiceAccountKeyRotation(garden, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
+		})
+
+	case gardencorev1beta1.RotationCompleting:
+		helper.MutateServiceAccountKeyRotation(garden, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
+		})
+	}
+
+	switch helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
+		})
+
+	case gardencorev1beta1.RotationCompleting:
+		helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
+		})
+	}
+
 	return r.RuntimeClient.Status().Update(ctx, garden)
 }
 
@@ -215,6 +265,38 @@ func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
 
 func completeRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
 	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
+	})
+}
+
+func startRotationServiceAccountKey(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateServiceAccountKeyRotation(garden, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
+		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
+	})
+}
+
+func completeRotationServiceAccountKey(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateServiceAccountKeyRotation(garden, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
+	})
+}
+
+func startRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
+		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
+	})
+}
+
+func completeRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
 		rotation.LastCompletionTriggeredTime = now
 	})
@@ -253,6 +335,14 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 			for _, config := range nonAutoRotatedCACertConfigurations() {
 				rotation[config.GetName()] = gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}
+		}
+
+		if gardenStatus.Credentials.Rotation.ServiceAccountKey != nil && gardenStatus.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameServiceAccountKey] = gardenStatus.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time
+		}
+
+		if gardenStatus.Credentials.Rotation.ETCDEncryptionKey != nil && gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameETCDEncryptionKey] = gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time
 		}
 	}
 

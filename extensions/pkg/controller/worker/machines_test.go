@@ -118,7 +118,7 @@ var _ = Describe("Machines", func() {
 								CertificateAuthorities: &gardencorev1beta1.CARotation{
 									LastInitiationTime: &lastCARotationInitiation,
 								},
-								ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{
+								ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
 									LastInitiationTime: &lastSAKeyRotationInitiation,
 								},
 							},

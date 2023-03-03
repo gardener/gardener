@@ -187,9 +187,9 @@ type ShootCredentialsRotation struct {
 	// Observability contains information about the observability credential rotation.
 	Observability *ShootObservabilityRotation
 	// ServiceAccountKey contains information about the service account key credential rotation.
-	ServiceAccountKey *ShootServiceAccountKeyRotation
+	ServiceAccountKey *ServiceAccountKeyRotation
 	// ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
-	ETCDEncryptionKey *ShootETCDEncryptionKeyRotation
+	ETCDEncryptionKey *ETCDEncryptionKeyRotation
 }
 
 // CARotation contains information about the certificate authority credential rotation.
@@ -233,8 +233,8 @@ type ShootObservabilityRotation struct {
 	LastCompletionTime *metav1.Time
 }
 
-// ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
-type ShootServiceAccountKeyRotation struct {
+// ServiceAccountKeyRotation contains information about the service account key credential rotation.
+type ServiceAccountKeyRotation struct {
 	// Phase describes the phase of the service account key credential rotation.
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
@@ -250,8 +250,8 @@ type ShootServiceAccountKeyRotation struct {
 	LastCompletionTriggeredTime *metav1.Time
 }
 
-// ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
-type ShootETCDEncryptionKeyRotation struct {
+// ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
+type ETCDEncryptionKeyRotation struct {
 	// Phase describes the phase of the ETCD encryption key credential rotation.
 	Phase CredentialsRotationPhase
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
