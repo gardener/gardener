@@ -788,7 +788,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, 
 			}
 		}
 
-		allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, kubernetes.Version, fldPath.Child("kubeAPIServer", "admissionPlugins"))...)
+		allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, kubernetes.Version, false, fldPath.Child("kubeAPIServer", "admissionPlugins"))...)
 
 		if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
 			auditPath := fldPath.Child("kubeAPIServer", "auditConfig")

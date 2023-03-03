@@ -74,6 +74,7 @@ spec:
     #         clusterDefaultNodeSelector: <node-selectors-labels>
     #         namespace1: <node-selectors-labels>
     #         namespace2: <node-selectors-labels>
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-admission-plugin
     #   auditConfig:
     #     auditPolicy:
     #       configMapRef:

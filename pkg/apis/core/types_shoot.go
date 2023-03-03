@@ -664,6 +664,8 @@ type AdmissionPlugin struct {
 	Disabled *bool
 	// Config is the configuration of the plugin.
 	Config *runtime.RawExtension
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.
+	KubeconfigSecretName *string
 }
 
 // WatchCacheSizes contains configuration of the API server's watch cache sizes.
