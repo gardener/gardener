@@ -24,6 +24,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/core/seed"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
@@ -71,7 +72,9 @@ func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object)
 // Validate validates the given object.
 func (Strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	seed := obj.(*core.Seed)
-	return validation.ValidateSeed(seed)
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, validation.ValidateSeed(seed)...)
+	return allErrs
 }
 
 // Canonicalize allows an object to be mutated into a canonical form. This
@@ -102,12 +105,12 @@ func (Strategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Objec
 
 // WarningsOnCreate returns warnings to the client performing a create.
 func (Strategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
-	return nil
+	return seed.GetWarnings(ctx, obj.(*core.Seed), nil)
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (Strategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
-	return nil
+	return seed.GetWarnings(ctx, obj.(*core.Seed), old.(*core.Seed))
 }
 
 // StatusStrategy defines the strategy for storing seeds statuses.

@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -22,11 +23,14 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
+	seedregistry "github.com/gardener/gardener/pkg/registry/core/seed"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -137,6 +141,63 @@ var _ = Describe("Utils tests", func() {
 
 			errorList := ValidateIPFamilies([]core.IPFamily{core.IPFamilyIPv6}, fldPath)
 			Expect(errorList).To(BeEmpty())
+		})
+	})
+
+	Describe("#Validate", func() {
+		var seed *core.Seed
+
+		BeforeEach(func() {
+			seed = &core.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-seed",
+				},
+				Spec: core.SeedSpec{
+					DNS: core.SeedDNS{
+						IngressDomain: pointer.String("test-seed.seed.dev.k8s.ondemand.com"),
+					},
+					Provider: core.SeedProvider{
+						Type:   "test-provider",
+						Region: "test-region",
+					},
+					Networks: core.SeedNetworks{
+						Pods:     "10.123.211.10/18",
+						Services: "193.168.211.0/16",
+					},
+					Settings: &core.SeedSettings{
+						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{},
+					},
+				},
+			}
+		})
+
+		It("should not allow if deprecated field is different than new field", func() {
+			seed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{
+				Enabled: true,
+			}
+			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{
+				Enabled: false,
+			}
+			allErrs := seedregistry.NewStrategy(&registry.Store{}).Validate(context.TODO(), seed)
+
+			Expect(allErrs).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.settings.dependencyWatchdog"),
+					"Detail": Equal(`weeder and endpoint cannot have different values`),
+				}))))
+		})
+
+		It("should allow if deprecated fields are not set", func() {
+			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{
+				Enabled: true,
+			}
+			seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{
+				Enabled: true,
+			}
+			allErrs := seedregistry.NewStrategy(&registry.Store{}).Validate(context.TODO(), seed)
+
+			Expect(allErrs).To(BeEmpty())
 		})
 	})
 })
