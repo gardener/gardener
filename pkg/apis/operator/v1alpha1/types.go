@@ -206,6 +206,21 @@ type KubeAPIServerConfig struct {
 	// KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.
 	// +optional
 	*gardencorev1beta1.KubeAPIServerConfig `json:",inline"`
+	// SNI contains configuration options for the TLS SNI settings.
+	// +optional
+	SNI *SNI `json:"sni,omitempty"`
+}
+
+// SNI contains configuration options for the TLS SNI settings.
+type SNI struct {
+	// SecretName is the name of a secret containing the TLS certificate and private key.
+	SecretName string `json:"secretName"`
+	// DomainPatterns is a list of fully qualified domain names, possibly with prefixed wildcard segments. The domain
+	// patterns also allow IP addresses, but IPs should only be used if the apiserver has visibility to the IP address
+	// requested by a client. If no domain patterns are provided, the names of the certificate are extracted.
+	// Non-wildcard matches trump over wildcard matches, explicit domain patterns trump over extracted names.
+	// +optional
+	DomainPatterns []string `json:"domainPatterns,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

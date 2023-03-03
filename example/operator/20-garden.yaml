@@ -103,6 +103,10 @@ spec:
     #     httpAccessLogs: 3
     #   defaultNotReadyTolerationSeconds: 300
     #   defaultUnreachableTolerationSeconds: 300
+    #   sni:
+    #     secretName: name-of-secret-containing-tls-cert-and-key
+    #     domainPatterns:
+    #     - foo.example.com
     maintenance:
       timeWindow:
         begin: 220000+0100
