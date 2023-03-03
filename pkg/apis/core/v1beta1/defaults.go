@@ -86,11 +86,20 @@ func SetDefaults_SeedNetworks(obj *SeedNetworks) {
 
 // SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
 func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
-	if obj.Endpoint == nil {
-		obj.Endpoint = &SeedSettingDependencyWatchdogEndpoint{Enabled: true}
+	// keeping the field `weeder` and `endpoint` in sync
+	if obj.Weeder == nil {
+		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
+		if obj.Endpoint != nil {
+			obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: obj.Endpoint.Enabled}
+		}
 	}
-	if obj.Probe == nil {
-		obj.Probe = &SeedSettingDependencyWatchdogProbe{Enabled: true}
+
+	//keeping the field `prober` and `probe` in sync
+	if obj.Prober == nil {
+		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
+		if obj.Probe != nil {
+			obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: obj.Probe.Enabled}
+		}
 	}
 }
 

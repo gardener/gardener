@@ -2128,15 +2128,26 @@ message SeedSelector {
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
 message SeedSettingDependencyWatchdog {
   // Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Weeder` instead.
   // +optional
   optional SeedSettingDependencyWatchdogEndpoint endpoint = 1;
 
   // Probe controls the probe settings for the dependency-watchdog for the seed.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Prober` instead.
   // +optional
   optional SeedSettingDependencyWatchdogProbe probe = 2;
+
+  // Weeder controls the weeder settings for the dependency-watchdog for the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdogWeeder weeder = 3;
+
+  // Prober controls the prober settings for the dependency-watchdog for the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdogProber prober = 4;
 }
 
 // SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
+// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogWeeder` instead.
 message SeedSettingDependencyWatchdogEndpoint {
   // Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
   // helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
@@ -2145,10 +2156,27 @@ message SeedSettingDependencyWatchdogEndpoint {
 }
 
 // SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
+// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogProber` instead.
 message SeedSettingDependencyWatchdogProbe {
   // Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
-  // scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+  // scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
   // reachable via its external ingress in order to avoid melt-down situations.
+  optional bool enabled = 1;
+}
+
+// SeedSettingDependencyWatchdogProber controls the prober settings for the dependency-watchdog for the seed.
+message SeedSettingDependencyWatchdogProber {
+  // Enabled controls whether the probe controller(prober) of the dependency-watchdog should be enabled. This controller
+  // scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
+  // reachable via its external ingress in order to avoid melt-down situations.
+  optional bool enabled = 1;
+}
+
+// SeedSettingDependencyWatchdogWeeder controls the weeder settings for the dependency-watchdog for the seed.
+message SeedSettingDependencyWatchdogWeeder {
+  // Enabled controls whether the endpoint controller(weeder) of the dependency-watchdog should be enabled. This controller
+  // helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+  // CrashLoopBackoff status and restarting them once their dependants become ready and available again.
   optional bool enabled = 1;
 }
 

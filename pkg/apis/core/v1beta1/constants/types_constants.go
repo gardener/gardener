@@ -104,6 +104,12 @@ const (
 	// DeploymentNameKubeControllerManager is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-controller-manager pod.
 	DeploymentNameKubeControllerManager = "kube-controller-manager"
+	// DeploymentNameDependencyWatchdogProber is a constant for the name of a Kubernetes deployment object that contains
+	// the dependency-watchdog-prober pod.
+	DeploymentNameDependencyWatchdogProber = "dependency-watchdog-prober"
+	// DeploymentNameDependencyWatchdogWeeder is a constant for the name of a Kubernetes deployment object that contains
+	// the dependency-watchdog-weeder pod.
+	DeploymentNameDependencyWatchdogWeeder = "dependency-watchdog-weeder"
 	// DeploymentNameGardenlet is a constant for the name of a Kubernetes deployment object that contains
 	// the Gardenlet pod.
 	DeploymentNameGardenlet = "gardenlet"
