@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,14 +36,14 @@ type mutator struct {
 }
 
 // NewMutator creates a new Mutator that mutates resources in the shoot cluster.
-func NewMutator() extensionswebhook.Mutator {
+func NewMutator() extensionswebhook.MutatorWithShootClient {
 	return &mutator{
 		logger:               log.Log.WithName("shoot-mutator"),
 		kubeProxyConfigCodec: kubeproxy.NewConfigCodec(),
 	}
 }
 
-func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
+func (m *mutator) Mutate(ctx context.Context, new, _ client.Object, client client.Client) error {
 	acc, err := meta.Accessor(new)
 	if err != nil {
 		return fmt.Errorf("could not create accessor during webhook: %w", err)
@@ -54,11 +55,25 @@ func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
 	}
 
 	switch x := new.(type) {
+	case *corev1.Node:
+		return m.mutateCoreDNSHpa(ctx, client)
 	case *corev1.ConfigMap:
 		switch {
 		case strings.HasPrefix(x.Name, kubeproxy.ConfigNamePrefix):
 			extensionswebhook.LogMutation(logger, x.Kind, x.Namespace, x.Name)
 			return m.mutateKubeProxyConfigMap(ctx, x)
+		}
+	case *appsv1.Deployment:
+		switch {
+		case x.Name == "coredns":
+			extensionswebhook.LogMutation(logger, x.Kind, x.Namespace, x.Name)
+			return m.mutateCoreDNSDeployment(ctx, client, x)
+		}
+	case *corev1.Service:
+		switch {
+		case x.Name == "kube-dns":
+			extensionswebhook.LogMutation(logger, x.Kind, x.Namespace, x.Name)
+			return m.mutateCoreDNSService(ctx, x)
 		}
 	}
 
