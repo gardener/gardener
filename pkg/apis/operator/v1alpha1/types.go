@@ -206,6 +206,15 @@ type KubeAPIServerConfig struct {
 	// KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.
 	// +optional
 	*gardencorev1beta1.KubeAPIServerConfig `json:",inline"`
+	// AuditWebhook contains settings related to an audit webhook configuration.
+	// +optional
+	AuditWebhook *AuditWebhook `json:"auditWebhook,omitempty"`
+	// Authentication contains settings related to authentication.
+	// +optional
+	Authentication *Authentication `json:"authentication,omitempty"`
+	// Authorization contains settings related to authorization.
+	// +optional
+	Authorization *Authorization `json:"authorization,omitempty"`
 	// ResourcesToStoreInETCDEvents contains a list of resources which should be stored in etcd-events instead of
 	// etcd-main. The 'events' resource is always stored in etcd-events. Note that adding or removing resources from
 	// this list will not migrate them automatically from the etcd-main to etcd-events or vice versa.
@@ -214,6 +223,59 @@ type KubeAPIServerConfig struct {
 	// SNI contains configuration options for the TLS SNI settings.
 	// +optional
 	SNI *SNI `json:"sni,omitempty"`
+}
+
+// AuditWebhook contains settings related to an audit webhook configuration.
+type AuditWebhook struct {
+	// BatchMaxSize is the maximum size of a batch.
+	// +optional
+	BatchMaxSize *int32 `json:"batchMaxSize,omitempty"`
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	KubeconfigSecretName string `json:"kubeconfigSecretName"`
+	// Version is the API version to send and expect from the webhook.
+	// +optional
+	Version *string `json:"version,omitempty"`
+}
+
+// Authentication contains settings related to authentication.
+type Authentication struct {
+	// Webhook contains settings related to an authentication webhook configuration.
+	// +optional
+	Webhook *AuthenticationWebhook `json:"webhook,omitempty"`
+}
+
+// AuthenticationWebhook contains settings related to an authentication webhook configuration.
+type AuthenticationWebhook struct {
+	// CacheTTL is the duration to cache responses from the webhook authenticator.
+	// +optional
+	CacheTTL *metav1.Duration `json:"cacheTTL,omitempty"`
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	KubeconfigSecretName string `json:"kubeconfigSecretName"`
+	// Version is the API version to send and expect from the webhook.
+	// +optional
+	Version *string `json:"version,omitempty"`
+}
+
+// Authorization contains settings related to authorization.
+type Authorization struct {
+	// Webhook contains settings related to an authorization webhook configuration.
+	// +optional
+	Webhook *AuthorizationWebhook `json:"webhook,omitempty"`
+}
+
+// AuthorizationWebhook contains settings related to an authorization webhook configuration.
+type AuthorizationWebhook struct {
+	// CacheAuthorizedTTL is the duration to cache 'authorized' responses from the webhook authorizer.
+	// +optional
+	CacheAuthorizedTTL *metav1.Duration `json:"cacheAuthorizedTTL,omitempty"`
+	// CacheUnauthorizedTTL is the duration to cache 'unauthorized' responses from the webhook authorizer.
+	// +optional
+	CacheUnauthorizedTTL *metav1.Duration `json:"cacheUnauthorizedTTL,omitempty"`
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	KubeconfigSecretName string `json:"kubeconfigSecretName"`
+	// Version is the API version to send and expect from the webhook.
+	// +optional
+	Version *string `json:"version,omitempty"`
 }
 
 // GroupResource contains a list of resources which should be stored in etcd-events instead of etcd-main.

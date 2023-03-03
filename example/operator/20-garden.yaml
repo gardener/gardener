@@ -75,10 +75,25 @@ spec:
     #         namespace1: <node-selectors-labels>
     #         namespace2: <node-selectors-labels>
     #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-admission-plugin
+    #   authentication:
+    #     webhook:
+    #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authentication-webhook
+    #       cacheTTL: 30m
+    #       version: v1beta1
+    #   authorization:
+    #     webhook:
+    #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authorization-webhook
+    #       cacheAuthorizedTTL: 31m
+    #       cacheUnauthorizedTTL: 32m
+    #       version: v1beta1
     #   auditConfig:
     #     auditPolicy:
     #       configMapRef:
     #         name: auditpolicy
+    #   auditWebhook:
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-audit-webhook
+    #     batchMaxSize: 1337
+    #     version: audit.k8s.io/v1
     #   watchCacheSizes: # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
     #     default: 100
     #     resources:
