@@ -881,7 +881,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespace)
+	dwdWeeder, dwdProber, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -948,12 +948,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:   kubeStateMetrics.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying dependency-watchdog-endpoint",
-			Fn:   dwdEndpoint.Deploy,
+			Name: "Deploying dependency-watchdog-weeder",
+			Fn:   dwdWeeder.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying dependency-watchdog-probe",
-			Fn:   dwdProbe.Deploy,
+			Name: "Deploying dependency-watchdog-prober",
+			Fn:   dwdProber.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",

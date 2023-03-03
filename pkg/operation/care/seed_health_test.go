@@ -60,8 +60,8 @@ var (
 	}
 
 	optionalManagedResources = []string{
-		dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint,
-		dependencywatchdog.ManagedResourceDependencyWatchdogProbe,
+		dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
+		dependencywatchdog.ManagedResourceDependencyWatchdogProber,
 		nginxingress.ManagedResourceName,
 		hvpa.ManagedResourceName,
 	}
@@ -102,6 +102,12 @@ var _ = Describe("Seed health", func() {
 						Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{
 							Enabled: true,
 						},
+						Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{
+							Enabled: true,
+						},
+						Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{
+							Enabled: true,
+						},
 					},
 				},
 			},
@@ -137,6 +143,8 @@ var _ = Describe("Seed health", func() {
 				seed.Spec.Ingress.Controller.Kind = "foo"
 				seed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled = false
 				seed.Spec.Settings.DependencyWatchdog.Probe.Enabled = false
+				seed.Spec.Settings.DependencyWatchdog.Weeder.Enabled = false
+				seed.Spec.Settings.DependencyWatchdog.Prober.Enabled = false
 
 				for _, name := range requiredManagedResources {
 					Expect(c.Create(ctx, healthyManagedResource(name))).To(Succeed())

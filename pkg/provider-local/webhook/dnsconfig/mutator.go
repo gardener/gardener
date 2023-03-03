@@ -56,7 +56,7 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 			return nil
 		}
 
-		if newObj.GetLabels()["app"] == "dependency-watchdog-probe" {
+		if newObj.GetLabels()["app"] == "dependency-watchdog-prober" {
 			// We don't want to react for DWD pods but only for DWD deployments, so exit early here.
 			return nil
 		}

@@ -240,9 +240,9 @@ var _ = Describe("ControllerInstallation controller tests", func() {
         - c
       settings:
         dependencyWatchdog:
-          endpoint:
+          prober:
             enabled: true
-          probe:
+          weeder:
             enabled: true
         excessCapacityReservation:
           enabled: true

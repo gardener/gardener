@@ -49,8 +49,8 @@ var _ = Describe("Seed Care controller tests", func() {
 			istio.ManagedResourceControlName,
 			istio.ManagedResourceIstioSystemName,
 			hvpa.ManagedResourceName,
-			dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint,
-			dependencywatchdog.ManagedResourceDependencyWatchdogProbe,
+			dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
+			dependencywatchdog.ManagedResourceDependencyWatchdogProber,
 			nginxingress.ManagedResourceName,
 		}
 
