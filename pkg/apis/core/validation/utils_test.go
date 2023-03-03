@@ -15,22 +15,19 @@
 package validation_test
 
 import (
-	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/registry/generic/registry"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
-	seedregistry "github.com/gardener/gardener/pkg/registry/core/seed"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -153,12 +150,24 @@ var _ = Describe("Utils tests", func() {
 					Name: "test-seed",
 				},
 				Spec: core.SeedSpec{
-					DNS: core.SeedDNS{
-						IngressDomain: pointer.String("test-seed.seed.dev.k8s.ondemand.com"),
-					},
 					Provider: core.SeedProvider{
 						Type:   "test-provider",
 						Region: "test-region",
+					},
+					Ingress: &core.Ingress{
+						Domain: "someingress.example.com",
+						Controller: core.IngressController{
+							Kind: "nginx",
+						},
+					},
+					DNS: core.SeedDNS{
+						Provider: &core.SeedDNSProvider{
+							Type: "provider",
+							SecretRef: corev1.SecretReference{
+								Name:      "secret",
+								Namespace: "garden",
+							},
+						},
 					},
 					Networks: core.SeedNetworks{
 						Pods:     "10.123.211.10/18",
@@ -178,7 +187,7 @@ var _ = Describe("Utils tests", func() {
 			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{
 				Enabled: false,
 			}
-			allErrs := seedregistry.NewStrategy(&registry.Store{}).Validate(context.TODO(), seed)
+			allErrs := ValidateSeed(seed)
 
 			Expect(allErrs).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -195,7 +204,7 @@ var _ = Describe("Utils tests", func() {
 			seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{
 				Enabled: true,
 			}
-			allErrs := seedregistry.NewStrategy(&registry.Store{}).Validate(context.TODO(), seed)
+			allErrs := ValidateSeed(seed)
 
 			Expect(allErrs).To(BeEmpty())
 		})
