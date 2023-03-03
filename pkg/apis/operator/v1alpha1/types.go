@@ -206,9 +206,20 @@ type KubeAPIServerConfig struct {
 	// KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.
 	// +optional
 	*gardencorev1beta1.KubeAPIServerConfig `json:",inline"`
+	// ResourcesToStoreInETCDEvents contains a list of resources which should be stored in etcd-events instead of
+	// etcd-main. The 'events' resource is always stored in etcd-events. Note that adding or removing resources from
+	// this list will not migrate them automatically from the etcd-main to etcd-events or vice versa.
+	// +optional
+	ResourcesToStoreInETCDEvents []GroupResource `json:"resourcesToStoreInETCDEvents,omitempty"`
 	// SNI contains configuration options for the TLS SNI settings.
 	// +optional
 	SNI *SNI `json:"sni,omitempty"`
+}
+
+// GroupResource contains a list of resources which should be stored in etcd-events instead of etcd-main.
+type GroupResource struct {
+	Group    string `json:"group"`
+	Resource string `json:"resource"`
 }
 
 // SNI contains configuration options for the TLS SNI settings.

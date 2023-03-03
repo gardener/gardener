@@ -107,6 +107,9 @@ spec:
     #     secretName: name-of-secret-containing-tls-cert-and-key
     #     domainPatterns:
     #     - foo.example.com
+    #   resourcesToStoreInETCDEvents:
+    #   - group: networking.k8s.io
+    #     resources: networkpolicies
     maintenance:
       timeWindow:
         begin: 220000+0100
