@@ -15,9 +15,9 @@ Gardener is using it for two purposes:
 
 For the sake of separating these concerns, two instances of the DWD are deployed by the seed controller.
 
-### Probe
+### Prober
 
-The `dependency-watchdog-probe` deployment is responsible for above mentioned first point.
+The `dependency-watchdog-prober` deployment is responsible for above-mentioned first point.
 
 The `kube-apiserver` of shoot clusters is exposed via a load balancer, usually with an attached public IP, which serves as the main entry point when it comes to interaction with the shoot cluster (e.g., via `kubectl`).
 While end-users are talking to their clusters via this load balancer, other control plane components like the `kube-controller-manager` or `kube-scheduler` run in the same namespace/same cluster, so they can communicate via the in-cluster `Service` directly instead of using the detour with the load balancer.
@@ -27,6 +27,7 @@ This means that the `kubelet`s and `kube-proxy`s also have to talk to the contro
 The `kube-controller-manager` has a special control loop called [`nodelifecycle`](https://github.com/kubernetes/kubernetes/tree/master/pkg/controller/nodelifecycle) which will set the status of `Node`s to `NotReady` in case the kubelet stops to regularly renew its lease/to send its heartbeat.
 This will trigger other self-healing capabilities of Kubernetes, for example, the eviction of pods from such "unready" nodes to healthy nodes.
 Similarly, the `cloud-controller-manager` has a control loop that will disconnect load balancers from "unready" nodes, i.e., such workload would no longer be accessible until moved to a healthy node.
+Furthermore, the `machine-controller-manager` removes "unready" nodes after `health-timeout` (default 10min).
 
 While these are awesome Kubernetes features on their own, they have a dangerous drawback when applied in the context of Gardener's architecture:
 When the `kube-apiserver` load balancer fails for whatever reason, then the `kubelet`s can't talk to the `kube-apiserver` to renew their lease anymore.
@@ -36,13 +37,13 @@ As a result, the customer's workload will go down and become unreachable.
 
 This is exactly the situation that the DWD prevents:
 It regularly tries to talk to the `kube-apiserver`s of the shoot clusters, once by using their load balancer, and once by talking via the in-cluster `Service`.
-If it detects that the `kube-apiserver` is reachable internally but not externally, it scales down the `kube-controller-manager` to `0`.
-This will prevent it from marking the shoot worker nodes as "unready".
-As soon as the `kube-apiserver` is reachable externally again, the `kube-controller-manager` will be scaled up to `1` again.
+If it detects that the `kube-apiserver` is reachable internally but not externally it scales down `machine-controller-manager`, `cluster-autoscaler`(if enabled) and `kube-controller-manager` to `0`.
+This will prevent it from marking the shoot worker nodes as "unready". This will also prevent the `machine-controller-manager` from deleting potentially healthy nodes.
+As soon as the `kube-apiserver` is reachable externally again, `kube-controller-manager` , `machine-controller-manager` and `cluster-autoscaler` are restored to the state prior to scale-down.
 
-### Endpoint
+### Weeder 
 
-The `dependency-watchdog-endpoint` deployment is responsible for the above mentioned second point.
+The `dependency-watchdog-weeder` deployment is responsible for above mentioned second point.
 
 Kubernetes is restarting failing pods with an exponentially increasing backoff time.
 While this is a great strategy to prevent system overloads, it has the disadvantage that the delay between restarts is increasing up to multiple minutes very fast.
