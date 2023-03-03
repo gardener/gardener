@@ -1,0 +1,9 @@
+rules:
+  - selectorRegexp: (.+[.])?k8s[.]io
+    allowedPrefixes:
+      - k8s.io/apimachinery
+      - k8s.io/api
+  - selectorRegexp: github[.]com/gardener/dependency-watchdog
+    allowedPrefixes:
+    # should be self-contained and must not import any other dependency watchdog packages
+      - github.com/gardener/dependency-watchdog/api/weeder
