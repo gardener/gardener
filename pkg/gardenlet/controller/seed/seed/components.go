@@ -18,10 +18,11 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
-	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
-	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
+	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -238,8 +239,8 @@ func defaultDependencyWatchdogs(
 	seedSettings *gardencorev1beta1.SeedSettings,
 	gardenNamespaceName string,
 ) (
-	dwdEndpoint component.DeployWaiter,
-	dwdProbe component.DeployWaiter,
+	dwdWeeder component.DeployWaiter,
+	dwdProber component.DeployWaiter,
 	err error,
 ) {
 	image, err := imageVector.FindImage(images.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
@@ -248,62 +249,66 @@ func defaultDependencyWatchdogs(
 	}
 
 	var (
-		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String(), KubernetesVersion: seedVersion}
-		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String(), KubernetesVersion: seedVersion}
+		dwdWeederValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder, Image: image.String(), KubernetesVersion: seedVersion}
+		dwdProberValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber, Image: image.String(), KubernetesVersion: seedVersion}
 	)
 
-	dwdEndpoint = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
-	dwdProbe = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues))
+	dwdWeeder = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdWeederValues))
+	dwdProber = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProberValues))
 
-	if v1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
+	if v1beta1helper.SeedSettingDependencyWatchdogWeederEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
 		var (
-			dependencyWatchdogEndpointConfigurationFuncs = []dependencywatchdog.EndpointConfigurationFunc{
-				func() (map[string]restarterapi.Service, error) {
-					return etcd.DependencyWatchdogEndpointConfiguration(v1beta1constants.ETCDRoleMain)
+			dependencyWatchdogWeederConfigurationFuncs = []dependencywatchdog.WeederConfigurationFunc{
+				func() (map[string]weederapi.DependantSelectors, error) {
+					return etcd.NewDependencyWatchdogWeederConfiguration(v1beta1constants.ETCDRoleMain)
 				},
-				kubeapiserver.DependencyWatchdogEndpointConfiguration,
+				kubeapiserver.NewDependencyWatchdogWeederConfiguration,
 			}
-			dependencyWatchdogEndpointConfigurations = restarterapi.ServiceDependants{
-				Services: make(map[string]restarterapi.Service, len(dependencyWatchdogEndpointConfigurationFuncs)),
+			dependencyWatchdogWeederConfiguration = weederapi.Config{
+				WatchDuration:                 &metav1.Duration{Duration: dependencywatchdog.DefaultWatchDuration},
+				ServicesAndDependantSelectors: make(map[string]weederapi.DependantSelectors, len(dependencyWatchdogWeederConfigurationFuncs)),
 			}
 		)
 
-		for _, componentFn := range dependencyWatchdogEndpointConfigurationFuncs {
+		for _, componentFn := range dependencyWatchdogWeederConfigurationFuncs {
 			dwdConfig, err := componentFn()
 			if err != nil {
 				return nil, nil, err
 			}
 			for k, v := range dwdConfig {
-				dependencyWatchdogEndpointConfigurations.Services[k] = v
+				dependencyWatchdogWeederConfiguration.ServicesAndDependantSelectors[k] = v
 			}
 		}
 
-		dwdEndpointValues.ValuesEndpoint = dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations}
-		dwdEndpoint = dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues)
+		dwdWeederValues.WeederConfig = dependencyWatchdogWeederConfiguration
+		dwdWeeder = dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdWeederValues)
 	}
 
-	if v1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
+	if v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
 		var (
-			dependencyWatchdogProbeConfigurationFuncs = []dependencywatchdog.ProbeConfigurationFunc{
-				kubeapiserver.DependencyWatchdogProbeConfiguration,
+			dependencyWatchdogProberConfigurationFuncs = []dependencywatchdog.ProberConfigurationFunc{
+				kubeapiserver.NewDependencyWatchdogProberConfiguration,
 			}
-			dependencyWatchdogProbeConfigurations = scalerapi.ProbeDependantsList{
-				Probes: make([]scalerapi.ProbeDependants, 0, len(dependencyWatchdogProbeConfigurationFuncs)),
+			dependencyWatchdogProberConfiguration = proberapi.Config{
+				InternalKubeConfigSecretName: dependencywatchdog.InternalProbeSecretName,
+				ExternalKubeConfigSecretName: dependencywatchdog.ExternalProbeSecretName,
+				ProbeInterval:                &metav1.Duration{Duration: dependencywatchdog.DefaultProbeInterval},
+				DependentResourceInfos:       make([]proberapi.DependentResourceInfo, 0, len(dependencyWatchdogProberConfigurationFuncs)),
 			}
 		)
 
-		for _, componentFn := range dependencyWatchdogProbeConfigurationFuncs {
+		for _, componentFn := range dependencyWatchdogProberConfigurationFuncs {
 			dwdConfig, err := componentFn()
 			if err != nil {
 				return nil, nil, err
 			}
-			dependencyWatchdogProbeConfigurations.Probes = append(dependencyWatchdogProbeConfigurations.Probes, dwdConfig...)
+			dependencyWatchdogProberConfiguration.DependentResourceInfos = append(dependencyWatchdogProberConfiguration.DependentResourceInfos, dwdConfig...)
 		}
 
-		dwdProbeValues.ValuesProbe = dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations}
-		dwdProbe = dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues)
+		dwdProberValues.ProberConfig = dependencyWatchdogProberConfiguration
+		dwdProber = dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProberValues)
 	}
 
 	return

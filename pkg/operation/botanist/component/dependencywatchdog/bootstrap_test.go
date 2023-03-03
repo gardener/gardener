@@ -79,9 +79,9 @@ metadata:
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: gardener.cloud:` + dwdName + `:cluster-role
+  name: gardener.cloud:` + dwdName + `
 rules:`
-					if role == RoleEndpoint {
+					if role == RoleWeeder {
 						out += `
 - apiGroups:
   - ""
@@ -100,26 +100,10 @@ rules:`
   - list
   - watch
   - delete
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - create
-- apiGroups:
-  - coordination.k8s.io
-  resourceNames:
-  - dependency-watchdog
-  resources:
-  - leases
-  verbs:
-  - get
-  - watch
-  - update
 `
 					}
 
-					if role == RoleProbe {
+					if role == RoleProber {
 						out += `
 - apiGroups:
   - extensions.gardener.cloud
@@ -148,22 +132,6 @@ rules:`
   - list
   - watch
   - update
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - create
-- apiGroups:
-  - coordination.k8s.io
-  resourceNames:
-  - dependency-watchdog-probe
-  resources:
-  - leases
-  verbs:
-  - get
-  - watch
-  - update
 `
 					}
 
@@ -174,28 +142,46 @@ rules:`
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
-  name: gardener.cloud:` + dwdName + `:cluster-role-binding
+  name: gardener.cloud:` + dwdName + `
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:` + dwdName + `:cluster-role
+  name: gardener.cloud:` + dwdName + `
 subjects:
 - kind: ServiceAccount
   name: ` + dwdName + `
   namespace: ` + namespace + `
 `
 
-				roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				roleYAMLFor = func(role Role) string {
+					out := `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
-  name: gardener.cloud:` + dwdName + `:role
+  name: gardener.cloud:` + dwdName + `
   namespace: ` + namespace + `
-rules:
+rules:`
+					if role == RoleWeeder {
+						out += `
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - dwd-weeder-leader-election
+  resources:
+  - leases
+  verbs:
+  - get
+  - watch
+  - update
 - apiGroups:
   - ""
   resources:
-  - endpoints
   - events
   verbs:
   - create
@@ -203,16 +189,50 @@ rules:
   - update
   - patch
 `
+					}
+
+					if role == RoleProber {
+						out += `
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - dwd-prober-leader-election
+  resources:
+  - leases
+  verbs:
+  - get
+  - watch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - update
+  - patch
+`
+					}
+					return out
+				}
+
 				roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
-  name: gardener.cloud:` + dwdName + `:role-binding
+  name: gardener.cloud:` + dwdName + `
   namespace: ` + namespace + `
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: gardener.cloud:` + dwdName + `:role
+  name: gardener.cloud:` + dwdName + `
 subjects:
 - kind: ServiceAccount
   name: ` + dwdName + `
@@ -224,17 +244,17 @@ subjects:
 data:
   dep-config.yaml: |`
 
-					if role == RoleEndpoint {
+					if role == RoleWeeder {
 						out += `
-    namespace: ""
-    services: null
+    servicesAndDependantSelectors: null
 `
 					}
 
-					if role == RoleProbe {
+					if role == RoleProber {
 						out += `
-    namespace: ""
-    probes: null
+    dependentResourceInfos: null
+    externalKubeConfigSecretName: ""
+    internalKubeConfigSecretName: ""
 `
 					}
 
@@ -279,13 +299,13 @@ spec:
       labels:
         app: ` + dwdName
 
-					if role == RoleEndpoint {
+					if role == RoleWeeder {
 						out += `
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed`
 					}
 
-					if role == RoleProbe {
+					if role == RoleProber {
 						out += `
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-private-networks: allowed
@@ -300,24 +320,24 @@ spec:
       containers:
       - command:`
 
-					if role == RoleEndpoint {
+					if role == RoleWeeder {
 						out += `
         - /usr/local/bin/dependency-watchdog
+        - weeder
         - --config-file=/etc/dependency-watchdog/config/dep-config.yaml
-        - --deployed-namespace=` + namespace + `
-        - --watch-duration=5m
+        - --enable-leader-election=true
 `
 					}
 
-					if role == RoleProbe {
+					if role == RoleProber {
 						out += `
         - /usr/local/bin/dependency-watchdog
-        - probe
+        - prober
         - --config-file=/etc/dependency-watchdog/config/dep-config.yaml
-        - --deployed-namespace=some-namespace
-        - --qps=20.0
-        - --burst=100
-        - --v=4
+        - --kube-api-qps=20.0
+        - --kube-api-burst=100
+        - --zap-log-level=INFO
+        - --enable-leader-election=true
 `
 					}
 
@@ -356,7 +376,7 @@ status: {}
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
-  name: ` + dwdName + `-vpa
+  name: ` + dwdName + `
   namespace: ` + namespace + `
 spec:
   resourcePolicy:
@@ -365,11 +385,11 @@ spec:
       minAllowed:
 `
 
-					if role == RoleEndpoint {
+					if role == RoleWeeder {
 						out += `        memory: 25Mi`
 					}
 
-					if role == RoleProbe {
+					if role == RoleProber {
 						out += `        memory: 50Mi`
 					}
 
@@ -455,15 +475,15 @@ status:
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(9))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+"_cluster-role.yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+"_cluster-role-binding.yaml"])).To(DeepEqual(clusterRoleBindingYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleBindingYAML))
 				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(DeepEqual(configMapYAMLFor(values.Role)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(deploymentYAMLFor(values.Role)))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(podDisruptionYAML))
-				Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+"_role.yaml"])).To(DeepEqual(roleYAML))
-				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+"_role-binding.yaml"])).To(DeepEqual(roleBindingYAML))
+				Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleYAMLFor(values.Role)))
+				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleBindingYAML))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(serviceAccountYAML))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+"-vpa.yaml"])).To(DeepEqual(vpaYAMLFor(values.Role)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(vpaYAMLFor(values.Role)))
 			})
 
 			It("should successfully destroy all resources for role "+string(values.Role), func() {
@@ -478,14 +498,48 @@ status:
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			})
+			// TODO(himanshu-kun): Remove these tests after complete migration to DWD v1
+			It("should successfully clean-up old unsupported DWD managed resource and create managed resource and secret for role "+string(values.Role), func() {
+				oldManagedResourceName := ManagedResourceDependencyWatchdogProbe
+				if values.Role == RoleWeeder {
+					oldManagedResourceName = ManagedResourceDependencyWatchdogEndpoint
+				}
+				var (
+					oldDWDManagedResource = &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      oldManagedResourceName,
+							Namespace: namespace,
+						},
+					}
+					oldDWDManagedResourceSecret = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "managedresource-" + oldManagedResourceName,
+							Namespace: namespace,
+						},
+					}
+				)
+				Expect(c.Create(ctx, oldDWDManagedResource)).To(Succeed())
+				Expect(c.Create(ctx, oldDWDManagedResourceSecret)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResource), oldDWDManagedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResourceSecret), oldDWDManagedResourceSecret)).To(Succeed())
+
+				Expect(dwd.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResource), oldDWDManagedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, oldDWDManagedResource.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResourceSecret), oldDWDManagedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, oldDWDManagedResourceSecret.Name)))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			})
 		}
 
-		Describe("RoleEndpoint", func() {
-			testSuite(BootstrapperValues{Role: RoleEndpoint, Image: image}, "885b78df")
+		Describe("RoleWeeder", func() {
+			testSuite(BootstrapperValues{Role: RoleWeeder, Image: image}, "d1e2e712")
 		})
 
-		Describe("RoleProbe", func() {
-			testSuite(BootstrapperValues{Role: RoleProbe, Image: image}, "07491e14")
+		Describe("RoleProber", func() {
+			testSuite(BootstrapperValues{Role: RoleProber, Image: image}, "bad3c18c")
 		})
 	})
 

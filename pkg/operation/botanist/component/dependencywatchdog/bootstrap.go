@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
-	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
+	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +35,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -53,39 +54,41 @@ import (
 type Role string
 
 const (
-	// RoleEndpoint is a constant for the 'endpoint' role of the dependency-watchdog.
-	RoleEndpoint Role = "endpoint"
-	// RoleProbe is a constant for the 'probe' role of the dependency-watchdog.
-	RoleProbe Role = "probe"
+	// RoleWeeder is a constant for the 'weeder' role of the dependency-watchdog.
+	RoleWeeder Role = "weeder"
+	// RoleProber is a constant for the 'prober' role of the dependency-watchdog.
+	RoleProber Role = "prober"
 
-	name            = "dependency-watchdog"
-	volumeName      = "config"
-	volumeMountPath = "/etc/dependency-watchdog/config"
-	configFileName  = "dep-config.yaml"
+	prefixDependencyWatchdog       = "dependency-watchdog"
+	volumeName                     = "config"
+	volumeMountPath                = "/etc/dependency-watchdog/config"
+	configFileName                 = "dep-config.yaml"
+	dwdWeederDefaultLockObjectName = "dwd-weeder-leader-election"
+	dwdProberDefaultLockObjectName = "dwd-prober-leader-election"
 
-	// ManagedResourceDependencyWatchdogEndpoint is the name of the dependency-watchdog-endpoint managed resource.
-	ManagedResourceDependencyWatchdogEndpoint = "dependency-watchdog-endpoint"
-	// ManagedResourceDependencyWatchdogProbe is the name of the dependency-watchdog-probe managed resource.
-	ManagedResourceDependencyWatchdogProbe = "dependency-watchdog-probe"
+	// ManagedResourceDependencyWatchdogWeeder is the name of the dependency-watchdog-weeder managed resource.
+	ManagedResourceDependencyWatchdogWeeder = prefixDependencyWatchdog + "-weeder"
+	// ManagedResourceDependencyWatchdogProber is the name of the dependency-watchdog-prober managed resource.
+	ManagedResourceDependencyWatchdogProber = prefixDependencyWatchdog + "-prober"
+
+	// ManagedResourceDependencyWatchdogEndpoint is the name of the dependency-watchdog-endpoint managed resource. This resource is cleaned up now.
+	ManagedResourceDependencyWatchdogEndpoint = prefixDependencyWatchdog + "-endpoint"
+	// ManagedResourceDependencyWatchdogProbe is the name of the dependency-watchdog-probe managed resource. This resource is cleaned up now.
+	ManagedResourceDependencyWatchdogProbe = prefixDependencyWatchdog + "-probe"
 )
 
 // BootstrapperValues contains dependency-watchdog values.
 type BootstrapperValues struct {
+	// Role defines which dependency-watchdog controller i.e. weeder or prober.
 	Role Role
-	ValuesEndpoint
-	ValuesProbe
-	Image             string
+	// WeederConfig is the Config for the weeder Role.
+	WeederConfig weederapi.Config
+	// ProberConfig is the Config for the prober Role.
+	ProberConfig proberapi.Config
+	// Image is the container image used for DependencyWatchdog.
+	Image string
+	// KubernetesVersion is the Kubernetes version of the Seed.
 	KubernetesVersion *semver.Version
-}
-
-// ValuesEndpoint contains the service dependants of dependency-watchdog.
-type ValuesEndpoint struct {
-	ServiceDependants restarterapi.ServiceDependants
-}
-
-// ValuesProbe contains the probe dependants list of dependency-watchdog.
-type ValuesProbe struct {
-	ProbeDependantsList scalerapi.ProbeDependantsList
 }
 
 // NewBootstrapper creates a new instance of DeployWaiter for the dependency-watchdog.
@@ -109,192 +112,23 @@ type bootstrapper struct {
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
 	var (
-		config              string
-		vpaMinAllowedMemory string
 		err                 error
-	)
-
-	switch b.values.Role {
-	case RoleEndpoint:
-		config, err = restarterapi.Encode(&b.values.ValuesEndpoint.ServiceDependants)
-		if err != nil {
-			return err
-		}
-		vpaMinAllowedMemory = "25Mi"
-
-	case RoleProbe:
-		config, err = scalerapi.Encode(&b.values.ValuesProbe.ProbeDependantsList)
-		if err != nil {
-			return err
-		}
-		vpaMinAllowedMemory = "50Mi"
-	}
-
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      b.name() + "-config",
-			Namespace: b.namespace,
-			Labels:    map[string]string{v1beta1constants.LabelApp: b.name()},
-		},
-		Data: map[string]string{configFileName: config},
-	}
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-
-	var (
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-
-		serviceAccount = &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.name(),
-				Namespace: b.namespace,
-			},
-			AutomountServiceAccountToken: pointer.Bool(false),
-		}
-
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener.cloud:%s:cluster-role", b.name()),
-			},
-			Rules: b.clusterRoleRules(),
-		}
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener.cloud:%s:cluster-role-binding", b.name()),
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-
-		role = &rbacv1.Role{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("gardener.cloud:%s:role", b.name()),
-				Namespace: b.namespace,
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"endpoints", "events"},
-					Verbs:     []string{"create", "get", "update", "patch"},
-				},
-			},
-		}
-
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("gardener.cloud:%s:role-binding", b.name()),
-				Namespace: b.namespace,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
-				Name:     role.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-
-		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.name(),
-				Namespace: b.namespace,
-				Labels: utils.MergeStringMaps(map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-				}, b.getLabels()),
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(2),
-				Selector:             &metav1.LabelSelector{MatchLabels: b.getLabels()},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: b.podLabels(),
-					},
-					Spec: corev1.PodSpec{
-						PriorityClassName:             v1beta1constants.PriorityClassNameSeedSystem800,
-						ServiceAccountName:            serviceAccount.Name,
-						TerminationGracePeriodSeconds: pointer.Int64(5),
-						Containers: []corev1.Container{{
-							Name:            name,
-							Image:           b.values.Image,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         b.containerCommand(),
-							Ports: []corev1.ContainerPort{{
-								Name:          "metrics",
-								ContainerPort: 9643,
-								Protocol:      corev1.ProtocolTCP,
-							}},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("200m"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("512Mi"),
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{{
-								Name:      volumeName,
-								MountPath: volumeMountPath,
-								ReadOnly:  true,
-							}},
-						}},
-						Volumes: []corev1.Volume{{
-							Name: volumeName,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMap.Name,
-									},
-								},
-							},
-						}},
-					},
-				},
-			},
-		}
-
-		updateMode = vpaautoscalingv1.UpdateModeAuto
-		vpa        = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.name() + "-vpa",
-				Namespace: b.namespace,
-			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &updateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse(vpaMinAllowedMemory),
-						},
-					}},
-				},
-			},
-		}
-
+		registry            = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		podDisruptionBudget client.Object
 		maxUnavailable      = intstr.FromInt(1)
 	)
 
+	configMap, err := b.getConfigMap()
+	if err != nil {
+		return err
+	}
+	serviceAccount := b.getServiceAccount()
+	clusterRole := b.getClusterRole(serviceAccount)
+	clusterRoleBinding := b.getClusterRoleBinding(serviceAccount, clusterRole)
+	role := b.getRole(serviceAccount)
+	roleBinding := b.getRoleBinding(serviceAccount, role)
+	deployment := b.getDeployment(serviceAccount.Name, configMap.Name)
+	vpa := b.getVPA(deployment.Name)
 	if version.ConstraintK8sGreaterEqual121.Check(b.values.KubernetesVersion) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
@@ -321,8 +155,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		}
 	}
 
-	utilruntime.Must(references.InjectAnnotations(deployment))
-
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
@@ -335,6 +167,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		vpa,
 	)
 	if err != nil {
+		return err
+	}
+	// TODO: (himanshu-kun) remove after few releases
+	// First clean-up unsupported DWD managedResource and all the objects managed by it which includes old version of DWD weeder and prober as well.
+	if err := b.deleteOldDWDManagedResource(ctx); err != nil {
 		return err
 	}
 
@@ -363,17 +200,168 @@ func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, b.name())
 }
 
+func (b *bootstrapper) deleteOldDWDManagedResource(ctx context.Context) error {
+	oldManagedResourceName := ManagedResourceDependencyWatchdogProbe
+	if b.values.Role == RoleWeeder {
+		oldManagedResourceName = ManagedResourceDependencyWatchdogEndpoint
+	}
+	if err := managedresources.DeleteForSeed(ctx, b.client, b.namespace, oldManagedResourceName); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("could not delete managed resource %s: %w", oldManagedResourceName, err)
+	}
+	return b.waitUntilManagedResourceDeleted(ctx, oldManagedResourceName)
+}
+
+func (b *bootstrapper) waitUntilManagedResourceDeleted(ctx context.Context, name string) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+	if err := managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, name); err != nil {
+		return fmt.Errorf("error while waiting for managed resource %s to be deleted: %w", name, err)
+	}
+	return nil
+}
+
+func (b *bootstrapper) getConfigMap() (*corev1.ConfigMap, error) {
+	var (
+		config string
+		err    error
+	)
+
+	switch b.values.Role {
+	case RoleWeeder:
+		config, err = encodeConfig(&b.values.WeederConfig)
+		if err != nil {
+			return nil, err
+		}
+
+	case RoleProber:
+		config, err = encodeConfig(&b.values.ProberConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      b.name() + "-config",
+			Namespace: b.namespace,
+			Labels:    map[string]string{v1beta1constants.LabelApp: b.name()},
+		},
+		Data: map[string]string{configFileName: config},
+	}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+
+	return configMap, nil
+}
+
+func (b *bootstrapper) getServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      b.name(),
+			Namespace: b.namespace,
+		},
+		AutomountServiceAccountToken: pointer.Bool(false),
+	}
+}
+
+func (b *bootstrapper) getClusterRole(serviceAccount *corev1.ServiceAccount) *rbacv1.ClusterRole {
+	clusterRole := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("gardener.cloud:%s", b.name()),
+		},
+		Rules: b.getClusterRolePolicyRules(),
+	}
+	return clusterRole
+}
+
+func (b *bootstrapper) getClusterRoleBinding(serviceAccount *corev1.ServiceAccount, clusterRole *rbacv1.ClusterRole) *rbacv1.ClusterRoleBinding {
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("gardener.cloud:%s", b.name()),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     clusterRole.Name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccount.Name,
+			Namespace: serviceAccount.Namespace,
+		}},
+	}
+	return clusterRoleBinding
+}
+
+func (b *bootstrapper) getRole(serviceAccount *corev1.ServiceAccount) *rbacv1.Role {
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("gardener.cloud:%s", b.name()),
+			Namespace: b.namespace,
+		},
+		Rules: b.getRolePolicyRules(),
+	}
+	return role
+}
+
+func (b *bootstrapper) getRoleBinding(serviceAccount *corev1.ServiceAccount, role *rbacv1.Role) *rbacv1.RoleBinding {
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("gardener.cloud:%s", b.name()),
+			Namespace: b.namespace,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     role.Name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccount.Name,
+			Namespace: serviceAccount.Namespace,
+		}},
+	}
+	return roleBinding
+}
+
 func (b *bootstrapper) name() string {
-	return fmt.Sprintf("%s-%s", name, b.values.Role)
+	return fmt.Sprintf("%s-%s", prefixDependencyWatchdog, b.values.Role)
 }
 
 func (b *bootstrapper) getLabels() map[string]string {
 	return map[string]string{v1beta1constants.LabelApp: b.name()}
 }
 
-func (b *bootstrapper) clusterRoleRules() []rbacv1.PolicyRule {
+func (b *bootstrapper) getRolePolicyRules() []rbacv1.PolicyRule {
+	resourceName := dwdProberDefaultLockObjectName
+	if b.values.Role == RoleWeeder {
+		resourceName = dwdWeederDefaultLockObjectName
+	}
+
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"coordination.k8s.io"},
+			Resources: []string{"leases"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups:     []string{"coordination.k8s.io"},
+			ResourceNames: []string{resourceName},
+			Resources:     []string{"leases"},
+			Verbs:         []string{"get", "watch", "update"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"create", "get", "update", "patch"},
+		},
+	}
+
+	return rules
+}
+
+func (b *bootstrapper) getClusterRolePolicyRules() []rbacv1.PolicyRule {
 	switch b.values.Role {
-	case RoleEndpoint:
+	case RoleWeeder:
 		return []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
@@ -385,20 +373,9 @@ func (b *bootstrapper) clusterRoleRules() []rbacv1.PolicyRule {
 				Resources: []string{"pods"},
 				Verbs:     []string{"get", "list", "watch", "delete"},
 			},
-			{
-				APIGroups: []string{"coordination.k8s.io"},
-				Resources: []string{"leases"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups:     []string{"coordination.k8s.io"},
-				ResourceNames: []string{"dependency-watchdog"},
-				Resources:     []string{"leases"},
-				Verbs:         []string{"get", "watch", "update"},
-			},
 		}
 
-	case RoleProbe:
+	case RoleProber:
 		return []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{"extensions.gardener.cloud"},
@@ -415,32 +392,21 @@ func (b *bootstrapper) clusterRoleRules() []rbacv1.PolicyRule {
 				Resources: []string{"deployments", "deployments/scale"},
 				Verbs:     []string{"get", "list", "watch", "update"},
 			},
-			{
-				APIGroups: []string{"coordination.k8s.io"},
-				Resources: []string{"leases"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups:     []string{"coordination.k8s.io"},
-				ResourceNames: []string{"dependency-watchdog-probe"},
-				Resources:     []string{"leases"},
-				Verbs:         []string{"get", "watch", "update"},
-			},
 		}
 	}
 
 	return nil
 }
 
-func (b *bootstrapper) podLabels() map[string]string {
+func (b *bootstrapper) getPodLabels() map[string]string {
 	switch b.values.Role {
-	case RoleEndpoint:
+	case RoleWeeder:
 		return utils.MergeStringMaps(b.getLabels(), map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
-	case RoleProbe:
+	case RoleProber:
 		return utils.MergeStringMaps(b.getLabels(), map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -454,27 +420,137 @@ func (b *bootstrapper) podLabels() map[string]string {
 	return nil
 }
 
-func (b *bootstrapper) containerCommand() []string {
+func (b *bootstrapper) getContainerCommand() []string {
 	switch b.values.Role {
-	case RoleEndpoint:
+	case RoleWeeder:
 		return []string{
 			"/usr/local/bin/dependency-watchdog",
+			"weeder",
 			fmt.Sprintf("--config-file=%s/%s", volumeMountPath, configFileName),
-			"--deployed-namespace=" + b.namespace,
-			"--watch-duration=5m",
+			"--enable-leader-election=true",
 		}
 
-	case RoleProbe:
+	case RoleProber:
 		return []string{
 			"/usr/local/bin/dependency-watchdog",
-			"probe",
+			"prober",
 			fmt.Sprintf("--config-file=%s/%s", volumeMountPath, configFileName),
-			"--deployed-namespace=" + b.namespace,
-			"--qps=20.0",
-			"--burst=100",
-			"--v=4",
+			"--kube-api-qps=20.0",
+			"--kube-api-burst=100",
+			"--zap-log-level=INFO",
+			"--enable-leader-election=true",
 		}
 	}
 
 	return nil
+}
+
+func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName string) *appsv1.Deployment {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      b.name(),
+			Namespace: b.namespace,
+			Labels: utils.MergeStringMaps(map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			}, b.getLabels()),
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas:             pointer.Int32(1),
+			RevisionHistoryLimit: pointer.Int32(2),
+			Selector:             &metav1.LabelSelector{MatchLabels: b.getLabels()},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: b.getPodLabels(),
+				},
+				Spec: corev1.PodSpec{
+					PriorityClassName:             v1beta1constants.PriorityClassNameSeedSystem800,
+					ServiceAccountName:            serviceAccountName,
+					TerminationGracePeriodSeconds: pointer.Int64(5),
+					Containers: []corev1.Container{{
+						Name:            prefixDependencyWatchdog,
+						Image:           b.values.Image,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Command:         b.getContainerCommand(),
+						Ports: []corev1.ContainerPort{{
+							Name:          "metrics",
+							ContainerPort: 9643,
+							Protocol:      corev1.ProtocolTCP,
+						}},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("200m"),
+								corev1.ResourceMemory: resource.MustParse("256Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("512Mi"),
+							},
+						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      volumeName,
+							MountPath: volumeMountPath,
+							ReadOnly:  true,
+						}},
+					}},
+					Volumes: []corev1.Volume{{
+						Name: volumeName,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: configMapName,
+								},
+							},
+						},
+					}},
+				},
+			},
+		},
+	}
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
+
+	return deployment
+}
+
+func (b *bootstrapper) getVPA(deploymentName string) *vpaautoscalingv1.VerticalPodAutoscaler {
+	var (
+		vpaMinAllowedMemory = "25Mi"
+		updateMode          = vpaautoscalingv1.UpdateModeAuto
+	)
+
+	if b.values.Role == RoleProber {
+		vpaMinAllowedMemory = "50Mi"
+	}
+
+	return &vpaautoscalingv1.VerticalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      b.name(),
+			Namespace: b.namespace,
+		},
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       deploymentName,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: &updateMode,
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse(vpaMinAllowedMemory),
+					},
+				}},
+			},
+		},
+	}
+}
+
+func encodeConfig[T any](config *T) (string, error) {
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }

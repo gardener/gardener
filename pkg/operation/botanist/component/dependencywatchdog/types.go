@@ -15,16 +15,16 @@
 package dependencywatchdog
 
 import (
-	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
-	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
+	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 )
 
 type (
-	// EndpointConfigurationFunc is a function alias for returning configuration for the dependency-watchdog
-	// (endpoint role).
-	EndpointConfigurationFunc func() (map[string]restarterapi.Service, error)
+	// WeederConfigurationFunc is a function alias for returning configuration for the dependency-watchdog
+	// (weeder role).
+	WeederConfigurationFunc func() (map[string]weederapi.DependantSelectors, error)
 
-	// ProbeConfigurationFunc is a function alias for returning configuration for the dependency-watchdog
-	// (probe role).
-	ProbeConfigurationFunc func() ([]scalerapi.ProbeDependants, error)
+	// ProberConfigurationFunc is a function alias for returning configuration for the dependency-watchdog
+	// (prober role).
+	ProberConfigurationFunc func() ([]proberapi.DependentResourceInfo, error)
 )

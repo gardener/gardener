@@ -17,6 +17,7 @@ package dependencywatchdog
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,10 @@ import (
 )
 
 const (
+	// DefaultProbeInterval is the default value of interval between two probes by DWD prober
+	DefaultProbeInterval = 30 * time.Second
+	// DefaultWatchDuration is the default value of the total duration for which a DWD Weeder watches for any dependant Pod to transition to CrashLoopBackoff after the target service has recovered.
+	DefaultWatchDuration = 5 * time.Minute
 	// ExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
 	ExternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-external-probe"
 	// InternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
