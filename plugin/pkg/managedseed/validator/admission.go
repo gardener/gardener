@@ -30,6 +30,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -350,6 +351,10 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		}
 	} else if spec.Settings.VerticalPodAutoscaler.Enabled {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "verticalPodAutoscaler", "enabled"), spec.Settings.VerticalPodAutoscaler.Enabled, "seed VPA is not supported for managed seeds - use the shoot VPA"))
+	}
+
+	if spec.SecretRef != nil && !pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("secretRef"), spec.SecretRef, "seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"))
 	}
 
 	return allErrs, nil

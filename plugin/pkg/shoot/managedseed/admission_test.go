@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +33,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 )
@@ -86,6 +88,15 @@ var _ = Describe("ManagedSeed", func() {
 					Shoot: &seedmanagementv1alpha1.Shoot{
 						Name: name,
 					},
+					Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+						Config: runtime.RawExtension{
+							Object: &gardenletv1alpha1.GardenletConfiguration{
+								SeedConfig: &gardenletv1alpha1.SeedConfig{
+									SeedTemplate: gardencorev1beta1.SeedTemplate{},
+								},
+							},
+						},
+					},
 				},
 			}
 
@@ -111,8 +122,8 @@ var _ = Describe("ManagedSeed", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
-				shoot.Spec.Addons.NginxIngress.Enabled = true
 				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Addons.NginxIngress.Enabled = true
 				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(BeInvalidError())
@@ -123,8 +134,8 @@ var _ = Describe("ManagedSeed", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
-				shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
 				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
 				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(BeInvalidError())
@@ -162,8 +173,56 @@ var _ = Describe("ManagedSeed", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeInvalidError())
+				Expect(err).To(MatchError(ContainSubstring("field is immutable for managed seeds")))
 			})
 
+			It("should forbid Shoot update if the seedTemplate is not specified", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagementv1alpha1.Gardenlet{
+					Config: runtime.RawExtension{
+						Object: &gardenletv1alpha1.GardenletConfiguration{},
+					},
+				}
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeInternalServerError())
+				Expect(err).To(MatchError(ContainSubstring("cannot extract the seed template")))
+			})
+
+			It("should forbid Shoot update if shoot static token kubeconfig gets disabled and seed secretRef is set", func() {
+				seedConfig := &gardenletv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						Spec: gardencorev1beta1.SeedSpec{
+							SecretRef: &corev1.SecretReference{
+								Name:      "foo",
+								Namespace: "garden",
+							},
+						},
+					},
+				}
+				managedSeed.Spec.Gardenlet = &seedmanagementv1alpha1.Gardenlet{
+					Config: runtime.RawExtension{
+						Object: &gardenletv1alpha1.GardenletConfiguration{
+							SeedConfig: seedConfig,
+						},
+					},
+				}
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeInvalidError())
+				Expect(err).To(MatchError(ContainSubstring("shoot static token kubeconfig cannot be disabled when the seed secretRef is set")))
+			})
 		})
 
 		Context("delete", func() {

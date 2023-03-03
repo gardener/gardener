@@ -93,6 +93,7 @@ var _ = Describe("ManagedSeed", func() {
 						Domain: pointer.String(domain),
 					},
 					Kubernetes: core.Kubernetes{
+						EnableStaticTokenKubeconfig: pointer.Bool(false),
 						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
 							Enabled: true,
 						},
@@ -380,6 +381,10 @@ var _ = Describe("ManagedSeed", func() {
 						Region: "bar-region",
 						Zones:  []string{"foo", "bar"},
 					},
+					SecretRef: &corev1.SecretReference{
+						Name:      name,
+						Namespace: namespace,
+					},
 					Settings: &gardencorev1beta1.SeedSettings{
 						VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
 							Enabled: true,
@@ -438,6 +443,11 @@ var _ = Describe("ManagedSeed", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.verticalPodAutoscaler.enabled"),
 						"Detail": ContainSubstring("seed VPA is not supported for managed seeds - use the shoot VPA"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.secretRef"),
+						"Detail": ContainSubstring("seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"),
 					})),
 				))
 			})
