@@ -24,15 +24,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
-	// IstioDefaultZoneKey is the label key for the istio default ingress gateway.
-	IstioDefaultZoneKey = "istio"
-	alternativeZoneKey  = v1beta1constants.GardenRole
-	zoneInfix           = "--zone--"
+	alternativeZoneKey = v1beta1constants.GardenRole
+	zoneInfix          = "--zone--"
 )
 
 // IstioServiceName is the currently used name of the istio ingress service, which is responsible for the shoot cluster.
@@ -127,7 +126,7 @@ func GetIstioNamespaceForZone(defaultNamespace string, zone string) string {
 // GetIstioZoneLabels returns the labels to be used for istio with the mandatory zone label set.
 func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]string {
 	// Use "istio" for the default gateways and v1beta1constants.LabelExposureClassHandlerName for exposure classes
-	zonekey := IstioDefaultZoneKey
+	zonekey := istio.DefaultZoneKey
 	zoneValue := "ingressgateway"
 	if value, ok := labels[zonekey]; ok {
 		zoneValue = value
@@ -144,7 +143,7 @@ func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]strin
 // IsZonalIstioExtension indicates whether the namespace related to the given labels is a zonal istio extension.
 // It also returns the zone.
 func IsZonalIstioExtension(labels map[string]string) (bool, string) {
-	if v, ok := labels[IstioDefaultZoneKey]; ok {
+	if v, ok := labels[istio.DefaultZoneKey]; ok {
 		i := strings.Index(v, zoneInfix)
 		if i < 0 {
 			return false, ""

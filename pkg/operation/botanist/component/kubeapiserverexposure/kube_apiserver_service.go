@@ -17,6 +17,7 @@ package kubeapiserverexposure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -49,8 +50,10 @@ var (
 
 // ServiceValues configure the kube-apiserver service.
 type ServiceValues struct {
+	// AnnotationsFunc is a function that returns annotations that should be added to the service.
 	AnnotationsFunc func() map[string]string
-	SNIPhase        component.Phase
+	// SNIPhase is the current status of the SNI configuration.
+	SNIPhase component.Phase
 }
 
 // serviceValues configure the kube-apiserver service.
@@ -64,10 +67,10 @@ type serviceValues struct {
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
-// <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps().
+// <waiter> is optional and defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps().
 func NewService(
 	log logr.Logger,
-	crclient client.Client,
+	cl client.Client,
 	values *ServiceValues,
 	serviceKeyFunc func() client.ObjectKey,
 	sniServiceKeyFunc func() client.ObjectKey,
@@ -125,7 +128,7 @@ func NewService(
 
 	return &service{
 		log:                        log,
-		client:                     crclient,
+		client:                     cl,
 		values:                     internalValues,
 		serviceKeyFunc:             serviceKeyFunc,
 		loadBalancerServiceKeyFunc: loadBalancerServiceKeyFunc,
@@ -151,14 +154,25 @@ func (s *service) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
 		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
-		if s.values.enableSNI {
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
-		}
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}))
 		// TODO(rfranzke): Drop this annotation once the APIServerSNI feature gate is dropped (then API servers are only
 		//  exposed indirectly via Istio) and the NetworkPolicy controller in gardener-resource-manager is enabled for
 		//  all relevant namespaces in the seed cluster.
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, kubeapiserverconstants.Port))
+
+		if s.values.enableSNI {
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
+		}
+
+		// For shoot namespaces the Kube-Apiserver service needs extra labels and annotations to create required network policies
+		// which allow a connection from Istio-Ingress components to Kube-Apiserver.
+		if isShootNamespace(obj.Namespace) {
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj,
+				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
+		}
 
 		obj.Labels = getLabels()
 		if s.values.gardenerManaged {
@@ -226,4 +240,8 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}
+}
+
+func isShootNamespace(namespace string) bool {
+	return strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix)
 }

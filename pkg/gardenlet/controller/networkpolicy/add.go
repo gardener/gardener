@@ -164,7 +164,7 @@ func (r *Reconciler) ClusterPredicate() predicate.Predicate {
 	}
 }
 
-// MapToNamespaces is a mapper function which returns requests for all shoot namespaces + garden namespace + istio-system namespace.
+// MapToNamespaces is a mapper function which returns requests for all shoot namespaces + garden namespace + istio namespaces.
 func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
 	var selectors []labels.Selector
 	for _, config := range r.networkPolicyConfigs() {

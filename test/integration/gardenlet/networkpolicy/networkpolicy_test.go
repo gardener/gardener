@@ -37,12 +37,13 @@ import (
 
 var _ = Describe("NetworkPolicy controller tests", func() {
 	var (
-		gardenNamespace       *corev1.Namespace
-		istioSystemNamespace  *corev1.Namespace
-		istioIngressNamespace *corev1.Namespace
-		shootNamespace        *corev1.Namespace
-		fooNamespace          *corev1.Namespace
-		cluster               *extensionsv1alpha1.Cluster
+		gardenNamespace             *corev1.Namespace
+		istioSystemNamespace        *corev1.Namespace
+		istioIngressNamespace       *corev1.Namespace
+		istioExposureClassNamespace *corev1.Namespace
+		shootNamespace              *corev1.Namespace
+		fooNamespace                *corev1.Namespace
+		cluster                     *extensionsv1alpha1.Cluster
 	)
 
 	BeforeEach(func() {
@@ -70,6 +71,15 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				Labels: map[string]string{
 					testID:                      testRunID,
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress,
+				},
+			},
+		}
+		istioExposureClassNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "istio-ingress-handler-",
+				Labels: map[string]string{
+					testID: testRunID,
+					v1beta1constants.LabelExposureClassHandlerName: "",
 				},
 			},
 		}
@@ -111,7 +121,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		log.Info("Created garden namespace for test", "namespaceName", gardenNamespace.Name)
 
 		DeferCleanup(func() {
-			By("Delete garden Namespace")
+			By("Delete garden namespace")
 			Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
@@ -120,7 +130,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		log.Info("Created istio-system namespace for test", "namespaceName", istioSystemNamespace.Name)
 
 		DeferCleanup(func() {
-			By("Delete istio-system Namespace")
+			By("Delete istio-system namespace")
 			Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
@@ -129,8 +139,17 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		log.Info("Created istio-ingress namespace for test", "namespaceName", istioIngressNamespace.Name)
 
 		DeferCleanup(func() {
-			By("Delete istio-ingress Namespace")
+			By("Delete istio-ingress namespace")
 			Expect(testClient.Delete(ctx, istioIngressNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		By("Create istio-ingress exposure class namespace")
+		Expect(testClient.Create(ctx, istioExposureClassNamespace)).To(Succeed())
+		log.Info("Created istio-ingress exposure class namespace for test", "namespaceName", istioExposureClassNamespace.Name)
+
+		DeferCleanup(func() {
+			By("Delete istio-ingress exposure class namespace")
+			Expect(testClient.Delete(ctx, istioExposureClassNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
 		By("Create shoot namespace")
@@ -192,12 +211,13 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 	})
 
 	type testAttributes struct {
-		networkPolicyName         string
-		expectedNetworkPolicySpec func(namespaceName string) networkingv1.NetworkPolicySpec
-		inGardenNamespace         bool
-		inIstioSystemNamespace    bool
-		inIstioIngressNamespace   bool
-		inShootNamespaces         bool
+		networkPolicyName             string
+		expectedNetworkPolicySpec     func(namespaceName string) networkingv1.NetworkPolicySpec
+		inGardenNamespace             bool
+		inIstioSystemNamespace        bool
+		inIstioIngressNamespace       bool
+		inIstioExposureClassNamespace bool
+		inShootNamespaces             bool
 	}
 
 	defaultTests := func(attrs testAttributes) {
@@ -228,6 +248,12 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(istioIngressNamespace.Name)))
 					}
+
+					if attrs.inIstioExposureClassNamespace {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(istioExposureClassNamespace.Name)))
+					}
 				}).Should(Succeed())
 
 				By("Ensure controller does not create the network policy in unexpected namespaces")
@@ -246,6 +272,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 					if !attrs.inIstioIngressNamespace {
 						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+					}
+
+					if !attrs.inIstioExposureClassNamespace {
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
@@ -287,8 +317,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					PolicyTypes: []networkingv1.PolicyType{"Ingress", "Egress"},
 				}
 			},
-			inIstioSystemNamespace: true,
-			inShootNamespaces:      true,
+			inIstioSystemNamespace:        true,
+			inIstioIngressNamespace:       true,
+			inIstioExposureClassNamespace: true,
+			inShootNamespaces:             true,
 		})
 	})
 
@@ -478,10 +510,11 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					}},
 				}
 			},
-			inGardenNamespace:       true,
-			inIstioSystemNamespace:  true,
-			inIstioIngressNamespace: true,
-			inShootNamespaces:       true,
+			inGardenNamespace:             true,
+			inIstioSystemNamespace:        true,
+			inIstioIngressNamespace:       true,
+			inIstioExposureClassNamespace: true,
+			inShootNamespaces:             true,
 		})
 	})
 

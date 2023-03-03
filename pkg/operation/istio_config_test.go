@@ -26,6 +26,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -50,12 +51,12 @@ var _ = Describe("istioconfig", func() {
 			Expect(GetIstioZoneLabels(labels, zone)).To(matcher)
 		},
 
-		Entry("no zone, but istio label", map[string]string{IstioDefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{IstioDefaultZoneKey: "istio-value"})),
+		Entry("no zone, but istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{istio.DefaultZoneKey: "istio-value"})),
 		Entry("no zone, but gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, nil, Equal(map[string]string{"gardener.cloud/role": "gardener-role"})),
-		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", IstioDefaultZoneKey: "ingressgateway"})),
-		Entry("zone and istio label", map[string]string{IstioDefaultZoneKey: "istio-value"}, pointer.String("my-zone"), Equal(map[string]string{IstioDefaultZoneKey: "istio-value--zone--my-zone"})),
+		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway"})),
+		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, pointer.String("my-zone"), Equal(map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone"})),
 		Entry("zone and gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, pointer.String("my-zone"), Equal(map[string]string{"gardener.cloud/role": "gardener-role--zone--my-zone"})),
-		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, pointer.String("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", IstioDefaultZoneKey: "ingressgateway--zone--my-zone"})),
+		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, pointer.String("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway--zone--my-zone"})),
 	)
 
 	DescribeTable("#IsZonalIstioExtension",
@@ -66,10 +67,10 @@ var _ = Describe("istioconfig", func() {
 		},
 
 		Entry("no zonal extension", map[string]string{"key1": "value1", "key2": "value2"}, BeFalse(), Equal("")),
-		Entry("no zone, but istio label", map[string]string{IstioDefaultZoneKey: "istio-value"}, BeFalse(), Equal("")),
+		Entry("no zone, but istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, BeFalse(), Equal("")),
 		Entry("no zone, but gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role"}, BeFalse(), Equal("")),
 		Entry("no zone, but gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),
-		Entry("zone and istio label", map[string]string{IstioDefaultZoneKey: "istio-value--zone--my-zone"}, BeTrue(), Equal("my-zone")),
+		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone"}, BeTrue(), Equal("my-zone")),
 		Entry("zone and gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone"}, BeFalse(), Equal("")),
 		Entry("zone and gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeTrue(), Equal("some-zone")),
 		Entry("zone and incorrect gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),

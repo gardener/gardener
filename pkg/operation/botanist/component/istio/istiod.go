@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -43,10 +42,13 @@ const (
 	ManagedResourceControlName = "istio"
 	// ManagedResourceIstioSystemName is the name of the ManagedResource containing Istio-System resource specifications.
 	ManagedResourceIstioSystemName = "istio-system"
-
-	istiodServiceName            = "istiod"
+	// DefaultZoneKey is the label key for the istio default ingress gateway.
+	DefaultZoneKey = "istio"
+	// IstiodServiceName is the name of the istiod service.
+	IstiodServiceName            = "istiod"
 	istiodServicePortNameMetrics = "metrics"
-	portWebhookServer            = 10250
+	// PortWebhookServer is the port of the validating webhook server.
+	PortWebhookServer = 10250
 
 	releaseName = "istio"
 )
@@ -173,8 +175,8 @@ func (i *istiod) Deploy(ctx context.Context) error {
 				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.LabelExposureClassHandlerName, value)
 			}
 
-			if value, ok := istioIngressGateway.Labels[operation.IstioDefaultZoneKey]; ok {
-				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, operation.IstioDefaultZoneKey, value)
+			if value, ok := istioIngressGateway.Labels[DefaultZoneKey]; ok {
+				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, DefaultZoneKey, value)
 			}
 
 			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
@@ -293,7 +295,7 @@ func (i *istiod) WaitCleanup(ctx context.Context) error {
 
 func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedChart, error) {
 	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, releaseName, i.values.Istiod.Namespace, map[string]interface{}{
-		"serviceName": istiodServiceName,
+		"serviceName": IstiodServiceName,
 		"trustDomain": i.values.Istiod.TrustDomain,
 		"labels": map[string]interface{}{
 			"app":   "istiod",
@@ -302,7 +304,7 @@ func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedCh
 		"deployNamespace":   false,
 		"priorityClassName": "istiod",
 		"ports": map[string]interface{}{
-			"https": portWebhookServer,
+			"https": PortWebhookServer,
 		},
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,

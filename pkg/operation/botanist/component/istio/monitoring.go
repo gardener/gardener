@@ -155,7 +155,7 @@ relabel_configs:
   - __meta_kubernetes_endpoint_port_name
   - __meta_kubernetes_namespace
   action: keep
-  regex: ` + istiodServiceName + `;` + istiodServicePortNameMetrics + `;` + v1beta1constants.IstioSystemNamespace + `
+  regex: ` + IstiodServiceName + `;` + istiodServicePortNameMetrics + `;` + v1beta1constants.IstioSystemNamespace + `
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod
 - source_labels: [ __meta_kubernetes_namespace ]

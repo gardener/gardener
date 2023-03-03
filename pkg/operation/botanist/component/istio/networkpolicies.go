@@ -22,10 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -40,75 +37,7 @@ type networkPolicyTransformer struct {
 
 func getIstioSystemNetworkPolicyTransformers() []networkPolicyTransformer {
 	return []networkPolicyTransformer{
-		{
-			name: "allow-to-istiod-webhook-server-port",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: "Allows Ingress from all sources to the webhook server port of istiod",
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: istiodAppLabelValue,
-							},
-						},
-						Ingress: []networkingv1.NetworkPolicyIngressRule{{
-							From: []networkingv1.NetworkPolicyPeer{
-								{
-									IPBlock: &networkingv1.IPBlock{
-										CIDR: "0.0.0.0/0",
-									},
-								},
-							},
-							Ports: []networkingv1.NetworkPolicyPort{
-								{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(portWebhookServer)},
-							},
-						}},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
-					}
-
-					return nil
-				}
-			},
-		},
-		{
-			name: "allow-from-shoot-vpn",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from shoot vpn servers with label "+
-							"'%s=%s'. It's needed to call the validating webhook istiod by the shoot apiserver.",
-							v1beta1constants.LabelApp, vpnshoot.LabelValue),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: istiodAppLabelValue,
-							},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
-						Ingress: []networkingv1.NetworkPolicyIngressRule{{
-							From: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:   vpnshoot.LabelValue,
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent,
-									},
-								},
-								NamespaceSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelRole: metav1.NamespaceSystem,
-									},
-								},
-							}},
-						},
-						},
-					}
-					return nil
-				}
-			},
-		},
+		// TODO(timuthy, rfranzke): Replace later when all egress rules for Aggregate Prometheus can be changed.
 		{
 			name: "allow-from-aggregate-prometheus",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
@@ -149,18 +78,24 @@ func getIstioSystemNetworkPolicyTransformers() []networkPolicyTransformer {
 				}
 			},
 		},
+	}
+}
+
+func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
+	return []networkPolicyTransformer{
+		// TODO(timuthy, rfranzke): Replace later when all egress rules for Aggregate Prometheus can be changed.
 		{
-			name: "allow-from-istio-ingress",
+			name: "allow-from-aggregate-prometheus",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
 					obj.Annotations = map[string]string{
 						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from pods with label "+
-							"'%s=%s'", v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue),
+							"'%s=%s'", v1beta1constants.LabelApp, "aggregate-prometheus"),
 					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: istiodAppLabelValue,
+								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
 							},
 						},
 						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
@@ -168,111 +103,28 @@ func getIstioSystemNetworkPolicyTransformers() []networkPolicyTransformer {
 							From: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
+										v1beta1constants.LabelApp:  "aggregate-prometheus",
+										v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
 									},
 								},
-								NamespaceSelector: &metav1.LabelSelector{},
-							}},
-						},
-						},
-					}
-					return nil
-				}
-			},
-		},
-	}
-}
-
-func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
-	return []networkPolicyTransformer{
-		{
-			name: "deny-all-egress",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: "Deny all egress traffic from pods in this namespace.",
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					}
-					return nil
-				}
-			},
-		},
-		{
-			name: "allow-to-shoot-apiserver",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to shoot api servers with label '%s=%s'.", v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.LabelRole, v1beta1constants.LabelAPIServer),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
+								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
+										v1beta1constants.LabelRole: v1beta1constants.GardenNamespace,
 									},
 								},
-								NamespaceSelector: &metav1.LabelSelector{},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(kubeapiserverconstants.Port),
+								Port:     utils.IntStrPtrFromInt(15020),
 							}},
-						}},
-					}
-					return nil
-				}
-			},
-		},
-		// TODO(rfranzke): Delete this network policy in a future release.
-		{
-			name: "allow-to-shoot-vpn-seed-server",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to shoot vpn servers with label '%s=%s'.", v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.LabelApp, v1beta1constants.DeploymentNameVPNSeedServer),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							},
 						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameVPNSeedServer,
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-									},
-								},
-								NamespaceSelector: &metav1.LabelSelector{},
-							}},
-							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(vpnseedserver.OpenVPNPort),
-							}},
-						}},
+						},
 					}
 					return nil
 				}
 			},
 		},
+		// TODO(timuthy, rfranzke): Replace rule as soon as Networkpolicy controller is activated for the 'garden' namespace.
 		{
 			name: "allow-to-reversed-vpn-auth-server",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
@@ -308,48 +160,6 @@ func getIstioIngressNetworkPolicyTransformers() []networkPolicyTransformer {
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 								Port:     utils.IntStrPtrFromInt(vpnauthzserver.ServerPort),
-							}},
-						}},
-					}
-					return nil
-				}
-			},
-		},
-		{
-			name: "allow-to-istiod",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
-							"'%s=%s' to pods labeled with '%s=%s' in namespace %s.",
-							v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.LabelApp, istiodAppLabelValue,
-							v1beta1constants.IstioSystemNamespace,
-						),
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp: istiodAppLabelValue,
-									},
-								},
-								NamespaceSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"kubernetes.io/metadata.name": v1beta1constants.IstioSystemNamespace,
-									},
-								},
-							}},
-							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(15012),
 							}},
 						}},
 					}
