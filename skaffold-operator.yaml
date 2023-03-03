@@ -61,7 +61,6 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/operation/botanist/component
-        - pkg/operation/botanist/component/dependencywatchdog
         - pkg/operation/botanist/component/etcd
         - pkg/operation/botanist/component/etcd/constants
         - pkg/operation/botanist/component/gardensystem

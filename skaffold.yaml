@@ -28,6 +28,7 @@ build:
         - cmd/utils
         - pkg/api
         - pkg/api/core/shoot
+        - pkg/api/core/seed
         - pkg/apis/authentication
         - pkg/apis/authentication/install
         - pkg/apis/authentication/v1alpha1
