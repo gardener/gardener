@@ -117,6 +117,9 @@ type VirtualCluster struct {
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
+	// Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
+	// cluster.
+	Kubernetes Kubernetes `json:"kubernetes"`
 	// Maintenance contains information about the time window for maintenance operations.
 	Maintenance Maintenance `json:"maintenance"`
 }
@@ -187,6 +190,23 @@ type ControlPlane struct {
 
 // HighAvailability specifies the configuration settings for high availability for a resource.
 type HighAvailability struct{}
+
+// Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
+// cluster.
+type Kubernetes struct {
+	// KubeAPIServer contains configuration settings for the kube-apiserver.
+	// +optional
+	KubeAPIServer *KubeAPIServerConfig `json:"kubeAPIServer,omitempty"`
+	// Version is the semantic Kubernetes version to use for the virtual garden cluster.
+	Version string `json:"version"`
+}
+
+// KubeAPIServerConfig contains configuration settings for the kube-apiserver.
+type KubeAPIServerConfig struct {
+	// KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.
+	// +optional
+	*gardencorev1beta1.KubeAPIServerConfig `json:",inline"`
+}
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {
