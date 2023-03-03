@@ -214,7 +214,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), meta.DeletionTimestamp != nil, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -278,7 +278,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ExposureClassName, oldSpec.ExposureClassName, fldPath.Child("exposureClassName"))...)
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
-	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
@@ -303,7 +303,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		}
 
 		// worker kubernetes versions must not be downgraded and must not skip a minor
-		allErrs = append(allErrs, validateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
+		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
 	}
 
 	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
@@ -555,8 +555,8 @@ func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.
 	return allErrs
 }
 
-// validateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip one minor
-func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field.ErrorList {
+// ValidateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip one minor
+func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(new) == 0 {
@@ -726,7 +726,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, dockerConfigured, shootHasDeletionTimestamp bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, dockerConfigured bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -734,137 +734,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, 
 		return allErrs
 	}
 
-	if kubeAPIServer := kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
-			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
-
-			if fieldNilOrEmptyString(oidc.ClientID) {
-				if oidc.ClientID != nil {
-					allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID cannot be empty when key is provided"))
-				}
-				if !fieldNilOrEmptyString(oidc.IssuerURL) {
-					allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID must be set when issuerURL is provided"))
-				}
-			}
-
-			if fieldNilOrEmptyString(oidc.IssuerURL) {
-				if oidc.IssuerURL != nil {
-					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL cannot be empty when key is provided"))
-				}
-				if !fieldNilOrEmptyString(oidc.ClientID) {
-					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL must be set when clientID is provided"))
-				}
-			} else {
-				issuer, err := url.Parse(*oidc.IssuerURL)
-				if err != nil || (issuer != nil && len(issuer.Host) == 0) {
-					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must be a valid URL and have https scheme"))
-				}
-				if issuer != nil && issuer.Scheme != "https" {
-					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must have https scheme"))
-				}
-			}
-
-			if oidc.CABundle != nil {
-				if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
-					allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
-				}
-			}
-			if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
-			}
-			if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groupsPrefix cannot be empty when key is provided"))
-			}
-			for i, alg := range oidc.SigningAlgs {
-				if !availableOIDCSigningAlgs.Has(alg) {
-					allErrs = append(allErrs, field.NotSupported(oidcPath.Child("signingAlgs").Index(i), alg, sets.List(availableOIDCSigningAlgs)))
-				}
-			}
-			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
-			}
-			if oidc.UsernamePrefix != nil && len(*oidc.UsernamePrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "usernamePrefix cannot be empty when key is provided"))
-			}
-		}
-
-		allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, kubernetes.Version, false, fldPath.Child("kubeAPIServer", "admissionPlugins"))...)
-
-		if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
-			auditPath := fldPath.Child("kubeAPIServer", "auditConfig")
-			if auditPolicy := auditConfig.AuditPolicy; auditPolicy != nil && auditConfig.AuditPolicy.ConfigMapRef != nil {
-				allErrs = append(allErrs, validateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
-			}
-		}
-
-		allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("kubeAPIServer", "watchCacheSizes"))...)
-
-		allErrs = append(allErrs, ValidateKubeAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("kubeAPIServer", "logging"))...)
-
-		if defaultNotReadyTolerationSeconds := kubeAPIServer.DefaultNotReadyTolerationSeconds; defaultNotReadyTolerationSeconds != nil {
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultNotReadyTolerationSeconds), fldPath.Child("kubeAPIServer", "defaultNotReadyTolerationSeconds"))...)
-		}
-		if defaultUnreachableTolerationSeconds := kubeAPIServer.DefaultUnreachableTolerationSeconds; defaultUnreachableTolerationSeconds != nil {
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultUnreachableTolerationSeconds), fldPath.Child("kubeAPIServer", "defaultUnreachableTolerationSeconds"))...)
-		}
-
-		if kubeAPIServer.Requests != nil {
-			const maxMaxNonMutatingRequestsInflight = 800
-			if v := kubeAPIServer.Requests.MaxNonMutatingInflight; v != nil {
-				path := fldPath.Child("kubeAPIServer", "requests", "maxNonMutatingInflight")
-
-				allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-				if *v > maxMaxNonMutatingRequestsInflight {
-					allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxNonMutatingRequestsInflight)))
-				}
-			}
-
-			const maxMaxMutatingRequestsInflight = 400
-			if v := kubeAPIServer.Requests.MaxMutatingInflight; v != nil {
-				path := fldPath.Child("kubeAPIServer", "requests", "maxMutatingInflight")
-
-				allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-				if *v > maxMaxMutatingRequestsInflight {
-					allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxMutatingRequestsInflight)))
-				}
-			}
-		}
-
-		if kubeAPIServer.ServiceAccountConfig != nil {
-			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
-				if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
-				}
-
-				if !shootHasDeletionTimestamp {
-					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 0 && duration < 720*time.Hour {
-						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at least 720h (30d)"))
-					}
-
-					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 2160*time.Hour {
-						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at most 2160h (90d)"))
-					}
-				}
-			}
-
-			geqKubernetes122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
-			if kubeAPIServer.ServiceAccountConfig.AcceptedIssuers != nil && !geqKubernetes122 {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "acceptedIssuers"), "this field is only available in Kubernetes v1.22+"))
-			}
-		}
-
-		if kubeAPIServer.EventTTL != nil {
-			if kubeAPIServer.EventTTL.Duration < 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "eventTTL"), *kubeAPIServer.EventTTL, "can not be negative"))
-			}
-			if kubeAPIServer.EventTTL.Duration > time.Hour*24*7 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "eventTTL"), *kubeAPIServer.EventTTL, "can not be longer than 7d"))
-			}
-		}
-
-		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
-	}
-
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, false, fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, fldPath.Child("kubeControllerManager"))...)
 	allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
 	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
@@ -1047,6 +917,144 @@ func isPSPDisabled(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
 		}
 	}
 	return false
+}
+
+// ValidateKubeAPIServer validates KubeAPIServerConfig.
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, kubeconfigAllowedForAdmissionPlugins bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if kubeAPIServer == nil {
+		return allErrs
+	}
+
+	if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
+		oidcPath := fldPath.Child("oidcConfig")
+
+		if fieldNilOrEmptyString(oidc.ClientID) {
+			if oidc.ClientID != nil {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID cannot be empty when key is provided"))
+			}
+			if !fieldNilOrEmptyString(oidc.IssuerURL) {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID must be set when issuerURL is provided"))
+			}
+		}
+
+		if fieldNilOrEmptyString(oidc.IssuerURL) {
+			if oidc.IssuerURL != nil {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL cannot be empty when key is provided"))
+			}
+			if !fieldNilOrEmptyString(oidc.ClientID) {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL must be set when clientID is provided"))
+			}
+		} else {
+			issuer, err := url.Parse(*oidc.IssuerURL)
+			if err != nil || (issuer != nil && len(issuer.Host) == 0) {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must be a valid URL and have https scheme"))
+			}
+			if issuer != nil && issuer.Scheme != "https" {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must have https scheme"))
+			}
+		}
+
+		if oidc.CABundle != nil {
+			if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
+			}
+		}
+		if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
+			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
+		}
+		if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
+			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groupsPrefix cannot be empty when key is provided"))
+		}
+		for i, alg := range oidc.SigningAlgs {
+			if !availableOIDCSigningAlgs.Has(alg) {
+				allErrs = append(allErrs, field.NotSupported(oidcPath.Child("signingAlgs").Index(i), alg, sets.List(availableOIDCSigningAlgs)))
+			}
+		}
+		if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
+			allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
+		}
+		if oidc.UsernamePrefix != nil && len(*oidc.UsernamePrefix) == 0 {
+			allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "usernamePrefix cannot be empty when key is provided"))
+		}
+	}
+
+	allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, version, kubeconfigAllowedForAdmissionPlugins, fldPath.Child("admissionPlugins"))...)
+
+	if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
+		auditPath := fldPath.Child("auditConfig")
+		if auditPolicy := auditConfig.AuditPolicy; auditPolicy != nil && auditConfig.AuditPolicy.ConfigMapRef != nil {
+			allErrs = append(allErrs, validateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
+		}
+	}
+
+	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
+
+	allErrs = append(allErrs, ValidateKubeAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
+
+	if defaultNotReadyTolerationSeconds := kubeAPIServer.DefaultNotReadyTolerationSeconds; defaultNotReadyTolerationSeconds != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultNotReadyTolerationSeconds), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
+	}
+	if defaultUnreachableTolerationSeconds := kubeAPIServer.DefaultUnreachableTolerationSeconds; defaultUnreachableTolerationSeconds != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultUnreachableTolerationSeconds), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
+	}
+
+	if kubeAPIServer.Requests != nil {
+		const maxMaxNonMutatingRequestsInflight = 800
+		if v := kubeAPIServer.Requests.MaxNonMutatingInflight; v != nil {
+			path := fldPath.Child("requests", "maxNonMutatingInflight")
+
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+			if *v > maxMaxNonMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxNonMutatingRequestsInflight)))
+			}
+		}
+
+		const maxMaxMutatingRequestsInflight = 400
+		if v := kubeAPIServer.Requests.MaxMutatingInflight; v != nil {
+			path := fldPath.Child("requests", "maxMutatingInflight")
+
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+			if *v > maxMaxMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxMutatingRequestsInflight)))
+			}
+		}
+	}
+
+	if kubeAPIServer.ServiceAccountConfig != nil {
+		if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
+			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+			}
+
+			if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 0 && duration < 720*time.Hour {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "maxTokenExpiration"), "must be at least 720h (30d)"))
+			}
+
+			if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 2160*time.Hour {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "maxTokenExpiration"), "must be at most 2160h (90d)"))
+			}
+		}
+
+		geqKubernetes122, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.22")
+		if kubeAPIServer.ServiceAccountConfig.AcceptedIssuers != nil && !geqKubernetes122 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "acceptedIssuers"), "this field is only available in Kubernetes v1.22+"))
+		}
+	}
+
+	if kubeAPIServer.EventTTL != nil {
+		if kubeAPIServer.EventTTL.Duration < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("eventTTL"), *kubeAPIServer.EventTTL, "can not be negative"))
+		}
+		if kubeAPIServer.EventTTL.Duration > time.Hour*24*7 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("eventTTL"), *kubeAPIServer.EventTTL, "can not be longer than 7d"))
+		}
+	}
+
+	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
+
+	return allErrs
 }
 
 func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking core.Networking, version string, fldPath *field.Path) field.ErrorList {

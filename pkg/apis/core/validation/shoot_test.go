@@ -1708,17 +1708,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should accept values for the max token duration out of boundaries when deletion timestamp is set", func() {
-				shoot.DeletionTimestamp = &metav1.Time{}
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					MaxTokenExpiration: &metav1.Duration{Duration: 5000 * time.Hour},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(BeEmpty())
-			})
-
 			It("should not allow to specify multiple issuers if kubernetes is lower than 1.22", func() {
 				shoot.Spec.Kubernetes.Version = "1.21.9"
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
