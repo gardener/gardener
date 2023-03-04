@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -63,6 +65,7 @@ var _ = Describe("MachineControllerManager", func() {
 		shootAccessSecret   *corev1.Secret
 		deployment          *appsv1.Deployment
 		podDisruptionBudget *policyv1.PodDisruptionBudget
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -286,6 +289,42 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 		}
+
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpaControlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "autoscaling.k8s.io/v1",
+				Kind:       "VerticalPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-controller-manager-vpa",
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "machine-controller-manager",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+						ContainerName:    "machine-controller-manager",
+						ControlledValues: &vpaControlledValues,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("70Mi"),
+						},
+						MaxAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("2"),
+							corev1.ResourceMemory: resource.MustParse("5G"),
+						},
+					}},
+				},
+			},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -321,6 +360,11 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
 			podDisruptionBudget.ResourceVersion = "1"
 			Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
+
+			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
+			vpa.ResourceVersion = "1"
+			Expect(actualVPA).To(Equal(vpa))
 		})
 	})
 
@@ -332,9 +376,11 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 			Expect(fakeClient.Create(ctx, podDisruptionBudget)).To(Succeed())
+			Expect(fakeClient.Create(ctx, vpa)).To(Succeed())
 
 			Expect(mcm.Destroy(ctx)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), &corev1.Secret{})).To(BeNotFoundError())

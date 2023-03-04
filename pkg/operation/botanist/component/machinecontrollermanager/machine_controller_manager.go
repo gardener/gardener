@@ -20,6 +20,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -46,7 +48,8 @@ import (
 )
 
 const (
-	portMetrics = 10258
+	portMetrics   = 10258
+	containerName = "machine-controller-manager"
 )
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -94,6 +97,10 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		service             = m.emptyService()
 		deployment          = m.emptyDeployment()
 		podDisruptionBudget = m.emptyPodDisruptionBudget()
+		vpa                 = m.emptyVPA()
+
+		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
+		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
 
 	genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -179,7 +186,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{{
-					Name:            "machine-controller-manager",
+					Name:            containerName,
 					Image:           m.values.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command: []string{
@@ -258,11 +265,37 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, vpa, func() error {
+		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+			Kind:       "Deployment",
+			Name:       deployment.Name,
+		}
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateMode}
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName:    containerName,
+				ControlledValues: &vpaControlledValues,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("70Mi"),
+				},
+				MaxAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("2"),
+					corev1.ResourceMemory: resource.MustParse("5G"),
+				},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, m.client,
+		m.emptyVPA(),
 		m.emptyPodDisruptionBudget(),
 		m.emptyDeployment(),
 		m.newShootAccessSecret().Secret,
@@ -302,6 +335,10 @@ func (m *machineControllerManager) emptyPodDisruptionBudget() client.Object {
 		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
 	}
 	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
+}
+
+func (m *machineControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-vpa", Namespace: m.namespace}}
 }
 
 func getLabels() map[string]string {
