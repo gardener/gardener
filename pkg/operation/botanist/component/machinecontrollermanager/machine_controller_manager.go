@@ -37,19 +37,22 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
-	portMetrics   = 10258
-	containerName = "machine-controller-manager"
+	portMetrics               = 10258
+	containerName             = "machine-controller-manager"
+	managedResourceTargetName = "shoot-core-machine-controller-manager"
 )
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -290,11 +293,18 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	data, err := m.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data)
 }
 
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, m.client,
+		m.emptyManagedResource(),
+		m.emptyManagedResourceSecret(),
 		m.emptyVPA(),
 		m.emptyPodDisruptionBudget(),
 		m.emptyDeployment(),
@@ -307,6 +317,54 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 
 func (m *machineControllerManager) Wait(_ context.Context) error        { return nil }
 func (m *machineControllerManager) WaitCleanup(_ context.Context) error { return nil }
+
+func (m *machineControllerManager) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
+	var (
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:machine-controller-manager",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"nodes", "nodes/status", "endpoints", "replicationcontrollers", "pods", "persistentvolumes", "persistentvolumeclaims"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods/eviction"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups: []string{"extensions", "apps"},
+					Resources: []string{"replicasets", "statefulsets", "daemonsets", "deployments"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"batch"},
+					Resources: []string{"jobs", "cronjobs"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"policy"},
+					Resources: []string{"poddisruptionbudgets"},
+					Verbs:     []string{"list", "watch"},
+				},
+				{
+					APIGroups: []string{"storage.k8s.io"},
+					Resources: []string{"volumeattachments"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		}
+	)
+
+	return registry.AddAllAndSerialize(
+		clusterRole,
+	)
+}
 
 func (m *machineControllerManager) emptyServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
@@ -339,6 +397,14 @@ func (m *machineControllerManager) emptyPodDisruptionBudget() client.Object {
 
 func (m *machineControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-vpa", Namespace: m.namespace}}
+}
+
+func (m *machineControllerManager) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
+	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceTargetName, Namespace: m.namespace}}
+}
+
+func (m *machineControllerManager) emptyManagedResourceSecret() *corev1.Secret {
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceTargetName, true), Namespace: m.namespace}}
 }
 
 func getLabels() map[string]string {

@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/machinecontrollermanager"
@@ -59,13 +60,15 @@ var _ = Describe("MachineControllerManager", func() {
 		values     Values
 		mcm        component.DeployWaiter
 
-		serviceAccount      *corev1.ServiceAccount
-		clusterRoleBinding  *rbacv1.ClusterRoleBinding
-		service             *corev1.Service
-		shootAccessSecret   *corev1.Secret
-		deployment          *appsv1.Deployment
-		podDisruptionBudget *policyv1.PodDisruptionBudget
-		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceAccount        *corev1.ServiceAccount
+		clusterRoleBinding    *rbacv1.ClusterRoleBinding
+		service               *corev1.Service
+		shootAccessSecret     *corev1.Secret
+		deployment            *appsv1.Deployment
+		podDisruptionBudget   *policyv1.PodDisruptionBudget
+		vpa                   *vpaautoscalingv1.VerticalPodAutoscaler
+		managedResourceSecret *corev1.Secret
+		managedResource       *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
@@ -325,6 +328,116 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 		}
+
+		clusterRoleYAML := `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:machine-controller-manager
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - nodes/status
+  - endpoints
+  - replicationcontrollers
+  - pods
+  - persistentvolumes
+  - persistentvolumeclaims
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - replicasets
+  - statefulsets
+  - daemonsets
+  - deployments
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - volumeattachments
+  verbs:
+  - get
+  - list
+  - watch
+`
+
+		managedResourceSecret = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "managedresource-shoot-core-machine-controller-manager",
+				Namespace: namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"clusterrole____gardener.cloud_target_machine-controller-manager.yaml": []byte(clusterRoleYAML),
+			},
+		}
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "resources.gardener.cloud/v1alpha1",
+				Kind:       "ManagedResource",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-core-machine-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"origin": "gardener"},
+			},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
+				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+				KeepObjects:  pointer.Bool(false),
+			},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -365,6 +478,16 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
 			vpa.ResourceVersion = "1"
 			Expect(actualVPA).To(Equal(vpa))
+
+			actualManagedResourceSecret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
+			managedResourceSecret.ResourceVersion = "1"
+			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
+
+			actualManagedResource := &resourcesv1alpha1.ManagedResource{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(Succeed())
+			managedResource.ResourceVersion = "1"
+			Expect(actualManagedResource).To(Equal(managedResource))
 		})
 	})
 
@@ -377,9 +500,13 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 			Expect(fakeClient.Create(ctx, podDisruptionBudget)).To(Succeed())
 			Expect(fakeClient.Create(ctx, vpa)).To(Succeed())
+			Expect(fakeClient.Create(ctx, managedResourceSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
 			Expect(mcm.Destroy(ctx)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(BeNotFoundError())
