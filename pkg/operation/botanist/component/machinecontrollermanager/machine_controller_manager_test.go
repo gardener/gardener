@@ -52,6 +52,7 @@ var _ = Describe("MachineControllerManager", func() {
 
 		serviceAccount     *corev1.ServiceAccount
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		service            *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -103,6 +104,37 @@ var _ = Describe("MachineControllerManager", func() {
 				Namespace: namespace,
 			}},
 		}
+		service = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "machine-controller-manager",
+				},
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":10258}]`,
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:      corev1.ServiceTypeClusterIP,
+				ClusterIP: corev1.ClusterIPNone,
+				Ports: []corev1.ServicePort{{
+					Name:     "metrics",
+					Port:     10258,
+					Protocol: corev1.ProtocolTCP,
+				}},
+				Selector: map[string]string{
+					"app":  "kubernetes",
+					"role": "machine-controller-manager",
+				},
+			},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -118,6 +150,11 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
 			clusterRoleBinding.ResourceVersion = "1"
 			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
+
+			actualService := &corev1.Service{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), actualService)).To(Succeed())
+			service.ResourceVersion = "1"
+			Expect(actualService).To(Equal(service))
 		})
 	})
 
@@ -125,9 +162,11 @@ var _ = Describe("MachineControllerManager", func() {
 		It("should successfully destroy all resources", func() {
 			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
+			Expect(fakeClient.Create(ctx, service)).To(Succeed())
 
 			Expect(mcm.Destroy(ctx)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())
 		})
