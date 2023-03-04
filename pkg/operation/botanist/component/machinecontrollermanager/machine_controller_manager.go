@@ -51,9 +51,17 @@ import (
 
 const (
 	portMetrics               = 10258
+	portNameMetrics           = "metrics"
 	containerName             = "machine-controller-manager"
+	serviceName               = "machine-controller-manager"
 	managedResourceTargetName = "shoot-core-machine-controller-manager"
 )
+
+// Interface contains functions for a machine-controller-manager deployer.
+type Interface interface {
+	component.DeployWaiter
+	component.MonitoringComponent
+}
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
 func New(
@@ -61,7 +69,7 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	return &machineControllerManager{
 		client:                        client,
 		namespace:                     namespace,
@@ -154,7 +162,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.ClusterIP = corev1.ClusterIPNone
 		desiredPorts := []corev1.ServicePort{{
-			Name:     "metrics",
+			Name:     portNameMetrics,
 			Protocol: corev1.ProtocolTCP,
 			Port:     portMetrics,
 		}}
@@ -222,7 +230,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						TimeoutSeconds:      5,
 					},
 					Ports: []corev1.ContainerPort{{
-						Name:          "metrics",
+						Name:          portNameMetrics,
 						ContainerPort: portMetrics,
 						Protocol:      corev1.ProtocolTCP,
 					}},
@@ -425,7 +433,7 @@ func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.Clus
 }
 
 func (m *machineControllerManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: m.namespace}}
 }
 
 func (m *machineControllerManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
