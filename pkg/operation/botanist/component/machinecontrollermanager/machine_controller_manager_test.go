@@ -408,6 +408,21 @@ rules:
   - watch
 `
 
+		clusterRoleBindingYAML := `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:machine-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:target:machine-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: machine-controller-manager
+  namespace: kube-system
+`
+
 		managedResourceSecret = &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
@@ -419,7 +434,8 @@ rules:
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"clusterrole____gardener.cloud_target_machine-controller-manager.yaml": []byte(clusterRoleYAML),
+				"clusterrole____gardener.cloud_target_machine-controller-manager.yaml":        []byte(clusterRoleYAML),
+				"clusterrolebinding____gardener.cloud_target_machine-controller-manager.yaml": []byte(clusterRoleBindingYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{

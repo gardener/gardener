@@ -359,10 +359,27 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 				},
 			},
 		}
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:machine-controller-manager",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
 		clusterRole,
+		clusterRoleBinding,
 	)
 }
 
