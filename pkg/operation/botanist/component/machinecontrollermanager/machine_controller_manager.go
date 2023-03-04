@@ -61,6 +61,8 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
+	// SetNamespaceUID sets the UID of the namespace into which the cluster-autoscaler shall be deployed.
+	SetNamespaceUID(types.UID)
 }
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -92,12 +94,12 @@ type machineControllerManager struct {
 type Values struct {
 	// Image is the container image used for machine-controller-manager.
 	Image string
-	// NamespaceUID is the UID of the namespace.
-	NamespaceUID types.UID
 	// Replicas is the number of replicas for the deployment.
 	Replicas int32
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
+
+	namespaceUID types.UID
 }
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
@@ -131,7 +133,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			APIVersion:         "v1",
 			Kind:               "Namespace",
 			Name:               m.namespace,
-			UID:                m.values.NamespaceUID,
+			UID:                m.values.namespaceUID,
 			Controller:         pointer.Bool(true),
 			BlockOwnerDeletion: pointer.Bool(true),
 		}}
@@ -325,6 +327,8 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 
 func (m *machineControllerManager) Wait(_ context.Context) error        { return nil }
 func (m *machineControllerManager) WaitCleanup(_ context.Context) error { return nil }
+
+func (m *machineControllerManager) SetNamespaceUID(uid types.UID) { m.values.namespaceUID = uid }
 
 func (m *machineControllerManager) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
 	var (

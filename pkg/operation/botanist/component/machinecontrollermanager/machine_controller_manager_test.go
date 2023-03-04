@@ -36,7 +36,6 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -58,7 +57,7 @@ var _ = Describe("MachineControllerManager", func() {
 		fakeClient client.Client
 		sm         secretsmanager.Interface
 		values     Values
-		mcm        component.DeployWaiter
+		mcm        Interface
 
 		serviceAccount        *corev1.ServiceAccount
 		clusterRoleBinding    *rbacv1.ClusterRoleBinding
@@ -76,11 +75,11 @@ var _ = Describe("MachineControllerManager", func() {
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Image:                    image,
-			NamespaceUID:             namespaceUID,
 			Replicas:                 replicas,
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
 		}
 		mcm = New(fakeClient, namespace, sm, values)
+		mcm.SetNamespaceUID(namespaceUID)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
