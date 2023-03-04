@@ -21,7 +21,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -41,13 +43,15 @@ var _ = Describe("MachineControllerManager", func() {
 
 		image                    = "mcm-image:tag"
 		runtimeKubernetesVersion = semver.MustParse("1.26.1")
+		namespaceUID             = types.UID("uid")
 
 		fakeClient client.Client
 		sm         secretsmanager.Interface
 		values     Values
 		mcm        component.DeployWaiter
 
-		serviceAccount *corev1.ServiceAccount
+		serviceAccount     *corev1.ServiceAccount
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -55,6 +59,7 @@ var _ = Describe("MachineControllerManager", func() {
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Image:                    image,
+			NamespaceUID:             namespaceUID,
 			Replicas:                 1,
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
 		}
@@ -71,6 +76,33 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "machine-controller-manager-" + namespace,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         "v1",
+					Kind:               "Namespace",
+					Name:               namespace,
+					UID:                namespaceUID,
+					Controller:         pointer.Bool(true),
+					BlockOwnerDeletion: pointer.Bool(true),
+				}},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "system:machine-controller-manager-runtime",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -81,15 +113,22 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
 			serviceAccount.ResourceVersion = "1"
 			Expect(actualServiceAccount).To(Equal(serviceAccount))
+
+			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
+			clusterRoleBinding.ResourceVersion = "1"
+			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
 		})
 	})
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
 			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
 
 			Expect(mcm.Destroy(ctx)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())
 		})
 	})
