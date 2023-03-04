@@ -48,6 +48,47 @@ var _ = Describe("Bootstrap", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: system:machine-controller-manager-runtime
+rules:
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - endpoints
+  - events
+  - pods
+  verbs:
+  - '*'
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - machine-controller
+  - machine-controller-manager
+  resources:
+  - leases
+  verbs:
+  - get
+  - watch
+  - update
+`
 	)
 
 	BeforeEach(func() {
@@ -96,7 +137,8 @@ var _ = Describe("Bootstrap", func() {
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(0))
+			Expect(managedResourceSecret.Data).To(HaveLen(1))
+			Expect(string(managedResourceSecret.Data["clusterrole____system_machine-controller-manager-runtime.yaml"])).To(Equal(clusterRoleYAML))
 		})
 	})
 

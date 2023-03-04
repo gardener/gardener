@@ -18,6 +18,11 @@ import (
 	"context"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -25,7 +30,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const managedResourceControlName = "machine-controller-manager"
+const (
+	managedResourceControlName = "machine-controller-manager"
+	clusterRoleName            = "system:machine-controller-manager-runtime"
+)
 
 // NewBootstrapper creates a new instance of DeployWaiter for the machine-controller-manager bootstrapper.
 func NewBootstrapper(client client.Client, namespace string) component.DeployWaiter {
@@ -43,9 +51,38 @@ type bootstrapper struct {
 func (b *bootstrapper) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterRoleName,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{machinev1alpha1.GroupName},
+					Resources: []string{"*"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{coordinationv1.GroupName},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{coordinationv1.GroupName},
+					Resources:     []string{"leases"},
+					Verbs:         []string{"get", "watch", "update"},
+					ResourceNames: []string{"machine-controller", "machine-controller-manager"},
+				},
+			},
+		}
 	)
 
-	resources, err := registry.AddAllAndSerialize()
+	resources, err := registry.AddAllAndSerialize(clusterRole)
 	if err != nil {
 		return err
 	}
