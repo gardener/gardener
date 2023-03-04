@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -55,11 +57,12 @@ var _ = Describe("MachineControllerManager", func() {
 		values     Values
 		mcm        component.DeployWaiter
 
-		serviceAccount     *corev1.ServiceAccount
-		clusterRoleBinding *rbacv1.ClusterRoleBinding
-		service            *corev1.Service
-		shootAccessSecret  *corev1.Secret
-		deployment         *appsv1.Deployment
+		serviceAccount      *corev1.ServiceAccount
+		clusterRoleBinding  *rbacv1.ClusterRoleBinding
+		service             *corev1.Service
+		shootAccessSecret   *corev1.Secret
+		deployment          *appsv1.Deployment
+		podDisruptionBudget *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -87,6 +90,7 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
+
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "rbac.authorization.k8s.io/v1",
@@ -114,6 +118,7 @@ var _ = Describe("MachineControllerManager", func() {
 				Namespace: namespace,
 			}},
 		}
+
 		service = &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
@@ -145,6 +150,7 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 		}
+
 		shootAccessSecret = &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
@@ -163,6 +169,7 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+
 		deployment = &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps/v1",
@@ -255,6 +262,30 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 		}
 		Expect(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", shootAccessSecret.Name)).To(Succeed())
+
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "policy/v1",
+				Kind:       "PodDisruptionBudget",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "machine-controller-manager",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: utils.IntStrPtrFromInt(1),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":  "kubernetes",
+						"role": "machine-controller-manager",
+					},
+				},
+			},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -285,6 +316,11 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), actualDeployment)).To(Succeed())
 			deployment.ResourceVersion = "1"
 			Expect(actualDeployment).To(Equal(deployment))
+
+			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
+			podDisruptionBudget.ResourceVersion = "1"
+			Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
 		})
 	})
 
@@ -295,9 +331,11 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Create(ctx, service)).To(Succeed())
 			Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(fakeClient.Create(ctx, podDisruptionBudget)).To(Succeed())
 
 			Expect(mcm.Destroy(ctx)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())

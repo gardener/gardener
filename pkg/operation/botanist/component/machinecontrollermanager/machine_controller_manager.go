@@ -22,6 +22,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,11 +88,12 @@ type Values struct {
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	var (
-		shootAccessSecret  = m.newShootAccessSecret()
-		serviceAccount     = m.emptyServiceAccount()
-		clusterRoleBinding = m.emptyClusterRoleBindingRuntime()
-		service            = m.emptyService()
-		deployment         = m.emptyDeployment()
+		shootAccessSecret   = m.newShootAccessSecret()
+		serviceAccount      = m.emptyServiceAccount()
+		clusterRoleBinding  = m.emptyClusterRoleBindingRuntime()
+		service             = m.emptyService()
+		deployment          = m.emptyDeployment()
+		podDisruptionBudget = m.emptyPodDisruptionBudget()
 	)
 
 	genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -235,11 +238,32 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, podDisruptionBudget, func() error {
+		switch pdb := podDisruptionBudget.(type) {
+		case *policyv1.PodDisruptionBudget:
+			pdb.Labels = utils.MergeStringMaps(pdb.Labels, getLabels())
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: utils.IntStrPtrFromInt(1),
+				Selector:       deployment.Spec.Selector,
+			}
+		case *policyv1beta1.PodDisruptionBudget:
+			pdb.Labels = utils.MergeStringMaps(pdb.Labels, getLabels())
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: utils.IntStrPtrFromInt(1),
+				Selector:       deployment.Spec.Selector,
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, m.client,
+		m.emptyPodDisruptionBudget(),
 		m.emptyDeployment(),
 		m.newShootAccessSecret().Secret,
 		m.emptyService(),
@@ -269,6 +293,15 @@ func (m *machineControllerManager) newShootAccessSecret() *gardenerutils.ShootAc
 
 func (m *machineControllerManager) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: m.namespace}}
+}
+
+func (m *machineControllerManager) emptyPodDisruptionBudget() client.Object {
+	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: m.namespace}
+
+	if m.runtimeVersionGreaterEqual123 {
+		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
+	}
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
 }
 
 func getLabels() map[string]string {
