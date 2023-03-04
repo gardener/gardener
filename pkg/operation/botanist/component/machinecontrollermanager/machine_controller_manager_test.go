@@ -20,6 +20,9 @@ import (
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -28,6 +31,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/machinecontrollermanager"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("MachineControllerManager", func() {
@@ -42,6 +46,8 @@ var _ = Describe("MachineControllerManager", func() {
 		sm         secretsmanager.Interface
 		values     Values
 		mcm        component.DeployWaiter
+
+		serviceAccount *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -53,17 +59,38 @@ var _ = Describe("MachineControllerManager", func() {
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
 		}
 		mcm = New(fakeClient, namespace, sm, values)
+
+		serviceAccount = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "ServiceAccount",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	})
 
 	Describe("#Deploy", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		It("should successfully deploy all resources", func() {
 			Expect(mcm.Deploy(ctx)).To(Succeed())
+
+			actualServiceAccount := &corev1.ServiceAccount{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
+			serviceAccount.ResourceVersion = "1"
+			Expect(actualServiceAccount).To(Equal(serviceAccount))
 		})
 	})
 
 	Describe("#Destroy", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		It("should successfully destroy all resources", func() {
+			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+
 			Expect(mcm.Destroy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())
 		})
 	})
 
