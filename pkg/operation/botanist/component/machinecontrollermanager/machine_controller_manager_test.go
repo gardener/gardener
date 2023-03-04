@@ -20,10 +20,13 @@ import (
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -31,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/machinecontrollermanager"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -44,6 +48,7 @@ var _ = Describe("MachineControllerManager", func() {
 		image                    = "mcm-image:tag"
 		runtimeKubernetesVersion = semver.MustParse("1.26.1")
 		namespaceUID             = types.UID("uid")
+		replicas                 = int32(1)
 
 		fakeClient client.Client
 		sm         secretsmanager.Interface
@@ -53,6 +58,8 @@ var _ = Describe("MachineControllerManager", func() {
 		serviceAccount     *corev1.ServiceAccount
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 		service            *corev1.Service
+		shootAccessSecret  *corev1.Secret
+		deployment         *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
@@ -61,10 +68,13 @@ var _ = Describe("MachineControllerManager", func() {
 		values = Values{
 			Image:                    image,
 			NamespaceUID:             namespaceUID,
-			Replicas:                 1,
+			Replicas:                 replicas,
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
 		}
 		mcm = New(fakeClient, namespace, sm, values)
+
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
 		serviceAccount = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -135,6 +145,116 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 		}
+		shootAccessSecret = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-access-machine-controller-manager",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "machine-controller-manager",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+		deployment = &appsv1.Deployment{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "machine-controller-manager",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             &replicas,
+				RevisionHistoryLimit: pointer.Int32(2),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "kubernetes",
+					"role": "machine-controller-manager",
+				}},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app":                                "kubernetes",
+							"role":                               "machine-controller-manager",
+							"gardener.cloud/role":                "controlplane",
+							"maintenance.gardener.cloud/restart": "true",
+							"networking.gardener.cloud/to-dns":   "allowed",
+							"networking.gardener.cloud/to-public-networks":                  "allowed",
+							"networking.gardener.cloud/to-private-networks":                 "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver":                "allowed",
+							"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:            "machine-controller-manager",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"./machine-controller-manager",
+								"--control-kubeconfig=inClusterConfig",
+								"--delete-migrated-machine-class=true",
+								"--machine-safety-apiserver-statuscheck-timeout=30s",
+								"--machine-safety-apiserver-statuscheck-period=1m",
+								"--machine-safety-orphan-vms-period=30m",
+								"--machine-safety-overshooting-period=1m",
+								"--namespace=" + namespace,
+								"--port=10258",
+								"--safety-up=2",
+								"--safety-down=1",
+								"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+								"--v=3",
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Port:   intstr.FromInt(10258),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								FailureThreshold:    3,
+								InitialDelaySeconds: 30,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      5,
+							},
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 10258,
+								Protocol:      corev1.ProtocolTCP,
+							}},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("31m"),
+									corev1.ResourceMemory: resource.MustParse("70Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("1Gi"),
+								},
+							},
+						}},
+						PriorityClassName:             "gardener-system-300",
+						ServiceAccountName:            "machine-controller-manager",
+						TerminationGracePeriodSeconds: pointer.Int64(5),
+					},
+				},
+			},
+		}
+		Expect(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", shootAccessSecret.Name)).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
@@ -155,6 +275,16 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), actualService)).To(Succeed())
 			service.ResourceVersion = "1"
 			Expect(actualService).To(Equal(service))
+
+			actualShootAccessSecret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), actualShootAccessSecret)).To(Succeed())
+			shootAccessSecret.ResourceVersion = "1"
+			Expect(actualShootAccessSecret).To(Equal(shootAccessSecret))
+
+			actualDeployment := &appsv1.Deployment{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), actualDeployment)).To(Succeed())
+			deployment.ResourceVersion = "1"
+			Expect(actualDeployment).To(Equal(deployment))
 		})
 	})
 
@@ -163,9 +293,13 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
 			Expect(fakeClient.Create(ctx, service)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
 			Expect(mcm.Destroy(ctx)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())

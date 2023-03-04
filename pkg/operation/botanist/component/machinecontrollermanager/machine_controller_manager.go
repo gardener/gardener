@@ -16,20 +16,26 @@ package machinecontrollermanager
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/semver"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -80,10 +86,17 @@ type Values struct {
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	var (
+		shootAccessSecret  = m.newShootAccessSecret()
 		serviceAccount     = m.emptyServiceAccount()
 		clusterRoleBinding = m.emptyClusterRoleBindingRuntime()
 		service            = m.emptyService()
+		deployment         = m.emptyDeployment()
 	)
+
+	genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
@@ -138,11 +151,97 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := shootAccessSecret.Reconcile(ctx, m.client); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, deployment, func() error {
+		deployment.Labels = utils.MergeStringMaps(deployment.Labels, getLabels(), map[string]string{
+			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+		})
+		deployment.Spec.Replicas = &m.values.Replicas
+		deployment.Spec.RevisionHistoryLimit = pointer.Int32(2)
+		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
+		deployment.Spec.Template = corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.GardenRole:                                                                                 v1beta1constants.GardenRoleControlPlane,
+					v1beta1constants.LabelPodMaintenanceRestart:                                                                 "true",
+					v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelNetworkPolicyToPublicNetworks:                                                         v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                                        v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+					gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
+				}),
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name:            "machine-controller-manager",
+					Image:           m.values.Image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command: []string{
+						"./machine-controller-manager",
+						"--control-kubeconfig=inClusterConfig",
+						"--delete-migrated-machine-class=true",
+						"--machine-safety-apiserver-statuscheck-timeout=30s",
+						"--machine-safety-apiserver-statuscheck-period=1m",
+						"--machine-safety-orphan-vms-period=30m",
+						"--machine-safety-overshooting-period=1m",
+						"--namespace=" + m.namespace,
+						fmt.Sprintf("--port=%d", portMetrics),
+						"--safety-up=2",
+						"--safety-down=1",
+						"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+						"--v=3",
+					},
+					LivenessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path:   "/healthz",
+								Port:   intstr.FromInt(portMetrics),
+								Scheme: corev1.URISchemeHTTP,
+							},
+						},
+						FailureThreshold:    3,
+						InitialDelaySeconds: 30,
+						PeriodSeconds:       10,
+						SuccessThreshold:    1,
+						TimeoutSeconds:      5,
+					},
+					Ports: []corev1.ContainerPort{{
+						Name:          "metrics",
+						ContainerPort: portMetrics,
+						Protocol:      corev1.ProtocolTCP,
+					}},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("31m"),
+							corev1.ResourceMemory: resource.MustParse("70Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("1024Mi"),
+						},
+					}},
+				},
+				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
+				ServiceAccountName:            serviceAccount.Name,
+				TerminationGracePeriodSeconds: pointer.Int64(5),
+			},
+		}
+
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, m.client,
+		m.emptyDeployment(),
+		m.newShootAccessSecret().Secret,
 		m.emptyService(),
 		m.emptyClusterRoleBindingRuntime(),
 		m.emptyServiceAccount(),
@@ -162,6 +261,14 @@ func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.Clus
 
 func (m *machineControllerManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
+}
+
+func (m *machineControllerManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameMachineControllerManager, m.namespace)
+}
+
+func (m *machineControllerManager) emptyDeployment() *appsv1.Deployment {
+	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: m.namespace}}
 }
 
 func getLabels() map[string]string {
