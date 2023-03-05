@@ -17,6 +17,7 @@ package machinecontrollermanager
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,6 +27,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -44,7 +46,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -325,8 +329,38 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 	)
 }
 
-func (m *machineControllerManager) Wait(_ context.Context) error        { return nil }
-func (m *machineControllerManager) WaitCleanup(_ context.Context) error { return nil }
+var (
+	// DefaultInterval is the default interval.
+	DefaultInterval = 5 * time.Second
+	// DefaultTimeout is the default timeout.
+	DefaultTimeout = 5 * time.Minute
+)
+
+func (m *machineControllerManager) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
+	defer cancel()
+
+	deployment := m.emptyDeployment()
+	return retry.Until(timeoutCtx, DefaultInterval, health.IsDeploymentUpdated(m.client, deployment))
+}
+
+func (m *machineControllerManager) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
+		deploy := m.emptyDeployment()
+		err = m.client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)
+		switch {
+		case apierrors.IsNotFound(err):
+			return retry.Ok()
+		case err == nil:
+			return retry.MinorError(err)
+		default:
+			return retry.SevereError(err)
+		}
+	})
+}
 
 func (m *machineControllerManager) SetNamespaceUID(uid types.UID) { m.values.namespaceUID = uid }
 

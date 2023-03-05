@@ -16,6 +16,7 @@ package machinecontrollermanager_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
@@ -41,6 +42,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -568,13 +570,71 @@ subjects:
 	})
 
 	Describe("#Wait", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithVars(
+				&DefaultInterval, time.Millisecond,
+				&DefaultTimeout, 100*time.Millisecond,
+			))
+		})
+
+		It("should successfully wait for the deployment to be updated", func() {
+			deploy := deployment.DeepCopy()
+
+			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+
+			Expect(fakeClient.Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: deployment.Namespace,
+					Labels:    deployment.Spec.Selector.MatchLabels,
+				},
+			})).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				deploy.Generation = 24
+				deploy.Spec.Replicas = pointer.Int32(1)
+				deploy.Status.Conditions = []appsv1.DeploymentCondition{
+					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+					{Type: appsv1.DeploymentAvailable, Status: "True"},
+				}
+				deploy.Status.ObservedGeneration = deploy.Generation
+				deploy.Status.Replicas = *deploy.Spec.Replicas
+				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
+				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
+				Expect(fakeClient.Update(ctx, deploy)).To(Succeed())
+			})
+			defer timer.Stop()
+
 			Expect(mcm.Wait(ctx)).To(Succeed())
 		})
 	})
 
 	Describe("#WaitCleanup", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithVars(
+				&DefaultInterval, time.Millisecond,
+				&DefaultTimeout, 100*time.Millisecond,
+			))
+		})
+
+		It("should time out while waiting for the deployment to be deleted", func() {
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(mcm.WaitCleanup(ctx)).To(MatchError(ContainSubstring("context deadline exceeded")))
+		})
+
+		It("should successfully wait for the deployment to be deleted", func() {
+			deploy := deployment.DeepCopy()
+
+			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				Expect(fakeClient.Delete(ctx, deploy)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(BeNotFoundError())
+			})
+			defer timer.Stop()
+
 			Expect(mcm.WaitCleanup(ctx)).To(Succeed())
 		})
 	})
