@@ -1,3 +1,5 @@
+# Source: https://github.com/gardener/machine-controller-manager/blob/v0.48.1/kubernetes/crds/machine.sapcloud.io_machinesets.yaml
+# Above file lacks the `labels` specification, so this was added manually.
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -44,13 +46,13 @@ spec:
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
-                  of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
-                  object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -123,6 +125,7 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+                x-kubernetes-map-type: atomic
               template:
                 description: MachineTemplateSpec describes the data a machine should
                   have when created from a template
@@ -133,7 +136,7 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   spec:
                     description: 'Specification of the desired behavior of the machine.
-                          More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status'
+                      More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status'
                     properties:
                       class:
                         description: Class contains the machineclass attributes of
@@ -183,10 +186,11 @@ spec:
                               node is created with.
                             properties:
                               configSource:
-                                description: If specified, the source to get node
-                                  configuration from The DynamicKubeletConfig feature
-                                  gate must be enabled for the Kubelet to use this
-                                  field
+                                description: 'Deprecated. If specified, the source
+                                  of the node''s configuration. The DynamicKubeletConfig
+                                  feature gate must be enabled for the Kubelet to
+                                  use this field. This field is deprecated as of 1.22:
+                                  https://git.k8s.io/enhancements/keps/sig-node/281-dynamic-kubelet-configuration'
                                 properties:
                                   configMap:
                                     description: ConfigMap is a reference to a Node's
@@ -227,7 +231,7 @@ spec:
                                 type: object
                               externalID:
                                 description: 'Deprecated. Not all kubelets will set
-                                      this field. Remove field after 1.13. see: https://issues.k8s.io/61966'
+                                  this field. Remove field after 1.13. see: https://issues.k8s.io/61966'
                                 type: string
                               podCIDR:
                                 description: PodCIDR represents the pod IP range assigned
@@ -244,7 +248,7 @@ spec:
                                 type: array
                               providerID:
                                 description: 'ID of the node assigned by the cloud
-                                      provider in the format: <ProviderName>://<ProviderSpecificNodeID>'
+                                  provider in the format: <ProviderName>://<ProviderSpecificNodeID>'
                                 type: string
                               taints:
                                 description: If specified, the node's taints.
@@ -280,8 +284,8 @@ spec:
                                 type: array
                               unschedulable:
                                 description: 'Unschedulable controls node schedulability
-                                      of new pods. By default, node is schedulable. More
-                                      info: https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration'
+                                  of new pods. By default, node is schedulable. More
+                                  info: https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration'
                                 type: boolean
                             type: object
                         type: object
