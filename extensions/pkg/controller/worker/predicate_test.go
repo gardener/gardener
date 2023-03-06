@@ -18,6 +18,7 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -55,7 +56,7 @@ var _ = Describe("Worker Predicates", func() {
 
 		It("should notice the change of the Node in the Status", func() {
 			predicate := worker.MachineStatusHasChanged()
-			newMachine.Status.Node = "ip.10-256-18-291.cluster.node"
+			metav1.SetMetaDataLabel(&newMachine.ObjectMeta, "node", "ip.10-256-18-291.cluster.node")
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeTrue())
 			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
@@ -64,8 +65,8 @@ var _ = Describe("Worker Predicates", func() {
 
 		It("should not react when there are no changes of the Node in the Status", func() {
 			predicate := worker.MachineStatusHasChanged()
-			oldMachine.Status.Node = "ip.10-256-18-291.cluster.node"
-			newMachine.Status.Node = "ip.10-256-18-291.cluster.node"
+			metav1.SetMetaDataLabel(&oldMachine.ObjectMeta, "node", "ip.10-256-18-291.cluster.node")
+			metav1.SetMetaDataLabel(&newMachine.ObjectMeta, "node", "ip.10-256-18-291.cluster.node")
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
 			Expect(predicate.Delete(deleteEvent)).To(BeTrue())

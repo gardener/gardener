@@ -35,7 +35,7 @@ func MachineStatusHasChanged() predicate.Predicate {
 		}
 
 		return oldMachine.Spec.ProviderID != newMachine.Spec.ProviderID ||
-			oldMachine.Status.Node != newMachine.Status.Node
+			oldMachine.Labels[machinev1alpha1.NodeLabelKey] != newMachine.Labels[machinev1alpha1.NodeLabelKey]
 	}
 
 	return predicate.Funcs{
