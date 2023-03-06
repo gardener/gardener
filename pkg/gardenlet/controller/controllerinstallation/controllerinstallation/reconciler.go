@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,8 +39,10 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -157,6 +160,11 @@ func (r *Reconciler) reconcile(
 		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.Spec.Provider.Zones, ","))
 		return nil
 	}); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// TODO(timuthy, rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets promoted to GA.
+	if err := r.reconcileNetworkPoliciesInSeed(ctx, namespace.Name); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -331,4 +339,30 @@ func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1b
 			Name: gardenerutils.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
+}
+
+func (r *Reconciler) reconcileNetworkPoliciesInSeed(ctx context.Context, namespace string) error {
+	var (
+		peers = []networkingv1.NetworkPolicyPeer{
+			{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+		}
+
+		allowAllTrafficNetworkPolicy = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardenlet-allow-all-traffic",
+				Namespace: namespace,
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				Ingress:     []networkingv1.NetworkPolicyIngressRule{{From: peers}},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{{To: peers}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+			},
+		}
+	)
+
+	if !gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+		return client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, allowAllTrafficNetworkPolicy))
+	}
+	return client.IgnoreNotFound(r.SeedClientSet.Client().Delete(ctx, allowAllTrafficNetworkPolicy))
 }

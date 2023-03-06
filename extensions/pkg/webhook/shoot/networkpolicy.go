@@ -76,7 +76,7 @@ func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamesp
 	return err
 }
 
-// EnsureIngressNetworkPolicy ensures that the required ingress network policy is installed that allow the
+// EnsureIngressNetworkPolicy ensures that the required ingress network policy is installed that allows the
 // kube-apiservers of shoot namespaces to talk to the extension webhook.
 func EnsureIngressNetworkPolicy(ctx context.Context, c client.Client, extensionNamespace, extensionName string, port int) error {
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: extensionNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}}
