@@ -349,7 +349,7 @@ gardener-extensions-up gardener-extensions-down: export SKAFFOLD_LABEL = skaffol
 # set ldflags for skaffold
 gardener-up gardener-extensions-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up operator-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
-gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
