@@ -82,12 +82,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		}
 	}
 
-	// Deploy machine dependencies.
-	// TODO(dkistner): Remove in a future release.
-	if err := workerDelegate.DeployMachineDependencies(ctx); err != nil {
-		return fmt.Errorf("failed to deploy machine dependencies: %w", err)
-	}
-
 	// Deploy the machine-controller-manager into the cluster.
 	if err := a.deployMachineControllerManager(ctx, log, worker, cluster, workerDelegate, mcmReplicaFunc); err != nil {
 		return err
@@ -218,12 +212,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed to update the machine deployments in worker status: %w", err)
-	}
-
-	// Cleanup machine dependencies.
-	// TODO(dkistner): Remove in a future release.
-	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
-		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
 	}
 
 	// Call post reconcilation hook after Worker reconciliation has happened.
