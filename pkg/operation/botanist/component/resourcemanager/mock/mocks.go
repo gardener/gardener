@@ -92,6 +92,20 @@ func (mr *MockInterfaceMockRecorder) GetReplicas() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicas", reflect.TypeOf((*MockInterface)(nil).GetReplicas))
 }
 
+// GetValues mocks base method.
+func (m *MockInterface) GetValues() resourcemanager.Values {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValues")
+	ret0, _ := ret[0].(resourcemanager.Values)
+	return ret0
+}
+
+// GetValues indicates an expected call of GetValues.
+func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
+}
+
 // ScrapeConfigs mocks base method.
 func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 	m.ctrl.T.Helper()

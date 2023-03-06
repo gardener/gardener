@@ -127,6 +127,10 @@ This document provides a checklist for them that you can walk through.
    Also, such `DaemonSets` and the included `PodTemplates` need to be labelled with `node.gardener.cloud/critical-component=true`.
    For more information, see [Readiness of Shoot Worker Nodes](../usage/node-readiness.md).
 
+6. **Consider making a `Service` topology-aware** ([example](https://github.com/gardener/gardener/blob/6e5a47514b58a89355976a57ffede51b04df82e3/pkg/operation/botanist/component/vpa/admissioncontroller.go#L154-L160))
+
+   To reduce costs and to improve the network traffic latency in multi-zone Seed clusters, consider making a `Service` topology-aware, if applicable. In short, when a `Service` is topology-aware, Kubernetes routes network traffic to the `Endpoint`s (`Pod`s) which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided. See [Topology-Aware Traffic Routing](../usage/topology_aware_routing.md).
+
 ## Scalability
 
 1. **Provide resource requirements** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/component/metricsserver/metrics_server.go#L359-L367))

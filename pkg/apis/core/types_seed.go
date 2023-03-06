@@ -216,6 +216,9 @@ type SeedSettings struct {
 	OwnerChecks *SeedSettingOwnerChecks
 	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
 	DependencyWatchdog *SeedSettingDependencyWatchdog
+	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+	TopologyAwareRouting *SeedSettingTopologyAwareRouting
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -296,6 +299,14 @@ type SeedSettingDependencyWatchdogProbe struct {
 	// Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
 	// scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
 	// reachable via its external ingress in order to avoid melt-down situations.
+	Enabled bool
+}
+
+// SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
+// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+type SeedSettingTopologyAwareRouting struct {
+	// Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
+	// These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.
 	Enabled bool
 }
 

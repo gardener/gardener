@@ -856,6 +856,37 @@ var _ = Describe("Seed Validation Tests", func() {
 					})),
 				))
 			})
+
+			It("should prevent enabling topology-aware routing on single-zone Seed cluster", func() {
+				seed.Spec.Provider.Zones = []string{"a"}
+				seed.Spec.Settings = &core.SeedSettings{
+					TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
+						Enabled: true,
+					},
+				}
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.settings.topologyAwareRouting.enabled"),
+					})),
+				))
+			})
+
+			It("should allow enabling topology-aware routing on multi-zone Seed cluster", func() {
+				seed.Spec.Provider.Zones = []string{"a", "b"}
+				seed.Spec.Settings = &core.SeedSettings{
+					TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
+						Enabled: true,
+					},
+				}
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(BeEmpty())
+			})
 		})
 
 		It("should fail updating immutable fields", func() {

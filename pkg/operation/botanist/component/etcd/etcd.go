@@ -109,6 +109,8 @@ type Interface interface {
 	// RolloutPeerCA gets the peer CA and patches the
 	// related `etcd` resource to use this new CA for peer communication.
 	RolloutPeerCA(context.Context) error
+	// GetValues returns the current configuration values of the deployer.
+	GetValues() Values
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -148,19 +150,20 @@ type etcd struct {
 
 // Values are the configuration values for the ETCD.
 type Values struct {
-	NamePrefix              string
-	Role                    string
-	Class                   Class
-	Replicas                *int32
-	StorageCapacity         string
-	StorageClassName        *string
-	DefragmentationSchedule *string
-	CARotationPhase         gardencorev1beta1.CredentialsRotationPhase
-	KubernetesVersion       *semver.Version
-	BackupConfig            *BackupConfig
-	HvpaConfig              *HVPAConfig
-	PriorityClassName       string
-	HighAvailabilityEnabled bool
+	NamePrefix                  string
+	Role                        string
+	Class                       Class
+	Replicas                    *int32
+	StorageCapacity             string
+	StorageClassName            *string
+	DefragmentationSchedule     *string
+	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
+	KubernetesVersion           *semver.Version
+	BackupConfig                *BackupConfig
+	HvpaConfig                  *HVPAConfig
+	PriorityClassName           string
+	HighAvailabilityEnabled     bool
+	TopologyAwareRoutingEnabled bool
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -351,6 +354,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 	))
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
@@ -405,7 +409,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   &quota,
-			ClientService:           &druidv1alpha1.ClientService{Annotations: clientService.Annotations},
+			ClientService: &druidv1alpha1.ClientService{
+				Annotations: clientService.Annotations,
+				Labels:      clientService.Labels,
+			},
 		}
 
 		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
@@ -799,6 +806,10 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+func (e *etcd) GetValues() Values {
+	return e.values
 }
 
 func (e *etcd) podLabelSelector() labels.Selector {

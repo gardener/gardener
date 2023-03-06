@@ -107,6 +107,8 @@ global:
     webhooks:
       crdDeletionProtection:
         enabled: false
+      endpointSliceHints:
+        enabled: false
       extensionValidation:
         enabled: false
       highAvailabilityConfig:

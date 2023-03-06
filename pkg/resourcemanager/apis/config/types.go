@@ -216,6 +216,8 @@ type NodeControllerConfig struct {
 type ResourceManagerWebhookConfiguration struct {
 	// CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
 	CRDDeletionProtection CRDDeletionProtection
+	// EndpointSliceHints is the configuration for the endpoint-slice-hints webhook.
+	EndpointSliceHints EndpointSliceHintsWebhookConfig
 	// ExtensionValidation is the configuration for the extension-validation webhook.
 	ExtensionValidation ExtensionValidation
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
@@ -236,6 +238,12 @@ type ResourceManagerWebhookConfiguration struct {
 
 // CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
 type CRDDeletionProtection struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool
+}
+
+// EndpointSliceHintsWebhookConfig is the configuration for the endpoint-slice-hints webhook.
+type EndpointSliceHintsWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool
 }

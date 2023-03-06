@@ -45,3 +45,5 @@ spec:
       visible: true
     verticalPodAutoscaler:
       enabled: true
+    topologyAwareRouting:
+      enabled: true

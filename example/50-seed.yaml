@@ -72,6 +72,8 @@ spec:
       enabled: true # a Gardener-managed VPA deployment is enabled
     ownerChecks:
       enabled: true # owner checks are enabled for shoots scheduled on this seed
+    topologyAwareRouting:
+      enabled: true # certain Services deployed in the seed will be topology-aware
 # taints:
 # - key: seed.gardener.cloud/protected # only shoots in the `garden` namespace can use this seed
 # - key: <some-key>

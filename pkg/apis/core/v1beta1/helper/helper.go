@@ -508,6 +508,11 @@ func SeedSettingDependencyWatchdogProbeEnabled(settings *gardencorev1beta1.SeedS
 	return settings == nil || settings.DependencyWatchdog == nil || settings.DependencyWatchdog.Probe == nil || settings.DependencyWatchdog.Probe.Enabled
 }
 
+// SeedSettingTopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.
+func SeedSettingTopologyAwareRoutingEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
+}
+
 // SeedUsesNginxIngressController returns true if the seed's specification requires an nginx ingress controller to be deployed.
 func SeedUsesNginxIngressController(seed *gardencorev1beta1.Seed) bool {
 	return seed.Spec.DNS.Provider != nil && seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
@@ -1393,4 +1398,10 @@ func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.
 // SeedWantsManagedIngress returns true in case the seed cluster wants its ingress controller to be managed by Gardener.
 func SeedWantsManagedIngress(seed *gardencorev1beta1.Seed) bool {
 	return seed.Spec.DNS.Provider != nil && seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
+}
+
+// IsTopologyAwareRoutingForShootControlPlaneEnabled returns whether the topology aware routing is enabled for the given Shoot control plane.
+// Topology-aware routing is enabled when the corresponding Seed setting is enabled and the Shoot has a multi-zonal control plane.
+func IsTopologyAwareRoutingForShootControlPlaneEnabled(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) bool {
+	return SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings) && IsMultiZonalShootControlPlane(shoot)
 }

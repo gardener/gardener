@@ -9066,6 +9066,38 @@ are not considered by the scheduler.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingTopologyAwareRouting">SeedSettingTopologyAwareRouting
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
+These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingVerticalPodAutoscaler">SeedSettingVerticalPodAutoscaler
 </h3>
 <p>
@@ -9198,6 +9230,21 @@ SeedSettingDependencyWatchdog
 <td>
 <em>(Optional)</em>
 <p>DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>topologyAwareRouting</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingTopologyAwareRouting">
+SeedSettingTopologyAwareRouting
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
 </td>
 </tr>
 </tbody>

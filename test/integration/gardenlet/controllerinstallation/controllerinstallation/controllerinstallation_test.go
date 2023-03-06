@@ -239,6 +239,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
           enabled: true
         scheduling:
           visible: true
+        topologyAwareRouting:
+          enabled: false
         verticalPodAutoscaler:
           enabled: true
     taints: null

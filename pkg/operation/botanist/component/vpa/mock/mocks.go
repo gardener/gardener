@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	vpa "github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -60,6 +61,20 @@ func (m *MockInterface) Destroy(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+}
+
+// GetValues mocks base method.
+func (m *MockInterface) GetValues() vpa.Values {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValues")
+	ret0, _ := ret[0].(vpa.Values)
+	return ret0
+}
+
+// GetValues indicates an expected call of GetValues.
+func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
 }
 
 // Wait mocks base method.

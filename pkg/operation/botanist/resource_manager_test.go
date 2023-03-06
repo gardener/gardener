@@ -40,7 +40,9 @@ import (
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -60,6 +62,40 @@ var _ = Describe("ResourceManager", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
+	})
+
+	Describe("#DefaultResourceManager", func() {
+		var (
+			k8sSeedClient kubernetes.Interface
+		)
+
+		BeforeEach(func() {
+			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithVersion("v1.26.1").Build()
+			botanist.SeedClientSet = k8sSeedClient
+
+			botanist.Seed = &seedpkg.Seed{}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
+			botanist.Shoot = &shootpkg.Shoot{}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+		})
+
+		It("should successfully create a resource-manager component", func() {
+			botanist.ImageVector = imagevector.ImageVector{
+				{Name: "gardener-resource-manager"},
+			}
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return an error because the gardener-resource-manager image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{}
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).To(BeNil())
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
 	Describe("#DeployGardenerResourceManager", func() {

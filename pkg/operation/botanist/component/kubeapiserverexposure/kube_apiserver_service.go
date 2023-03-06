@@ -54,16 +54,19 @@ type ServiceValues struct {
 	AnnotationsFunc func() map[string]string
 	// SNIPhase is the current status of the SNI configuration.
 	SNIPhase component.Phase
+	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
+	TopologyAwareRoutingEnabled bool
 }
 
 // serviceValues configure the kube-apiserver service.
 // this one is not exposed as not all values should be configured
 // from the outside.
 type serviceValues struct {
-	annotationsFunc func() map[string]string
-	serviceType     corev1.ServiceType
-	enableSNI       bool
-	gardenerManaged bool
+	annotationsFunc             func() map[string]string
+	serviceType                 corev1.ServiceType
+	enableSNI                   bool
+	gardenerManaged             bool
+	topologyAwareRoutingEnabled bool
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -124,6 +127,7 @@ func NewService(
 		}
 
 		internalValues.annotationsFunc = values.AnnotationsFunc
+		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 	}
 
 	return &service{
@@ -174,10 +178,14 @@ func (s *service) Deploy(ctx context.Context) error {
 				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
 		}
 
-		obj.Labels = getLabels()
+		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
 		if s.values.gardenerManaged {
 			metav1.SetMetaDataLabel(&obj.ObjectMeta, v1beta1constants.LabelAPIServerExposure, v1beta1constants.LabelAPIServerExposureGardenerManaged)
+		} else {
+			delete(obj.Labels, v1beta1constants.LabelAPIServerExposure)
 		}
+
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled)
 
 		obj.Spec.Type = s.values.serviceType
 		obj.Spec.Selector = getLabels()

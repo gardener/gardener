@@ -92,7 +92,8 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},
-		WatchedNamespace: pointer.String(b.Shoot.SeedNamespace),
+		WatchedNamespace:            pointer.String(b.Shoot.SeedNamespace),
+		TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 	}
 
 	return resourcemanager.New(

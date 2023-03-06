@@ -31,6 +31,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -63,6 +64,7 @@ import (
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/endpointslicehints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
@@ -212,6 +214,8 @@ type Interface interface {
 	SetReplicas(*int32)
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
+	// GetValues returns the current configuration values of the deployer.
+	GetValues() Values
 }
 
 // New creates a new instance of the gardener-resource-manager.
@@ -288,12 +292,17 @@ type Values struct {
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
 	DefaultSeccompProfileEnabled bool
+	// EndpointSliceHintsEnabled specifies if the EndpointSlice hints webhook of GRM should be enabled or not.
+	EndpointSliceHintsEnabled bool
 	// PodTopologySpreadConstraintsEnabled specifies if the pod's TSC should be mutated to support rolling updates.
 	PodTopologySpreadConstraintsEnabled bool
 	// FailureToleranceType determines the failure tolerance type for the resource manager deployment.
 	FailureToleranceType *gardencorev1beta1.FailureToleranceType
 	// Zones is number of availability zones.
 	Zones []string
+	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the gardener-resource-manager service.
+	// This value is only applicable for the GRM that is deployed in the Shoot control plane (when TargetDiffersFromSourceCluster=true).
+	TopologyAwareRoutingEnabled bool
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -535,6 +544,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 		},
 		Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
+			EndpointSliceHints: resourcemanagerv1alpha1.EndpointSliceHintsWebhookConfig{
+				Enabled: r.values.EndpointSliceHintsEnabled,
+			},
 			HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
 				Enabled: true,
 			},
@@ -669,12 +681,15 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 
 	service := r.emptyService()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
-		service.Labels = r.getLabels()
+		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt(metricsPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
+
+		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
 
 		service.Spec.Selector = appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -1190,6 +1205,10 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 
 	if r.values.TargetDiffersFromSourceCluster {
 		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
+	}
+
+	if r.values.EndpointSliceHintsEnabled {
+		webhooks = append(webhooks, GetEndpointSliceHintsMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.PodTopologySpreadConstraintsEnabled {
@@ -1750,6 +1769,47 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 	}
 }
 
+// GetEndpointSliceHintsMutatingWebhook returns the EndpointSlice hints mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetEndpointSliceHintsMutatingWebhook(
+	namespaceSelector *metav1.LabelSelector,
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Equivalent
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "endpoint-slice-hints.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{discoveryv1.GroupName},
+				APIVersions: []string{discoveryv1.SchemeGroupVersion.Version},
+				Resources:   []string{"endpointslices"},
+			},
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+				admissionregistrationv1.Update,
+			},
+		}},
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				resourcesv1alpha1.EndpointSliceHintsConsider: "true",
+			},
+		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, endpointslicehints.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
 func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector {
 	namespaceSelectorOperator := metav1.LabelSelectorOpIn
 	if !r.values.TargetDiffersFromSourceCluster {
@@ -1861,6 +1921,9 @@ func (r *resourceManager) SetReplicas(replicas *int32) { r.values.Replicas = rep
 
 // SetSecrets sets the secrets for the gardener-resource-manager.
 func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
+
+// GetValues returns the current configuration values of the deployer.
+func (r *resourceManager) GetValues() Values { return r.values }
 
 // Secrets is collection of secrets for the gardener-resource-manager.
 type Secrets struct {

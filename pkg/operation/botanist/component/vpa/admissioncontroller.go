@@ -55,6 +55,9 @@ type ValuesAdmissionController struct {
 	PriorityClassName string
 	// Replicas is the number of pod replicas.
 	Replicas *int32
+	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the vpa-webhoook service.
+	// This value is only applicable for the vpa-admission-controller that is deployed in the Shoot control plane (when ClusterType=shoot).
+	TopologyAwareRoutingEnabled bool
 }
 
 func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
@@ -145,6 +148,9 @@ func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding 
 }
 
 func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
+	topologAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled)
+
 	service.Spec.Selector = getAppLabel(admissionController)
 	desiredPorts := []corev1.ServicePort{
 		{

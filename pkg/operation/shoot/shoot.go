@@ -99,6 +99,12 @@ func (b *Builder) WithCloudProfileObjectFromCluster(seedClient kubernetes.Interf
 	return b
 }
 
+// WithSeedObject sets the seed attribute at the Builder.
+func (b *Builder) WithSeedObject(seed *gardencorev1beta1.Seed) *Builder {
+	b.seed = seed
+	return b
+}
+
 // WithShootSecret sets the shootSecretFunc attribute at the Builder.
 func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
 	b.shootSecretFunc = func(context.Context, string, string) (*corev1.Secret, error) { return secret, nil }
@@ -221,6 +227,11 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.Purpose = v1beta1helper.GetPurpose(shootObject)
 
 	shoot.PSPDisabled = v1beta1helper.IsPSPDisabled(shoot.GetInfo())
+
+	if b.seed == nil {
+		return nil, fmt.Errorf("seed object is required but not set")
+	}
+	shoot.TopologyAwareRoutingEnabled = v1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(b.seed, shootObject)
 
 	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
 	if err != nil {
