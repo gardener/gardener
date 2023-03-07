@@ -22,10 +22,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
@@ -99,30 +96,5 @@ func ApplyMachineResources(ctx context.Context, c client.Client) error {
 
 	applier := kubernetes.NewApplier(c, c.RESTMapper())
 
-	if err := applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs); err != nil {
-		return err
-	}
-
-	// TODO(rfrankze): Delete this in a future version.
-	for _, crd := range []*apiextensionsv1.CustomResourceDefinition{
-		{ObjectMeta: metav1.ObjectMeta{Name: "alicloudmachineclasses.machine.sapcloud.io"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "awsmachineclasses.machine.sapcloud.io"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "azuremachineclasses.machine.sapcloud.io"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "gcpmachineclasses.machine.sapcloud.io"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "openstackmachineclasses.machine.sapcloud.io"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "packetmachineclasses.machine.sapcloud.io"}},
-	} {
-		if err := gardenerutils.ConfirmDeletion(ctx, c, crd); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
-			continue
-		}
-
-		if err := c.Delete(ctx, crd); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
+	return applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
 }
