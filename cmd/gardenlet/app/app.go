@@ -503,6 +503,21 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 		taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), serviceList.Items, vpnseedserver.MetricsPort, false)...)
 	}
 
+	// loki services
+	serviceList := &corev1.ServiceList{}
+	if err := g.mgr.GetClient().List(ctx, serviceList, client.MatchingLabels{"app": "loki", "role": "logging"}); err != nil {
+		return err
+	}
+
+	// drop loki service in garden namespace since this one should not be mutated
+	for i := len(serviceList.Items) - 1; i >= 0; i-- {
+		if serviceList.Items[i].Namespace == "garden" {
+			serviceList.Items = append(serviceList.Items[:i], serviceList.Items[i+1:]...)
+		}
+	}
+
+	taskFns = append(taskFns, migrationTasksForLokiServices(g.mgr.GetClient(), serviceList.Items)...)
+
 	return flow.Parallel(taskFns...)(ctx)
 }
 
@@ -526,6 +541,23 @@ func migrationTasksForServices(cl client.Client, services []corev1.Service, port
 			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(&service, selectors...))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(&service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+			return cl.Patch(ctx, &service, patch)
+		})
+	}
+
+	return taskFns
+}
+
+func migrationTasksForLokiServices(cl client.Client, services []corev1.Service) []flow.TaskFn {
+	var taskFns []flow.TaskFn
+
+	for _, svc := range services {
+		service := svc
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(service.DeepCopy())
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(&service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
 			return cl.Patch(ctx, &service, patch)
 		})
 	}

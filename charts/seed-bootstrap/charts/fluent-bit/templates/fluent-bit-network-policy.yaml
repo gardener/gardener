@@ -10,22 +10,17 @@ spec:
   podSelector:
     matchLabels:
 {{ toYaml .Values.labels | indent 6 }}
+{{- if .Values.networkPolicy.additionalEgressIPBlocks }}
+  # This rule and with it the whole NetworkPolicy, will be dropped as part of https://github.com/gardener/gardener/pull/7568.
   egress:
   - to:
 {{- range .Values.networkPolicy.additionalEgressIPBlocks }}
     - ipBlock:
         cidr: {{ . }}
 {{- end }}
-    - namespaceSelector:
-        matchLabels:
-          gardener.cloud/role: shoot
-      podSelector: 
-{{ toYaml .Values.global.lokiLabels | indent 10 }}
-    - podSelector:
-        matchLabels:
-{{ toYaml .Values.global.lokiLabels | indent 10 }}
     ports:
     - protocol: TCP
       port: {{ .Values.global.lokiPort }}
   policyTypes:
   - Egress
+{{- end }}

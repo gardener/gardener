@@ -14,12 +14,6 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-{{ toYaml .Values.global.fluentbit.labels | indent 10 }}
-      namespaceSelector:
-        matchLabels:
-          role: garden
-    - podSelector:
-        matchLabels:
 {{ toYaml .Values.prometheus.labels | indent 10 }}
       namespaceSelector:
         matchLabels:

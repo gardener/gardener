@@ -12,6 +12,8 @@ metadata:
 {{- if eq .Values.clusterType "shoot" }}
     networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
     networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":"metrics","protocol":"TCP"}{{ if .Values.rbacSidecarEnabled }},{"port":{{ .Values.telegraf.port }},"protocol":"TCP"}{{ end }}]'
+    networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-shoots
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
 {{- end }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 4 }}
