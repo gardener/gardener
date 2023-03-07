@@ -53,6 +53,12 @@ if [ "$USER" != root ]; then
   SUDO="sudo -E"
 fi
 
+namespace="$(kubectl --kubeconfig "$kubeconfig" get ns -l controllerregistration.core.gardener.cloud/name=provider-local -o jsonpath={..metadata.name})"
+if [[ -z "$namespace" ]]; then
+  echo "gardenlet has not yet created the namespace for the extension, cannot start provider-local"
+  exit 1
+fi
+
 $SUDO go run \
   -mod=vendor \
   -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
@@ -64,6 +70,7 @@ $SUDO go run \
   --webhook-config-server-port="${WEBHOOK_SERVER_PORT}" \
   --webhook-config-url=$(get_host_address):${WEBHOOK_SERVER_PORT} \
   --webhook-config-cert-dir="${WEBHOOK_CERT_DIR}" \
+  --webhook-config-namespace="$namespace" \
   --service-host-ip="${SERVICE_HOST_IP}" \
   --service-zone-0-ip="${SERVICE_ZONE_0_IP}" \
   --service-zone-1-ip="${SERVICE_ZONE_1_IP}" \
