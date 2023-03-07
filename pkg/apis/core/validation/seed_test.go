@@ -960,7 +960,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						Kind: "nginx",
 					},
 				}
-				seed.Spec.DNS.IngressDomain = nil
 				seed.Spec.DNS.Provider = &core.SeedDNSProvider{
 					Type: "some-type",
 					SecretRef: corev1.SecretReference{
@@ -968,49 +967,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						Namespace: "bar",
 					},
 				}
-			})
-
-			It("should deny if spec.dns.ingressDomain is set", func() {
-				seed.Spec.DNS.IngressDomain = pointer.String("someingress.example.com")
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.dns.ingressDomain"),
-						"Detail": Equal("this field is deprecated and will be removed in a future version. Use spec.ingress.domain instead"),
-					})),
-				))
-			})
-
-			It("should deny if spec.dns.provider.domains is set", func() {
-				seed.Spec.DNS.Provider.Domains = &core.DNSIncludeExclude{
-					Include: []string{"foo.bar"},
-				}
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.dns.provider.domains"),
-						"Detail": Equal("this field is deprecated and will be removed in a future version. Don't set this field"),
-					})),
-				))
-			})
-
-			It("should deny if spec.dns.provider.zones is set", func() {
-				seed.Spec.DNS.Provider.Zones = &core.DNSIncludeExclude{
-					Exclude: []string{"foo.bar"},
-				}
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.dns.provider.zones"),
-						"Detail": Equal("this field is deprecated and will be removed in a future version. Don't set this field"),
-					})),
-				))
 			})
 
 			It("should fail if immutable spec.ingress.domain gets changed", func() {
@@ -1026,53 +982,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 
-			It("should succeed if ingress domain stays the same when migrating from dns.ingressDomain to ingress.domain", func() {
-				newSeed := prepareSeedForUpdate(seed)
-				seed.Spec.DNS.IngressDomain = pointer.String(seed.Spec.Ingress.Domain)
-				seed.Spec.Ingress = nil
-
-				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
-			})
-
-			It("should fail if ingress domain changed when migrating from dns.ingressDomain to ingress.domain", func() {
-				newSeed := prepareSeedForUpdate(seed)
-				otherDomain := "other-domain"
-				seed.Spec.Ingress = nil
-				seed.Spec.DNS.IngressDomain = &otherDomain
-
-				errorList := ValidateSeedUpdate(newSeed, seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.ingress.domain"),
-					"Detail": Equal(`field is immutable`),
-				}))
-			})
-
-			It("should fail if tried to migrate from ingress.domain to dns.ingressDomain", func() {
-				newSeed := prepareSeedForUpdate(seed)
-				currentDomain := seed.Spec.Ingress.Domain
-				newSeed.Spec.Ingress = nil
-				newSeed.Spec.DNS.IngressDomain = &currentDomain
-
-				errorList := ValidateSeedUpdate(newSeed, seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.dns.ingressDomain"),
-					"Detail": ContainSubstring("this field is deprecated and will be removed in a future version. Use spec.ingress.domain instead"),
-				}, Fields{
-					"Type":   Equal(field.ErrorTypeRequired),
-					"Field":  Equal("spec.ingress"),
-					"Detail": ContainSubstring("cannot be empty"),
-				}))
-			})
-
 			It("should succeed if ingress config is correct", func() {
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 
-			It("both nil", func() {
+			It("ingress is nil", func() {
 				seed.Spec.Ingress = nil
 
 				errorList := ValidateSeed(seed)
@@ -1081,17 +995,6 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.ingress"),
 					"Detail": ContainSubstring("cannot be empty"),
-				}))
-			})
-
-			It("both set", func() {
-				seed.Spec.DNS.IngressDomain = pointer.String("foo")
-
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.ingressDomain"),
 				}))
 			})
 
