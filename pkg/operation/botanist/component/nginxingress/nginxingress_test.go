@@ -468,6 +468,8 @@ spec:
       labels:
         app: nginx-ingress
         component: controller
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
         release: addons
         seccompprofile.resources.gardener.cloud/skip: "true"
     spec:

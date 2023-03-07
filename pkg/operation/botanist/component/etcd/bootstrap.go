@@ -271,7 +271,10 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: labels(),
+						Labels: utils.MergeStringMaps(labels(), map[string]string{
+							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						}),
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName:  b.priorityClassName,

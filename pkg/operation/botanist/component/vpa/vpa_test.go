@@ -1292,7 +1292,7 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
 
 				deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeSeed)
-				dropNetworkingLabels(deploymentUpdater.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(serviceAccountUpdater)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleUpdater)))
@@ -1309,7 +1309,7 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name)
 
 				deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed)
-				dropNetworkingLabels(deploymentRecommender.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceAccountRecommender)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderMetricsReader)))
@@ -1325,7 +1325,7 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
 
 				deploymentAdmissionController := deploymentAdmissionControllerFor(true, component.ClusterTypeSeed)
-				dropNetworkingLabels(deploymentAdmissionController.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentAdmissionController.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccountAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleAdmissionController)))
@@ -1412,7 +1412,7 @@ var _ = Describe("VPA", func() {
 					valuesUpdater.EvictionTolerance,
 					component.ClusterTypeSeed,
 				)
-				dropNetworkingLabels(deploymentUpdater.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
 				deploymentRecommender := deploymentRecommenderFor(
 					true,
@@ -1420,7 +1420,7 @@ var _ = Describe("VPA", func() {
 					valuesRecommender.RecommendationMarginFraction,
 					component.ClusterTypeSeed,
 				)
-				dropNetworkingLabels(deploymentRecommender.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(deploymentUpdater)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
@@ -1805,15 +1805,14 @@ func replaceTargetSubstrings(in string) string {
 	return strings.Replace(in, ":target:", ":source:", -1)
 }
 
-func dropNetworkingLabels(labels map[string]string) {
+func adaptNetworkPolicyLabelsForClusterTypeSeed(labels map[string]string) {
 	for k := range labels {
 		if k == "networking.gardener.cloud/from-prometheus" {
 			continue
 		}
 
-		if strings.HasPrefix(k, "networking.gardener.cloud/") || strings.HasPrefix(k, "networking.resources.gardener.cloud/") {
-			delete(labels, k)
-		}
+		delete(labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
+		labels["networking.gardener.cloud/to-runtime-apiserver"] = "allowed"
 	}
 }
 

@@ -171,7 +171,9 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(admissionController)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: getAllLabels(admissionController),
+				Labels: utils.MergeStringMaps(getAllLabels(admissionController), map[string]string{
+					v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+				}),
 			},
 			Spec: corev1.PodSpec{
 				PriorityClassName: v.values.AdmissionController.PriorityClassName,
@@ -257,9 +259,14 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		},
 	}
 
-	if v.values.ClusterType == component.ClusterTypeShoot {
+	switch v.values.ClusterType {
+	case component.ClusterTypeSeed:
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+
+	case component.ClusterTypeShoot:
+		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}

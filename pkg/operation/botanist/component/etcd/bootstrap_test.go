@@ -345,6 +345,8 @@ spec:
       creationTimestamp: null
       labels:
         gardener.cloud/role: etcd-druid
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
     spec:
       containers:
       - command:
@@ -398,6 +400,8 @@ spec:
       creationTimestamp: null
       labels:
         gardener.cloud/role: etcd-druid
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
     spec:
       containers:
       - command:

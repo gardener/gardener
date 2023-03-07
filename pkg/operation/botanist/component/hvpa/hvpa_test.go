@@ -203,8 +203,10 @@ var _ = Describe("HVPA", func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"gardener.cloud/role": "hvpa",
-							"app":                 "hvpa-controller",
+							"gardener.cloud/role":              "hvpa",
+							"app":                              "hvpa-controller",
+							"networking.gardener.cloud/to-dns": "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{

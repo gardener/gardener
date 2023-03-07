@@ -1880,15 +1880,16 @@ func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 }
 
 func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
-	if r.values.TargetDiffersFromSourceCluster {
-		return map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
-		}
+	labels := map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
-	return nil
+	if r.values.TargetDiffersFromSourceCluster {
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
+	}
+
+	return labels
 }
 
 func appLabel() map[string]string {

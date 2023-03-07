@@ -2077,8 +2077,6 @@ subjects:
 				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(pdbV1.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				// Remove networking label from deployment template
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-runtime-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 
 				utilruntime.Must(references.InjectAnnotations(deployment))

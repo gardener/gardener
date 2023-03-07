@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -409,7 +410,10 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: getLabels(labelValueController, labelValueAddons),
+						Labels: utils.MergeStringMaps(getLabels(labelValueController, labelValueAddons), map[string]string{
+							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						}),
 						Annotations: map[string]string{
 							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
 							// volume and hence using the function won't have any effect.

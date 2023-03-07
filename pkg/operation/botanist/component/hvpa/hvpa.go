@@ -192,7 +192,10 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				Selector:             &metav1.LabelSelector{MatchLabels: utils.MergeStringMaps(getLabels(), getDeploymentLabels())},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
+						Labels: utils.MergeStringMaps(getLabels(), getDeploymentLabels(), map[string]string{
+							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						}),
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName:  h.values.PriorityClassName,
