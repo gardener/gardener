@@ -26,6 +26,8 @@ import (
 )
 
 // New creates a new instance of DeployWaiter for the network policies.
+// Deprecated.
+// TODO(rfrankze): Remove this component in a future release.
 func New(client client.Client, namespace string) component.Deployer {
 	return &networkPolicies{
 		client:    client,
@@ -39,16 +41,10 @@ type networkPolicies struct {
 }
 
 func (n *networkPolicies) Deploy(ctx context.Context) error {
-	// TODO(rfranzke): Delete this in a future release.
-	return kubernetesutils.DeleteObjects(ctx, n.client,
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: n.namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: n.namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-all-shoot-apiservers", Namespace: n.namespace}},
-	)
+	return n.Destroy(ctx)
 }
 
 func (n *networkPolicies) Destroy(ctx context.Context) error {
-	// TODO(rfranzke): Delete this in a future release.
 	return kubernetesutils.DeleteObjects(ctx, n.client,
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-aggregate-prometheus", Namespace: n.namespace}},
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-seed-prometheus", Namespace: n.namespace}},

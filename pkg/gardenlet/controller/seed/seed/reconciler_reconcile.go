@@ -862,7 +862,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), sniEnabledOrInUse, r.GardenNamespace)
+	networkPolicies, err := defaultNetworkPolicies(seedClient, r.GardenNamespace)
 	if err != nil {
 		return err
 	}

@@ -18,12 +18,8 @@ import (
 	"context"
 	"time"
 
-	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -32,54 +28,22 @@ import (
 const ManagedResourceControlName = "global-network-policies"
 
 // NewBootstrapper creates a new instance of DeployWaiter for the network policies.
-func NewBootstrapper(client client.Client, namespace string, values GlobalValues) component.DeployWaiter {
+// Deprecated.
+// TODO(rfrankze): Remove this component in a future release.
+func NewBootstrapper(client client.Client, namespace string) component.DeployWaiter {
 	return &bootstrapper{
 		client:    client,
 		namespace: namespace,
-		values:    values,
 	}
 }
 
 type bootstrapper struct {
 	client    client.Client
 	namespace string
-	values    GlobalValues
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-
-	for _, transformer := range getGlobalNetworkPolicyTransformers(b.values) {
-		obj := &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      transformer.name,
-				Namespace: b.namespace,
-			},
-		}
-
-		if err := transformer.transform(obj)(); err != nil {
-			return err
-		}
-
-		if err := registry.Add(obj); err != nil {
-			return err
-		}
-	}
-
-	// TODO(rfranzke): Remove this in a future release.
-	for _, name := range []string{"allow-to-public-networks", "allow-to-blocked-cidrs", "allow-to-dns", "allow-to-private-networks"} {
-		if err := registry.Add(&networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Namespace:   b.namespace,
-				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
-			},
-		}); err != nil {
-			return err
-		}
-	}
-
-	return managedresources.CreateForSeed(ctx, b.client, b.namespace, ManagedResourceControlName, false, registry.SerializedObjects())
+	return b.Destroy(ctx)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {

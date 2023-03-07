@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
@@ -46,7 +45,6 @@ import (
 
 var requiredManagedResourcesSeed = sets.New[string](
 	etcd.Druid,
-	networkpolicies.ManagedResourceControlName,
 	clusterautoscaler.ManagedResourceControlName,
 	kubestatemetrics.ManagedResourceName,
 	seedsystem.ManagedResourceName,
