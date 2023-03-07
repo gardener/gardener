@@ -3,8 +3,13 @@ kind: Service
 metadata:
   name: {{ include "name" . }}
   namespace: {{ .Release.Namespace }}
-{{-  if .Values.ignoreResources }}
   annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":{{ .Values.webhookConfig.serverPort }}}]'
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ .Values.metricsPort }},"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+    networking.resources.gardener.cloud/pod-label-selector-namespace-alias: extensions
+{{-  if .Values.ignoreResources }}
     resources.gardener.cloud/ignore: "true"
 {{- end }}
   labels:

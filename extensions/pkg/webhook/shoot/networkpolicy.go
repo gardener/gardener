@@ -20,27 +20,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// GetNetworkPolicyMeta returns the network policy object with filled meta data.
-func GetNetworkPolicyMeta(namespace, extensionName string) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{ObjectMeta: kubernetesutils.ObjectMeta(namespace, "gardener-extension-"+extensionName)}
+// GetNetworkPolicyMeta returns the network policy object with filled metadata.
+func GetNetworkPolicyMeta(shootNamespace, extensionName string) *networkingv1.NetworkPolicy {
+	return &networkingv1.NetworkPolicy{ObjectMeta: kubernetesutils.ObjectMeta(shootNamespace, "gardener-extension-"+extensionName)}
 }
 
-// EnsureNetworkPolicy ensures that the required network policy that allows the kube-apiserver running in the given
-// namespace to talk to the extension webhook is installed.
-func EnsureNetworkPolicy(ctx context.Context, c client.Client, namespace, extensionName string, port int) error {
-	networkPolicy := GetNetworkPolicyMeta(namespace, extensionName)
-
-	policyPort := intstr.FromInt(port)
-	policyProtocol := corev1.ProtocolTCP
-
+// EnsureEgressNetworkPolicy ensures that the required egress network policy is installed that allows the kube-apiserver
+// running in the given shoot namespace to talk to the extension webhook .
+func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamespace, extensionNamespace, extensionName string, port int) error {
+	networkPolicy := GetNetworkPolicyMeta(shootNamespace, extensionName)
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, networkPolicy, func() error {
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -48,15 +44,15 @@ func EnsureNetworkPolicy(ctx context.Context, c client.Client, namespace, extens
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
-							Port:     &policyPort,
-							Protocol: &policyProtocol,
+							Port:     utils.IntStrPtrFromInt(port),
+							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 						},
 					},
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension,
+									corev1.LabelMetadataName: extensionNamespace,
 								},
 							},
 							PodSelector: &metav1.LabelSelector{
@@ -72,6 +68,49 @@ func EnsureNetworkPolicy(ctx context.Context, c client.Client, namespace, extens
 				MatchLabels: map[string]string{
 					v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 					v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+				},
+			},
+		}
+		return nil
+	})
+	return err
+}
+
+// EnsureIngressNetworkPolicy ensures that the required ingress network policy is installed that allows the
+// kube-apiservers of shoot namespaces to talk to the extension webhook.
+func EnsureIngressNetworkPolicy(ctx context.Context, c client.Client, extensionNamespace, extensionName string, port int) error {
+	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: extensionNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}}
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, networkPolicy, func() error {
+		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+			Ingress: []networkingv1.NetworkPolicyIngressRule{
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Port:     utils.IntStrPtrFromInt(port),
+							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+						},
+					},
+					From: []networkingv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+								},
+							},
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+									v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+								},
+							},
+						},
+					},
+				},
+			},
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/name": "gardener-extension-" + extensionName,
 				},
 			},
 		}

@@ -301,6 +301,7 @@ var _ = Describe("ResourceManager", func() {
 			AlwaysUpdate:                         &alwaysUpdate,
 			ClusterIdentity:                      &clusterIdentity,
 			ConcurrentSyncs:                      &concurrentSyncs,
+			FullNetworkPolicies:                  true,
 			HealthSyncPeriod:                     &healthSyncPeriod,
 			Image:                                image,
 			MaxConcurrentHealthWorkers:           &maxConcurrentHealthWorkers,
@@ -454,10 +455,11 @@ var _ = Describe("ResourceManager", func() {
 				config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
 					Enabled: true,
 					NamespaceSelectors: []metav1.LabelSelector{
-						{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}},
-						{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}},
-						{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-						{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+						{MatchLabels: map[string]string{"gardener.cloud/role": "shoot"}},
+						{MatchLabels: map[string]string{"gardener.cloud/role": "istio-system"}},
+						{MatchLabels: map[string]string{"gardener.cloud/role": "istio-ingress"}},
+						{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "handler.exposureclass.gardener.cloud/name", Operator: metav1.LabelSelectorOpExists}}},
+						{MatchLabels: map[string]string{"gardener.cloud/role": "extension"}},
 					},
 				}
 				config.Webhooks.CRDDeletionProtection.Enabled = true

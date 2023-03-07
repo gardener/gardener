@@ -42,6 +42,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		istioIngressNamespace       *corev1.Namespace
 		istioExposureClassNamespace *corev1.Namespace
 		shootNamespace              *corev1.Namespace
+		extensionNamespace          *corev1.Namespace
 		fooNamespace                *corev1.Namespace
 		cluster                     *extensionsv1alpha1.Cluster
 	)
@@ -88,6 +89,15 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				GenerateName: "shoot--",
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+					testID:                      testRunID,
+				},
+			},
+		}
+		extensionNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "extension-",
+				Labels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension,
 					testID:                      testRunID,
 				},
 			},
@@ -161,6 +171,15 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootNamespace))).To(Succeed())
 		})
 
+		By("Create extension namespace")
+		Expect(testClient.Create(ctx, extensionNamespace)).To(Succeed())
+		log.Info("Created extension namespace for test", "namespace", client.ObjectKeyFromObject(extensionNamespace))
+
+		DeferCleanup(func() {
+			By("Delete extension namespace")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionNamespace))).To(Succeed())
+		})
+
 		By("Create foo namespace")
 		Expect(testClient.Create(ctx, fooNamespace)).To(Succeed())
 		log.Info("Created foo namespace for test", "namespace", client.ObjectKeyFromObject(fooNamespace))
@@ -218,6 +237,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		inIstioIngressNamespace       bool
 		inIstioExposureClassNamespace bool
 		inShootNamespaces             bool
+		inExtensionNamespaces         bool
 	}
 
 	defaultTests := func(attrs testAttributes) {
@@ -254,6 +274,12 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(istioExposureClassNamespace.Name)))
 					}
+
+					if attrs.inExtensionNamespaces {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(extensionNamespace.Name)))
+					}
 				}).Should(Succeed())
 
 				By("Ensure controller does not create the network policy in unexpected namespaces")
@@ -276,6 +302,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 					if !attrs.inIstioExposureClassNamespace {
 						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+					}
+
+					if !attrs.inExtensionNamespaces {
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
@@ -321,35 +351,55 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inIstioIngressNamespace:       true,
 			inIstioExposureClassNamespace: true,
 			inShootNamespaces:             true,
+			inExtensionNamespaces:         true,
 		})
 	})
 
-	Describe("allow-to-{seed,runtime}-apiserver", func() {
-		tests := func(networkPolicyName, labelKey string) {
-			var expectedNetworkPolicySpec networkingv1.NetworkPolicySpec
+	Describe("allow-to-seed-apiserver", func() {
+		var expectedNetworkPolicySpec networkingv1.NetworkPolicySpec
 
-			JustBeforeEach(func() {
-				kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
+		JustBeforeEach(func() {
+			kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
 
-				expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
-					Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
-					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{labelKey: "allowed"}},
-					PolicyTypes: []networkingv1.PolicyType{"Egress"},
-				}
-			})
+			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
+				Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.gardener.cloud/to-seed-apiserver": "allowed"}},
+				PolicyTypes: []networkingv1.PolicyType{"Egress"},
+			}
+		})
 
-			defaultTests(testAttributes{
-				networkPolicyName:         networkPolicyName,
-				expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
-				inGardenNamespace:         true,
-				inIstioSystemNamespace:    true,
-				inShootNamespaces:         true,
-			})
-		}
+		defaultTests(testAttributes{
+			networkPolicyName:         "allow-to-seed-apiserver",
+			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
+			inGardenNamespace:         true,
+			inIstioSystemNamespace:    true,
+			inShootNamespaces:         true,
+		})
+	})
 
-		tests("allow-to-seed-apiserver", "networking.gardener.cloud/to-seed-apiserver")
-		tests("allow-to-runtime-apiserver", "networking.gardener.cloud/to-runtime-apiserver")
+	Describe("allow-to-runtime-apiserver", func() {
+		var expectedNetworkPolicySpec networkingv1.NetworkPolicySpec
+
+		JustBeforeEach(func() {
+			kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
+
+			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
+				Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.gardener.cloud/to-runtime-apiserver": "allowed"}},
+				PolicyTypes: []networkingv1.PolicyType{"Egress"},
+			}
+		})
+
+		defaultTests(testAttributes{
+			networkPolicyName:         "allow-to-runtime-apiserver",
+			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
+			inGardenNamespace:         true,
+			inIstioSystemNamespace:    true,
+			inShootNamespaces:         true,
+			inExtensionNamespaces:     true,
+		})
 	})
 
 	Describe("allow-to-public-networks", func() {
@@ -380,6 +430,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
 			inGardenNamespace:         true,
 			inShootNamespaces:         true,
+			inExtensionNamespaces:     true,
 		})
 	})
 
@@ -408,8 +459,9 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 				return out
 			},
-			inGardenNamespace: true,
-			inShootNamespaces: true,
+			inGardenNamespace:     true,
+			inShootNamespaces:     true,
+			inExtensionNamespaces: true,
 		})
 	})
 
@@ -448,6 +500,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
 			inGardenNamespace:         true,
 			inShootNamespaces:         true,
+			inExtensionNamespaces:     true,
 		})
 	})
 
@@ -515,6 +568,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inIstioIngressNamespace:       true,
 			inIstioExposureClassNamespace: true,
 			inShootNamespaces:             true,
+			inExtensionNamespaces:         true,
 		})
 	})
 

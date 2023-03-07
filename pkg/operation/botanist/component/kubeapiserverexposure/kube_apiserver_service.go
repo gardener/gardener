@@ -67,6 +67,7 @@ type serviceValues struct {
 	enableSNI                   bool
 	gardenerManaged             bool
 	topologyAwareRoutingEnabled bool
+	fullNetworkPolicies         bool
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -80,6 +81,7 @@ func NewService(
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
+	fullNetworkPolicies bool,
 ) component.DeployWaiter {
 	if waiter == nil {
 		waiter = retry.DefaultOps()
@@ -95,7 +97,8 @@ func NewService(
 
 	var (
 		internalValues = &serviceValues{
-			annotationsFunc: func() map[string]string { return map[string]string{} },
+			annotationsFunc:     func() map[string]string { return map[string]string{} },
+			fullNetworkPolicies: fullNetworkPolicies,
 		}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
@@ -172,10 +175,17 @@ func (s *service) Deploy(ctx context.Context) error {
 		// For shoot namespaces the Kube-Apiserver service needs extra labels and annotations to create required network policies
 		// which allow a connection from Istio-Ingress components to Kube-Apiserver.
 		if isShootNamespace(obj.Namespace) {
+			namespaceSelectors := []metav1.LabelSelector{
+				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+			}
+
+			if s.values.fullNetworkPolicies {
+				namespaceSelectors = append(namespaceSelectors, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}})
+			}
+
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj,
-				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
 		}
 
 		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())

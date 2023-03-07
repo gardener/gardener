@@ -19,6 +19,7 @@ spec:
       labels:
         app: seed-prometheus
         role: monitoring
+        networking.resources.gardener.cloud/to-extensions-all-seed-scrape-targets: allowed
     spec:
       # used to talk to Seed's API server.
       priorityClassName: gardener-system-600

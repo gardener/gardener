@@ -75,6 +75,7 @@ func NewActuator(
 	imageVector imagevector.ImageVector,
 	configName string,
 	atomicShootWebhookConfig *atomic.Value,
+	webhookServerNamespace string,
 	webhookServerPort int,
 ) controlplane.Actuator {
 	return &actuator{
@@ -97,6 +98,7 @@ func NewActuator(
 		imageVector:                imageVector,
 		configName:                 configName,
 		atomicShootWebhookConfig:   atomicShootWebhookConfig,
+		webhookServerNamespace:     webhookServerNamespace,
 		webhookServerPort:          webhookServerPort,
 
 		newSecretsManager: extensionssecretsmanager.SecretsManagerForCluster,
@@ -126,6 +128,7 @@ type actuator struct {
 	imageVector                imagevector.ImageVector
 	configName                 string
 	atomicShootWebhookConfig   *atomic.Value
+	webhookServerNamespace     string
 	webhookServerPort          int
 
 	gardenerClientset kubernetesclient.Interface
@@ -262,7 +265,7 @@ func (a *actuator) reconcileControlPlane(
 			return false, fmt.Errorf("expected *admissionregistrationv1.MutatingWebhookConfiguration, got %T", value)
 		}
 
-		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.providerName, ShootWebhooksResourceName, a.webhookServerPort, webhookConfig, cluster); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.webhookServerNamespace, a.providerName, ShootWebhooksResourceName, a.webhookServerPort, webhookConfig, cluster); err != nil {
 			return false, fmt.Errorf("could not reconcile shoot webhooks: %w", err)
 		}
 	}

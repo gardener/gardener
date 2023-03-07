@@ -34,7 +34,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,6 +53,7 @@ import (
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -104,8 +104,9 @@ var _ = Describe("Actuator", func() {
 		fakeClient        client.Client
 		newSecretsManager newSecretsManagerFunc
 
-		ctx               = context.TODO()
-		webhookServerPort = 443
+		ctx                    = context.TODO()
+		webhookServerNamespace = "extension-foo-12345"
+		webhookServerPort      = 443
 
 		cp         *extensionsv1alpha1.ControlPlane
 		cpExposure = &extensionsv1alpha1.ControlPlane{
@@ -209,7 +210,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		resourceKeyShootWebhooksNetworkPolicy = client.ObjectKey{Namespace: namespace, Name: "gardener-extension-" + providerName}
-		createdNetworkPolicyForShootWebhooks  = constructNetworkPolicy(providerName, namespace, webhookServerPort)
+		createdNetworkPolicyForShootWebhooks  = constructNetworkPolicy(webhookServerNamespace, providerName, namespace, webhookServerPort)
 		deletedNetworkPolicyForShootWebhooks  = &networkingv1.NetworkPolicy{
 			ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
 		}
@@ -432,7 +433,7 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerPort)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort)
 			err := a.(inject.Client).InjectClient(c)
 			Expect(err).NotTo(HaveOccurred())
 			a.(*actuator).gardenerClientset = gardenerClientset
@@ -504,7 +505,7 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, atomicWebhookConfig, webhookServerPort)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 			a.(*actuator).newSecretsManager = newSecretsManager
 
@@ -558,7 +559,7 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0)
+			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, "", 0)
 			Expect(a.(inject.Client).InjectClient(c)).To(Succeed())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
@@ -590,7 +591,7 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0)
+			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, "", 0)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 			a.(*actuator).newSecretsManager = newSecretsManager
 
@@ -621,29 +622,24 @@ func getPurposeExposure() *extensionsv1alpha1.Purpose {
 	return purpose
 }
 
-func constructNetworkPolicy(providerName, namespace string, webhookPort int) *networkingv1.NetworkPolicy {
-	var (
-		protocol = corev1.ProtocolTCP
-		port     = intstr.FromInt(webhookPort)
-	)
-
+func constructNetworkPolicy(webhookServerNamespace, providerName, shootNamespace string, webhookPort int) *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{
-		ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
+		ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(shootNamespace, providerName).ObjectMeta,
 		Spec: networkingv1.NetworkPolicySpec{
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 			Egress: []networkingv1.NetworkPolicyEgressRule{
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
-							Port:     &port,
-							Protocol: &protocol,
+							Port:     utils.IntStrPtrFromInt(webhookPort),
+							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 						},
 					},
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension,
+									"kubernetes.io/metadata.name": webhookServerNamespace,
 								},
 							},
 							PodSelector: &metav1.LabelSelector{

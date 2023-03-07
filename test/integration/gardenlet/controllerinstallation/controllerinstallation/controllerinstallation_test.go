@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,7 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -154,6 +157,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		})
 
 		It("should create a namespace and deploy the chart", func() {
+			DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.FullNetworkPoliciesInRuntimeCluster, false))
+
 			By("Ensure namespace was created")
 			namespace := &corev1.Namespace{}
 			Eventually(func(g Gomega) {
@@ -166,6 +171,11 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(namespace.Annotations).To(And(
 					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
 				))
+			}).Should(Succeed())
+
+			By("Ensure 'gardenlet-allow-all-traffic' policy was created because FullNetworkPoliciesInRuntimeCluster feature gate is disabled")
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "gardenlet-allow-all-traffic"}, &networkingv1.NetworkPolicy{})
 			}).Should(Succeed())
 
 			By("Ensure chart was deployed correctly")
@@ -304,6 +314,33 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 				return controllerInstallation.Status.Conditions
 			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)))
+		})
+
+		It("should delete the 'gardenlet-allow-all-traffic' network policy", func() {
+			DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
+
+			By("Ensure namespace was created")
+			namespace := &corev1.Namespace{}
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)
+			}).Should(Succeed())
+
+			By("Create 'gardenlet-allow-all-traffic' policy")
+			networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardenlet-allow-all-traffic",
+				Namespace: namespace.Name,
+			}}
+			Expect(testClient.Create(ctx, networkPolicy)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+			By("Trigger reconciliation")
+			patch := client.MergeFrom(controllerInstallation.DeepCopy())
+			controllerInstallation.Spec.SeedRef.ResourceVersion = "foo"
+			Expect(testClient.Patch(ctx, controllerInstallation, patch)).To(Succeed())
+
+			By("Ensure 'gardenlet-allow-all-traffic' policy was deleted because FullNetworkPoliciesInRuntimeCluster feature gate is enabled")
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), &networkingv1.NetworkPolicy{})
+			}).Should(BeNotFoundError())
 		})
 	})
 })

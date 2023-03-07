@@ -351,7 +351,7 @@ func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, s
 			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
 				return err
 			}
-			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
+			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.Server.Namespace, c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
 				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 			}
 		}

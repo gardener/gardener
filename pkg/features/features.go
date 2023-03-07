@@ -102,6 +102,12 @@ const (
 	// owner: @axel7born @ScheererJ @DockToFuture @kon-angelo
 	// alpha: v1.64.0
 	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
+
+	// FullNetworkPoliciesInRuntimeCluster enables gardenlet's NetworkPolicy controller to place 'deny-all' network policies in
+	// all relevant namespaces in the seed cluster.
+	// owner: @rfranzke
+	// alpha: v1.66.0
+	FullNetworkPoliciesInRuntimeCluster featuregate.Feature = "FullNetworkPoliciesInRuntimeCluster"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -112,11 +118,12 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
-	HAControlPlanes:                 {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
-	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
+	HAControlPlanes:                     {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:                     {Default: false, PreRelease: featuregate.Alpha},
+	MutableShootSpecNetworkingNodes:     {Default: false, PreRelease: featuregate.Alpha},
+	FullNetworkPoliciesInRuntimeCluster: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
