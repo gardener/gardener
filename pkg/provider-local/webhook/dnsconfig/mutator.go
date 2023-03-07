@@ -44,6 +44,10 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 		podSpec *corev1.PodSpec
 	)
 
+	if newObj.GetDeletionTimestamp() != nil {
+		return nil
+	}
+
 	switch obj := newObj.(type) {
 	case *corev1.Pod:
 		if oldObj != nil {
