@@ -31,6 +31,12 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
+    {{- if .Values.shoot.sniEnabled }}
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: istio-ingressgateway
+    {{- end }}
   ingress:
   - from:
     - podSelector:
