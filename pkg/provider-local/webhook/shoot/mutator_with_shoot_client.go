@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,32 +17,31 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 )
 
-type mutator struct {
-	logger               logr.Logger
-	kubeProxyConfigCodec kubeproxy.ConfigCodec
+type mutatorWithShootClient struct {
+	logger  logr.Logger
+	mutator extensionswebhook.Mutator
 }
 
-// NewMutator creates a new Mutator that mutates resources in the shoot cluster.
-func NewMutator() extensionswebhook.Mutator {
-	return &mutator{
-		logger:               log.Log.WithName("shoot-mutator"),
-		kubeProxyConfigCodec: kubeproxy.NewConfigCodec(),
+// NewMutatorWithShootClient creates a new Mutator that mutates resources in the shoot cluster.
+func NewMutatorWithShootClient(mutator extensionswebhook.Mutator) extensionswebhook.MutatorWithShootClient {
+	return &mutatorWithShootClient{
+		logger:  log.Log.WithName("shoot-mutator"),
+		mutator: mutator,
 	}
 }
 
-func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
+func (m *mutatorWithShootClient) Mutate(ctx context.Context, new, old client.Object, client client.Client) error {
 	acc, err := meta.Accessor(new)
 	if err != nil {
 		return fmt.Errorf("could not create accessor during webhook: %w", err)
@@ -54,13 +53,21 @@ func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
 	}
 
 	switch x := new.(type) {
-	case *corev1.ConfigMap:
+	case *corev1.Node:
+		return m.mutateCoreDNSHpa(ctx, client)
+	case *appsv1.Deployment:
 		switch {
-		case strings.HasPrefix(x.Name, kubeproxy.ConfigNamePrefix):
+		case x.Name == "coredns":
 			extensionswebhook.LogMutation(logger, x.Kind, x.Namespace, x.Name)
-			return m.mutateKubeProxyConfigMap(ctx, x)
+			return m.mutateCoreDNSDeployment(ctx, client, x)
+		}
+	case *corev1.Service:
+		switch {
+		case x.Name == "kube-dns":
+			extensionswebhook.LogMutation(logger, x.Kind, x.Namespace, x.Name)
+			return m.mutateCoreDNSService(ctx, x)
 		}
 	}
 
-	return nil
+	return m.mutator.Mutate(ctx, new, old)
 }

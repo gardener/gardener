@@ -29,9 +29,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func (m *mutator) mutateCoreDNSDeployment(ctx context.Context, client client.Client, deployment *appsv1.Deployment) error {
-	nodeList := corev1.NodeList{}
-	if err := client.List(ctx, &nodeList); err != nil {
+func (m *mutatorWithShootClient) mutateCoreDNSDeployment(ctx context.Context, client client.Client, deployment *appsv1.Deployment) error {
+	nodeList := &corev1.NodeList{}
+	if err := client.List(ctx, nodeList); err != nil {
 		return fmt.Errorf("failed to list the nodes")
 	}
 
@@ -70,14 +70,14 @@ func (m *mutator) mutateCoreDNSDeployment(ctx context.Context, client client.Cli
 	return nil
 }
 
-func (m *mutator) mutateCoreDNSHpa(ctx context.Context, shootClient client.Client) error {
+func (m *mutatorWithShootClient) mutateCoreDNSHpa(ctx context.Context, shootClient client.Client) error {
 	hpa := autoscalingv2.HorizontalPodAutoscaler{}
 	if err := shootClient.Get(ctx, types.NamespacedName{Name: "coredns", Namespace: metav1.NamespaceSystem}, &hpa); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	nodeList := corev1.NodeList{}
-	if err := shootClient.List(ctx, &nodeList); err != nil {
+	nodeList := &corev1.NodeList{}
+	if err := shootClient.List(ctx, nodeList); err != nil {
 		return fmt.Errorf("failed to list the nodes")
 	}
 
@@ -94,7 +94,7 @@ func (m *mutator) mutateCoreDNSHpa(ctx context.Context, shootClient client.Clien
 	return shootClient.Patch(ctx, &hpa, patch)
 }
 
-func (m *mutator) mutateCoreDNSService(_ context.Context, service *corev1.Service) error {
+func (m *mutatorWithShootClient) mutateCoreDNSService(_ context.Context, service *corev1.Service) error {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyLocal
 	service.Spec.InternalTrafficPolicy = &serviceInternalTrafficPolicy
 
