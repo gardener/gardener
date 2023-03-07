@@ -3698,8 +3698,7 @@ not a default domain is used.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.DNSProvider">DNSProvider</a>, 
-<a href="#core.gardener.cloud/v1beta1.SeedDNSProvider">SeedDNSProvider</a>)
+<a href="#core.gardener.cloud/v1beta1.DNSProvider">DNSProvider</a>)
 </p>
 <p>
 <p>DNSIncludeExclude contains information about which domains shall be included/excluded.</p>
@@ -8427,20 +8426,6 @@ the objects as well as buckets.</p>
 <tbody>
 <tr>
 <td>
-<code>ingressDomain</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>provider</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.SeedDNSProvider">
@@ -8494,36 +8479,6 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <p>SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>domains</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
-DNSIncludeExclude
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Domains contains information about which domains shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>zones</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
-DNSIncludeExclude
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Zones contains information about which hosted zones shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener.</p>
 </td>
 </tr>
 </tbody>
