@@ -58,9 +58,11 @@ spec:
         app: prometheus
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-all-scrape-targets: allowed
+        # needed for blackbox-exporter sidecar container to talk to shoot API server via istio-ingressgateway
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443: allowed
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
