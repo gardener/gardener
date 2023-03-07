@@ -172,10 +172,15 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, waitUntilControlPlaneReady),
 		})
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Deploying gardener-resource-manager (re-run bootstrap if needed)",
+			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
+		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
 			Name:         "Ensuring that the gardener resource manager is scaled to 1",
 			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
