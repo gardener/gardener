@@ -480,17 +480,17 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, log logr.Logger) error {
 	var (
 		taskFns                  []flow.TaskFn
-		kubeApiServerServiceList = &corev1.ServiceList{}
+		kubeAPIServerServiceList = &corev1.ServiceList{}
 	)
 
-	// Kube-Apiserver services
-	if err := g.mgr.GetClient().List(ctx, kubeApiServerServiceList, client.MatchingLabels{v1beta1constants.LabelApp: v1beta1constants.LabelKubernetes, v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer}); err != nil {
+	// kube-apiserver services
+	if err := g.mgr.GetClient().List(ctx, kubeAPIServerServiceList, client.MatchingLabels{v1beta1constants.LabelApp: v1beta1constants.LabelKubernetes, v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer}); err != nil {
 		return err
 	}
 
-	taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), kubeApiServerServiceList.Items, kubeapiserverconstants.Port)...)
+	taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), kubeAPIServerServiceList.Items, kubeapiserverconstants.Port, true)...)
 
-	// VPN-Seed-Server services
+	// vpn-seed-server services
 	for _, serviceName := range []string{vpnseedserver.ServiceName, vpnseedserver.ServiceName + "-0", vpnseedserver.ServiceName + "-1"} {
 		serviceList := &corev1.ServiceList{}
 		// Use APIReader here because an index on `metadata.name` is not available in the runtime client.
@@ -500,27 +500,32 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 			return err
 		}
 
-		taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), serviceList.Items, vpnseedserver.MetricsPort)...)
+		taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), serviceList.Items, vpnseedserver.MetricsPort, false)...)
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
 }
 
-func migrationTasksForServices(cl client.Client, services []corev1.Service, port int) []flow.TaskFn {
+func migrationTasksForServices(cl client.Client, services []corev1.Service, port int, withGardenNamespaceSelector bool) []flow.TaskFn {
 	var taskFns []flow.TaskFn
 
 	for _, svc := range services {
 		service := svc
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
+			selectors := []metav1.LabelSelector{
+				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+			}
+
+			if withGardenNamespaceSelector {
+				selectors = append(selectors, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}})
+			}
+
 			patch := client.MergeFrom(service.DeepCopy())
-
 			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(&service,
-				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(&service, selectors...))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(&service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
-
 			return cl.Patch(ctx, &service, patch)
 		})
 	}

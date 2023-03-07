@@ -172,10 +172,11 @@ func (s *service) Deploy(ctx context.Context) error {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		}
 
-		// For shoot namespaces the Kube-Apiserver service needs extra labels and annotations to create required network policies
-		// which allow a connection from Istio-Ingress components to Kube-Apiserver.
+		// For shoot namespaces the kube-apiserver service needs extra labels and annotations to create required network policies
+		// which allow a connection from istio-ingress components to kube-apiserver.
 		if isShootNamespace(obj.Namespace) {
 			namespaceSelectors := []metav1.LabelSelector{
+				{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
 			}

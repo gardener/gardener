@@ -435,9 +435,6 @@ const (
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
 	// LabelNetworkPolicyToShootNetworks allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks=allowed' to IPv4 blocks belonging to the Shoot network.
 	LabelNetworkPolicyToShootNetworks = "networking.gardener.cloud/to-shoot-networks"
-	// LabelNetworkPolicyToAllShootAPIServers allows Egress from pods labeled with 'networking.gardener.cloud/to-all-shoot-apiservers=allowed' to talk to all
-	// Shoots' Kubernetes API Servers.
-	LabelNetworkPolicyToAllShootAPIServers = "networking.gardener.cloud/to-all-shoot-apiservers"
 	// LabelNetworkPolicyFromShootAPIServer allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with
 	// 'networking.gardener.cloud/from-shoot-apiserver=allowed'.
 	// Deprecated. Label `kube-apiserver` pods with `networking.resources.gardener.cloud/to-<service-name>-tcp-<container-port>=allowed` instead.
