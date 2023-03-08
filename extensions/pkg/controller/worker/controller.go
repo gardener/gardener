@@ -104,7 +104,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 
 		machinePredicates = []predicate.Predicate{
 			predicate.Or(
-				MachineStatusHasChanged(),
+				MachineNodeInfoHasChanged(),
 				predicate.GenerationChangedPredicate{},
 			),
 		}

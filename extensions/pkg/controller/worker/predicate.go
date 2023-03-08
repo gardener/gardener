@@ -21,8 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// MachineStatusHasChanged is a predicate deciding whether the status of a Machine has been changed.
-func MachineStatusHasChanged() predicate.Predicate {
+// MachineNodeInfoHasChanged is a predicate deciding whether the information about the backing node of a Machine has
+// been changed.
+func MachineNodeInfoHasChanged() predicate.Predicate {
 	statusHasChanged := func(oldObj client.Object, newObj client.Object) bool {
 		oldMachine, ok := oldObj.(*machinev1alpha1.Machine)
 		if !ok {

@@ -25,7 +25,7 @@ import (
 )
 
 var _ = Describe("Worker Predicates", func() {
-	Describe("#MachineStatusHasChanged", func() {
+	Describe("#MachineNodeInfoHasChanged", func() {
 		var (
 			oldMachine   *machinev1alpha1.Machine
 			newMachine   *machinev1alpha1.Machine
@@ -54,8 +54,17 @@ var _ = Describe("Worker Predicates", func() {
 			}
 		})
 
-		It("should notice the change of the Node in the Status", func() {
-			predicate := worker.MachineStatusHasChanged()
+		It("should notice the change of the provider id", func() {
+			predicate := worker.MachineNodeInfoHasChanged()
+			newMachine.Spec.ProviderID = "foo"
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+
+		It("should notice the change of the node label", func() {
+			predicate := worker.MachineNodeInfoHasChanged()
 			metav1.SetMetaDataLabel(&newMachine.ObjectMeta, "node", "ip.10-256-18-291.cluster.node")
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeTrue())
@@ -63,8 +72,8 @@ var _ = Describe("Worker Predicates", func() {
 			Expect(predicate.Generic(genericEvent)).To(BeFalse())
 		})
 
-		It("should not react when there are no changes of the Node in the Status", func() {
-			predicate := worker.MachineStatusHasChanged()
+		It("should not react when there are no changes of the node label", func() {
+			predicate := worker.MachineNodeInfoHasChanged()
 			metav1.SetMetaDataLabel(&oldMachine.ObjectMeta, "node", "ip.10-256-18-291.cluster.node")
 			metav1.SetMetaDataLabel(&newMachine.ObjectMeta, "node", "ip.10-256-18-291.cluster.node")
 			Expect(predicate.Create(createEvent)).To(BeTrue())
@@ -72,8 +81,8 @@ var _ = Describe("Worker Predicates", func() {
 			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
 			Expect(predicate.Generic(genericEvent)).To(BeFalse())
 		})
-		It("should not react when there is not specified Node in the Status", func() {
-			predicate := worker.MachineStatusHasChanged()
+		It("should not react when there is not specified node label", func() {
+			predicate := worker.MachineNodeInfoHasChanged()
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
 			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
