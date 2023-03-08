@@ -253,6 +253,9 @@ type Values struct {
 	HealthSyncPeriod *metav1.Duration
 	// FullNetworkPolicies makes the network policy controller to consider all relevant namespaces.
 	FullNetworkPolicies bool
+	// NetworkPolicyControllerIncludesGardenNamespace describes whether the 'garden' namespace should be targeted by the
+	// network policy controller.
+	NetworkPolicyControllerIncludesGardenNamespace bool
 	// Image is the container image.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -587,6 +590,12 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		if r.values.FullNetworkPolicies {
 			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
 				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
+			)
+		}
+
+		if r.values.NetworkPolicyControllerIncludesGardenNamespace {
+			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
+				metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
 			)
 		}
 	}

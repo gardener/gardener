@@ -49,6 +49,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		operatorfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
 		false,
 		false,
+		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
 }

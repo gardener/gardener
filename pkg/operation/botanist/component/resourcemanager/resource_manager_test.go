@@ -298,10 +298,11 @@ var _ = Describe("ResourceManager", func() {
 			},
 		}
 		cfg = Values{
-			AlwaysUpdate:                         &alwaysUpdate,
-			ClusterIdentity:                      &clusterIdentity,
-			ConcurrentSyncs:                      &concurrentSyncs,
-			FullNetworkPolicies:                  true,
+			AlwaysUpdate:        &alwaysUpdate,
+			ClusterIdentity:     &clusterIdentity,
+			ConcurrentSyncs:     &concurrentSyncs,
+			FullNetworkPolicies: true,
+			NetworkPolicyControllerIncludesGardenNamespace: true,
 			HealthSyncPeriod:                     &healthSyncPeriod,
 			Image:                                image,
 			MaxConcurrentHealthWorkers:           &maxConcurrentHealthWorkers,
@@ -460,6 +461,7 @@ var _ = Describe("ResourceManager", func() {
 						{MatchLabels: map[string]string{"gardener.cloud/role": "istio-ingress"}},
 						{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "handler.exposureclass.gardener.cloud/name", Operator: metav1.LabelSelectorOpExists}}},
 						{MatchLabels: map[string]string{"gardener.cloud/role": "extension"}},
+						{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "garden"}},
 					},
 				}
 				config.Webhooks.CRDDeletionProtection.Enabled = true

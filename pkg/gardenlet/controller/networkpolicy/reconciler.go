@@ -151,13 +151,15 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			name:          "deny-all",
 			reconcileFunc: r.reconcileNetworkPolicyDenyAll,
 			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
+				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
 				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
 			}),
 		},
-		// This network policy is deprecated and will be removed soon in favor of `allow-to-runtime-apiserver`.
+		// TODO(rfranzke): This network policy is deprecated and will be removed soon in favor of
+		//  `allow-to-runtime-apiserver`.
 		{
 			name: "allow-to-seed-apiserver",
 			reconcileFunc: func(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
