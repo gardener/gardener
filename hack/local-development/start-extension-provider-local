@@ -38,12 +38,11 @@ export LEADER_ELECTION_NAMESPACE=garden
 export GO111MODULE=on
 export GARDENER_SHOOT_CLIENT=external
 
-# The namespace for the provider-local extension controller is required because it is where
-# gardenlet will look for the gardener-extension-heartbeat lease resource during shoot
-# health checks.
-HEARTBEAT_NAMESPACE="$(kubectl get namespaces -l controllerregistration.core.gardener.cloud/name=provider-local -o jsonpath='{.items[0].metadata.name}')"
-if [ -z "$HEARTBEAT_NAMESPACE" ]; then
-  echo "Could not find namespace for provider-local extension controller heartbeats"
+# The namespace for the provider-local extension controller is required for various reasons
+# (heartbeats, secrets management, network policies, ...).
+EXTENSION_NAMESPACE="$(kubectl get namespaces -l controllerregistration.core.gardener.cloud/name=provider-local -o jsonpath='{.items[0].metadata.name}')"
+if [ -z "$EXTENSION_NAMESPACE" ]; then
+  echo "gardenlet has not yet created the namespace for the extension, cannot start provider-local"
   exit 1
 fi
 
@@ -51,12 +50,6 @@ fi
 SUDO=
 if [ "$USER" != root ]; then
   SUDO="sudo -E"
-fi
-
-namespace="$(kubectl --kubeconfig "$kubeconfig" get ns -l controllerregistration.core.gardener.cloud/name=provider-local -o jsonpath={..metadata.name})"
-if [[ -z "$namespace" ]]; then
-  echo "gardenlet has not yet created the namespace for the extension, cannot start provider-local"
-  exit 1
 fi
 
 $SUDO PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION=true go run \
@@ -70,14 +63,14 @@ $SUDO PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION=true go run \
   --webhook-config-server-port="${WEBHOOK_SERVER_PORT}" \
   --webhook-config-url=$(get_host_address):${WEBHOOK_SERVER_PORT} \
   --webhook-config-cert-dir="${WEBHOOK_CERT_DIR}" \
-  --webhook-config-namespace="$namespace" \
+  --webhook-config-namespace="${EXTENSION_NAMESPACE}" \
   --service-host-ip="${SERVICE_HOST_IP}" \
   --service-zone-0-ip="${SERVICE_ZONE_0_IP}" \
   --service-zone-1-ip="${SERVICE_ZONE_1_IP}" \
   --service-zone-2-ip="${SERVICE_ZONE_2_IP}" \
   --metrics-bind-address="${METRICS_BIND_ADDRESS}" \
   --health-bind-address="${HEALTH_BIND_ADDRESS}" \
-  --heartbeat-namespace="${HEARTBEAT_NAMESPACE}" \
+  --heartbeat-namespace="${EXTENSION_NAMESPACE}" \
   --gardener-version="$(cat "$(dirname $0)/../../VERSION")" \
   --backupbucket-local-dir="$ETCD_BACKUP_DIR" \
   --backupbucket-container-mount-path="$CONTAINER_PATH"
