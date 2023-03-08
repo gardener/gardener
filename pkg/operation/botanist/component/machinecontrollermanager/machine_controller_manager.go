@@ -81,7 +81,7 @@ func New(
 		namespace:                     namespace,
 		secretsManager:                secretsManager,
 		values:                        values,
-		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(values.RuntimeKubernetesVersion),
+		runtimeVersionGreaterEqual121: versionutils.ConstraintK8sGreaterEqual121.Check(values.RuntimeKubernetesVersion),
 	}
 }
 
@@ -91,7 +91,7 @@ type machineControllerManager struct {
 	secretsManager secretsmanager.Interface
 	values         Values
 
-	runtimeVersionGreaterEqual123 bool
+	runtimeVersionGreaterEqual121 bool
 }
 
 // Values is a set of configuration values for the machine-controller-manager component.
@@ -443,8 +443,9 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 				Namespace: metav1.NamespaceSystem,
 			},
 			Subjects: []rbacv1.Subject{{
-				Kind: rbacv1.ServiceAccountKind,
-				Name: serviceAccountName,
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccountName,
+				Namespace: metav1.NamespaceSystem,
 			}},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -485,7 +486,7 @@ func (m *machineControllerManager) emptyDeployment() *appsv1.Deployment {
 func (m *machineControllerManager) emptyPodDisruptionBudget() client.Object {
 	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: m.namespace}
 
-	if m.runtimeVersionGreaterEqual123 {
+	if m.runtimeVersionGreaterEqual121 {
 		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
 	}
 	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}

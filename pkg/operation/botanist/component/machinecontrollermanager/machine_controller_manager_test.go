@@ -455,6 +455,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: machine-controller-manager
+  namespace: kube-system
 `
 
 		managedResourceSecret = &corev1.Secret{
