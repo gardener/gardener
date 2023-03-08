@@ -31,7 +31,7 @@ const (
 	AlertManagerPrefix = "au"
 
 	// ValiPrefix is a constant for a prefix used for the Vali instance.
-	ValiPrefix = "l"
+	ValiPrefix = "v"
 
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"
