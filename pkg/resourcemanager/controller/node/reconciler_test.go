@@ -24,12 +24,15 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -49,18 +52,21 @@ var (
 func init() {
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(appsv1.AddToScheme(scheme))
+	utilruntime.Must(storagev1.AddToScheme(scheme))
 }
 
 var _ = Describe("Reconciler", func() {
 	var (
-		log       logr.Logger
-		logBuffer *gbytes.Buffer
-		recorder  *record.FakeRecorder
+		fakeClient client.Client
+		log        logr.Logger
+		logBuffer  *gbytes.Buffer
+		recorder   *record.FakeRecorder
 
 		node *corev1.Node
 	)
 
 	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		logBuffer = gbytes.NewBuffer()
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(logBuffer))
 		recorder = record.NewFakeRecorder(1)
@@ -70,6 +76,7 @@ var _ = Describe("Reconciler", func() {
 				Labels: map[string]string{
 					"kubernetes.io/os": "linux",
 				},
+				Name: "node-1",
 			},
 		}
 	})
@@ -230,6 +237,129 @@ var _ = Describe("Reconciler", func() {
 
 		It("should return true if there all node-critical pods are ready", func() {
 			Expect(AllNodeCriticalPodsAreReady(log, recorder, node, pods)).To(BeTrue())
+		})
+	})
+
+	Describe("GetRequiredDrivers", func() {
+		var pods []corev1.Pod
+
+		BeforeEach(func() {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod1",
+					Namespace: "foo",
+				},
+			}
+
+			pod2 := pod.DeepCopy()
+			pod2.Name = "pod2"
+			pod3 := pod.DeepCopy()
+			pod3.Name = "pod3"
+			pods = []corev1.Pod{*pod, *pod2, *pod3}
+		})
+
+		It("should return an empty driver set if there are no node-critical pods", func() {
+			Expect(GetRequiredDrivers(nil).Len()).To(Equal(0))
+		})
+
+		It("should return an empty driver set if there are node-critical pods without the wait-for-csi-node annotation", func() {
+			Expect(GetRequiredDrivers(pods).Len()).To(Equal(0))
+		})
+
+		It("should return the correct number of drivers if there are node-critical pods with the wait-for-csi-node annotation", func() {
+			pods[0].ObjectMeta.Annotations = map[string]string{
+				"node.gardener.cloud/wait-for-csi-node-foo": "foo.driver.example.com",
+				"unrelated.k8s.io/something":                "true",
+			}
+			pods[1].ObjectMeta.Annotations = map[string]string{
+				"node.gardener.cloud/wait-for-csi-node-foo": "foo.driver.example.com", // duplicate driver should only be considered once
+			}
+			pods[2].ObjectMeta.Annotations = map[string]string{
+				"node.gardener.cloud/wait-for-csi-node-bar": "bar.driver.example.com",
+				"unrelated.k8s.io/something-else":           "false",
+			}
+
+			Expect(GetRequiredDrivers(pods).Len()).To(Equal(2))
+			Expect(GetRequiredDrivers(pods).UnsortedList()).To(ContainElement("foo.driver.example.com"))
+			Expect(GetRequiredDrivers(pods).UnsortedList()).To(ContainElement("bar.driver.example.com"))
+		})
+	})
+
+	Describe("GetExistingDriversFromCSINode", func() {
+		var csiNode *storagev1.CSINode
+
+		BeforeEach(func() {
+			csiNode = &storagev1.CSINode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node-1", // CSINodes have the same name as the corresponding Node object
+				},
+			}
+		})
+
+		It("should return an empty driver set and no error if there is no CSINode object", func() {
+			// Note: we take the name of the node to find the CSINode object
+			existingDrivers, err := GetExistingDriversFromCSINode(context.TODO(), fakeClient, client.ObjectKeyFromObject(node))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(existingDrivers.Len()).To(Equal(0))
+
+		})
+
+		It("should return an empty driver set and no error if there is an empty CSINode object", func() {
+			Expect(fakeClient.Create(context.TODO(), csiNode)).To(Succeed())
+
+			// Note: we take the name of the node to find the CSINode object
+			existingDrivers, err := GetExistingDriversFromCSINode(context.TODO(), fakeClient, client.ObjectKeyFromObject(node))
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(existingDrivers.Len()).To(Equal(0))
+		})
+
+		It("should return a driver set with one driver and no error if there is an CSINode object with one specified driver", func() {
+			csiNode.Spec.Drivers = []storagev1.CSINodeDriver{
+				{
+					Name:   "foo.driver.example.org",
+					NodeID: "node-driver-id",
+				},
+			}
+			Expect(fakeClient.Create(context.TODO(), csiNode)).To(Succeed())
+
+			// Note: we take the name of the node to find the CSINode object
+			existingDrivers, err := GetExistingDriversFromCSINode(context.TODO(), fakeClient, client.ObjectKeyFromObject(node))
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(existingDrivers.Len()).To(Equal(1))
+			Expect(existingDrivers.UnsortedList()[0]).To(Equal("foo.driver.example.org"))
+		})
+	})
+
+	Describe("AllCSINodeDriversAreReady", func() {
+		var requiredDrivers, existingDrivers sets.Set[string]
+
+		BeforeEach(func() {
+			requiredDrivers = sets.Set[string]{}
+			existingDrivers = sets.Set[string]{}
+		})
+
+		It("should return true if there are no required and no existing drivers", func() {
+			Expect(AllCSINodeDriversAreReady(log, recorder, node, nil, nil)).To(BeTrue())
+		})
+
+		It("should return false if there are some required, but no existing drivers", func() {
+			requiredDrivers.Insert("foo.driver.example.com")
+			requiredDrivers.Insert("bar.driver.example.com")
+
+			Expect(AllCSINodeDriversAreReady(log, recorder, node, requiredDrivers, nil)).To(BeFalse())
+			// note that the order if driver names can vary, therefore we only
+			// check that there are exactly two occurences of *.driver.example.com
+			Eventually(logBuffer).Should(gbytes.Say(`Unready required CSI drivers.+(?:foo|bar)\.driver\.example\.com\"\,\"(?:foo|bar)\.driver\.example\.com\"\]`))
+		})
+
+		It("should return true if there are some required and matching existing drivers", func() {
+			requiredDrivers.Insert("foo.driver.example.com")
+			requiredDrivers.Insert("bar.driver.example.com")
+			existingDrivers.Insert("foo.driver.example.com")
+			existingDrivers.Insert("bar.driver.example.com")
+			Expect(AllCSINodeDriversAreReady(log, recorder, node, requiredDrivers, existingDrivers)).To(BeTrue())
 		})
 	})
 
