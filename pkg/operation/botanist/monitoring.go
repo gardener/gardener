@@ -45,9 +45,6 @@ import (
 
 const (
 	secretNameIngress = v1beta1constants.SecretNameObservabilityIngressUsers
-
-	grafanaOperatorsRole = "operators"
-	grafanaUsersRole     = "users"
 )
 
 func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfig {
@@ -391,10 +388,6 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
-	if err := b.DeleteDeprecatedGrafana(ctx); err != nil {
-		return err
-	}
-
 	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngress),
 		secretsmanager.Persist(),
 		secretsmanager.Rotate(secretsmanager.InPlace),
@@ -579,16 +572,6 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 // DeleteGrafana will delete all grafana resources from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
 	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
-}
-
-// DeleteDeprecatedGrafana will delete all deprecated grafana instances from the seed cluster.
-// TODO(istvanballok): Remove in a future release
-func (b *Botanist) DeleteDeprecatedGrafana(ctx context.Context) error {
-	if err := common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
-		return err
-	}
-
-	return common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaUsersRole)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
