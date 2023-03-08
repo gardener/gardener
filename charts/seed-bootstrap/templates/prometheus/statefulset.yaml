@@ -21,6 +21,7 @@ spec:
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-all-seed-scrape-targets: allowed
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
