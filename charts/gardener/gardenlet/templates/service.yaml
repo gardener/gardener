@@ -9,6 +9,9 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
+  annotations:
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }},"protocol":"TCP"}]'
 spec:
   selector:
     app: gardener

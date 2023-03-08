@@ -794,9 +794,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"images":       imagevector.ImageMapToValues(seedImages),
 		},
 		"prometheus": map[string]interface{}{
-			"resources":               monitoringResources["prometheus"],
-			"storage":                 seed.GetValidVolumeSize("10Gi"),
-			"additionalScrapeConfigs": centralScrapeConfigs.String(),
+			"deployAllowAllAccessNetworkPolicy": !gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+			"resources":                         monitoringResources["prometheus"],
+			"storage":                           seed.GetValidVolumeSize("10Gi"),
+			"additionalScrapeConfigs":           centralScrapeConfigs.String(),
 			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
 		},
 		"aggregatePrometheus": map[string]interface{}{
@@ -890,6 +891,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: r.GardenNamespace}},
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-aggregate-prometheus", Namespace: r.GardenNamespace}},
 		); err != nil {
+			return err
+		}
+
+	}
+
+	if gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+		if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
 			return err
 		}
 	}

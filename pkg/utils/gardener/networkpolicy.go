@@ -30,12 +30,26 @@ import (
 // `networking.resources.gardener.cloud/from-policy-allowed-ports` annotation of the given service. In addition, it adds
 // the well-known annotation for scrape targets of Prometheus in shoot namespaces.
 func InjectNetworkPolicyAnnotationsForScrapeTargets(service *corev1.Service, ports ...networkingv1.NetworkPolicyPort) error {
+	return injectNetworkPolicyAnnotationsForScrapeTargets(service, v1beta1constants.LabelNetworkPolicyScrapeTargets, ports...)
+}
+
+// InjectNetworkPolicyAnnotationsForSeedScrapeTargets injects the provided ports into the
+// `networking.resources.gardener.cloud/from-policy-allowed-ports` annotation of the given service. In addition, it adds
+// the well-known annotation for scrape targets of the Prometheis in the garden namespace.
+func InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service *corev1.Service, ports ...networkingv1.NetworkPolicyPort) error {
+	return injectNetworkPolicyAnnotationsForScrapeTargets(service, v1beta1constants.LabelNetworkPolicySeedScrapeTargets, ports...)
+}
+
+// InjectNetworkPolicyAnnotationsForScrapeTargets injects the provided ports into the
+// `networking.resources.gardener.cloud/from-policy-allowed-ports` annotation of the given service. In addition, it adds
+// the annotation for scrape targets based on the provided label selector.
+func injectNetworkPolicyAnnotationsForScrapeTargets(service *corev1.Service, podLabelSelector string, ports ...networkingv1.NetworkPolicyPort) error {
 	rawPorts, err := json.Marshal(ports)
 	if err != nil {
 		return err
 	}
 
-	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector, v1beta1constants.LabelNetworkPolicyScrapeTargets)
+	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector, podLabelSelector)
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromPolicyAllowedPorts, string(rawPorts))
 	return nil
 }

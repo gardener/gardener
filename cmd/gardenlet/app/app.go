@@ -33,6 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
@@ -479,12 +480,10 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 }
 
 func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, log logr.Logger) error {
-	var (
-		taskFns                  []flow.TaskFn
-		kubeAPIServerServiceList = &corev1.ServiceList{}
-	)
+	var taskFns []flow.TaskFn
 
 	// kube-apiserver services
+	kubeAPIServerServiceList := &corev1.ServiceList{}
 	if err := g.mgr.GetClient().List(ctx, kubeAPIServerServiceList, client.MatchingLabels{v1beta1constants.LabelApp: v1beta1constants.LabelKubernetes, v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer}); err != nil {
 		return err
 	}
@@ -533,6 +532,14 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 	}
 
 	taskFns = append(taskFns, migrationTasksForPrometheusServices(g.mgr.GetClient(), serviceList.Items)...)
+
+	// vpa-recommender services for shoot namespaces
+	namespaceList := &corev1.NamespaceList{}
+	if err := g.mgr.GetClient().List(ctx, namespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
+		return err
+	}
+
+	taskFns = append(taskFns, migrationTasksForShootVPARecommenders(g.mgr.GetClient(), namespaceList.Items)...)
 
 	return flow.Parallel(taskFns...)(ctx)
 }
@@ -592,6 +599,37 @@ func migrationTasksForPrometheusServices(cl client.Client, services []corev1.Ser
 			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(&service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
 			return cl.Patch(ctx, &service, patch)
+		})
+	}
+
+	return taskFns
+}
+
+func migrationTasksForShootVPARecommenders(cl client.Client, shootNamespaces []corev1.Namespace) []flow.TaskFn {
+	var taskFns []flow.TaskFn
+
+	for _, ns := range shootNamespaces {
+		namespace := ns
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpa-recommender",
+					Namespace: namespace.Name,
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{v1beta1constants.LabelApp: "vpa-recommender"},
+					Ports: []corev1.ServicePort{{
+						Port:       8942,
+						TargetPort: intstr.FromInt(8942),
+					}},
+				},
+			}
+
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+
+			return client.IgnoreAlreadyExists(cl.Create(ctx, service))
 		})
 	}
 

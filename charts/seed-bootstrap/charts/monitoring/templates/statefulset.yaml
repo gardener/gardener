@@ -19,7 +19,14 @@ spec:
       labels:
         app: seed-prometheus
         role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-all-seed-scrape-targets: allowed
         networking.resources.gardener.cloud/to-extensions-all-seed-scrape-targets: allowed
+        # TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
+        #  Conceptionally, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
+        #  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
+        networking.resources.gardener.cloud/to-all-shoots-vpa-recommender-tcp-8942: allowed
     spec:
       # used to talk to Seed's API server.
       priorityClassName: gardener-system-600

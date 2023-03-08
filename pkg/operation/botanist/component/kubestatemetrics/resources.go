@@ -161,11 +161,16 @@ func (k *kubeStateMetrics) emptyService() *corev1.Service {
 func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 	service.Labels = k.getLabels()
 
-	if k.values.ClusterType == component.ClusterTypeShoot {
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(port),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-		}))
+	metricsPort := networkingv1.NetworkPolicyPort{
+		Port:     utils.IntStrPtrFromInt(port),
+		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+	}
+
+	switch k.values.ClusterType {
+	case component.ClusterTypeSeed:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricsPort))
+	case component.ClusterTypeShoot:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, metricsPort))
 	}
 
 	service.Spec.Type = corev1.ServiceTypeClusterIP

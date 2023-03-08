@@ -700,10 +700,16 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
 		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		portMetrics := networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt(metricsPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-		}))
+		}
+
+		if !r.values.TargetDiffersFromSourceCluster {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
+		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
+		}
 
 		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
