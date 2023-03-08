@@ -121,7 +121,7 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 		}
 
 		if len(shootNamespace) == 0 {
-			return fmt.Errorf("could not find shoot namespace for webhook request")
+			return fmt.Errorf("could not find shoot namespace for webhook request from remote address %s", remoteAddr)
 		}
 
 		_, shootClient, err := util.NewClientForShoot(ctx, h.client, shootNamespace, client.Options{}, extensionsconfig.RESTOptions{})
