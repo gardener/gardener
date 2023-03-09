@@ -17,20 +17,6 @@ spec:
     - podSelector:
         matchLabels:
           networking.gardener.cloud/from-prometheus: allowed
-    - podSelector:
-        matchLabels:
-          app: prometheus
-          role: monitoring
-      namespaceSelector:
-        matchLabels:
-          role: garden
-    - podSelector:
-        matchLabels:
-          component: alertmanager
-          role: monitoring
-      namespaceSelector:
-        matchLabels:
-          role: garden
   ingress:
   - from:
     - podSelector:
