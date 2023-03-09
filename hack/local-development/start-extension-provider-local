@@ -37,6 +37,7 @@ trap cleanup_kubeconfig EXIT
 export LEADER_ELECTION_NAMESPACE=garden
 export GO111MODULE=on
 export GARDENER_SHOOT_CLIENT=external
+export PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION=true
 
 # The namespace for the provider-local extension controller is required for various reasons
 # (heartbeats, secrets management, network policies, ...).
@@ -52,7 +53,7 @@ if [ "$USER" != root ]; then
   SUDO="sudo -E"
 fi
 
-PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION=true $SUDO go run \
+$SUDO go run \
   -mod=vendor \
   -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
   "$REPO_ROOT/cmd/gardener-extension-provider-local/main.go" \
