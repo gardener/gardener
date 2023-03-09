@@ -19,6 +19,13 @@ The controller removes the taint once all node-critical Pods are ready (determin
 The `Node` controller considers all `DaemonSets` and `Pods` with the label `node.gardener.cloud/critical-component=true` as node-critical.
 If there are `DaemonSets` that contain the `node.gardener.cloud/critical-component=true` label in their metadata and in their Pod template, the `Node` controller waits for corresponding daemon Pods to be scheduled and to get ready before removing the taint.
 
+Additionally, the `Node` controller checks for the readiness of `csi-driver-node` components if a respective Pod indicates that it uses such a driver.
+This is achieved through a well-defined annotation prefix (`node.gardener.cloud/wait-for-csi-node-`).
+E. g. for an Openstack Cinder CSI Driver, the `csi-driver-node` Pod is annotated with `node.gardener.cloud/wait-for-csi-node-cinder=cinder.csi.openstack.org`.
+The annotation key's suffix is arbitrarily chosen (in this case `cinder`) and the annotation value needs to match the actual driver name as specified in the `CSINode` object.
+The `Node` controller will verify that the used driver is properly registered in this object before removing the `node.gardener.cloud/critical-components-not-ready` taint.
+Note that the `csi-driver-node` Pod still needs to be labelled and tolerate the taint as described above to be considered in this additional check.
+
 ## Marking Node-Critical Components
 
 To make use of this feature, node-critical DaemonSets and Pods need to:
@@ -26,7 +33,12 @@ To make use of this feature, node-critical DaemonSets and Pods need to:
 - Tolerate the `node.gardener.cloud/critical-components-not-ready` `NoSchedule` taint.
 - Be labelled with `node.gardener.cloud/critical-component=true`.
 
+`csi-driver-node` Pods additionally need to:
+
+- Be annotated with `node.gardener.cloud/wait-for-csi-node-<name>=<full-driver-name>`.
+  It's required that these Pods fulfill the above criteria (label and toleration) as well.
+
 Gardener already marks components like kube-proxy, apiserver-proxy and node-local-dns as node-critical.
-Provider extensions mark components like csi-driver-node as node-critical.
+Provider extensions mark components like csi-driver-node as node-critical and add the `wait-for-csi-node` annotation.
 Network extensions mark components responsible for setting up CNI on worker Nodes (e.g., `calico-node`) as node-critical.
 If shoot owners manage any additional node-critical components, they can make use of this feature as well.
