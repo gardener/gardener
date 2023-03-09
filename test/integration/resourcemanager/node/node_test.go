@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -208,6 +209,24 @@ var _ = Describe("Node tests", func() {
 			eventuallyTaintIsRemoved(node)
 		})
 	})
+
+	Context("critical Pods with CSINode driver requirement", func() {
+		BeforeEach(func() {
+			metav1.SetMetaDataLabel(&pod.ObjectMeta, "node.gardener.cloud/critical-component", "true")
+			metav1.SetMetaDataAnnotation(&pod.ObjectMeta, "node.gardener.cloud/wait-for-csi-node-driver", "foo.driver.example.com")
+		})
+
+		It("should remove the taint once the CSINode object got ready", func() {
+			patchPodReady(pod)
+
+			// taint should still not be removed
+			consistentlyTaintIsNotRemoved(node)
+
+			createRequiredCSINodeObject(node.Name, "foo.driver.example.com")
+
+			eventuallyTaintIsRemoved(node)
+		})
+	})
 })
 
 func eventuallyTaintIsRemoved(node *corev1.Node) {
@@ -242,4 +261,22 @@ func patchPodReady(pod *corev1.Pod) {
 		},
 	}
 	ExpectWithOffset(1, testClient.Status().Patch(ctx, pod, patch)).To(Succeed())
+}
+
+func createRequiredCSINodeObject(nodeName, driverName string) {
+	By("Creating required CSINode object")
+	csiNode := storagev1.CSINode{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+		},
+		Spec: storagev1.CSINodeSpec{
+			Drivers: []storagev1.CSINodeDriver{
+				{
+					Name:   driverName,
+					NodeID: string(uuid.NewUUID()),
+				},
+			},
+		},
+	}
+	ExpectWithOffset(1, testClient.Create(ctx, &csiNode)).To(Succeed())
 }
