@@ -52,7 +52,7 @@ if [ "$USER" != root ]; then
   SUDO="sudo -E"
 fi
 
-$SUDO PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION=true go run \
+PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION=true $SUDO go run \
   -mod=vendor \
   -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
   "$REPO_ROOT/cmd/gardener-extension-provider-local/main.go" \
