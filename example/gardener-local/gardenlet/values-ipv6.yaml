@@ -1,6 +1,4 @@
 config:
-  featureGates:
-    IPv6SingleStack: true
   gardenClientConnection:
     bootstrapKubeconfig:
       kubeconfig: |
