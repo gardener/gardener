@@ -204,7 +204,8 @@ var _ = Describe("ExtAuthzServer", func() {
 				Name:      serviceName,
 				Namespace: namespace,
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo":                            "*",
+					"networking.resources.gardener.cloud/namespace-selectors": `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]`,
 				},
 				ResourceVersion: "1",
 			},

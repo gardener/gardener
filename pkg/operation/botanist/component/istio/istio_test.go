@@ -1657,6 +1657,7 @@ automountServiceAccountToken: false
 			if vpnEnabled {
 				additionalLabels = `
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
+        networking.resources.gardener.cloud/to-garden-reversed-vpn-auth-server-tcp-9001: allowed
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194: allowed
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194: allowed`
 			}
@@ -1881,36 +1882,6 @@ spec:
 `
 		}
 
-		istioIngressNetworkPolicyToReversedVpnAuthServer = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
-      to reversed vpn auth servers with label 'app=reversed-vpn-auth-server' in namespace
-      garden.
-  creationTimestamp: null
-  name: allow-to-reversed-vpn-auth-server
-  namespace: ` + deployNSIngress + `
-spec:
-  egress:
-  - ports:
-    - port: 9001
-      protocol: TCP
-    to:
-    - namespaceSelector:
-        matchLabels:
-          role: garden
-      podSelector:
-        matchLabels:
-          app: reversed-vpn-auth-server
-  podSelector:
-    matchLabels:
-      app: istio-ingressgateway
-  policyTypes:
-  - Egress
-status: {}
-`
-
 		istioProxyProtocolEnvoyFilter = `# this adds "envoy.listener.proxy_protocol" filter to the listener.
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -2110,7 +2081,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
+			Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
 
 			By("Verify istio-system resources in `Ignore` mode")
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap(true)))
@@ -2139,9 +2110,6 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true)))
-
-			By("Verify istio-ingress network policies")
-			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__allow-to-reversed-vpn-auth-server.yaml"])).To(Equal(istioIngressNetworkPolicyToReversedVpnAuthServer))
 
 			By("Verify istio-proxy-protocol resources")
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
@@ -2230,7 +2198,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false, true)))
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
@@ -2342,7 +2310,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
@@ -2375,7 +2343,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(BeEmpty())
@@ -2408,7 +2376,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(16))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
 
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_configmap.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_deployment.yaml"))

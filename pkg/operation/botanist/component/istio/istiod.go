@@ -24,7 +24,6 @@ import (
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -196,29 +195,11 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 	renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioIngressGatewayChart.Manifests...)
 
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-
-	for _, istioIngressGateway := range i.values.IngressGateway {
-		for _, transformer := range getIstioIngressNetworkPolicyTransformers() {
-			obj := &networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      transformer.name,
-					Namespace: istioIngressGateway.Namespace,
-				},
-			}
-
-			if err := transformer.transform(obj)(); err != nil {
-				return err
-			}
-
-			if err := registry.Add(obj); err != nil {
-				return err
-			}
-		}
-	}
-
-	chartsMap := renderedChart.AsSecretData()
-	objMap := registry.SerializedObjects()
+	var (
+		registry  = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		chartsMap = renderedChart.AsSecretData()
+		objMap    = registry.SerializedObjects()
+	)
 
 	for key := range objMap {
 		chartsMap[key] = objMap[key]
