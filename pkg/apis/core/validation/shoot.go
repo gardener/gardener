@@ -145,10 +145,10 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, oldShoot.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.ObjectMeta, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateShoot(newShoot)...)
-	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	// validate version updates only to kubernetes 1.25
 	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newShoot, oldShoot)...)
+	allErrs = append(allErrs, ValidateShoot(newShoot)...)
+	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 
 	return allErrs
 }
