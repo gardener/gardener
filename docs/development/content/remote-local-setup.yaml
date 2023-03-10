@@ -97,6 +97,8 @@ spec:
             command:
             - cat
             - /tmp/ready
+          failureThreshold: 30
+          periodSeconds: 10
         resources:
           requests: {cpu: 8, memory: 16G}
           limits:   {cpu: 8, memory: 16G}
