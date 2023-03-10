@@ -194,7 +194,8 @@ func (r *Reconciler) reconcile(
 				"clusterIdentity": r.GardenClusterIdentity,
 			},
 			"seed": map[string]interface{}{
-				"identity":        seed.Name, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
+				"identity":        seed.Name, // 'identity' value is deprecated to be replaced either by 'clusterIdentity' or 'name'. Should be removed in a future version.
+				"name":            seed.Name,
 				"clusterIdentity": seedClusterIdentity,
 				"annotations":     seed.Annotations,
 				"labels":          seed.Labels,
