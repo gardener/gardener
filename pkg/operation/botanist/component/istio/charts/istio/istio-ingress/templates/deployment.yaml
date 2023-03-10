@@ -150,6 +150,10 @@ spec:
           value: standard
         - name: ISTIO_META_CLUSTER_ID
           value: "Kubernetes"
+        - name: ISTIO_META_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         - name: ISTIO_BOOTSTRAP_OVERRIDE
           value: /etc/istio/custom-bootstrap/custom_bootstrap.yaml
         volumeMounts:
