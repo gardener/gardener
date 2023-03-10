@@ -8,6 +8,11 @@ config:
         clusters:
         - cluster:
             insecure-skip-tls-verify: true
+            # The first kind cluster is used as the garden cluster.
+            # Hence, overwrite the in-cluster kubernetes service with the kind node's hostname as the garden cluster address.
+            # Note that this doesn't work in IPv6 single-stack kind clusters,
+            # ref https://github.com/kubernetes-sigs/kind/issues/3114
+            # I.e., the local setup with two seeds for testing control plane migration is not supported in combination with IPv6.
             server: https://gardener-local-control-plane:6443
           name: default
         contexts:

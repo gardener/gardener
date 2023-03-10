@@ -199,6 +199,8 @@ To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/admi
 
 There are cases where you would want to create a second seed cluster in your local setup. For example, if you want to test the [control plane migration](../usage/control_plane_migration.md) feature. The following steps describe how to do that.
 
+> Note that this setup is not supported in combination with `IPFAMILY=ipv6` because of a bug in kind (ref [kubernetes-sigs/kind#3114](https://github.com/kubernetes-sigs/kind/issues/3114)).
+
 If you are on macOS, add a new IP address on your loopback device which will be necessary for the new KinD cluster that you will create. On macOS, the default loopback device is `lo0`.
 
 ```bash

@@ -14,7 +14,11 @@ config:
         clusters:
         - cluster:
             insecure-skip-tls-verify: true
-            server: https://gardener-local-control-plane:6443
+            # We use the in-cluster kubernetes service as the garden cluster address.
+            # While this doesn't work on the second kind cluster, it works well with IPv6 single-stack kind clusters.
+            # Using the kind node's hostname doesn't work in IPv6 single-stack kind clusters,
+            # ref https://github.com/kubernetes-sigs/kind/issues/3114
+            server: https://kubernetes.default.svc
           name: default
         contexts:
         - context:
