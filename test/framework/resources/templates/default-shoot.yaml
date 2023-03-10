@@ -4,17 +4,6 @@ metadata:
   name: abc
   namespace: abc
 spec:
-  kubernetes:
-    # TODO(ialidzhikov): Remove the enableStaticTokenKubeconfig field and let the defaulting on gardener-apiserver to be used.
-    # The desired behaviour we want to achieve is to have the field:
-    # - defaulted to true for Shoots with K8s < 1.26
-    # - defaulted to false for Shoots with K8s >= 1.25
-    #
-    # Currently the Shoot creation tests is using UniversalDecoder().Decode to convert the Shoot yaml to a Shoot object.
-    # This Decode func also performs defaulting. As this Shoot manifest does not have a K8s version set, the defaulting logic for
-    # the enableStaticTokenKubeconfig field cannot parse the K8s version and sets the field always to false.
-    # We should consider switching to UniversalDeserializer or use other approach that will allow the desired behaviour to be achieved.
-    enableStaticTokenKubeconfig: true
   dns: {}
   networking:
     type: calico

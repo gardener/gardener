@@ -124,7 +124,7 @@ func ReadObject(file string, into apimachineryRuntime.Object) error {
 		return err
 	}
 
-	_, _, err = serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder().Decode(data, nil, into)
+	_, _, err = serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDeserializer().Decode(data, nil, into)
 	return err
 }
 
