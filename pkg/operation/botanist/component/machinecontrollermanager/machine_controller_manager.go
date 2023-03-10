@@ -384,7 +384,7 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 					Verbs:     []string{"create"},
 				},
 				{
-					APIGroups: []string{"extensions", "apps"},
+					APIGroups: []string{"apps"},
 					Resources: []string{"replicasets", "statefulsets", "daemonsets", "deployments"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
 				},

@@ -362,7 +362,6 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - extensions
   - apps
   resources:
   - replicasets
