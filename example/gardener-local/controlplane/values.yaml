@@ -268,3 +268,7 @@ global:
   defaultDomains:
   - provider: local
     domain: external.local.gardener.cloud
+
+  rbac:
+    seedAuthorizer:
+      enabled: true
