@@ -89,7 +89,7 @@ func New(
 		image:                         image,
 		replicas:                      replicas,
 		config:                        config,
-		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(runtimeKubernetesVersion),
+		runtimeVersionGreaterEqual121: versionutils.ConstraintK8sGreaterEqual121.Check(runtimeKubernetesVersion),
 	}
 }
 
@@ -101,7 +101,7 @@ type clusterAutoscaler struct {
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
 
-	runtimeVersionGreaterEqual123 bool
+	runtimeVersionGreaterEqual121 bool
 	namespaceUID                  types.UID
 	machineDeployments            []extensionsv1alpha1.MachineDeployment
 }
@@ -358,7 +358,7 @@ func (c *clusterAutoscaler) emptyDeployment() *appsv1.Deployment {
 func (c *clusterAutoscaler) emptyPodDisruptionBudget() client.Object {
 	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler, Namespace: c.namespace}
 
-	if c.runtimeVersionGreaterEqual123 {
+	if c.runtimeVersionGreaterEqual121 {
 		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
 	}
 	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
