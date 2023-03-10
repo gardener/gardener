@@ -39,20 +39,22 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		serviceSelector        = map[string]string{"foo": "bar"}
 		customPodLabelSelector = "custom-selector"
 
-		port1Protocol   = corev1.ProtocolTCP
-		port1TargetPort = intstr.FromInt(5678)
-		port1Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port1Protocol)), port1TargetPort.String())
+		port1Protocol          = corev1.ProtocolTCP
+		port1ServicePort int32 = 1234
+		port1TargetPort        = intstr.FromInt(5678)
+		port1Suffix            = fmt.Sprintf("-%s-%s", strings.ToLower(string(port1Protocol)), port1TargetPort.String())
 
-		port2Protocol   = corev1.ProtocolUDP
-		port2TargetPort = intstr.FromString("testport")
-		port2Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port2Protocol)), port2TargetPort.String())
+		port2Protocol          = corev1.ProtocolUDP
+		port2ServicePort int32 = 9012
+		port2TargetPort        = intstr.FromString("testport")
+		port2Suffix            = fmt.Sprintf("-%s-%s", strings.ToLower(string(port2Protocol)), port2TargetPort.String())
 
 		port3Protocol   = corev1.ProtocolUDP
 		port3TargetPort = intstr.FromString("testport2")
 		port3Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port3Protocol)), port3TargetPort.String())
 
 		port4Protocol   = corev1.ProtocolTCP
-		port4TargetPort = intstr.FromInt(9012)
+		port4TargetPort = intstr.FromInt(3456)
 		port4Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port4Protocol)), port4TargetPort.String())
 
 		ensureNetworkPolicies = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
@@ -190,8 +192,8 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			Spec: corev1.ServiceSpec{
 				Selector: serviceSelector,
 				Ports: []corev1.ServicePort{
-					{Name: "port1", Port: 1234, Protocol: port1Protocol, TargetPort: port1TargetPort},
-					{Name: "port2", Port: 9012, Protocol: port2Protocol, TargetPort: port2TargetPort},
+					{Name: "port1", Port: port1ServicePort, Protocol: port1Protocol, TargetPort: port1TargetPort},
+					{Name: "port2", Port: port2ServicePort, Protocol: port2Protocol, TargetPort: port2TargetPort},
 				},
 			},
 		}
@@ -888,6 +890,194 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			By("Wait until all policies are deleted")
 			ensureNetworkPoliciesGetDeleted()
 			ensureIngressFromWorldNetworkPolicyGetsDeleted()
+		})
+	})
+
+	Context("service exposed via ingress", func() {
+		var (
+			ensureExposedViaIngressNetworkPolicies = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
+				return func() {
+					assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
+						networkPolicyList := &networkingv1.NetworkPolicyList{}
+						g.Expect(testClient.List(ctx, networkPolicyList)).To(Succeed())
+						return networkPolicyList.Items
+					}
+					expectation := ContainElements(
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-ingress-controller"), "Namespace": Equal(service.Namespace)})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-ingress-controller"), "Namespace": Equal(ingressControllerNamespace)})}),
+					)
+
+					if should {
+						asyncAssertion(1, assertedFunc).Should(expectation)
+					} else {
+						asyncAssertion(1, assertedFunc).ShouldNot(expectation)
+					}
+				}
+			}
+			ensureExposedViaIngressNetworkPoliciesGetCreated = ensureExposedViaIngressNetworkPolicies(EventuallyWithOffset, true)
+			ensureExposedViaIngressNetworkPoliciesGetDeleted = ensureExposedViaIngressNetworkPolicies(EventuallyWithOffset, false)
+
+			controllerNamespace *corev1.Namespace
+			ingress             *networkingv1.Ingress
+		)
+
+		JustBeforeEach(func() {
+			controllerNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ingressControllerNamespace}}
+
+			pathType := networkingv1.PathTypePrefix
+			ingress = &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      service.Name,
+					Namespace: service.Namespace,
+				},
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{{
+						Host: "foo.example.com",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{{
+									Path:     "/bar",
+									PathType: &pathType,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: networkingv1.ServiceBackendPort{
+												Number: port1ServicePort,
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			}
+
+			By("Create ingress controller Namespace")
+			Expect(testClient.Create(ctx, controllerNamespace)).To(Succeed())
+			log.Info("Created ingress controller Namespace", "namespace", client.ObjectKeyFromObject(controllerNamespace))
+
+			By("Create Ingress")
+			Expect(testClient.Create(ctx, ingress)).To(Succeed())
+			log.Info("Created Ingress", "ingress", client.ObjectKeyFromObject(ingress))
+
+			DeferCleanup(func() {
+				By("Delete Ingress")
+				Expect(testClient.Delete(ctx, ingress)).To(Or(Succeed(), BeNotFoundError()))
+				log.Info("Deleted Ingress", "ingress", client.ObjectKeyFromObject(ingress))
+
+				By("Wait until manager has observed Ingress deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)
+				}).Should(BeNotFoundError())
+
+				By("Delete ingress controller Namespace")
+				Expect(testClient.Delete(ctx, controllerNamespace)).To(Or(Succeed(), BeNotFoundError()))
+				log.Info("Deleted ingress controller Namespace", "namespace", client.ObjectKeyFromObject(controllerNamespace))
+
+				By("Wait until manager has observed ingress controller Namespace deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerNamespace), controllerNamespace)
+				}).Should(BeNotFoundError())
+			})
+		})
+
+		It("should create the expected network policies", func() {
+			By("Wait until ingress policy was created")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port1Suffix + "-from-ingress-controller", Namespace: service.Namespace}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+				PodSelector: metav1.LabelSelector{MatchLabels: serviceSelector},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{{
+					From: []networkingv1.NetworkPolicyPeer{{
+						PodSelector:       &ingressControllerPodSelector,
+						NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": controllerNamespace.Name}},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port1Protocol, Port: &port1TargetPort}},
+				}},
+			}))
+
+			By("Wait until egress policy was created")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-ingress-controller", Namespace: controllerNamespace.Name}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				PodSelector: ingressControllerPodSelector,
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector:       &metav1.LabelSelector{MatchLabels: serviceSelector},
+						NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": service.Namespace}},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port1Protocol, Port: &port1TargetPort}},
+				}},
+			}))
+		})
+
+		It("should reconcile the policies when the ports in service are changed", func() {
+			By("Wait until all policies are created")
+			ensureExposedViaIngressNetworkPoliciesGetCreated()
+
+			By("Patch Service")
+			newTargetPort := intstr.FromInt(2468)
+			patch := client.MergeFrom(service.DeepCopy())
+			service.Spec.Ports[0].TargetPort = newTargetPort
+			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+			By("Wait until all policies were reconciled")
+			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+				networkPolicyList := &networkingv1.NetworkPolicyList{}
+				g.Expect(testClient.List(ctx, networkPolicyList)).To(Succeed())
+				return networkPolicyList.Items
+			}).Should(And(
+				Not(ContainElements(
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-ingress-controller"), "Namespace": Equal(service.Namespace)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-ingress-controller"), "Namespace": Equal(ingressControllerNamespace)})}),
+				)),
+				ContainElements(
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + "-tcp-" + newTargetPort.String() + "-from-ingress-controller"), "Namespace": Equal(service.Namespace)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + "-tcp-" + newTargetPort.String() + "-from-ingress-controller"), "Namespace": Equal(ingressControllerNamespace)})}),
+				),
+			))
+		})
+
+		It("should delete the policies when the pod selector in service is removed", func() {
+			By("Wait until all policies are created")
+			ensureExposedViaIngressNetworkPoliciesGetCreated()
+
+			By("Patch Service")
+			patch := client.MergeFrom(service.DeepCopy())
+			service.Spec.Selector = nil
+			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+			By("Wait until all policies are deleted")
+			ensureExposedViaIngressNetworkPoliciesGetDeleted()
+		})
+
+		It("should delete the policies when the ingress gets deleted", func() {
+			By("Wait until all policies are created")
+			ensureExposedViaIngressNetworkPoliciesGetCreated()
+
+			By("Delete Ingress")
+			Expect(testClient.Delete(ctx, ingress)).To(Succeed())
+
+			By("Wait until all policies are deleted")
+			ensureExposedViaIngressNetworkPoliciesGetDeleted()
+		})
+
+		It("should delete the policies when the service gets deleted", func() {
+			By("Wait until all policies are created")
+			ensureExposedViaIngressNetworkPoliciesGetCreated()
+
+			By("Delete Service")
+			Expect(testClient.Delete(ctx, service)).To(Succeed())
+
+			By("Wait until all policies are deleted")
+			ensureExposedViaIngressNetworkPoliciesGetDeleted()
 		})
 	})
 })

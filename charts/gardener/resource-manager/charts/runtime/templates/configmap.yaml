@@ -115,6 +115,10 @@ data:
         namespaceSelectors:
 {{ toYaml .Values.global.config.controllers.networkPolicy.namespaceSelectors | indent 8 }}
         {{- end }}
+        {{- if .Values.global.config.controllers.networkPolicy.ingressControllerPeer }}
+        ingressControllerPeer:
+{{ toYaml .Values.global.config.controllers.networkPolicy.ingressControllerPeer | indent 8 }}
+        {{- end }}
       node:
         enabled: {{ .Values.global.config.controllers.node.enabled }}
         {{- if .Values.global.config.controllers.node.concurrentSyncs }}

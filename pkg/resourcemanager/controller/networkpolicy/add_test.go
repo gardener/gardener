@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -148,6 +149,57 @@ var _ = Describe("Add", func() {
 		})
 	})
 
+	Describe("#IngressPredicate", func() {
+		var (
+			p       predicate.Predicate
+			ingress *networkingv1.Ingress
+		)
+
+		BeforeEach(func() {
+			p = reconciler.IngressPredicate()
+			ingress = &networkingv1.Ingress{}
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because new object is no ingress", func() {
+				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
+			})
+
+			It("should return false because old object is no ingress", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: ingress})).To(BeFalse())
+			})
+
+			It("should return false because nothing changed", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectOld: ingress, ObjectNew: ingress})).To(BeFalse())
+			})
+
+			It("should return true because the rules were changed", func() {
+				oldIngress := ingress.DeepCopy()
+				ingress.Spec.Rules = append(ingress.Spec.Rules, networkingv1.IngressRule{})
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldIngress, ObjectNew: ingress})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return true", func() {
+				Expect(p.Delete(event.DeleteEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeTrue())
+			})
+		})
+	})
+
 	Describe("#MapToAllServices", func() {
 		var (
 			service1 *corev1.Service
@@ -172,6 +224,95 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return nil if there are no services", func() {
+			Expect(reconciler.MapToAllServices(ctx, log, nil, nil)).To(BeNil())
+		})
+	})
+
+	Describe("#MapIngressToServices", func() {
+		BeforeEach(func() {
+			log = logr.Discard()
+		})
+
+		It("should map to all referenced services", func() {
+			var (
+				namespace = "some-namespace"
+				service1  = "svc1"
+				service2  = "svc2"
+				service3  = "svc3"
+
+				ingress = &networkingv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{Namespace: namespace},
+					Spec: networkingv1.IngressSpec{
+						Rules: []networkingv1.IngressRule{
+							{
+								IngressRuleValue: networkingv1.IngressRuleValue{
+									HTTP: &networkingv1.HTTPIngressRuleValue{
+										Paths: []networkingv1.HTTPIngressPath{
+											{
+												Backend: networkingv1.IngressBackend{
+													Resource: &corev1.TypedLocalObjectReference{
+														Name: "foo",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							{
+								IngressRuleValue: networkingv1.IngressRuleValue{
+									HTTP: &networkingv1.HTTPIngressRuleValue{
+										Paths: []networkingv1.HTTPIngressPath{
+											{
+												Backend: networkingv1.IngressBackend{
+													Service: &networkingv1.IngressServiceBackend{
+														Name: service1,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							{
+								IngressRuleValue: networkingv1.IngressRuleValue{
+									HTTP: &networkingv1.HTTPIngressRuleValue{
+										Paths: []networkingv1.HTTPIngressPath{
+											{
+												Backend: networkingv1.IngressBackend{
+													Service: &networkingv1.IngressServiceBackend{
+														Name: service2,
+													},
+												},
+											},
+											{
+												Backend: networkingv1.IngressBackend{
+													Service: &networkingv1.IngressServiceBackend{
+														Name: service3,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			)
+
+			Expect(reconciler.MapIngressToServices(ctx, log, nil, ingress)).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service1}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service2}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service3}},
+			))
+		})
+
+		It("should return nil if there are no referenced services", func() {
+			Expect(reconciler.MapToAllServices(ctx, log, nil, &networkingv1.Ingress{Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{Host: "foo"}}}})).To(BeNil())
+		})
+
+		It("should return nil if the passed object is nil", func() {
 			Expect(reconciler.MapToAllServices(ctx, log, nil, nil)).To(BeNil())
 		})
 	})

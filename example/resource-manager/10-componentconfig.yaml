@@ -60,6 +60,11 @@ controllers:
   # namespaceSelectors:
   # - matchLabels:
   #     kubernetes.io/metadata.name: default
+    ingressControllerPeer:
+      namespace: default
+      podSelector:
+        matchLabels:
+          foo: bar
   node:
     enabled: true
     concurrentSyncs: 5

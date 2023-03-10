@@ -92,6 +92,11 @@ global:
       # namespaceSelectors:
       # - matchLabels:
       #     foo: bar
+      # ingressControllerPeer:
+      #   namespace: default
+      #   podSelector:
+      #     matchLabels:
+      #       foo: bar
       node:
         enabled: false
       # concurrentSyncs: 5

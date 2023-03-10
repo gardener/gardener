@@ -200,6 +200,19 @@ type NetworkPolicyControllerConfig struct {
 	// objects. An empty list means all namespaces.
 	// +optional
 	NamespaceSelectors []metav1.LabelSelector `json:"namespaceSelectors,omitempty"`
+	// IngressControllerPeer contains the pod selector and namespace for an ingress-controller. If provided, this
+	// NetworkPolicy controller watches Ingress resources and automatically creates NetworkPolicy resources allowing
+	// the respective ingress/egress traffic for the backends exposed by the Ingresses.
+	// +optional
+	IngressControllerPeer *IngressControllerPeer `json:"ingressControllerPeer,omitempty"`
+}
+
+// IngressControllerPeer contains the pod selector and namespace for an ingress-controller.
+type IngressControllerPeer struct {
+	// Namespace is the name of the namespace in which the ingress controller runs.
+	Namespace string `json:"namespace"`
+	// PodSelector is the selector for the ingress controller pods.
+	PodSelector metav1.LabelSelector `json:"podSelector"`
 }
 
 // SecretControllerConfig is the configuration for the secret controller.

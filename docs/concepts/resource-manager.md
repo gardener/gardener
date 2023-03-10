@@ -734,6 +734,110 @@ spec:
 The respective pods don't need any additional labels.
 If the annotation's value is empty (`[]`) then all ports are allowed.
 
+#### Services Exposed via `Ingress` Resources
+
+The controller can optionally be configured to watch `Ingress` resources by specifying the pod and namespace selectors for the `Ingress` controller.
+If this information is provided, it automatically creates `NetworkPolicy` resources allowing the respective ingress/egress traffic for the backends exposed by the `Ingress`es.
+This way, neither custom `NetworkPolicy`s nor custom labels must be provided.
+
+The needed configuration is part of the component configuration:
+
+```yaml
+controllers:
+  networkPolicy:
+    enabled: true
+    concurrentSyncs: 5
+  # namespaceSelectors:
+  # - matchLabels:
+  #     kubernetes.io/metadata.name: default
+    ingressControllerPeer:
+      namespace: default
+      podSelector:
+        matchLabels:
+          foo: bar
+```
+
+As an example, let's assume that above `gardener-resource-manager` `Service` was exposed via the following `Ingress` resource:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gardener-resource-manager
+  namespace: a
+spec:
+  rules:
+  - host: grm.foo.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: gardener-resource-manager
+            port:
+              number: 443
+        path: /
+        pathType: Prefix
+```
+
+As a result, the controller automatically would create the following `NetworkPolicy`s:
+
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows ingress TCP traffic to port 10250 for pods
+      selected by the a/gardener-resource-manager service selector from ingress controller
+      pods running in the default namespace labeled with map[foo:bar].
+  name: ingress-to-gardener-resource-manager-tcp-10250-from-ingress-controller
+  namespace: a
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          foo: bar
+      namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: default
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: gardener-resource-manager
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress TCP traffic to port 10250 from pods
+      running in the default namespace labeled with map[foo:bar] to pods selected by
+      the a/gardener-resource-manager service selector.
+  name: egress-to-a-gardener-resource-manager-tcp-10250-from-ingress-controller
+  namespace: default
+spec:
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: gardener-resource-manager
+      namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: a
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      foo: bar
+  policyTypes:
+  - Egress
+```
+
 ### [`Node` Controller](../../pkg/resourcemanager/controller/node)
 
 Gardenlet configures kubelet of shoot worker nodes to register the `Node` object with the `node.gardener.cloud/critical-components-not-ready` taint (effect `NoSchedule`).
