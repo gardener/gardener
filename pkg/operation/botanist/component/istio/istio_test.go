@@ -88,8 +88,10 @@ metadata:
   name: istiod
   namespace: test
   annotations:
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":15014,"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":10250,"protocol":"TCP"}]'
-    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]'` + additionalAnnotation + `
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'` + additionalAnnotation + `
   labels:
     app: istiod
     istio: pilot
@@ -1609,6 +1611,8 @@ metadata:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":8132,"protocol":"TCP"},{"port":8443,"protocol":"TCP"},{"port":9443,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"shoot"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-istio-ingresses
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":15020,"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
     foo: bar
     
   labels:
@@ -1877,88 +1881,6 @@ spec:
 `
 		}
 
-		istioSystemNetworkPolicyAllowFromAggregatePrometheus = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows Ingress from pods with label 'app=aggregate-prometheus'
-  creationTimestamp: null
-  name: allow-from-aggregate-prometheus
-  namespace: ` + deployNS + `
-spec:
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          role: garden
-      podSelector:
-        matchLabels:
-          app: aggregate-prometheus
-          role: monitoring
-    ports:
-    - port: 15014
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      app: istiod
-  policyTypes:
-  - Ingress
-status: {}
-`
-		istioSystemNetworkPolicyAllowToDns = `# TODO(rfranzke): Delete this in a future version.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-to-dns
-  namespace: ` + deployNS + `
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-`
-		istioSystemNetworkPolicyDenyAll = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: deny-all
-  namespace: ` + deployNS + `
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-`
-		istioIngressNetworkPolicyAllowFromAggregatePrometheus = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows Ingress from pods with label 'app=aggregate-prometheus'
-  creationTimestamp: null
-  name: allow-from-aggregate-prometheus
-  namespace: ` + deployNSIngress + `
-spec:
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          role: garden
-      podSelector:
-        matchLabels:
-          app: aggregate-prometheus
-          role: monitoring
-    ports:
-    - port: 15020
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      app: istio-ingressgateway
-  policyTypes:
-  - Ingress
-status: {}
-`
-		istioIngressNetworkPolicyAllowToDns = `# TODO(rfranzke): Delete this in a future version.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-to-dns
-  namespace: ` + deployNSIngress + `
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-`
 		istioIngressNetworkPolicyToReversedVpnAuthServer = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -2188,7 +2110,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
+			Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
 
 			By("Verify istio-system resources in `Ignore` mode")
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap(true)))
@@ -2198,7 +2120,6 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding(true)))
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule(true)))
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_namespace.yaml"])).To(BeEmpty())
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_networkpolicy.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns + "---\n" + istioSystemNetworkPolicyDenyAll))
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication(true)))
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true, true)))
 			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole(true)))
@@ -2212,7 +2133,6 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
-			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_networkpolicy_test-ingress.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
@@ -2222,10 +2142,6 @@ spec:
 
 			By("Verify istio-ingress network policies")
 			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__allow-to-reversed-vpn-auth-server.yaml"])).To(Equal(istioIngressNetworkPolicyToReversedVpnAuthServer))
-			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test-ingress__allow-from-aggregate-prometheus.yaml"])).To(Equal(istioIngressNetworkPolicyAllowFromAggregatePrometheus))
-
-			By("Verify istio-system network policies")
-			Expect(string(managedResourceIstioSecret.Data["networkpolicy__test__allow-from-aggregate-prometheus.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromAggregatePrometheus))
 
 			By("Verify istio-proxy-protocol resources")
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
@@ -2239,7 +2155,7 @@ spec:
 			By("Verify istio-system resources")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
 			Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(16))
+			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(15))
 
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap(false)))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment(false, "d34796e6fc25a26d4a8a4cb3276e34961b18f867d70f5a1984255d57bfefb4c6")))
@@ -2248,7 +2164,6 @@ spec:
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding(false)))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule(false)))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_namespace.yaml"])).To(BeEmpty())
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_networkpolicy.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns + "---\n" + istioSystemNetworkPolicyDenyAll))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication(false)))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true, false)))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole(false)))
@@ -2315,7 +2230,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false, true)))
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
@@ -2427,7 +2342,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
@@ -2460,7 +2375,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(35))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(31))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(BeEmpty())
@@ -2493,7 +2408,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(19))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(16))
 
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_configmap.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_deployment.yaml"))

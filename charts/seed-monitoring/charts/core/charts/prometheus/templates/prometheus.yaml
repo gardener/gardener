@@ -16,6 +16,9 @@ metadata:
   labels:
     app: prometheus
     role: monitoring
+  annotations:
+    networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-shoots
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
 spec:
   ports:
   - name: metrics

@@ -198,23 +198,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	for _, transformer := range getIstioSystemNetworkPolicyTransformers() {
-		obj := &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      transformer.name,
-				Namespace: i.values.Istiod.Namespace,
-			},
-		}
-
-		if err := transformer.transform(obj)(); err != nil {
-			return err
-		}
-
-		if err := registry.Add(obj); err != nil {
-			return err
-		}
-	}
-
 	for _, istioIngressGateway := range i.values.IngressGateway {
 		for _, transformer := range getIstioIngressNetworkPolicyTransformers() {
 			obj := &networkingv1.NetworkPolicy{

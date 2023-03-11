@@ -1,8 +1,0 @@
-# TODO(rfranzke): Delete this in a future version.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-to-dns
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore

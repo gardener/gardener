@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	goruntime "runtime"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -511,12 +512,27 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 
 	// drop loki service in garden namespace since this one should not be mutated
 	for i := len(serviceList.Items) - 1; i >= 0; i-- {
-		if serviceList.Items[i].Namespace == "garden" {
+		if !strings.HasPrefix(serviceList.Items[i].Namespace, v1beta1constants.TechnicalIDPrefix) {
 			serviceList.Items = append(serviceList.Items[:i], serviceList.Items[i+1:]...)
 		}
 	}
 
 	taskFns = append(taskFns, migrationTasksForLokiServices(g.mgr.GetClient(), serviceList.Items)...)
+
+	// prometheus namespaces
+	serviceList = &corev1.ServiceList{}
+	if err := g.mgr.GetClient().List(ctx, serviceList, client.MatchingLabels{"app": "prometheus", "role": "monitoring"}); err != nil {
+		return err
+	}
+
+	// drop prometheus services in garden namespace since they one should not be mutated
+	for i := len(serviceList.Items) - 1; i >= 0; i-- {
+		if !strings.HasPrefix(serviceList.Items[i].Namespace, v1beta1constants.TechnicalIDPrefix) {
+			serviceList.Items = append(serviceList.Items[:i], serviceList.Items[i+1:]...)
+		}
+	}
+
+	taskFns = append(taskFns, migrationTasksForPrometheusServices(g.mgr.GetClient(), serviceList.Items)...)
 
 	return flow.Parallel(taskFns...)(ctx)
 }
@@ -549,6 +565,23 @@ func migrationTasksForServices(cl client.Client, services []corev1.Service, port
 }
 
 func migrationTasksForLokiServices(cl client.Client, services []corev1.Service) []flow.TaskFn {
+	var taskFns []flow.TaskFn
+
+	for _, svc := range services {
+		service := svc
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(service.DeepCopy())
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(&service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+			return cl.Patch(ctx, &service, patch)
+		})
+	}
+
+	return taskFns
+}
+
+func migrationTasksForPrometheusServices(cl client.Client, services []corev1.Service) []flow.TaskFn {
 	var taskFns []flow.TaskFn
 
 	for _, svc := range services {

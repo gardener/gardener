@@ -40,13 +40,6 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
-    - podSelector:
-        matchLabels:
-          app: aggregate-prometheus
-          role: monitoring
-      namespaceSelector:
-        matchLabels:
-          role: garden
   policyTypes:
   - Egress
   - Ingress

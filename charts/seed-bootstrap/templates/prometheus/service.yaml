@@ -6,6 +6,9 @@ metadata:
   labels:
     app: prometheus
     role: monitoring
+  annotations:
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ .Values.prometheus.port }},"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
 spec:
   ports:
   - name: web
