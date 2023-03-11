@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -47,6 +48,7 @@ func NewGardenerResourceManager(
 	endpointSliceHintsEnabled bool,
 	fullNetworkPoliciesEnabled bool,
 	networkPolicyControllerIncludesGardenNamespace bool,
+	networkPolicyControllerIngressControllerPeer *resourcemanagerv1alpha1.IngressControllerPeer,
 	zones []string,
 ) (
 	component.DeployWaiter,
@@ -69,6 +71,7 @@ func NewGardenerResourceManager(
 		EndpointSliceHintsEnabled:                      endpointSliceHintsEnabled,
 		FullNetworkPolicies:                            fullNetworkPoliciesEnabled,
 		NetworkPolicyControllerIncludesGardenNamespace: networkPolicyControllerIncludesGardenNamespace,
+		NetworkPolicyControllerIngressControllerPeer:   networkPolicyControllerIngressControllerPeer,
 		HealthSyncPeriod:                               &metav1.Duration{Duration: time.Minute},
 		Image:                                          image.String(),
 		LogLevel:                                       logLevel,
