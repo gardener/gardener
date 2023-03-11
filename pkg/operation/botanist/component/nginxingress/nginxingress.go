@@ -16,6 +16,7 @@ package nginxingress
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -40,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -415,8 +417,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(LabelValueController, labelValueAddons), map[string]string{
-							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:                                        v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                           v1beta1constants.LabelNetworkPolicyAllowed,
+							gardenerutils.NetworkPolicyLabel(serviceNameBackend, int(containerPortBackend)): v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 						Annotations: map[string]string{
 							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
@@ -594,6 +597,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add = append(deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add, "SYS_CHROOT")
 	}
+
+	metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, containerPortControllerHttp, containerPortControllerHttps))
 
 	return registry.AddAllAndSerialize(
 		clusterRole,

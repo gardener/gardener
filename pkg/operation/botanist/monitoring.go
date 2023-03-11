@@ -444,6 +444,16 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(rfranzke): Delete this in a future version.
+	{
+		if err := kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-alertmanager", Namespace: b.Shoot.SeedNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-grafana", Namespace: b.Shoot.SeedNamespace}},
+		); err != nil {
+			return err
+		}
+	}
+
 	return b.syncShootCredentialToGarden(
 		ctx,
 		gardenerutils.ShootProjectSecretSuffixMonitoring,
