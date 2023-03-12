@@ -51,10 +51,15 @@ spec:
     - 169.254.169.254/32
   settings:
     dependencyWatchdog:
-      endpoint:
-        enabled: true # crashlooping pods will be restarted onces their dependants become ready
-      probe:
+      weeder:
+        enabled: true # crashlooping pods will be restarted once their dependants become ready
+      endpoint: # deprecated
+        enabled: true # crashlooping pods will be restarted once their dependants become ready
+      prober:
         enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
+      probe: #deprecated
+        enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
+
     excessCapacityReservation:
       enabled: true # this seed will deploy excess-capacity-reservation pods
     scheduling:

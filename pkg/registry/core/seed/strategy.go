@@ -24,7 +24,6 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/api/core/seed"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
@@ -52,6 +51,7 @@ func (s Strategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	seed := obj.(*core.Seed)
 
 	seed.Generation = 1
+	syncDependencyWatchdogSettings(seed)
 	seed.Status = core.SeedStatus{}
 }
 
@@ -62,6 +62,7 @@ func (s Strategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
+	syncDependencyWatchdogSettings(newSeed)
 	newSeed.Status = oldSeed.Status
 
 	if !apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
@@ -69,12 +70,39 @@ func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object)
 	}
 }
 
+func syncDependencyWatchdogSettings(seed *core.Seed) {
+	if seed.Spec.Settings == nil || seed.Spec.Settings.DependencyWatchdog == nil {
+		return
+	}
+	// keeping the field `weeder` and `endpoint` in sync
+	// Case 1: If weeder is specified, endpoint isn't -> do nothing
+	// Case 2: If weeder isn't specified, endpoint is -> make weeder=endpoint
+	// Case 3: If both are specified, give preference to weeder field -> do nothing, as endpoint field is not used by clients
+	// Case 4: If both not specified, default weeder.enabled to true
+	if seed.Spec.Settings.DependencyWatchdog.Weeder == nil {
+		seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: true}
+		if seed.Spec.Settings.DependencyWatchdog.Endpoint != nil {
+			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: seed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled}
+		}
+	}
+
+	//keeping the field `prober` and `probe` in sync
+	// Case 1: If prober is specified, probe isn't -> do nothing
+	// Case 2: If prober isn't specified, probe is -> make prober=probe
+	// Case 3: If both are specified, give preference to prober field -> do nothing, as probe field is not used by clients
+	// Case 4: If both not specified, default prober.enabled to true
+	if seed.Spec.Settings.DependencyWatchdog.Prober == nil {
+		seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: true}
+		if seed.Spec.Settings.DependencyWatchdog.Probe != nil {
+			seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: seed.Spec.Settings.DependencyWatchdog.Probe.Enabled}
+		}
+	}
+}
+
 // Validate validates the given object.
 func (Strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	seed := obj.(*core.Seed)
-	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validation.ValidateSeed(seed)...)
-	return allErrs
+	return validation.ValidateSeed(seed)
 }
 
 // Canonicalize allows an object to be mutated into a canonical form. This
@@ -105,12 +133,12 @@ func (Strategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Objec
 
 // WarningsOnCreate returns warnings to the client performing a create.
 func (Strategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
-	return seed.GetWarnings(ctx, obj.(*core.Seed), nil)
+	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (Strategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
-	return seed.GetWarnings(ctx, obj.(*core.Seed), old.(*core.Seed))
+	return nil
 }
 
 // StatusStrategy defines the strategy for storing seeds statuses.

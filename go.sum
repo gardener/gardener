@@ -168,7 +168,6 @@ github.com/gardener/etcd-druid v0.15.3 h1:IMsJTaUaSOXusfgOOF5GX5eJ0o1CI/9XtKzgxw
 github.com/gardener/etcd-druid v0.15.3/go.mod h1:VTxoQXmaE2RSP+LQS5qWUDoXzmdK6xlKLUdFhaGu6KM=
 github.com/gardener/hvpa-controller/api v0.5.0 h1:f4F3O7YUrenwh4S3TgPREPiB287JjjUiUL18OqPLyAA=
 github.com/gardener/hvpa-controller/api v0.5.0/go.mod h1:QQl3ELkCaki+8RhXl0FZMfvnm0WCGwGJlGmrxJj6lvM=
-github.com/gardener/machine-controller-manager v0.27.0/go.mod h1:zlIxuLQMtRO+aXOFsG6qtYkBmggbWY82K7MSO051ARU=
 github.com/gardener/machine-controller-manager v0.48.1 h1:Oxr5e6gRm7P40Ds4nGlga/0nmfF7cH4rOfjthR6Mm38=
 github.com/gardener/machine-controller-manager v0.48.1/go.mod h1:Axeu1Oh3agySk0oR4T+FUNax41Ni2K8tuksu8KRHuh0=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
