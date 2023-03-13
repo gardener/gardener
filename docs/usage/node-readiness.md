@@ -21,8 +21,9 @@ If there are `DaemonSets` that contain the `node.gardener.cloud/critical-compone
 
 Additionally, the `Node` controller checks for the readiness of `csi-driver-node` components if a respective Pod indicates that it uses such a driver.
 This is achieved through a well-defined annotation prefix (`node.gardener.cloud/wait-for-csi-node-`).
-E. g. for an Openstack Cinder CSI Driver, the `csi-driver-node` Pod is annotated with `node.gardener.cloud/wait-for-csi-node-cinder=cinder.csi.openstack.org`.
-The annotation key's suffix is arbitrarily chosen (in this case `cinder`) and the annotation value needs to match the actual driver name as specified in the `CSINode` object.
+For example, the `csi-driver-node` Pod for Openstack Cinder is annotated with `node.gardener.cloud/wait-for-csi-node-cinder=cinder.csi.openstack.org`.
+A key prefix is used instead of a "regular" annotation to allow for multiple CSI drivers being registered by one `csi-driver-node` Pod.
+The annotation key's suffix can be chosen arbitrarily (in this case `cinder`) and the annotation value needs to match the actual driver name as specified in the `CSINode` object.
 The `Node` controller will verify that the used driver is properly registered in this object before removing the `node.gardener.cloud/critical-components-not-ready` taint.
 Note that the `csi-driver-node` Pod still needs to be labelled and tolerate the taint as described above to be considered in this additional check.
 

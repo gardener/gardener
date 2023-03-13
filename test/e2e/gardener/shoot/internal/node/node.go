@@ -172,9 +172,8 @@ func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, 
 
 func patchCSINodeObjectWithRequiredDriver(ctx context.Context, shootClient client.Client) {
 	csiNodeList := &storagev1.CSINodeList{}
-
 	Expect(shootClient.List(ctx, csiNodeList)).To(Succeed())
-	Expect(len(csiNodeList.Items)).To(Equal(1))
+	Expect(csiNodeList.Items).To(HaveLen(1))
 
 	csiNode := csiNodeList.Items[0].DeepCopy()
 	csiNode.Spec.Drivers = []storagev1.CSINodeDriver{

@@ -84,16 +84,16 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("failed listing node-critical Pods on node: %w", err)
 	}
 
-	var requiredDrivers, existingDrivers sets.Set[string]
-
-	requiredDrivers = GetRequiredDrivers(podList.Items)
+	var (
+		requiredDrivers = GetRequiredDrivers(podList.Items)
+		existingDrivers sets.Set[string]
+	)
 
 	// getting the CSINode object and checking for existing drivers is only
 	// necessary if at least one driver is required by the pods.
 	if len(requiredDrivers) >= 1 {
 		var err error
 		existingDrivers, err = GetExistingDriversFromCSINode(ctx, r.TargetClient, client.ObjectKeyFromObject(node))
-
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed getting existing drivers from CSINode object for node: %w", err)
 		}
@@ -183,14 +183,10 @@ func AllNodeCriticalPodsAreReady(log logr.Logger, recorder record.EventRecorder,
 func GetRequiredDrivers(pods []corev1.Pod) sets.Set[string] {
 	requiredDrivers := sets.Set[string]{}
 	for _, pod := range pods {
-		drivers := []string{}
 		for key, value := range pod.Annotations {
 			if strings.HasPrefix(key, constants.AnnotationPrefixWaitForCSINode) {
-				drivers = append(drivers, value)
+				requiredDrivers.Insert(value)
 			}
-		}
-		if len(drivers) >= 1 {
-			requiredDrivers.Insert(drivers...)
 		}
 	}
 	return requiredDrivers
@@ -200,17 +196,14 @@ func GetRequiredDrivers(pods []corev1.Pod) sets.Set[string] {
 // present in the CSINode object. A non-existent CSINode object is not
 // considered an error, an empty set of existing drivers is returned instead.
 func GetExistingDriversFromCSINode(ctx context.Context, client client.Client, csiNodeName types.NamespacedName) (sets.Set[string], error) {
-	csiNode := &storagev1.CSINode{}
-	// per specification, Node and CSINode have the same name
-	err := client.Get(ctx, csiNodeName, csiNode)
-
 	existingDrivers := sets.Set[string]{}
 
-	if apierrors.IsNotFound(err) {
-		return existingDrivers, nil
-	}
-
-	if err != nil {
+	// per specification, Node and CSINode have the same name
+	csiNode := &storagev1.CSINode{}
+	if err := client.Get(ctx, csiNodeName, csiNode); err != nil {
+		if apierrors.IsNotFound(err) {
+			return existingDrivers, nil
+		}
 		return nil, err
 	}
 
