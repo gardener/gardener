@@ -140,11 +140,9 @@ type SeedBackup struct {
 
 // SeedDNS contains DNS-relevant information about this seed cluster.
 type SeedDNS struct {
-	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.
-	// +optional
-	IngressDomain *string `json:"ingressDomain,omitempty" protobuf:"bytes,1,opt,name=ingressDomain"`
+	// IngressDomain is tombstoned to show why 1 is reserved protobuf tag.
+	// IngressDomain *string `json:"ingressDomain,omitempty" protobuf:"bytes,1,opt,name=ingressDomain"`
+
 	// Provider configures a DNSProvider
 	// +optional
 	Provider *SeedDNSProvider `json:"provider,omitempty" protobuf:"bytes,2,opt,name=provider"`
@@ -156,14 +154,12 @@ type SeedDNSProvider struct {
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
-	// Domains contains information about which domains shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener.
-	// +optional
-	Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,3,opt,name=domains"`
-	// Zones contains information about which hosted zones shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener.
-	// +optional
-	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,4,opt,name=zones"`
+
+	// Domains is tombstoned to show why 3 is reserved protobuf tag.
+	// Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,3,opt,name=domains"`
+
+	// Zones is tombstoned to show why 4 is reserved protobuf tag.
+	// Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,4,opt,name=zones"`
 }
 
 // Ingress configures the Ingress specific settings of the Seed cluster

@@ -4742,7 +4742,6 @@ func Convert_core_SeedBackup_To_v1alpha1_SeedBackup(in *core.SeedBackup, out *Se
 }
 
 func autoConvert_v1alpha1_SeedDNS_To_core_SeedDNS(in *SeedDNS, out *core.SeedDNS, s conversion.Scope) error {
-	out.IngressDomain = (*string)(unsafe.Pointer(in.IngressDomain))
 	out.Provider = (*core.SeedDNSProvider)(unsafe.Pointer(in.Provider))
 	return nil
 }
@@ -4753,7 +4752,6 @@ func Convert_v1alpha1_SeedDNS_To_core_SeedDNS(in *SeedDNS, out *core.SeedDNS, s 
 }
 
 func autoConvert_core_SeedDNS_To_v1alpha1_SeedDNS(in *core.SeedDNS, out *SeedDNS, s conversion.Scope) error {
-	out.IngressDomain = (*string)(unsafe.Pointer(in.IngressDomain))
 	out.Provider = (*SeedDNSProvider)(unsafe.Pointer(in.Provider))
 	return nil
 }
@@ -4766,8 +4764,6 @@ func Convert_core_SeedDNS_To_v1alpha1_SeedDNS(in *core.SeedDNS, out *SeedDNS, s 
 func autoConvert_v1alpha1_SeedDNSProvider_To_core_SeedDNSProvider(in *SeedDNSProvider, out *core.SeedDNSProvider, s conversion.Scope) error {
 	out.Type = in.Type
 	out.SecretRef = in.SecretRef
-	out.Domains = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Domains))
-	out.Zones = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Zones))
 	return nil
 }
 
@@ -4779,8 +4775,6 @@ func Convert_v1alpha1_SeedDNSProvider_To_core_SeedDNSProvider(in *SeedDNSProvide
 func autoConvert_core_SeedDNSProvider_To_v1alpha1_SeedDNSProvider(in *core.SeedDNSProvider, out *SeedDNSProvider, s conversion.Scope) error {
 	out.Type = in.Type
 	out.SecretRef = in.SecretRef
-	out.Domains = (*DNSIncludeExclude)(unsafe.Pointer(in.Domains))
-	out.Zones = (*DNSIncludeExclude)(unsafe.Pointer(in.Zones))
 	return nil
 }
 

@@ -37,4 +37,34 @@ var _ = Describe("Seed", func() {
 			}
 		})
 	})
+
+	Describe("SeedDNS", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(SeedDNS{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "1" {
+					Fail("protobuf 1 in SeedDNS is reserved for removed ingressDomain field")
+				}
+			}
+		})
+	})
+
+	Describe("SeedDNSProvider", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(SeedDNSProvider{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "3" {
+					Fail("protobuf 3 in SeedDNSProvider is reserved for removed domains field")
+				} else if protobufNum == "4" {
+					Fail("protobuf 4 in SeedDNSProvider is reserved for removed zones field")
+				}
+			}
+		})
+	})
 })

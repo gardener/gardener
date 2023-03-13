@@ -6169,13 +6169,6 @@ func schema_pkg_apis_core_v1alpha1_SeedDNS(ref common.ReferenceCallback) common.
 				Description: "SeedDNS contains DNS-relevant information about this seed cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"ingressDomain": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider configures a DNSProvider",
@@ -6212,24 +6205,12 @@ func schema_pkg_apis_core_v1alpha1_SeedDNSProvider(ref common.ReferenceCallback)
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},
-					"domains": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
-						},
-					},
-					"zones": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
-						},
-					},
 				},
 				Required: []string{"type", "secretRef"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude", "k8s.io/api/core/v1.SecretReference"},
+			"k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -13868,13 +13849,6 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 				Description: "SeedDNS contains DNS-relevant information about this seed cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"ingressDomain": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use spec.ingress.domain instead.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider configures a DNSProvider",
@@ -13911,24 +13885,12 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},
-					"domains": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
-						},
-					},
-					"zones": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future version of Gardener.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
-						},
-					},
 				},
 				Required: []string{"type", "secretRef"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude", "k8s.io/api/core/v1.SecretReference"},
+			"k8s.io/api/core/v1.SecretReference"},
 	}
 }
 

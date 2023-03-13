@@ -193,18 +193,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		}
 	}
 
-	if seedSpec.DNS.IngressDomain != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), seedSpec.DNS.IngressDomain, "this field is deprecated and will be removed in a future version. Use spec.ingress.domain instead"))
-	}
-	if provider := seedSpec.DNS.Provider; provider != nil {
-		if provider.Domains != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "provider", "domains"), provider.Domains, "this field is deprecated and will be removed in a future version. Don't set this field"))
-		}
-		if provider.Zones != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "provider", "zones"), provider.Zones, "this field is deprecated and will be removed in a future version. Don't set this field"))
-		}
-	}
-
 	if !inTemplate && seedSpec.Ingress == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("ingress"), "cannot be empty"))
 	}
@@ -293,9 +281,6 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 
 	if oldSeedSpec.Ingress != nil && newSeedSpec.Ingress != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, oldSeedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
-	}
-	if oldSeedSpec.DNS.IngressDomain != nil && newSeedSpec.Ingress != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, *oldSeedSpec.DNS.IngressDomain, fldPath.Child("ingress", "domain"))...)
 	}
 
 	if oldSeedSpec.Backup != nil {
