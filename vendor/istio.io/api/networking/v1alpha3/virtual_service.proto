@@ -1004,7 +1004,9 @@ message TCPRoute {
 // {{</tabset>}}
 //
 // HTTPMatchRequest CANNOT be empty.
-// **Note:** No regex string match can be set when delegate VirtualService is specified.
+// **Note:**
+// 1. If a root VirtualService have matched any property (path, header etc.) by regex, delegate VirtualServices should not have any other matches on the same property.
+// 2. If a delegate VirtualService have matched any property (path, header etc.) by regex, root VirtualServices should not have any other matches on the same property.
 message HTTPMatchRequest {
   // The name assigned to a match. The match's name will be
   // concatenated with the parent route's name and will be logged in
@@ -1068,7 +1070,7 @@ message HTTPMatchRequest {
   //
   // - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
   //
-  // If the value is empty and only the name of header is specfied, presence of the header is checked.
+  // If the value is empty and only the name of header is specified, presence of the header is checked.
   // **Note:** The keys `uri`, `scheme`, `method`, and `authority` will be ignored.
   map<string, StringMatch> headers = 5;
 
@@ -1949,7 +1951,7 @@ message HTTPFaultInjection {
   //
   // The _fixedDelay_ field is used to indicate the amount of delay in seconds.
   // The optional _percentage_ field can be used to only delay a certain
-  // percentage of requests. If left unspecified, all request will be delayed.
+  // percentage of requests. If left unspecified, no request will be delayed.
   message Delay {
     // Percentage of requests on which the delay will be injected (0-100).
     // Use of integer `percent` value is deprecated. Use the double `percentage`
@@ -1966,6 +1968,7 @@ message HTTPFaultInjection {
     }
 
     // Percentage of requests on which the delay will be injected.
+    // If left unspecified, no request will be delayed.
     Percent percentage = 5;
   }
 
@@ -2021,7 +2024,7 @@ message HTTPFaultInjection {
   //
   // The _httpStatus_ field is used to indicate the HTTP status code to
   // return to the caller. The optional _percentage_ field can be used to only
-  // abort a certain percentage of requests. If not specified, all requests are
+  // abort a certain percentage of requests. If not specified, no request will be
   // aborted.
   message Abort {
     reserved 1;
@@ -2042,6 +2045,7 @@ message HTTPFaultInjection {
     }
 
     // Percentage of requests to be aborted with the error code provided.
+    // If not specified, no request will be aborted.
     Percent percentage = 5;
   }
 }

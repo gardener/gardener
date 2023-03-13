@@ -2385,7 +2385,6 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
-
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_networkpolicy_test-ingress.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))

@@ -17,6 +17,17 @@ func (this *ServiceEntry) UnmarshalJSON(b []byte) error {
 	return ServiceEntryUnmarshaler.Unmarshal(bytes.NewReader(b), this)
 }
 
+// MarshalJSON is a custom marshaler for ServicePort
+func (this *ServicePort) MarshalJSON() ([]byte, error) {
+	str, err := ServiceEntryMarshaler.MarshalToString(this)
+	return []byte(str), err
+}
+
+// UnmarshalJSON is a custom unmarshaler for ServicePort
+func (this *ServicePort) UnmarshalJSON(b []byte) error {
+	return ServiceEntryUnmarshaler.Unmarshal(bytes.NewReader(b), this)
+}
+
 var (
 	ServiceEntryMarshaler   = &jsonpb.Marshaler{}
 	ServiceEntryUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
