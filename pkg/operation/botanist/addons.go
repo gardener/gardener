@@ -75,7 +75,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Operation.IsShootMonitoringEnabled()),
-		"network-policies":    common.GenerateAddonConfig(nil, true),
 		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled),
 	}
 

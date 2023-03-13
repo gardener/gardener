@@ -7,10 +7,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: monitoring.enabled
-- name: network-policies
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: network-policies.enabled
 - name: podsecuritypolicies
   repository: http://localhost:10191
   version: 0.1.0
