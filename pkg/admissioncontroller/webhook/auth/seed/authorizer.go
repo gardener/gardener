@@ -119,7 +119,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case certificateSigningRequestResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeCertificateSigningRequest, attrs,
-				[]string{"get"},
+				[]string{"get", "list", "watch"},
 				[]string{"create"},
 				[]string{"seedclient"},
 			)
@@ -128,7 +128,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case clusterRoleBindingResource:
 			return a.authorizeClusterRoleBinding(requestLog, seedName, attrs)
 		case configMapResource:
-			return a.authorizeConfigMap(requestLog, seedName, attrs)
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeConfigMap, attrs)
 		case controllerDeploymentResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
@@ -177,7 +177,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case shootStateResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeShootState, attrs,
-				[]string{"get", "update", "patch", "delete"},
+				[]string{"get", "update", "patch", "delete", "list", "watch"},
 				[]string{"create"},
 				nil,
 			)
@@ -217,17 +217,6 @@ func (a *authorizer) authorizeClusterRoleBinding(log logr.Logger, seedName strin
 	)
 }
 
-func (a *authorizer) authorizeConfigMap(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if attrs.GetVerb() == "get" &&
-		attrs.GetNamespace() == metav1.NamespaceSystem &&
-		attrs.GetName() == v1beta1constants.ClusterIdentity {
-
-		return auth.DecisionAllow, "", nil
-	}
-
-	return a.authorizeRead(log, seedName, graph.VertexTypeConfigMap, attrs)
-}
-
 func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkVerb(log, attrs, "create", "patch"); !ok {
 		return auth.DecisionNoOpinion, reason, nil
@@ -241,14 +230,15 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 }
 
 func (a *authorizer) authorizeLease(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	// This is needed if the seed cluster is a garden cluster at the same time.
 	if attrs.GetName() == "gardenlet-leader-election" &&
-		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "watch", "update"}) {
+		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "list", "watch", "update"}) {
 
 		return auth.DecisionAllow, "", nil
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeLease, attrs,
-		[]string{"get", "update", "patch"},
+		[]string{"get", "update", "patch", "list", "watch"},
 		[]string{"create"},
 		nil,
 	)
@@ -258,7 +248,7 @@ func (a *authorizer) authorizeNamespace(log logr.Logger, seedName string, attrs 
 	// TODO: Remove this once the gardenlet's `ControllerInstallation` controller does no longer populate the already
 	// deprecated `gardener.garden.identity` value when rendering the Helm charts.
 	if attrs.GetName() == v1beta1constants.GardenNamespace &&
-		attrs.GetVerb() == "get" {
+		utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) {
 
 		return auth.DecisionAllow, "", nil
 	}
@@ -309,7 +299,7 @@ func (a *authorizer) authorizeServiceAccount(log logr.Logger, seedName string, a
 
 func (a *authorizer) authorizeRead(log logr.Logger, seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
 	return a.authorize(log, seedName, fromType, attrs,
-		[]string{"get"},
+		[]string{"get", "list", "watch"},
 		nil,
 		nil,
 	)
