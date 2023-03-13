@@ -259,9 +259,6 @@ func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx conte
 	acquiredOrReleased := false
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		// Check whether the finalizer of the machine class credentials secret has been added or removed.
-		// This check is only applicable when the given workerDelegate does not implement the
-		// deprecated WorkerCredentialsDelegate interface, i.e. machine classes reference a separate
-		// Secret for cloud provider credentials.
 		if !acquiredOrReleased {
 			secret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
 			if err != nil {
