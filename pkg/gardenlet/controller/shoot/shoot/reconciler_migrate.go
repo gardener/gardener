@@ -172,27 +172,27 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, waitUntilControlPlaneReady),
 		})
+		ensureResourceManagerScaledUp = g.Add(flow.Task{
+			Name:         "Ensuring that the gardener-resource-manager is scaled to 1",
+			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
+		})
 		// Deploy gardener-resource-manager to re-run the bootstrap logic if needed (e.g. when the token is expired because of hibernation).
 		// This fixes https://github.com/gardener/gardener/issues/7606
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
-		})
-		ensureResourceManagerScaledUp = g.Add(flow.Task{
-			Name:         "Ensuring that the gardener-resource-manager is scaled to 1",
-			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
 			Fn:           flow.TaskFn(botanist.KeepObjectsForManagedResources).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting all Managed Resources from the Shoot's namespace",
 			Fn:           flow.TaskFn(botanist.DeleteManagedResources),
-			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
+			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, deployGardenerResourceManager),
 		})
 		waitForManagedResourcesDeletion = g.Add(flow.Task{
 			Name:         "Waiting until ManagedResources are deleted",
