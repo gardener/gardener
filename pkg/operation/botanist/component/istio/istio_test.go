@@ -367,6 +367,9 @@ rules:
   - apiGroups: [""]
     verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
     resources: [ "services" ]
+  - apiGroups: [""]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "serviceaccounts" ]
 `
 		}
 
@@ -530,6 +533,12 @@ rules:
   - get
   - watch
   - list
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - delete
 `
 		}
 
@@ -938,6 +947,12 @@ spec:
         - name: istio-kubeconfig
           mountPath: /var/run/secrets/remote
           readOnly: true
+        - name: istio-csr-dns-cert
+          mountPath: /var/run/secrets/istiod/tls
+          readOnly: true
+        - name: istio-csr-ca-configmap
+          mountPath: /var/run/secrets/istiod/ca
+          readOnly: true
       volumes:
       # Technically not needed on this pod - but it helps debugging/testing SDS
       # Should be removed after everything works.
@@ -963,6 +978,15 @@ spec:
       - name: config-volume
         configMap:
           name: istio
+      - name: istio-csr-dns-cert
+        secret:
+          secretName: istiod-tls
+          optional: true
+      - name: istio-csr-ca-configmap
+        configMap:
+          name: istio-ca-root-cert
+          defaultMode: 420
+          optional: true
       priorityClassName: gardener-system-critical
       affinity:
         podAntiAffinity:
@@ -1000,7 +1024,7 @@ metadata:
   name: istio-ingressgateway
   namespace: ` + deployNSIngress + `
   labels:
-    app.kubernetes.io/version: 1.15.3
+    app.kubernetes.io/version: 1.17.1
     app: istio-ingressgateway
     foo: bar
     
@@ -1248,7 +1272,6 @@ spec:
                       inline_string: envoy.wasm.stats
 
 ---
-
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1291,7 +1314,6 @@ spec:
                       inline_string: "envoy.wasm.stats"
 
 ---
-
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1337,7 +1359,6 @@ spec:
                       inline_string: envoy.wasm.stats
 
 ---
-
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1426,7 +1447,6 @@ spec:
                       inline_string: envoy.wasm.stats
 
 ---
-
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1467,6 +1487,155 @@ spec:
                   code:
                     local:
                       inline_string: "envoy.wasm.stats"
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: stats-filter-1.16
+  namespace: ` + deployNSIngress + `
+  labels:
+    istio.io/rev: default
+spec:
+  priority: -1
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.16.*'
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: envoy.filters.http.router
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: istio.stats
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+          value:
+            config:
+              root_id: stats_outbound
+              configuration:
+                "@type": "type.googleapis.com/google.protobuf.StringValue"
+                value: |
+                  {
+                    "debug": "false",
+                    "stat_prefix": "istio",
+                    "disable_host_header_fallback": true
+                  }
+              vm_config:
+                vm_id: stats_outbound
+                runtime: envoy.wasm.runtime.null
+                code:
+                  local:
+                    inline_string: "envoy.wasm.stats"
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-stats-filter-1.16
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.16.*'
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.tcp_proxy"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: istio.stats
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+          value:
+            config:
+              root_id: stats_outbound
+              configuration:
+                "@type": "type.googleapis.com/google.protobuf.StringValue"
+                value: |
+                  {
+                    "debug": "false",
+                    "stat_prefix": "istio"
+                  }
+              vm_config:
+                vm_id: tcp_stats_outbound
+                runtime: envoy.wasm.runtime.null
+                code:
+                  local:
+                    inline_string: "envoy.wasm.stats"
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: stats-filter-1.17
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.17.*'
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: istio.stats
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/stats.PluginConfig
+          value:
+            disable_host_header_fallback: true
+
+---
+# Source: istiod/templates/telemetryv2_1.17.yaml
+# Note: tcp stats filter is wasm enabled only in sidecars.
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-stats-filter-1.17
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.17.*'
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.tcp_proxy"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: istio.stats
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/stats.PluginConfig
+          value: {}
 
 ---
 
@@ -1612,7 +1781,7 @@ metadata:
     foo: bar
     
   labels:
-    app.kubernetes.io/version: 1.15.3
+    app.kubernetes.io/version: 1.17.1
     app: istio-ingressgateway
     foo: bar
     
@@ -1641,7 +1810,7 @@ metadata:
   name: istio-ingressgateway
   namespace: ` + deployNSIngress + `
   labels:
-    app.kubernetes.io/version: 1.15.3
+    app.kubernetes.io/version: 1.17.1
     app: istio-ingressgateway
     foo: bar
     
@@ -1663,7 +1832,7 @@ metadata:
   name: istio-ingressgateway
   namespace: ` + deployNSIngress + `
   labels:
-    app.kubernetes.io/version: 1.15.3
+    app.kubernetes.io/version: 1.17.1
     app: istio-ingressgateway
     foo: bar
     
@@ -1801,6 +1970,10 @@ spec:
           value: standard
         - name: ISTIO_META_CLUSTER_ID
           value: "Kubernetes"
+        - name: ISTIO_META_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         - name: ISTIO_BOOTSTRAP_OVERRIDE
           value: /etc/istio/custom-bootstrap/custom_bootstrap.yaml
         volumeMounts:
@@ -2212,6 +2385,7 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
+
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_networkpolicy_test-ingress.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))
