@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 )
 
-// RegisterFeatureGates registers the feature gates of the Gardener Operator.
+// RegisterFeatureGates registers the feature gates of gardener-operator.
 func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.DefaultSeccompProfile,

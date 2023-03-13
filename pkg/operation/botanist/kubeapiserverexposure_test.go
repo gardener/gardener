@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -100,7 +101,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 		Context("sni enabled", func() {
 			BeforeEach(func() {
-				Expect(features.DefaultFeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true))
 				botanist.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 				botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 				botanist.Shoot.ExternalClusterDomain = pointer.String("baz")

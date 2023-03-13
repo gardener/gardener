@@ -14,5 +14,13 @@
 
 package features
 
-// RegisterFeatureGates registers the feature gates of the Gardener Scheduler.
-func RegisterFeatureGates() {}
+import (
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/features"
+)
+
+// RegisterFeatureGates registers the feature gates of gardener-scheduler.
+func RegisterFeatureGates() {
+	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures()))
+}

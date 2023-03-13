@@ -39,7 +39,7 @@ import (
 // Example usage:
 //
 //	v := "foo"
-//	defer WithVar(&v, "bar")()
+//	DeferCleanup(WithVar(&v, "bar"))
 func WithVar(dst, src interface{}) func() {
 	dstValue := reflect.ValueOf(dst)
 	if dstValue.Type().Kind() != reflect.Ptr {
@@ -67,7 +67,7 @@ func WithVar(dst, src interface{}) func() {
 //
 // Example usage:
 //
-//	defer WithVars(&v, "foo", &x, "bar")()
+//	DeferCleanup(WithVars(&v, "foo", &x, "bar"))
 func WithVars(dstsAndSrcs ...interface{}) func() {
 	if len(dstsAndSrcs)%2 != 0 {
 		ginkgo.Fail(fmt.Sprintf("dsts and srcs are not of equal length: %v", dstsAndSrcs))
@@ -138,7 +138,7 @@ func WithWd(path string) func() {
 // Failures to set or restore cause the test to fail.
 // Example use:
 //
-//	defer WithFeatureGate(features.DefaultFeatureGate, features.<FeatureName>, true)()
+//	DeferCleanup(WithFeatureGate(features.DefaultFeatureGate, features.<FeatureName>, true))
 func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value bool) func() {
 	originalValue := gate.Enabled(f)
 
@@ -163,7 +163,7 @@ func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value 
 // Example usage:
 //
 //	var fileName string
-//	defer WithTempFile("", "test", []byte("test file content"), &fileName)()
+//	DeferCleanup(WithTempFile("", "test", []byte("test file content"), &fileName))
 func WithTempFile(dir, pattern string, content []byte, fileName *string) func() {
 	file, err := os.CreateTemp(dir, pattern)
 	if err != nil {

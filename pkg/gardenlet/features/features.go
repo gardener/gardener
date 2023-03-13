@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 )
 
-// RegisterFeatureGates registers the feature gates of the Gardenlet.
+// RegisterFeatureGates registers the feature gates of gardenlet.
 func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.HVPA,
