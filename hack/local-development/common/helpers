@@ -142,9 +142,7 @@ get_host_address () {
   local ip_route=""
   local ip_address=""
 
-  # TODO: SC2235
-  if ! ( [[ "$(uname -s)" == *"Darwin"* ]] || [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]] ); then
-
+  if ! [[ "$(uname -s)" == *"Darwin"* ]] && ! [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]]; then
     if [[ -z "$IPFAMILY" && $(echo "$IPFAMILY" | awk '{print tolower($0)}') == "ipv6" ]]; then
       ip_route=$(ip route get 1::)
     else
