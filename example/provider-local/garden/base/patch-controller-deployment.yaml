@@ -1,8 +1,0 @@
-apiVersion: core.gardener.cloud/v1beta1
-kind: ControllerDeployment
-metadata:
-  name: networking-calico
-providerConfig:
-  values:
-    image:
-      tag: v1.27.0
