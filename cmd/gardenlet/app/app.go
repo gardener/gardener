@@ -286,16 +286,6 @@ func (g *garden) Start(ctx context.Context) error {
 		// gardenlet does not have the required RBAC permissions for listing/watching the following resources, so let's
 		// prevent any attempts to cache them.
 		opts.ClientDisableCacheFor = []client.Object{
-			&gardencorev1beta1.ExposureClass{},
-			&gardencorev1beta1.ShootState{},
-			&gardencorev1beta1.CloudProfile{},
-			&gardencorev1beta1.ControllerDeployment{},
-			&gardencorev1beta1.Project{},
-			&gardencorev1beta1.SecretBinding{},
-			&certificatesv1.CertificateSigningRequest{},
-			&coordinationv1.Lease{},
-			&corev1.Namespace{},
-			&corev1.ConfigMap{},
 			&corev1.Event{},
 			&eventsv1.Event{},
 		}
@@ -318,7 +308,17 @@ func (g *garden) Start(ctx context.Context) error {
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
-					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					&corev1.Secret{}:                            cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					&corev1.ConfigMap{}:                         kubernetes.SingleObjectCacheFunc(log),
+					&corev1.Namespace{}:                         kubernetes.SingleObjectCacheFunc(log),
+					&coordinationv1.Lease{}:                     kubernetes.SingleObjectCacheFunc(log),
+					&certificatesv1.CertificateSigningRequest{}: kubernetes.SingleObjectCacheFunc(log),
+					&gardencorev1beta1.CloudProfile{}:           kubernetes.SingleObjectCacheFunc(log),
+					&gardencorev1beta1.ControllerDeployment{}:   kubernetes.SingleObjectCacheFunc(log),
+					&gardencorev1beta1.ExposureClass{}:          kubernetes.SingleObjectCacheFunc(log),
+					&gardencorev1beta1.Project{}:                kubernetes.SingleObjectCacheFunc(log),
+					&gardencorev1beta1.SecretBinding{}:          kubernetes.SingleObjectCacheFunc(log),
+					&gardencorev1beta1.ShootState{}:             kubernetes.SingleObjectCacheFunc(log),
 				},
 				kubernetes.GardenScheme,
 			)(config, opts)
