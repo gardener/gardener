@@ -1,253 +1,245 @@
----
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: gardener-operator
 build:
   artifacts:
-  - image: eu.gcr.io/gardener-project/gardener/operator
-    ko:
-      main: ./cmd/gardener-operator
-      ldflags:
-      - "{{.LD_FLAGS}}"
-      dependencies:
-        paths:
-        - charts
-        - cmd/gardener-operator/app
-        - cmd/utils
-        - extensions/pkg/apis/config
-        - extensions/pkg/controller
-        - extensions/pkg/util
-        - extensions/pkg/webhook
-        - extensions/pkg/webhook/certificates
-        - extensions/pkg/webhook/shoot
-        - pkg/api/extensions
-        - pkg/apis/core
-        - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
-        - pkg/apis/core/v1beta1
-        - pkg/apis/core/v1beta1/constants
-        - pkg/apis/core/v1beta1/helper
-        - pkg/apis/core/helper
-        - pkg/apis/core/validation
-        - pkg/apis/extensions
-        - pkg/apis/extensions/v1alpha1
-        - pkg/apis/extensions/v1alpha1/helper
-        - pkg/apis/extensions/validation
-        - pkg/apis/operations
-        - pkg/apis/operations/install
-        - pkg/apis/operations/v1alpha1
-        - pkg/apis/operator
-        - pkg/apis/operator/v1alpha1
-        - pkg/apis/operator/v1alpha1/helper
-        - pkg/apis/operator/v1alpha1/validation
-        - pkg/apis/resources
-        - pkg/apis/resources/v1alpha1
-        - pkg/apis/seedmanagement
-        - pkg/apis/seedmanagement/encoding
-        - pkg/apis/seedmanagement/install
-        - pkg/apis/seedmanagement/v1alpha1
-        - pkg/apis/settings
-        - pkg/apis/settings/install
-        - pkg/apis/settings/v1alpha1
-        - pkg/chartrenderer
-        - pkg/client/kubernetes
-        - pkg/client/kubernetes/cache
-        - pkg/controller/service
-        - pkg/controllerutils
-        - pkg/controllerutils/predicate
-        - pkg/controllerutils/reconciler
-        - pkg/controllerutils/routes
-        - pkg/extensions
-        - pkg/features
-        - pkg/gardenlet/apis/config
-        - pkg/gardenlet/apis/config/v1alpha1
-        - pkg/healthz
-        - pkg/logger
-        - pkg/operation/botanist/component
-        - pkg/operation/botanist/component/dependencywatchdog
-        - pkg/operation/botanist/component/etcd
-        - pkg/operation/botanist/component/etcd/constants
-        - pkg/operation/botanist/component/gardensystem
-        - pkg/operation/botanist/component/hvpa
-        - pkg/operation/botanist/component/kubeapiserver
-        - pkg/operation/botanist/component/kubeapiserver/constants
-        - pkg/operation/botanist/component/kubeapiserverexposure
-        - pkg/operation/botanist/component/kubescheduler
-        - pkg/operation/botanist/component/resourcemanager
-        - pkg/operation/botanist/component/resourcemanager/constants
-        - pkg/operation/botanist/component/shared
-        - pkg/operation/botanist/component/vpa
-        - pkg/operation/botanist/component/vpa/constants
-        - pkg/operation/botanist/component/vpnseedserver
-        - pkg/operator/apis/config
-        - pkg/operator/apis/config/v1alpha1
-        - pkg/operator/apis/config/validation
-        - pkg/operator/client
-        - pkg/operator/controller
-        - pkg/operator/controller/garden
-        - pkg/operator/features
-        - pkg/operator/webhook
-        - pkg/operator/webhook/validation
-        - pkg/resourcemanager/apis/config
-        - pkg/resourcemanager/apis/config/v1alpha1
-        - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/resourcemanager/webhook/crddeletionprotection
-        - pkg/resourcemanager/webhook/endpointslicehints
-        - pkg/resourcemanager/webhook/extensionvalidation
-        - pkg/resourcemanager/webhook/highavailabilityconfig
-        - pkg/resourcemanager/webhook/podschedulername
-        - pkg/resourcemanager/webhook/podtopologyspreadconstraints
-        - pkg/resourcemanager/webhook/projectedtokenmount
-        - pkg/resourcemanager/webhook/seccompprofile
-        - pkg/resourcemanager/webhook/systemcomponentsconfig
-        - pkg/resourcemanager/webhook/tokeninvalidator
-        - pkg/utils
-        - pkg/utils/chart
-        - pkg/utils/context
-        - pkg/utils/errors
-        - pkg/utils/flow
-        - pkg/utils/gardener
-        - pkg/utils/images
-        - pkg/utils/imagevector
-        - pkg/utils/kubernetes
-        - pkg/utils/kubernetes/health
-        - pkg/utils/kubernetes/unstructured
-        - pkg/utils/managedresources
-        - pkg/utils/managedresources/builder
-        - pkg/utils/retry
-        - pkg/utils/secrets
-        - pkg/utils/secrets/manager
-        - pkg/utils/timewindow
-        - pkg/utils/validation/admissionplugins
-        - pkg/utils/validation/cidr
-        - pkg/utils/validation/features
-        - pkg/utils/version
-        - vendor
-        - VERSION
-  - image: eu.gcr.io/gardener-project/gardener/resource-manager
-    ko:
-      main: ./cmd/gardener-resource-manager
-      ldflags:
-      - "{{.LD_FLAGS}}"
-      dependencies:
-        paths:
-        - cmd/gardener-resource-manager/app
-        - cmd/gardener-resource-manager/app/bootstrappers
-        - cmd/utils
-        - pkg/api/extensions
-        - pkg/api/indexer
-        - pkg/apis/core
-        - pkg/apis/core/helper
-        - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
-        - pkg/apis/core/v1beta1
-        - pkg/apis/core/v1beta1/constants
-        - pkg/apis/core/v1beta1/helper
-        - pkg/apis/core/validation
-        - pkg/apis/extensions
-        - pkg/apis/extensions/v1alpha1
-        - pkg/apis/extensions/v1alpha1/helper
-        - pkg/apis/extensions/validation
-        - pkg/apis/operations
-        - pkg/apis/operations/install
-        - pkg/apis/operations/v1alpha1
-        - pkg/apis/operator
-        - pkg/apis/operator/v1alpha1
-        - pkg/apis/resources
-        - pkg/apis/resources/v1alpha1
-        - pkg/apis/resources/v1alpha1/helper
-        - pkg/apis/seedmanagement
-        - pkg/apis/seedmanagement/encoding
-        - pkg/apis/seedmanagement/install
-        - pkg/apis/seedmanagement/v1alpha1
-        - pkg/apis/settings
-        - pkg/apis/settings/install
-        - pkg/apis/settings/v1alpha1
-        - pkg/chartrenderer
-        - pkg/client/kubernetes
-        - pkg/client/kubernetes/cache
-        - pkg/controllerutils
-        - pkg/controllerutils/mapper
-        - pkg/controllerutils/predicate
-        - pkg/controllerutils/reconciler
-        - pkg/controllerutils/routes
-        - pkg/features
-        - pkg/gardenlet/apis/config
-        - pkg/gardenlet/apis/config/v1alpha1
-        - pkg/healthz
-        - pkg/logger
-        - pkg/resourcemanager/apis/config
-        - pkg/resourcemanager/apis/config/v1alpha1
-        - pkg/resourcemanager/apis/config/validation
-        - pkg/resourcemanager/client
-        - pkg/resourcemanager/controller
-        - pkg/resourcemanager/controller/csrapprover
-        - pkg/resourcemanager/controller/garbagecollector
-        - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/resourcemanager/controller/health
-        - pkg/resourcemanager/controller/health/health
-        - pkg/resourcemanager/controller/health/progressing
-        - pkg/resourcemanager/controller/health/utils
-        - pkg/resourcemanager/controller/managedresource
-        - pkg/resourcemanager/controller/node
-        - pkg/resourcemanager/controller/node/helper
-        - pkg/resourcemanager/controller/secret
-        - pkg/resourcemanager/controller/tokeninvalidator
-        - pkg/resourcemanager/controller/tokenrequestor
-        - pkg/resourcemanager/predicate
-        - pkg/resourcemanager/webhook
-        - pkg/resourcemanager/webhook/crddeletionprotection
-        - pkg/resourcemanager/webhook/endpointslicehints
-        - pkg/resourcemanager/webhook/extensionvalidation
-        - pkg/resourcemanager/webhook/highavailabilityconfig
-        - pkg/resourcemanager/controller/networkpolicy
-        - pkg/resourcemanager/webhook/podschedulername
-        - pkg/resourcemanager/webhook/podtopologyspreadconstraints
-        - pkg/resourcemanager/webhook/projectedtokenmount
-        - pkg/resourcemanager/webhook/seccompprofile
-        - pkg/resourcemanager/webhook/systemcomponentsconfig
-        - pkg/resourcemanager/webhook/tokeninvalidator
-        - pkg/utils
-        - pkg/utils/context
-        - pkg/utils/errors
-        - pkg/utils/flow
-        - pkg/utils/gardener
-        - pkg/utils/kubernetes
-        - pkg/utils/kubernetes/health
-        - pkg/utils/retry
-        - pkg/utils/secrets
-        - pkg/utils/timewindow
-        - pkg/utils/validation/admissionplugins
-        - pkg/utils/validation/cidr
-        - pkg/utils/validation/features
-        - pkg/utils/version
-        - vendor
-        - VERSION
+    - image: eu.gcr.io/gardener-project/gardener/operator
+      ko:
+        dependencies:
+          paths:
+            - charts
+            - cmd/gardener-operator/app
+            - cmd/utils
+            - extensions/pkg/apis/config
+            - extensions/pkg/controller
+            - extensions/pkg/util
+            - extensions/pkg/webhook
+            - extensions/pkg/webhook/certificates
+            - extensions/pkg/webhook/shoot
+            - pkg/api/extensions
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1alpha1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/core/helper
+            - pkg/apis/core/validation
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
+            - pkg/apis/extensions/validation
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
+            - pkg/apis/operator/v1alpha1/validation
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/controller/service
+            - pkg/controllerutils
+            - pkg/controllerutils/predicate
+            - pkg/controllerutils/reconciler
+            - pkg/controllerutils/routes
+            - pkg/extensions
+            - pkg/features
+            - pkg/gardenlet/apis/config
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/healthz
+            - pkg/logger
+            - pkg/operation/botanist/component
+            - pkg/operation/botanist/component/dependencywatchdog
+            - pkg/operation/botanist/component/etcd
+            - pkg/operation/botanist/component/etcd/constants
+            - pkg/operation/botanist/component/gardensystem
+            - pkg/operation/botanist/component/hvpa
+            - pkg/operation/botanist/component/kubeapiserver
+            - pkg/operation/botanist/component/kubeapiserver/constants
+            - pkg/operation/botanist/component/kubeapiserverexposure
+            - pkg/operation/botanist/component/kubescheduler
+            - pkg/operation/botanist/component/resourcemanager
+            - pkg/operation/botanist/component/resourcemanager/constants
+            - pkg/operation/botanist/component/shared
+            - pkg/operation/botanist/component/vpa
+            - pkg/operation/botanist/component/vpa/constants
+            - pkg/operation/botanist/component/vpnseedserver
+            - pkg/operator/apis/config
+            - pkg/operator/apis/config/v1alpha1
+            - pkg/operator/apis/config/validation
+            - pkg/operator/client
+            - pkg/operator/controller
+            - pkg/operator/controller/garden
+            - pkg/operator/features
+            - pkg/operator/webhook
+            - pkg/operator/webhook/validation
+            - pkg/resourcemanager/apis/config
+            - pkg/resourcemanager/apis/config/v1alpha1
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/resourcemanager/webhook/crddeletionprotection
+            - pkg/resourcemanager/webhook/endpointslicehints
+            - pkg/resourcemanager/webhook/extensionvalidation
+            - pkg/resourcemanager/webhook/highavailabilityconfig
+            - pkg/resourcemanager/webhook/podschedulername
+            - pkg/resourcemanager/webhook/podtopologyspreadconstraints
+            - pkg/resourcemanager/webhook/projectedtokenmount
+            - pkg/resourcemanager/webhook/seccompprofile
+            - pkg/resourcemanager/webhook/systemcomponentsconfig
+            - pkg/resourcemanager/webhook/tokeninvalidator
+            - pkg/utils
+            - pkg/utils/chart
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/gardener
+            - pkg/utils/images
+            - pkg/utils/imagevector
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
+            - pkg/utils/managedresources
+            - pkg/utils/managedresources/builder
+            - pkg/utils/retry
+            - pkg/utils/secrets
+            - pkg/utils/secrets/manager
+            - pkg/utils/timewindow
+            - pkg/utils/validation/admissionplugins
+            - pkg/utils/validation/cidr
+            - pkg/utils/validation/features
+            - pkg/utils/version
+            - vendor
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-operator
+    - image: eu.gcr.io/gardener-project/gardener/resource-manager
+      ko:
+        dependencies:
+          paths:
+            - cmd/gardener-resource-manager/app
+            - cmd/gardener-resource-manager/app/bootstrappers
+            - cmd/utils
+            - pkg/api/extensions
+            - pkg/api/indexer
+            - pkg/apis/core
+            - pkg/apis/core/helper
+            - pkg/apis/core/install
+            - pkg/apis/core/v1alpha1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/core/validation
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
+            - pkg/apis/extensions/validation
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/resources/v1alpha1/helper
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/controllerutils
+            - pkg/controllerutils/mapper
+            - pkg/controllerutils/predicate
+            - pkg/controllerutils/reconciler
+            - pkg/controllerutils/routes
+            - pkg/features
+            - pkg/gardenlet/apis/config
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/healthz
+            - pkg/logger
+            - pkg/resourcemanager/apis/config
+            - pkg/resourcemanager/apis/config/v1alpha1
+            - pkg/resourcemanager/apis/config/validation
+            - pkg/resourcemanager/client
+            - pkg/resourcemanager/controller
+            - pkg/resourcemanager/controller/csrapprover
+            - pkg/resourcemanager/controller/garbagecollector
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/resourcemanager/controller/health
+            - pkg/resourcemanager/controller/health/health
+            - pkg/resourcemanager/controller/health/progressing
+            - pkg/resourcemanager/controller/health/utils
+            - pkg/resourcemanager/controller/managedresource
+            - pkg/resourcemanager/controller/node
+            - pkg/resourcemanager/controller/node/helper
+            - pkg/resourcemanager/controller/secret
+            - pkg/resourcemanager/controller/tokeninvalidator
+            - pkg/resourcemanager/controller/tokenrequestor
+            - pkg/resourcemanager/predicate
+            - pkg/resourcemanager/webhook
+            - pkg/resourcemanager/webhook/crddeletionprotection
+            - pkg/resourcemanager/webhook/endpointslicehints
+            - pkg/resourcemanager/webhook/extensionvalidation
+            - pkg/resourcemanager/webhook/highavailabilityconfig
+            - pkg/resourcemanager/controller/networkpolicy
+            - pkg/resourcemanager/webhook/podschedulername
+            - pkg/resourcemanager/webhook/podtopologyspreadconstraints
+            - pkg/resourcemanager/webhook/projectedtokenmount
+            - pkg/resourcemanager/webhook/seccompprofile
+            - pkg/resourcemanager/webhook/systemcomponentsconfig
+            - pkg/resourcemanager/webhook/tokeninvalidator
+            - pkg/utils
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/gardener
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/health
+            - pkg/utils/retry
+            - pkg/utils/secrets
+            - pkg/utils/timewindow
+            - pkg/utils/validation/admissionplugins
+            - pkg/utils/validation/cidr
+            - pkg/utils/validation/features
+            - pkg/utils/version
+            - vendor
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-resource-manager
 deploy:
   helm:
     releases:
-    - name: gardener-operator
-      chartPath: charts/gardener/operator
-      namespace: garden
-      createNamespace: true
-      wait: true
-      artifactOverrides:
-        image: eu.gcr.io/gardener-project/gardener/operator
-        # dummy artifact overrides to make skaffold load images into cluster
-        resource-manager:
-          image: eu.gcr.io/gardener-project/gardener/resource-manager
-      setValueTemplates:
-        # on a local cluster, skaffold uses a local immutable tag for artifacts,
-        # overwrite our image vector to use the image that was just built
-        # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
-        imageVectorOverwrite: |
-          images:
-          - name: gardener-resource-manager
-            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
-            tag: "{{.IMAGE_TAG2}}"
-        env:
-        - name: GARDENER_OPERATOR_LOCAL
-          value: "true"
-      imageStrategy:
-        helm: {}
+      - name: gardener-operator
+        chartPath: charts/gardener/operator
+        namespace: garden
+        setValueTemplates:
+          env[0].name: GARDENER_OPERATOR_LOCAL
+          env[0].value: "true"
+          image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_operator}}'
+          image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_operator}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_operator}}'
+          imageVectorOverwrite: |
+            images:
+            - name: gardener-resource-manager
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
+              tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_resource_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+          resource-manager.image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+          resource-manager.image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_resource_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+        createNamespace: true
+        wait: true
