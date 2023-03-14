@@ -35,9 +35,3 @@ type Actuator interface {
 	// machineSets and the machines. The underlying VMs representing the Shoot nodes are not deleted
 	Migrate(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 }
-
-// StateActuator acts upon Worker's State resources.
-type StateActuator interface {
-	// Reconcile reconciles the Worker State.
-	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Worker) error
-}
