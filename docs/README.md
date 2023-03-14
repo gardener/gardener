@@ -63,6 +63,7 @@
 * [Shoot Info `ConfigMap`](usage/shoot_info_configmap.md)
 * [Shoot Updates and Upgrades](usage/shoot_updates.md)
 * [Shoot HA Control Plane](usage/shoot_high_availability.md)
+* [Shoot HA Best Practices](usage/shoot_high_availability_best_practices.md)
 * [Shoot Workers Settings](usage/shoot_workers_settings.md)
 * [Accessing Shoot Clusters](usage/shoot_access.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
