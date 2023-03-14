@@ -1,17 +1,17 @@
----
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: etcd
-deploy:
-  kubectl:
-    manifests:
-    - example/00-namespace-garden.yaml
+manifests:
+  rawYaml:
+  - example/00-namespace-garden.yaml
   kustomize:
     paths:
     - example/gardener-local/etcd
+deploy:
+  kubectl: {}
 ---
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: controlplane
@@ -22,9 +22,6 @@ build:
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/apiserver
     ko:
-      main: ./cmd/gardener-apiserver
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - cmd/gardener-apiserver/app
@@ -204,11 +201,11 @@ build:
         - plugin/pkg/utils
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-apiserver
   - image: eu.gcr.io/gardener-project/gardener/controller-manager
     ko:
-      main: ./cmd/gardener-controller-manager
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - cmd/gardener-controller-manager/app
@@ -308,11 +305,11 @@ build:
         - pkg/utils/version
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-controller-manager
   - image: eu.gcr.io/gardener-project/gardener/scheduler
     ko:
-      main: ./cmd/gardener-scheduler
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - cmd/gardener-scheduler/app
@@ -370,11 +367,11 @@ build:
         - pkg/utils/version
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-scheduler
   - image: eu.gcr.io/gardener-project/gardener/admission-controller
     ko:
-      main: ./cmd/gardener-admission-controller
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - cmd/gardener-admission-controller/app
@@ -445,28 +442,28 @@ build:
         - third_party/apiserver/pkg/apis/audit/v1beta1
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-admission-controller
 deploy:
   helm:
     releases:
     - name: gardener-controlplane
       chartPath: charts/gardener/controlplane
+      valuesFiles:
+        - example/gardener-local/controlplane/values.yaml
       namespace: garden
+      setValueTemplates:
+        global.admission.image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_admission_controller}}'
+        global.admission.image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_admission_controller}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_admission_controller}}'
+        global.apiserver.image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_apiserver}}'
+        global.apiserver.image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_apiserver}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_apiserver}}'
+        global.controller.image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_controller_manager}}'
+        global.controller.image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_controller_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_controller_manager}}'
+        global.scheduler.image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_scheduler}}'
+        global.scheduler.image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_scheduler}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_scheduler}}'
       createNamespace: true
       wait: true
-      artifactOverrides:
-        global:
-          apiserver:
-            image: eu.gcr.io/gardener-project/gardener/apiserver
-          controller:
-            image: eu.gcr.io/gardener-project/gardener/controller-manager
-          scheduler:
-            image: eu.gcr.io/gardener-project/gardener/scheduler
-          admission:
-            image: eu.gcr.io/gardener-project/gardener/admission-controller
-      imageStrategy:
-        helm: {}
-      valuesFiles:
-      - example/gardener-local/controlplane/values.yaml
 profiles:
 - name: ha-single-zone
   patches:
@@ -492,14 +489,13 @@ profiles:
           config:
             schedulers:
               shoot:
-                concurrentSyncs: 5
                 candidateDeterminationStrategy: MinimalDistance
+                concurrentSyncs: 5
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/provider-extensions/garden/controlplane/values.yaml
-
 ---
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: provider-local
@@ -507,9 +503,6 @@ build:
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
     ko:
-      main: ./cmd/gardener-extension-provider-local
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - charts
@@ -644,86 +637,87 @@ build:
         - pkg/utils/version
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-extension-provider-local
 deploy:
   helm:
-    flags:
-      upgrade:
-        - --disable-openapi-validation
     releases:
     - name: gardener-extension-provider-local-registration
       chartPath: charts/gardener/provider-local/registration
       namespace: garden
-      artifactOverrides:
-        values:
-          image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
-      imageStrategy:
-        helm: {}
+      setValueTemplates:
+        values.image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_extensions_provider_local}}'
+        values.image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_extensions_provider_local}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_extensions_provider_local}}'
+    flags:
+      upgrade:
+      - --disable-openapi-validation
 profiles:
 - name: kind2
   patches:
-    # The deploy stage must be skipped because provider-local can only be registered in the garden cluster.
-    # The build stage is still necessary so that the image can be loaded into the kind cluster later on.
+  # The deploy stage must be skipped because provider-local can only be registered in the garden cluster.
+  # The build stage is still necessary so that the image can be loaded into the kind cluster later on.
   - op: remove
     path: /deploy
-
 ---
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: local-env
-deploy:
-  kubectl:
-    manifests:
-    - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
+manifests:
+  rawYaml:
+  - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
   kustomize:
     paths:
     - example/provider-local/garden/skaffold
     - example/provider-local/seed-kind/skaffold
+deploy:
+  kubectl: {}
 profiles:
 - name: ha-single-zone
-  deploy:
+  manifests:
     kustomize:
       paths:
       - example/provider-local/garden/skaffold
       - example/provider-local/seed-kind-ha-single-zone/skaffold
 - name: ha-multi-zone
-  deploy:
+  manifests:
     kustomize:
       paths:
       - example/provider-local/garden/skaffold
       - example/provider-local/seed-kind-ha-multi-zone/skaffold
 ---
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: kind2-env
 profiles:
 - name: kind2
-  deploy:
-    kubectl:
-      manifests:
-      - example/00-namespace-garden.yaml
+  manifests:
+    rawYaml:
+    - example/00-namespace-garden.yaml
     kustomize:
       paths:
       - example/provider-local/seed-kind2/skaffold
-
+  deploy:
+    kubectl: {}
 ---
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: extensions-env
 profiles:
 - name: extensions
-  deploy:
-    kubectl:
-      manifests:
-      - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
+  manifests:
+    rawYaml:
+    - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
     kustomize:
       paths:
       - example/provider-extensions/garden/project
-
+  deploy:
+    kubectl: {}
 ---
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: gardenlet
@@ -731,9 +725,6 @@ build:
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/gardenlet
     ko:
-      main: ./cmd/gardenlet
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - charts
@@ -935,11 +926,11 @@ build:
         - pkg/utils/version
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardenlet
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
-      main: ./cmd/gardener-resource-manager
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - cmd/gardener-resource-manager/app
@@ -1034,8 +1025,33 @@ build:
         - pkg/utils/version
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-resource-manager
 deploy:
   helm:
+    releases:
+    - name: gardener-gardenlet
+      chartPath: charts/gardener/gardenlet
+      valuesFiles:
+        - example/gardener-local/gardenlet/values.yaml
+      namespace: garden
+      setValueTemplates:
+        image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_gardenlet}}'
+        image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_gardenlet}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_gardenlet}}'
+        # on a local cluster, skaffold uses a local immutable tag for artifacts,
+        # overwrite our image vector to use the image that was just built
+        # see https://skaffold.dev/docs/deployers/helm/#image-configuration
+        imageVectorOverwrite: |
+          images:
+          - name: gardenlet
+            repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_gardenlet}}'
+            tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_gardenlet}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_gardenlet}}'
+          - name: gardener-resource-manager
+            repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+            tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_resource_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+      createNamespace: true
+      wait: true
     hooks:
       after:
       - host:
@@ -1043,83 +1059,32 @@ deploy:
           - bash
           - -ec
           - hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-    releases:
-    - name: gardener-gardenlet
-      chartPath: charts/gardener/gardenlet
-      namespace: garden
-      createNamespace: true
-      wait: true
-      artifactOverrides:
-        image: eu.gcr.io/gardener-project/gardener/gardenlet
-        # dummy artifact overrides to make skaffold load images into cluster
-        resource-manager:
-          image: eu.gcr.io/gardener-project/gardener/resource-manager
-      setValueTemplates:
-        # on a local cluster, skaffold uses a local immutable tag for artifacts,
-        # overwrite our image vector to use the image that was just built
-        # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
-        imageVectorOverwrite: |
-          images:
-          - name: gardenlet
-            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_gardenlet
-            tag: "{{.IMAGE_TAG6}}"
-          - name: gardener-resource-manager
-            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
-            tag: "{{.IMAGE_TAG7}}"
-      imageStrategy:
-        helm: {}
-      valuesFiles:
-      - example/gardener-local/gardenlet/values.yaml
 profiles:
 - name: kind2
   patches:
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/gardener-local/gardenlet/values-kind2.yaml
   - op: replace
     path: /deploy/helm/hooks/after/0/host/command
     value:
     - bash
     - -ec
     - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-  - op: add
-    path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/gardener-local/gardenlet/values-kind2.yaml
-    # for the kind2 profile only 4 images are built: provider-local, gardenlet, resource-manager
-    # so the imageVectorOverwrite must be patched to specify the correct tags
-  - op: replace
-    path: /deploy/helm/releases/0/setValueTemplates
-    value:
-      imageVectorOverwrite: |
-        images:
-        - name: gardener-resource-manager
-          repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
-          tag: "{{.IMAGE_TAG3}}"
 - name: extensions
   patches:
-  - op: replace
-    path: /deploy/helm/hooks/after/0/host/command
-    value:
-    - bash
-    - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/provider-extensions/gardenlet/values.yaml
-    # for the provider-extensions profile only 2 images are built: gardenlet and resource-manager
-    # so the imageVectorOverwrite must be patched to specify the correct tags
   - op: replace
-    path: /deploy/helm/releases/0/setValueTemplates
+    path: /deploy/helm/hooks/after/0/host/command
     value:
-      imageVectorOverwrite: |
-        images:
-        - name: gardenlet
-          repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_gardenlet
-          tag: "{{.IMAGE_TAG}}"
-        - name: gardener-resource-manager
-          repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_resource-manager
-          tag: "{{.IMAGE_TAG2}}"
-
+    - bash
+    - -ec
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
 - name: ha-single-zone
   patches:
   - op: add
@@ -1131,7 +1096,6 @@ profiles:
     - bash
     - -ec
     - hack/usage/wait-for.sh seed local-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-
 - name: ha-multi-zone
   patches:
   - op: add

@@ -1,5 +1,4 @@
----
-apiVersion: skaffold/v2beta29
+apiVersion: skaffold/v4beta3
 kind: Config
 metadata:
   name: gardener-operator
@@ -7,9 +6,6 @@ build:
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/operator
     ko:
-      main: ./cmd/gardener-operator
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - charts
@@ -125,11 +121,11 @@ build:
         - pkg/utils/version
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-operator
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
-      main: ./cmd/gardener-resource-manager
-      ldflags:
-      - "{{.LD_FLAGS}}"
       dependencies:
         paths:
         - cmd/gardener-resource-manager/app
@@ -224,30 +220,24 @@ build:
         - pkg/utils/version
         - vendor
         - VERSION
+      ldflags:
+      - '{{.LD_FLAGS}}'
+      main: ./cmd/gardener-resource-manager
 deploy:
   helm:
     releases:
     - name: gardener-operator
       chartPath: charts/gardener/operator
       namespace: garden
-      createNamespace: true
-      wait: true
-      artifactOverrides:
-        image: eu.gcr.io/gardener-project/gardener/operator
-        # dummy artifact overrides to make skaffold load images into cluster
-        resource-manager:
-          image: eu.gcr.io/gardener-project/gardener/resource-manager
       setValueTemplates:
-        # on a local cluster, skaffold uses a local immutable tag for artifacts,
-        # overwrite our image vector to use the image that was just built
-        # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
+        env[0].name: GARDENER_OPERATOR_LOCAL
+        env[0].value: "true"
+        image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_operator}}'
+        image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_operator}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_operator}}'
         imageVectorOverwrite: |
           images:
           - name: gardener-resource-manager
-            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
-            tag: "{{.IMAGE_TAG2}}"
-        env:
-        - name: GARDENER_OPERATOR_LOCAL
-          value: "true"
-      imageStrategy:
-        helm: {}
+            repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+            tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_resource_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+      createNamespace: true
+      wait: true
