@@ -15,6 +15,7 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -77,6 +78,11 @@ func (a *genericStateActuator) updateWorkerState(ctx context.Context, worker *ex
 		if err := a.client.Status().Patch(ctx, worker, patch); err != nil {
 			return err
 		}
+	}
+
+	// If the state did not change, do not even try to send an empty PATCH request.
+	if worker.Status.State != nil && bytes.Equal(rawState, worker.Status.State.Raw) {
+		return nil
 	}
 
 	patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
