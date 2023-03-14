@@ -1810,6 +1810,11 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 		*out = new(int64)
 		**out = **in
 	}
+	if in.CORSAllowedOrigins != nil {
+		in, out := &in.CORSAllowedOrigins, &out.CORSAllowedOrigins
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

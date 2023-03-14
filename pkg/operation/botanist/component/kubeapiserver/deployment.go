@@ -582,6 +582,10 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		}
 	}
 
+	if len(k.values.CORSAllowedOrigins) > 0 {
+		out = append(out, fmt.Sprintf("--cors-allowed-origins=%s", strings.Join(k.values.CORSAllowedOrigins, ",")))
+	}
+
 	if k.values.WatchCacheSizes != nil {
 		if k.values.WatchCacheSizes.Default != nil {
 			out = append(out, fmt.Sprintf("--default-watch-cache-size=%d", *k.values.WatchCacheSizes.Default))

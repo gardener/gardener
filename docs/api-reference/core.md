@@ -4992,6 +4992,18 @@ The field has effect only when the <code>DefaultTolerationSeconds</code> admissi
 Defaults to 300.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>corsAllowedOrigins</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CORSAllowedOrigins contains a list of allowed origins for CORS, comma separated. An allowed origin can be a regular expression to support subdomain matching. If this list is empty CORS will not be enabled. (flag <code>--cors-allowed-origins</code>)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeAPIServerLogging">KubeAPIServerLogging

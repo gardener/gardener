@@ -103,6 +103,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		runtimeConfig                       map[string]bool
 		watchCacheSizes                     *gardencorev1beta1.WatchCacheSizes
 		logging                             *gardencorev1beta1.KubeAPIServerLogging
+		corsAllowedOrigins                  []string
 	)
 
 	if apiServerConfig != nil {
@@ -136,6 +137,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 		logging = apiServerConfig.Logging
+		corsAllowedOrigins = apiServerConfig.CORSAllowedOrigins
 	}
 
 	enabledAdmissionPluginConfigs, err := b.convertToAdmissionPluginConfigs(enabledAdmissionPlugins)
@@ -175,8 +177,9 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 				HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 			},
-			WatchCacheSizes: watchCacheSizes,
-			Logging:         logging,
+			WatchCacheSizes:    watchCacheSizes,
+			Logging:            logging,
+			CORSAllowedOrigins: corsAllowedOrigins,
 		},
 	), nil
 }

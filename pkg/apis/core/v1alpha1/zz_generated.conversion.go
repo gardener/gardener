@@ -3228,6 +3228,7 @@ func autoConvert_v1alpha1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *Ku
 	out.Logging = (*core.KubeAPIServerLogging)(unsafe.Pointer(in.Logging))
 	out.DefaultNotReadyTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultNotReadyTolerationSeconds))
 	out.DefaultUnreachableTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultUnreachableTolerationSeconds))
+	out.CORSAllowedOrigins = *(*[]string)(unsafe.Pointer(&in.CORSAllowedOrigins))
 	return nil
 }
 
@@ -3264,6 +3265,7 @@ func autoConvert_core_KubeAPIServerConfig_To_v1alpha1_KubeAPIServerConfig(in *co
 	out.Logging = (*KubeAPIServerLogging)(unsafe.Pointer(in.Logging))
 	out.DefaultNotReadyTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultNotReadyTolerationSeconds))
 	out.DefaultUnreachableTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultUnreachableTolerationSeconds))
+	out.CORSAllowedOrigins = *(*[]string)(unsafe.Pointer(&in.CORSAllowedOrigins))
 	return nil
 }
 

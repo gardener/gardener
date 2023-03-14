@@ -566,6 +566,9 @@ type KubeAPIServerConfig struct {
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).
 	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
 	DefaultUnreachableTolerationSeconds *int64
+
+	// CORSAllowedOrigins contains a list of allowed origins for CORS, comma separated. An allowed origin can be a regular expression to support subdomain matching. If this list is empty CORS will not be enabled. (flag `--cors-allowed-origins`)
+	CORSAllowedOrigins []string
 }
 
 // KubeAPIServerLogging contains configuration for the logs level and http access logs

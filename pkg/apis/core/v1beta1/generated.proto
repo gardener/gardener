@@ -1003,6 +1003,10 @@ message KubeAPIServerConfig {
   // Defaults to 300.
   // +optional
   optional int64 defaultUnreachableTolerationSeconds = 15;
+
+  // CORSAllowedOrigins contains a list of allowed origins for CORS, comma separated. An allowed origin can be a regular expression to support subdomain matching. If this list is empty CORS will not be enabled. (flag `--cors-allowed-origins`)
+  // +optional
+  repeated string corsAllowedOrigins = 16;
 }
 
 // KubeAPIServerLogging contains configuration for the logs level and http access logs

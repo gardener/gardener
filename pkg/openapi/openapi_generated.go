@@ -3561,6 +3561,21 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Format:      "int64",
 						},
 					},
+					"corsAllowedOrigins": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CORSAllowedOrigins contains a list of allowed origins for CORS, comma separated. An allowed origin can be a regular expression to support subdomain matching. If this list is empty CORS will not be enabled. (flag `--cors-allowed-origins`)",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -11239,6 +11254,21 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Description: "DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`). The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled. Defaults to 300.",
 							Type:        []string{"integer"},
 							Format:      "int64",
+						},
+					},
+					"corsAllowedOrigins": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CORSAllowedOrigins contains a list of allowed origins for CORS, comma separated. An allowed origin can be a regular expression to support subdomain matching. If this list is empty CORS will not be enabled. (flag `--cors-allowed-origins`)",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},
