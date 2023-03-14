@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -60,13 +61,27 @@ func (a *genericStateActuator) updateWorkerState(ctx context.Context, worker *ex
 	if err != nil {
 		return err
 	}
+
 	rawState, err := json.Marshal(state)
 	if err != nil {
 		return err
 	}
 
+	// Previously, this actuator was using 'update'/PUT calls to write the state into the Worker status. However, this
+	// unnecessarily persisted also null-ed fields. Below PATCH call does not remove them, hence we have to reset the
+	// state once to ensure these null-ed fields disappear.
+	// TODO(rfranzke): Remove this in a future version.
+	if worker.Status.State != nil && strings.Contains(string(worker.Status.State.Raw), `"creationTimestamp":null`) {
+		patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		worker.Status.State = nil
+		if err := a.client.Status().Patch(ctx, worker, patch); err != nil {
+			return err
+		}
+	}
+
+	patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	worker.Status.State = &runtime.RawExtension{Raw: rawState}
-	return a.client.Status().Update(ctx, worker)
+	return a.client.Status().Patch(ctx, worker, patch)
 }
 
 func (a *genericStateActuator) getWorkerState(ctx context.Context, namespace string) (*State, error) {

@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log = log.WithValues("shootState", client.ObjectKeyFromObject(shootState))
 
-	shootStateCopy := shootState.DeepCopy()
+	patch := client.MergeFromWithOptions(shootState.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	currentState, currentResources := getShootStateExtensionStateAndResources(shootState, r.ObjectKind, &name, purpose)
 
 	// Delete resources which are no longer present in the extension state from the ShootState.Spec.Resources list
@@ -114,7 +114,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.GardenClient.Patch(ctx, shootState, client.MergeFromWithOptions(shootStateCopy, client.MergeFromWithOptimisticLock{})); err != nil {
+	if err := r.GardenClient.Patch(ctx, shootState, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not sync extension state for shoot %q for extension %s/%s/%s: %w", client.ObjectKeyFromObject(shootState).String(), r.ObjectKind, name, purposeToString(purpose), err)
 	}
 
