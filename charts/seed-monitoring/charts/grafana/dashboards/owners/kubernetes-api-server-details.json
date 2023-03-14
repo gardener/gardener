@@ -902,13 +902,17 @@
       "hiddenSeries": false,
       "id": 55,
       "legend": {
+        "alignAsTable": true,
         "avg": false,
         "current": false,
-        "max": false,
+        "max": true,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "max",
+        "sortDesc": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -927,9 +931,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_dropped_requests_total[$rate])) by (requestKind)",
-          "legendFormat": "{{ requestKind }}",
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_request_terminations_total{code=\"429\"}[$__rate_interval])) by (verb, group, version, resource, subresource)",
+          "hide": false,
           "interval": "",
+          "legendFormat": "{{verb}} {{group}}/{{version}}/{{resource}} {{subresource}}",
           "refId": "A"
         }
       ],
@@ -939,7 +945,7 @@
       "timeShift": null,
       "title": "Dropped Requests",
       "tooltip": {
-        "shared": true,
+        "shared": false,
         "sort": 0,
         "value_type": "individual"
       },
