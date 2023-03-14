@@ -151,6 +151,10 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	topologAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled)
 
+	if v.values.ClusterType == component.ClusterTypeSeed {
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, vpaconstants.AdmissionControllerPort))
+	}
+
 	service.Spec.Selector = getAppLabel(admissionController)
 	desiredPorts := []corev1.ServicePort{
 		{

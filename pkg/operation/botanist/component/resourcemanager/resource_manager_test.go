@@ -2064,6 +2064,7 @@ subjects:
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
 				service.Annotations["networking.resources.gardener.cloud/from-policy-pod-label-selector"] = "all-seed-scrape-targets"
+				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
 				configMap = configMapFor(&watchedNamespace, nil)
 				deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, &watchedNamespace, nil, false, nil)
 

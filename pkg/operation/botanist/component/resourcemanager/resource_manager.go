@@ -711,6 +711,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 
 		if !r.values.TargetDiffersFromSourceCluster {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, resourcemanagerconstants.ServerPort))
 		} else {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 		}
