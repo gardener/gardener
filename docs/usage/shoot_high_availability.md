@@ -53,7 +53,9 @@ If you have already set-up an HA shoot control plane with `node` failure toleran
 
 ## Zone Outage Situation
 
-An availability zone outage might lead to the requirement to change your cluster setup temporarily and on short notice, in order to compensate failures and shortages resulting from the outage.
+Implementing highly available software that can tolerate even a zone outage unscathed is no trivial task. You may find our [HA Best Practices](shoot_high_availability_best_practices.md) helpful to get closer to that goal. In this document, we collected many options and settings for you that also Gardener internally uses to provide a highly available service.
+
+During a zone outage, you may be forced to change your cluster setup on short notice in order to compensate for failures and shortages resulting from the outage.
 For instance, if the shoot cluster has worker nodes across three zones where one zone goes down, the computing power from these nodes is also gone during that time.
 Changing the worker pool (`shoot.spec.provider.workers[]`) and infrastructure (`shoot.spec.provider.infrastructureConfig`) configuration can eliminate this disbalance, having enough machines in healthy availability zones that can cope with the requests of your applications.
 
