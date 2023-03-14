@@ -1319,17 +1319,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "apiserver_registered_watchers",
+          "exemplar": true,
+          "expr": "    sum by (group, version, kind) (apiserver_registered_watchers)\n  + on () group_left ()\n    absent(apiserver_longrunning_requests) * 0\nor\n  sum by (group, version, resource) (apiserver_longrunning_requests)",
           "format": "time_series",
+          "hide": false,
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{group}}/{{version}}/{{kind}}",
+          "legendFormat": "{{group}}/{{version}}/{{resource}}{{kind}}",
           "refId": "A"
         },
         {
-          "expr": "count(apiserver_registered_watchers)\n",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "total",
+          "exemplar": true,
+          "expr": "sum(\n      sum by (group, version, kind) (apiserver_registered_watchers)\n    + on () group_left ()\n      absent(apiserver_longrunning_requests) * 0\n  or\n    sum by (group, version, resource) (apiserver_longrunning_requests)\n)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Total",
           "refId": "B"
         }
       ],
@@ -1353,15 +1357,17 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:244",
           "decimals": 0,
           "format": "short",
           "label": "Count Watches",
-          "logBase": 10,
+          "logBase": 1,
           "max": null,
           "min": null,
           "show": true
         },
         {
+          "$$hashKey": "object:245",
           "format": "short",
           "label": null,
           "logBase": 1,
