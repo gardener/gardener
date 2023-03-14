@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/helper"
@@ -82,10 +84,27 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("failed listing node-critical Pods on node: %w", err)
 	}
 
+	var (
+		requiredDrivers = GetRequiredDrivers(podList.Items)
+		existingDrivers sets.Set[string]
+	)
+
+	// getting the CSINode object and checking for existing drivers is only
+	// necessary if at least one driver is required by the pods.
+	if len(requiredDrivers) >= 1 {
+		var err error
+		existingDrivers, err = GetExistingDriversFromCSINode(ctx, r.TargetClient, client.ObjectKeyFromObject(node))
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed getting existing drivers from CSINode object for node: %w", err)
+		}
+	}
+
 	// - for all node-critical DaemonSets: check whether a daemon pod has already been scheduled to the node
 	// - for all scheduled node-critical Pods on the node: check their readiness
+	// - for all drivers required by csi-driver-node pods: check if they exist
 	if !(AllNodeCriticalDaemonPodsAreScheduled(log, r.Recorder, node, daemonSetList.Items, podList.Items) &&
-		AllNodeCriticalPodsAreReady(log, r.Recorder, node, podList.Items)) {
+		AllNodeCriticalPodsAreReady(log, r.Recorder, node, podList.Items) &&
+		AllCSINodeDriversAreReady(log, r.Recorder, node, requiredDrivers, existingDrivers)) {
 		backoff := r.Config.Backoff.Duration
 		log.V(1).Info("Checking node again after backoff", "backoff", backoff)
 		return reconcile.Result{RequeueAfter: backoff}, nil
@@ -156,6 +175,56 @@ func AllNodeCriticalPodsAreReady(log logr.Logger, recorder record.EventRecorder,
 	}
 
 	return true
+}
+
+// GetRequiredDrivers searches through the pods annotations, and returns a set
+// of driver names if it finds annotations with the wait-for-csi-node prefix;
+// otherwise it returns an empty set.
+func GetRequiredDrivers(pods []corev1.Pod) sets.Set[string] {
+	requiredDrivers := sets.Set[string]{}
+	for _, pod := range pods {
+		for key, value := range pod.Annotations {
+			if strings.HasPrefix(key, constants.AnnotationPrefixWaitForCSINode) {
+				requiredDrivers.Insert(value)
+			}
+		}
+	}
+	return requiredDrivers
+}
+
+// GetExistingDriversFromCSINode returns a set of all driver names that are
+// present in the CSINode object. A non-existent CSINode object is not
+// considered an error, an empty set of existing drivers is returned instead.
+func GetExistingDriversFromCSINode(ctx context.Context, client client.Client, csiNodeName types.NamespacedName) (sets.Set[string], error) {
+	existingDrivers := sets.Set[string]{}
+
+	// per specification, Node and CSINode have the same name
+	csiNode := &storagev1.CSINode{}
+	if err := client.Get(ctx, csiNodeName, csiNode); err != nil {
+		if apierrors.IsNotFound(err) {
+			return existingDrivers, nil
+		}
+		return nil, err
+	}
+
+	for _, driver := range csiNode.Spec.Drivers {
+		existingDrivers.Insert(driver.Name)
+	}
+
+	return existingDrivers, nil
+}
+
+// AllCSINodeDriversAreReady compares a set of required drivers (i.e. drivers
+// that are specified by csi-driver-node pods) with a set of existing drivers
+// (i.e. drivers for which the CSINode object had information stored in spec).
+// Either set could be empty.
+func AllCSINodeDriversAreReady(log logr.Logger, recorder record.EventRecorder, node *corev1.Node, requiredDrivers, existingDrivers sets.Set[string]) bool {
+	unreadyDrivers := requiredDrivers.Difference(existingDrivers)
+	if unreadyDrivers.Len() >= 1 {
+		log.Info("Unready required CSI drivers for Node", "drivers", unreadyDrivers.UnsortedList())
+		recorder.Eventf(node, corev1.EventTypeWarning, "UnreadyRequiredCSIDrivers", "Unready required CSI drivers for Node: %s", unreadyDrivers.UnsortedList())
+	}
+	return unreadyDrivers.Len() == 0
 }
 
 // RemoveTaint removes the taint managed by this controller from the given node object
