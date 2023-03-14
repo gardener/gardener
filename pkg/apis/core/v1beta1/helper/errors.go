@@ -16,7 +16,6 @@ package helper
 
 import (
 	"errors"
-	"regexp"
 	"strings"
 	"time"
 
@@ -54,84 +53,6 @@ func (e *ErrorWithCodes) Unwrap() error {
 // Error returns the error message.
 func (e *ErrorWithCodes) Error() string {
 	return e.err.Error()
-}
-
-var (
-	unauthenticatedRegexp               = regexp.MustCompile(`(?i)(InvalidAuthenticationTokenTenant|Authentication failed|AuthFailure|invalid character|invalid_client|query returned no results|InvalidAccessKeyId|cannot fetch token|InvalidSecretAccessKey|InvalidSubscriptionId)`)
-	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|AuthorizationFailed|invalid_grant|Authorization Profile was not found|no active subscriptions|UnauthorizedOperation|not authorized|AccessDenied|OperationNotAllowed|Error 403|SERVICE_ACCOUNT_ACCESS_DENIED)`)
-	quotaExceededRegexp                 = regexp.MustCompile(`(?i)((?:^|[^t]|(?:[^s]|^)t|(?:[^e]|^)st|(?:[^u]|^)est|(?:[^q]|^)uest|(?:[^e]|^)quest|(?:[^r]|^)equest)LimitExceeded|Quotas|Quota.*exceeded|exceeded quota|Quota has been met|QUOTA_EXCEEDED|Maximum number of ports exceeded|ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS|VolumeSizeExceedsAvailableQuota)`)
-	rateLimitsExceededRegexp            = regexp.MustCompile(`(?i)(RequestLimitExceeded|Throttling|Too many requests)`)
-	dependenciesRegexp                  = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse|InUseRouteTableCannotBeDeleted|timeout while waiting for state to become|InvalidCidrBlock|already busy for|InsufficientFreeAddressesInSubnet|InternalServerError|internalerror|internal server error|A resource with the ID|VnetAddressSpaceCannotChangeDueToPeerings|InternalBillingError|There are not enough hosts available)`)
-	retryableDependenciesRegexp         = regexp.MustCompile(`(?i)(RetryableError)`)
-	resourcesDepletedRegexp             = regexp.MustCompile(`(?i)(not available in the current hardware cluster|InsufficientInstanceCapacity|SkuNotAvailable|ZonalAllocationFailed|out of stock|Zone.NotOnSale)`)
-	configurationProblemRegexp          = regexp.MustCompile(`(?i)(AzureBastionSubnet|not supported in your requested Availability Zone|InvalidParameter|InvalidParameterValue|notFound|NetcfgInvalidSubnet|InvalidSubnet|Invalid value|KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID|violates constraint|no attached internet gateway found|Your query returned no results|PrivateEndpointNetworkPoliciesCannotBeEnabledOnPrivateEndpointSubnet|invalid VPC attributes|PrivateLinkServiceNetworkPoliciesCannotBeEnabledOnPrivateLinkServiceSubnet|unrecognized feature gate|runtime-config invalid key|LoadBalancingRuleMustDisableSNATSinceSameFrontendIPConfigurationIsReferencedByOutboundRule|strict decoder error|not allowed to configure an unsupported|error during apply of object .* is invalid:|OverconstrainedZonalAllocationRequest|duplicate zones|overlapping zones)`)
-	retryableConfigurationProblemRegexp = regexp.MustCompile(`(?i)(is misconfigured and requires zero voluntary evictions|SDK.CanNotResolveEndpoint|The requested configuration is currently not supported)`)
-)
-
-// DeprecatedDetermineError determines the Gardener error codes for the given error and returns an ErrorWithCodes with the error and codes.
-// This function is deprecated and will be removed in a future version.
-func DeprecatedDetermineError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	// try to re-use codes from error
-	var coder Coder
-	if errors.As(err, &coder) {
-		return err
-	}
-
-	codes := DeprecatedDetermineErrorCodes(err)
-	if len(codes) == 0 {
-		return err
-	}
-
-	return &ErrorWithCodes{err, codes}
-}
-
-// DeprecatedDetermineErrorCodes determines error codes based on the given error.
-// This function is deprecated and will be removed in a future version.
-func DeprecatedDetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
-	var (
-		coder   Coder
-		message = err.Error()
-		codes   = sets.New[string]()
-
-		knownCodes = map[gardencorev1beta1.ErrorCode]func(string) bool{
-			gardencorev1beta1.ErrorInfraUnauthenticated:          unauthenticatedRegexp.MatchString,
-			gardencorev1beta1.ErrorInfraUnauthorized:             unauthorizedRegexp.MatchString,
-			gardencorev1beta1.ErrorInfraQuotaExceeded:            quotaExceededRegexp.MatchString,
-			gardencorev1beta1.ErrorInfraRateLimitsExceeded:       rateLimitsExceededRegexp.MatchString,
-			gardencorev1beta1.ErrorInfraDependencies:             dependenciesRegexp.MatchString,
-			gardencorev1beta1.ErrorRetryableInfraDependencies:    retryableDependenciesRegexp.MatchString,
-			gardencorev1beta1.ErrorInfraResourcesDepleted:        resourcesDepletedRegexp.MatchString,
-			gardencorev1beta1.ErrorConfigurationProblem:          configurationProblemRegexp.MatchString,
-			gardencorev1beta1.ErrorRetryableConfigurationProblem: retryableConfigurationProblemRegexp.MatchString,
-		}
-	)
-
-	// try to re-use codes from error
-	if errors.As(err, &coder) {
-		for _, code := range coder.Codes() {
-			codes.Insert(string(code))
-			// found codes don't need to be checked any more
-			delete(knownCodes, code)
-		}
-	}
-
-	// determine error codes
-	for code, matchFn := range knownCodes {
-		if !codes.Has(string(code)) && matchFn(message) {
-			codes.Insert(string(code))
-		}
-	}
-
-	// compute error code list based on code string set
-	var out []gardencorev1beta1.ErrorCode
-	for _, c := range sets.List(codes) {
-		out = append(out, gardencorev1beta1.ErrorCode(c))
-	}
-	return out
 }
 
 // Coder is an error that may produce a ErrorCodes visible to the outside.
@@ -221,23 +142,6 @@ func FormatLastErrDescription(err error) string {
 type WrappedLastErrors struct {
 	Description string
 	LastErrors  []gardencorev1beta1.LastError
-}
-
-// DeprecatedNewWrappedLastErrors returns a list of last errors.
-func DeprecatedNewWrappedLastErrors(description string, err error) *WrappedLastErrors {
-	var lastErrors []gardencorev1beta1.LastError
-
-	for _, partError := range errorsutils.Errors(err) {
-		lastErrors = append(lastErrors, *LastErrorWithTaskID(
-			partError.Error(),
-			errorsutils.GetID(partError),
-			DeprecatedDetermineErrorCodes(partError)...))
-	}
-
-	return &WrappedLastErrors{
-		Description: description,
-		LastErrors:  lastErrors,
-	}
 }
 
 // NewWrappedLastErrors returns a list of last errors.
