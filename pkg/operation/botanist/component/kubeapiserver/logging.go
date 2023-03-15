@@ -17,51 +17,107 @@ package kubeapiserver
 import (
 	"fmt"
 
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/filter"
+	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/parser"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
-const (
-	loggingParserNameAPIServer = "kubeAPIServerParser"
-	loggingParserAPIServer     = `[PARSER]
-    Name        ` + loggingParserNameAPIServer + `
-    Format      regex
-    Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
-    Time_Key    time
-    Time_Format %m%d %H:%M:%S.%L
-`
-	loggingFilterAPIServer = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeAPIServer + `*` + ContainerNameKubeAPIServer + `*
-    Key_Name            log
-    Parser              ` + loggingParserNameAPIServer + `
-    Reserve_Data        True
-`
-
-	loggingParserNameAPIProxyMutator = "apiProxyMutatorParser"
-	loggingParserAPIProxyMutator     = `[PARSER]
-    Name        ` + loggingParserNameAPIProxyMutator + `
-    Format      json
-    Time_Key    ts
-`
-	loggingFilterAPIProxyMutator = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeAPIServer + `*` + containerNameAPIServerProxyPodMutator + `*
-    Key_Name            log
-    Parser              ` + loggingParserNameAPIProxyMutator + `
-    Reserve_Data        True
-`
-	loggingModifyFilterAPIProxyMutator = `[FILTER]
-    Name                modify
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeAPIServer + `*` + containerNameAPIServerProxyPodMutator + `*
-    Copy                level    severity
-`
-)
-
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the kube-apiserver logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{
-		Filters: fmt.Sprintf("%s\n%s\n%s", loggingFilterAPIServer, loggingFilterAPIProxyMutator, loggingModifyFilterAPIProxyMutator),
-		Parsers: fmt.Sprintf("%s\n%s", loggingParserAPIServer, loggingParserAPIProxyMutator),
-	}, nil
+	return component.CentralLoggingConfig{Filters: generateClusterFilters(), Parsers: generateClusterParsers()}, nil
+}
+
+func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
+	return []*fluentbitv1alpha2.ClusterFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   fmt.Sprintf("%s--%s", v1beta1constants.DeploymentNameKubeAPIServer, ContainerNameKubeAPIServer),
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", v1beta1constants.DeploymentNameKubeAPIServer, ContainerNameKubeAPIServer),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      ContainerNameKubeAPIServer + "-parser",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   fmt.Sprintf("%s--%s", v1beta1constants.DeploymentNameKubeAPIServer, containerNameAPIServerProxyPodMutator),
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", v1beta1constants.DeploymentNameKubeAPIServer, containerNameAPIServerProxyPodMutator),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      containerNameAPIServerProxyPodMutator + "-parser",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerNameAPIServerProxyPodMutator + "-modify-severity",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", v1beta1constants.DeploymentNameKubeAPIServer, containerNameAPIServerProxyPodMutator),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Modify: &fluentbitv1alpha2filter.Modify{
+							Rules: []fluentbitv1alpha2filter.Rule{
+								{
+									Copy: map[string]string{"level": "severity"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
+	return []*fluentbitv1alpha2.ClusterParser{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   ContainerNameKubeAPIServer + "-parser",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				Regex: &fluentbitv1alpha2parser.Regex{
+					Regex:      "^(?<severity>\\w)(?<time>\\d{4} [^\\s]*)\\s+(?<pid>\\d+)\\s+(?<source>[^ \\]]+)\\] (?<log>.*)$",
+					TimeKey:    "time",
+					TimeFormat: "%m%d %H:%M:%S.%L",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerNameAPIServerProxyPodMutator + "-parser",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				JSON: &fluentbitv1alpha2parser.JSON{
+					TimeKey: "ts",
+				},
+			},
+		},
+	}
 }
