@@ -210,7 +210,6 @@ func (r *Reconciler) reconcileBackupBucket(
 	}
 
 	if lastObservedError != nil {
-		lastObservedError := v1beta1helper.NewErrorWithCodes(lastObservedError, v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 		reconcileErr := &gardencorev1beta1.LastError{
 			Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
 			Description: lastObservedError.Error(),
