@@ -39,6 +39,21 @@ var (
 	//go:embed assets/crd-fluentbit.fluent.io_fluentbits.yaml
 	fluentBitCRD string
 
+	//go:embed assets/crd-fluentd.fluent.io_clusterfilters.yaml
+	fluentDClusterFilterCRD string
+	//go:embed assets/crd-fluentd.fluent.io_clusterfluentdconfigs.yaml
+	fluentDClusterFluentDConfigCRD string
+	//go:embed assets/crd-fluentd.fluent.io_clusteroutputs.yaml
+	fluentDClusterOutputCRD string
+	//go:embed assets/crd-fluentd.fluent.io_filters.yaml
+	fluentDFilterCRD string
+	//go:embed assets/crd-fluentd.fluent.io_fluentdconfigs.yaml
+	fluentDConfigCRD string
+	//go:embed assets/crd-fluentd.fluent.io_fluentds.yaml
+	fluentDCRD string
+	//go:embed assets/crd-fluentd.fluent.io_outputs.yaml
+	fluentDOutputCRD string
+
 	resources []string
 )
 
@@ -50,6 +65,13 @@ func init() {
 		fluentBitClusterOutputCRD,
 		fluentBitClusterParserCRD,
 		fluentBitCRD,
+		fluentDClusterFilterCRD,
+		fluentDClusterFluentDConfigCRD,
+		fluentDClusterOutputCRD,
+		fluentDFilterCRD,
+		fluentDConfigCRD,
+		fluentDCRD,
+		fluentDOutputCRD,
 	)
 }
 

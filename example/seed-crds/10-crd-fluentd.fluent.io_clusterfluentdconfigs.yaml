@@ -1,0 +1,183 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: clusterfluentdconfigs.fluentd.fluent.io
+spec:
+  group: fluentd.fluent.io
+  names:
+    kind: ClusterFluentdConfig
+    listKind: ClusterFluentdConfigList
+    plural: clusterfluentdconfigs
+    shortNames:
+    - cfdc
+    singular: clusterfluentdconfig
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterFluentdConfig is the Schema for the clusterfluentdconfigs
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterFluentdConfigSpec defines the desired state of ClusterFluentdConfig
+            properties:
+              clusterFilterSelector:
+                description: Select cluster filter plugins
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              clusterOutputSelector:
+                description: Select cluster output plugins
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              emit_mode:
+                description: 'Emit mode. If batch, the plugin will emit events per
+                  labels matched. Enum: record, batch. will make no effect if EnableFilterKubernetes
+                  is set false.'
+                enum:
+                - record
+                - batch
+                type: string
+              stickyTags:
+                description: Sticky tags will match only one record from an event
+                  stream. The same tag will be treated the same way. will make no
+                  effect if EnableFilterKubernetes is set false.
+                type: string
+              watchedConstainers:
+                description: A set of container names. Ignored if left empty.
+                items:
+                  type: string
+                type: array
+              watchedHosts:
+                description: A set of hosts. Ignored if left empty.
+                items:
+                  type: string
+                type: array
+              watchedLabels:
+                additionalProperties:
+                  type: string
+                description: Use this field to filter the logs, will make no effect
+                  if EnableFilterKubernetes is set false.
+                type: object
+              watchedNamespaces:
+                description: A set of namespaces. The whole namespaces would be watched
+                  if left empty.
+                items:
+                  type: string
+                type: array
+            type: object
+          status:
+            description: ClusterFluentdConfigStatus defines the observed state of
+              ClusterFluentdConfig
+            properties:
+              messages:
+                description: Messages defines the plugin errors which is selected
+                  by this fluentdconfig
+                type: string
+              state:
+                description: The state of this fluentd config
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

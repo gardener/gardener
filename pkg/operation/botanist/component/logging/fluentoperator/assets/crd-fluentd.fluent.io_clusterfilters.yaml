@@ -1,0 +1,432 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: clusterfilters.fluentd.fluent.io
+spec:
+  group: fluentd.fluent.io
+  names:
+    kind: ClusterFilter
+    listKind: ClusterFilterList
+    plural: clusterfilters
+    shortNames:
+    - cfdf
+    singular: clusterfilter
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterFilter is the Schema for the clusterfilters API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterFilterSpec defines the desired state of ClusterFilter
+            properties:
+              filters:
+                items:
+                  description: Filter defines all available filter plugins and their
+                    parameters.
+                  properties:
+                    grep:
+                      description: The filter_grep filter plugin
+                      properties:
+                        and:
+                          items:
+                            description: And defines the parameters for the "and"
+                              plugin
+                            properties:
+                              exclude:
+                                description: Exclude defines the parameters for the
+                                  exclude plugin
+                                properties:
+                                  key:
+                                    type: string
+                                  pattern:
+                                    type: string
+                                type: object
+                              regexp:
+                                description: Regexp defines the parameters for the
+                                  regexp plugin
+                                properties:
+                                  key:
+                                    type: string
+                                  pattern:
+                                    type: string
+                                type: object
+                            type: object
+                          type: array
+                        exclude:
+                          items:
+                            description: Exclude defines the parameters for the exclude
+                              plugin
+                            properties:
+                              key:
+                                type: string
+                              pattern:
+                                type: string
+                            type: object
+                          type: array
+                        or:
+                          items:
+                            description: Or defines the parameters for the "or" plugin
+                            properties:
+                              exclude:
+                                description: Exclude defines the parameters for the
+                                  exclude plugin
+                                properties:
+                                  key:
+                                    type: string
+                                  pattern:
+                                    type: string
+                                type: object
+                              regexp:
+                                description: Regexp defines the parameters for the
+                                  regexp plugin
+                                properties:
+                                  key:
+                                    type: string
+                                  pattern:
+                                    type: string
+                                type: object
+                            type: object
+                          type: array
+                        regexp:
+                          items:
+                            description: Regexp defines the parameters for the regexp
+                              plugin
+                            properties:
+                              key:
+                                type: string
+                              pattern:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    logLevel:
+                      description: The @log_level parameter specifies the plugin-specific
+                        logging level
+                      type: string
+                    parser:
+                      description: The filter_parser filter plugin
+                      properties:
+                        emitInvalidRecordToError:
+                          description: 'Emits invalid record to @ERROR label. Invalid
+                            cases are: key does not exist;the format is not matched;an
+                            unexpected error. If you want to ignore these errors,
+                            set false.'
+                          type: boolean
+                        hashValueField:
+                          description: Stores the parsed values as a hash value in
+                            a field.
+                          type: string
+                        injectKeyPrefix:
+                          description: Stores the parsed values with the specified
+                            key name prefix.
+                          type: string
+                        keyName:
+                          description: 'Specifies the field name in the record to
+                            parse. Required parameter. i.e: If set keyName to log,
+                            {"key":"value","log":"{\"time\":1622473200,\"user\":1}"}
+                            => {"user":1}'
+                          type: string
+                        parse:
+                          description: Parse defines various parameters for the parse
+                            plugin
+                          properties:
+                            estimateCurrentEvent:
+                              description: If true, use Fluent::Eventnow(current time)
+                                as a timestamp when time_key is specified.
+                              type: boolean
+                            expression:
+                              description: Specifies the regular expression for matching
+                                logs. Regular expression also supports i and m suffix.
+                              type: string
+                            id:
+                              description: The @id parameter specifies a unique name
+                                for the configuration.
+                              type: string
+                            keepTimeKey:
+                              description: If true, keep time field in th record.
+                              type: boolean
+                            localtime:
+                              description: If true, uses local time.
+                              type: boolean
+                            logLevel:
+                              description: The @log_level parameter specifies the
+                                plugin-specific logging level
+                              type: string
+                            timeFormat:
+                              description: Process value according to the specified
+                                format. This is available only when time_type is *string
+                              type: string
+                            timeFormatFallbacks:
+                              description: Uses the specified time format as a fallback
+                                in the specified order. You can parse undetermined
+                                time format by using time_format_fallbacks. This options
+                                is enabled when time_type is mixed.
+                              type: string
+                            timeKey:
+                              description: Specify time field for event time. If the
+                                event doesn't have this field, current time is used.
+                              type: string
+                            timeType:
+                              description: parses/formats value according to this
+                                type, default is *string
+                              enum:
+                              - float
+                              - unixtime
+                              - '*string'
+                              - mixed
+                              type: string
+                            timeout:
+                              description: Specify timeout for parse processing.
+                              pattern: ^\d+(\.[0-9]{0,2})?(s|m|h|d)?$
+                              type: string
+                            timezone:
+                              description: Uses the specified timezone.
+                              type: string
+                            type:
+                              description: The @type parameter specifies the type
+                                of the plugin.
+                              enum:
+                              - regexp
+                              - apache2
+                              - apache_error
+                              - nginx
+                              - syslog
+                              - csv
+                              - tsv
+                              - ltsv
+                              - json
+                              - multiline
+                              - none
+                              type: string
+                            types:
+                              description: 'Specify types for converting field into
+                                another, i.e: types user_id:integer,paid:bool,paid_usd_amount:float'
+                              type: string
+                            utc:
+                              description: If true, uses UTC.
+                              type: boolean
+                          required:
+                          - type
+                          type: object
+                        removeKeyNameField:
+                          description: Removes key_name field when parsing is succeeded.
+                          type: boolean
+                        replaceInvalidSequence:
+                          description: If true, invalid string is replaced with safe
+                            characters and re-parse it.
+                          type: boolean
+                        reserveData:
+                          description: 'Keeps the original key-value pair in the parsed
+                            result. Default is false. i.e: If set keyName to log,
+                            reverseData to true, {"key":"value","log":"{\"user\":1,\"num\":2}"}
+                            => {"key":"value","log":"{\"user\":1,\"num\":2}","user":1,"num":2}'
+                          type: boolean
+                        reserveTime:
+                          description: Keeps the original event time in the parsed
+                            result. Default is false.
+                          type: boolean
+                      required:
+                      - keyName
+                      - parse
+                      type: object
+                    recordTransformer:
+                      description: The filter_record_transformer filter plugin
+                      properties:
+                        autoTypecast:
+                          description: Automatically casts the field types. Default
+                            is false. This option is effective only for field values
+                            comprised of a single placeholder.
+                          type: boolean
+                        enableRuby:
+                          description: 'When set to true, the full Ruby syntax is
+                            enabled in the ${...} expression. The default value is
+                            false. i.e: jsonized_record ${record.to_json}'
+                          type: boolean
+                        keepKeys:
+                          description: A list of keys to keep. Only relevant if renew_record
+                            is set to true.
+                          type: string
+                        records:
+                          items:
+                            description: The parameters inside <record> directives
+                              are considered to be new key-value pairs
+                            properties:
+                              key:
+                                description: New field can be defined as key
+                                type: string
+                              value:
+                                description: The value must from Record properties.
+                                  See https://docs.fluentd.org/filter/record_transformer#less-than-record-greater-than-directive
+                                type: string
+                            required:
+                            - key
+                            - value
+                            type: object
+                          type: array
+                        removeKeys:
+                          description: A list of keys to delete. Supports nested field
+                            via record_accessor syntax since v1.1.0.
+                          type: string
+                        renewRecord:
+                          description: By default, the record transformer filter mutates
+                            the incoming data. However, if this parameter is set to
+                            true, it modifies a new empty hash instead.
+                          type: boolean
+                        renewTimeKey:
+                          description: renew_time_key foo overwrites the time of events
+                            with a value of the record field foo if exists. The value
+                            of foo must be a Unix timestamp.
+                          type: string
+                      type: object
+                    stdout:
+                      description: The filter_stdout filter plugin
+                      properties:
+                        format:
+                          description: The format section
+                          properties:
+                            delimiter:
+                              description: Delimiter for each field.
+                              type: string
+                            id:
+                              description: The @id parameter specifies a unique name
+                                for the configuration.
+                              type: string
+                            localtime:
+                              description: If true, uses local time.
+                              type: boolean
+                            logLevel:
+                              description: The @log_level parameter specifies the
+                                plugin-specific logging level
+                              type: string
+                            newline:
+                              description: Specify newline characters.
+                              enum:
+                              - lf
+                              - crlf
+                              type: string
+                            outputTag:
+                              description: Output tag field if true.
+                              type: boolean
+                            outputTime:
+                              description: Output time field if true.
+                              type: boolean
+                            timeFormat:
+                              description: Process value according to the specified
+                                format. This is available only when time_type is *string
+                              type: string
+                            timeFormatFallbacks:
+                              description: Uses the specified time format as a fallback
+                                in the specified order. You can parse undetermined
+                                time format by using time_format_fallbacks. This options
+                                is enabled when time_type is mixed.
+                              type: string
+                            timeType:
+                              description: parses/formats value according to this
+                                type, default is *string
+                              enum:
+                              - float
+                              - unixtime
+                              - '*string'
+                              - mixed
+                              type: string
+                            timezone:
+                              description: Uses the specified timezone.
+                              type: string
+                            type:
+                              description: The @type parameter specifies the type
+                                of the plugin.
+                              enum:
+                              - out_file
+                              - json
+                              - ltsv
+                              - csv
+                              - msgpack
+                              - hash
+                              - single_value
+                              type: string
+                            utc:
+                              description: If true, uses UTC.
+                              type: boolean
+                          type: object
+                        inject:
+                          description: The inject section
+                          properties:
+                            hostname:
+                              description: Hostname value
+                              type: string
+                            hostnameKey:
+                              description: The field name to inject hostname
+                              type: string
+                            inline:
+                              description: Time section
+                              properties:
+                                localtime:
+                                  description: If true, uses local time.
+                                  type: boolean
+                                timeFormat:
+                                  description: Process value according to the specified
+                                    format. This is available only when time_type
+                                    is *string
+                                  type: string
+                                timeFormatFallbacks:
+                                  description: Uses the specified time format as a
+                                    fallback in the specified order. You can parse
+                                    undetermined time format by using time_format_fallbacks.
+                                    This options is enabled when time_type is mixed.
+                                  type: string
+                                timeType:
+                                  description: parses/formats value according to this
+                                    type, default is *string
+                                  enum:
+                                  - float
+                                  - unixtime
+                                  - '*string'
+                                  - mixed
+                                  type: string
+                                timezone:
+                                  description: Uses the specified timezone.
+                                  type: string
+                                utc:
+                                  description: If true, uses UTC.
+                                  type: boolean
+                              type: object
+                            tagKey:
+                              description: The field name to inject tag
+                              type: string
+                            timeKey:
+                              description: The field name to inject time
+                              type: string
+                            workerIdKey:
+                              description: The field name to inject worker_id
+                              type: string
+                          type: object
+                      type: object
+                  type: object
+                type: array
+            type: object
+          status:
+            description: ClusterFilterStatus defines the observed state of ClusterFilter
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
