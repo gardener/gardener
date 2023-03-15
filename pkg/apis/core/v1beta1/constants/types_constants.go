@@ -129,6 +129,9 @@ const (
 	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
 	// the event-logger pod.
 	DeploymentNameEventLogger = "event-logger"
+	// DeploymentNameFluentOperator is a constant for the name of a Kubernetes deployment object that contains
+	// the fluent-operatorxw pod.
+	DeploymentNameFluentOperator = "fluent-operator"
 	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetrics = "kube-state-metrics"
@@ -398,6 +401,11 @@ const (
 	LabelLogging = "logging"
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
+	// LabelKeyCustomLoggingResource is the key of the label which is used from the operator to select the CustomResources which will be imported in the FluentBit configuration.
+	// TODO(Kristian-ZH): the label key has to be migrated to "fluentbit.gardener.cloud/type".
+	LabelKeyCustomLoggingResource = "fluentbit.gardener/type"
+	// LabelValueCustomLoggingResource is the value of the label which is used from the operator to select the CustomResources which will be imported in the FluentBit configuration.
+	LabelValueCustomLoggingResource = "seed"
 
 	// LabelSecretBindingReference is used to identify secrets which are referred by a SecretBinding (not necessarily in the same namespace).
 	LabelSecretBindingReference = "reference.gardener.cloud/secretbinding"

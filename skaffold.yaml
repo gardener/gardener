@@ -876,7 +876,6 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/extensions/worker
-        - pkg/operation/botanist/component/fluentoperator
         - pkg/operation/botanist/component/gardeneraccess
         - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/istio
@@ -890,7 +889,11 @@ build:
         - pkg/operation/botanist/component/kubestatemetrics
         - pkg/operation/botanist/component/logging/eventlogger
         - pkg/operation/botanist/component/logging/kuberbacproxy
+        - pkg/operation/botanist/component/logging/fluentoperator
+        - pkg/operation/botanist/component/logging/fluentoperator/customresources
+        - pkg/operation/botanist/component/logging/loki
         - pkg/operation/botanist/component/metricsserver
+        - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/namespaces
         - pkg/operation/botanist/component/networkpolicies
         - pkg/operation/botanist/component/nginxingress

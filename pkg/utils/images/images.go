@@ -43,6 +43,10 @@ const (
 	ImageNameDependencyWatchdog = "dependency-watchdog"
 	// ImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.
 	ImageNameEtcdDruid = "etcd-druid"
+	// ImageNameFluentOperator is a constant for an image in the image vector with name 'fluent-operator'.
+	ImageNameFluentOperator = "fluent-operator"
+	// ImageNameFluentOperatorInitContainer is a constant for an image in the image vector with name 'fluent-operator-init-container'.
+	ImageNameFluentOperatorInitContainer = "fluent-operator-init-container"
 	// ImageNameEventLogger is a constant for an image in the image vector with name 'event-logger'.
 	ImageNameEventLogger = "event-logger"
 	// ImageNameExtAuthzServer is a constant for an image in the image vector with name 'ext-authz-server'.

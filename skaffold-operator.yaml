@@ -78,6 +78,8 @@ build:
         - pkg/operation/botanist/component/kubestatemetrics
         - pkg/operation/botanist/component/nginxingress
         - pkg/operation/botanist/component/nodelocaldns/constants
+        - pkg/operation/botanist/component/logging/fluentoperator
+        - pkg/operation/botanist/component/logging/fluentoperator/customresources
         - pkg/operation/botanist/component/resourcemanager
         - pkg/operation/botanist/component/resourcemanager/constants
         - pkg/operation/botanist/component/shared
