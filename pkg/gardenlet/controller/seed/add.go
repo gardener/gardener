@@ -43,8 +43,9 @@ func AddToManager(
 	componentImageVectors imagevector.ComponentImageVectors,
 ) error {
 	if err := (&care.Reconciler{
-		Config:   *cfg.Controllers.SeedCare,
-		SeedName: cfg.SeedConfig.Name,
+		Config:          *cfg.Controllers.SeedCare,
+		SeedName:        cfg.SeedConfig.Name,
+		GardenletConfig: cfg,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
