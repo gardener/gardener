@@ -712,7 +712,7 @@ type KubeAPIServerConfig struct {
 	// +optional
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty" protobuf:"varint,15,opt,name=defaultUnreachableTolerationSeconds"`
 
-	//CORSAllowedOrigins contains a list of allowed origins for CORS, comma separated. An allowed origin can be a regular expression to support subdomain matching. If this list is empty CORS will not be enabled. (flag `--cors-allowed-origins`)
+	// CORSAllowedOrigins contains a list of allowed origins for CORS, comma separated. An allowed origin can be a regular expression to support subdomain matching. If this list is empty CORS will not be enabled. (flag `--cors-allowed-origins`)
 	// +optional
 	CORSAllowedOrigins []string `json:"corsAllowedOrigins,omitempty" protobuf:"bytes,16,rep,name=corsAllowedOrigins"`
 }
