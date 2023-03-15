@@ -29,6 +29,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -946,6 +947,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		// TODO(Kristian-ZH): Remove this in the next releases
+		if err := CleanupOldFluentBit(ctx, seedClient); err != nil {
+			return err
+		}
+
 		fluentOperatorResources, err := sharedcomponent.NewFluentOperatorResources(
 			seedClient,
 			r.GardenNamespace,
@@ -1312,4 +1318,57 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	}
 
 	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil
+}
+
+// CleanupOldFluentBit deletes all old fluent-bit resources which are not installed by the fluent-operator.
+func CleanupOldFluentBit(ctx context.Context, seedClient client.Client) error {
+	// Resources which does not duplicate these from the operators
+	uniqueResource := []client.Object{
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+	}
+
+	// Resources whose names duplicate these from the operators
+	fluentBitDaemonSet := &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
+	fluentBitService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
+	fluentBitServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
+
+	if err := seedClient.Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	if err := seedClient.Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	if err := seedClient.Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if !isOwnedByFluentOperator(fluentBitDaemonSet) {
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, fluentBitDaemonSet)); err != nil {
+			return err
+		}
+	}
+
+	if !isOwnedByFluentOperator(fluentBitService) {
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, fluentBitService)); err != nil {
+			return err
+		}
+	}
+
+	if !isOwnedByFluentOperator(fluentBitServiceAccount) {
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, fluentBitServiceAccount)); err != nil {
+			return err
+		}
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, seedClient, uniqueResource...)
+}
+
+func isOwnedByFluentOperator(obj client.Object) bool {
+	for _, ownerReference := range obj.GetOwnerReferences() {
+		if ownerReference.Kind == "FluentBit" && ownerReference.APIVersion == "fluentbit.fluent.io/v1alpha2" {
+			return true
+		}
+	}
+	return false
 }
