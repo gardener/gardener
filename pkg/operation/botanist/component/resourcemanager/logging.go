@@ -15,36 +15,72 @@
 package resourcemanager
 
 import (
+	"fmt"
+
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/filter"
+	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/parser"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
-const (
-	loggingParserName = "gardenerResourceManagerParser"
-	loggingParser     = `[PARSER]
-    Name        ` + loggingParserName + `
-    Format      json
-    Time_Key    ts
-    Time_Format %Y-%m-%dT%H:%M:%S.%L
-`
-
-	loggingFilters = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameGardenerResourceManager + `*` + containerName + `*
-    Key_Name            log
-    Parser              ` + loggingParserName + `
-    Reserve_Data        True
-
-[FILTER]
-    Name                modify
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameGardenerResourceManager + `*` + containerName + `*
-    Rename              level  severity
-    Rename              msg    log
-    Rename              logger source
-`
-)
-
 // CentralLoggingConfiguration returns a fluent-bit parser and filters for the gardener-resource-manager logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilters, Parsers: loggingParser}, nil
+	return component.CentralLoggingConfig{Filters: generateClusterFilters(), Parsers: generateClusterParsers()}, nil
+}
+
+func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
+	return []*fluentbitv1alpha2.ClusterFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   v1beta1constants.DeploymentNameGardenerResourceManager,
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", v1beta1constants.DeploymentNameGardenerResourceManager, containerName),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      containerName + "-parser",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+					{
+						Modify: &fluentbitv1alpha2filter.Modify{
+							Rules: []fluentbitv1alpha2filter.Rule{
+								{
+									Rename: map[string]string{
+										"level":  "severity",
+										"msg":    "log",
+										"logger": "source",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
+	return []*fluentbitv1alpha2.ClusterParser{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerName + "-parser",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				JSON: &fluentbitv1alpha2parser.JSON{
+					TimeKey:    "ts",
+					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L",
+				},
+			},
+		},
+	}
 }
