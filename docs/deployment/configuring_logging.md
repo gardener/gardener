@@ -26,55 +26,6 @@ Under the `shootPurpose` section, just list all the shoot purposes for which the
 Logs can be  viewed in the operator Grafana!
 The dedicated labels are `unit`, `syslog_identifier`, and `nodename` in the `Explore` menu.
 
-## Configuring the Log Processor
-
-Under `logging.fluentBit` there are three optional sections:
-- `input`: This overwrites the input configuration of the fluent-bit log processor.
- - `output`: This overwrites the output configuration of the fluent-bit log processor.
- - `service`: This overwrites the service configuration of the fluent-bit log processor.
-
-```yaml
-logging:
-  enabled: true
-  fluentBit:
-    output: |-
-      [Output]
-          ...
-    input: |-
-      [Input]
-          ...
-    service: |-
-      [Service]
-          ...
-```
-
-## Additional egress IPBlock for allow-fluentbit NetworkPolicy
-
-The optional setting under `logging.fluentBit.networkPolicy.additionalEgressIPBlocks` adds an additional egress IPBlock to `allow-fluentbit` NetworkPolicy to forward logs to a central system.
-
-```yaml
-logging:
-  enabled: true
-  fluentBit:
-    additionalEgressIpBlock:
-      - 123.123.123.123/32
-```
-
-## Configure Central Logging
-
-For central logging, the output configuration of the fluent-bit log processor can be overwritten (`logging.fluentBit.output`) and the Loki instances deployments in the Garden and Shoot namespace can be enabled/disabled (`logging.loki.enabled`), by default Loki is enabled.
-
-```yaml
-logging:
-  enabled: true
-  fluentBit:
-    output: |-
-      [Output]
-          ...
-  loki:
-    enabled: false
-```
-
 ## Configuring Central Loki Storage Capacity
 
 By default, the central Loki has `100Gi` of storage capacity.
@@ -85,10 +36,6 @@ However, if you specify less capacity, then the `PersistentVolume` will be delet
 ```yaml
 logging:
   enabled: true
-  fluentBit:
-    output: |-
-      [Output]
-          ...
   loki:
     garden:
       storage: "200Gi"

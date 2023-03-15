@@ -36,46 +36,71 @@ So our timestamp matches correctly the following format:
 %Y-%m-%dT%H:%M:%S.%L
 ```
 
-- It's time to apply our new regex into fluent-bit configuration. Go to `fluent-bit-configmap.yaml` and create new filter using the following template:
+- It's time to apply our new regex into fluent-bit configuration. To achieve that we can just deploy in the cluster where the `fluent-operator` is deployed the following custom resources:
 
-```text
-[FILTER]
-        Name                parser
-        Match               kubernetes.<< pod-name >>*<< container-name >>*
-        Key_Name            log
-        Parser              << parser-name >>
-        Reserve_Data        True
+```yaml
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  labels:
+    fluentbit.gardener/type: seed
+  name: << pod-name >>--(<< container-name >>)
+spec:
+  filters:
+  - parser:
+      keyName: log
+      parser: << container-name >>-parser
+      reserveData: true
+  match: kubernetes.<< pod-name >>*<< container-name >>*
 ```
 
-```text
+```yaml
 EXAMPLE
-[FILTER]
-        Name                parser
-        Match               kubernetes.alertmanager*alertmanager*
-        Key_Name            log
-        Parser              alermanagerParser
-        Reserve_Data        True
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  labels:
+    fluentbit.gardener/type: seed
+  name: alertmanager
+spec:
+  filters:
+  - parser:
+      keyName: log
+      parser: alertmanager-parser
+      reserveData: true
+  match: "kubernetes.alertmanager*alertmanager*"
 ```
 
-- Now lets check if there already exists parser with such a regex and time format that we need. If it doesn't, create one:
+- Now lets check if there already exists `ClusterParser` with such a regex and time format that we need. If it doesn't, create one:
 
-```text
-[PARSER]
-        Name        << parser-name >>
-        Format      regex
-        Regex       << regex >>
-        Time_Key    time
-        Time_Format << time-format >>
+```yaml
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name:  << container-name >>-parser
+  labels:
+    fluentbit.gardener/type: "seed"
+spec:
+  regex:
+    timeKey: time
+    timeFormat: << time-format >>
+    regex: "<< regex >>"
 ```
 
-```text
+```yaml
 EXAMPLE
-[PARSER]
-        Name        alermanagerParser
-        Format      regex
-        Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
-        Time_Key    time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: alermanager-parser
+  labels:
+    fluentbit.gardener/type: "seed"
+spec:
+  regex:
+    timeKey: time
+    timeFormat: "%Y-%m-%dT%H:%M:%S.%L"
+    regex: "^level=(?<severity>\\w+)\\s+ts=(?<time>\\d{4}-\\d{2}-\\d{2}[Tt].*[zZ])\\s+caller=(?<source>[^\\s]*+)\\s+(?<log>.*)"
 ```
 
 ```text
