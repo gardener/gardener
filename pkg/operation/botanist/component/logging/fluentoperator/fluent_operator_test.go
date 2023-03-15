@@ -277,32 +277,17 @@ var _ = Describe("Fluent Operator", func() {
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						v1beta1constants.LabelApp:                             fbName,
-						v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
-						v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
-						v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelApp:                                    fbName,
+						v1beta1constants.LabelRole:                                   v1beta1constants.LabelLogging,
+						v1beta1constants.GardenRole:                                  v1beta1constants.GardenRoleLogging,
+						v1beta1constants.LabelNetworkPolicyToDNS:                     v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:        v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToLoggingTCPMetrics:       v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToAllShootsLokiTCPMetrics: v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
 				Egress: []networkingv1.NetworkPolicyEgressRule{
 					{
-						To: []networkingv1.NetworkPolicyPeer{
-							{
-								NamespaceSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
-								},
-								PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-									v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
-									v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
-									v1beta1constants.LabelApp:   v1beta1constants.StatefulSetNameLoki,
-								}},
-							},
-							{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-								v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
-								v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
-								v1beta1constants.LabelApp:   v1beta1constants.StatefulSetNameLoki,
-							}}},
-						},
 						Ports: []networkingv1.NetworkPolicyPort{
 							{Protocol: &protocolTCP, Port: &lokiPort},
 						},

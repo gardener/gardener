@@ -4,8 +4,3 @@ dependencies:
   version: 0.1.0
   # needed for the logging stack
   condition: loki.enabled
-- name: fluent-bit
-  repository: http://localhost:10191
-  version: 0.1.0
-  # needed for the logging stack
-  condition: fluent-bit.enabled
