@@ -51,16 +51,6 @@ type WorkerDelegate interface {
 	// in case the required version has been removed from the `CloudProfile`.
 	UpdateMachineImagesStatus(context.Context) error
 
-	// DeployMachineDependencies is a hook to create external machine dependencies.
-	// Deprecated: Use PreReconcileHook() instead.
-	// TODO(dkistner): Remove in a future release.
-	DeployMachineDependencies(context.Context) error
-
-	// CleanupMachineDependencies is a hook to cleanup external machine dependencies.
-	// Deprecated: Use PostReconcileHook() and PostDeleteHook() instead.
-	// TODO(dkistner): Remove in a future release.
-	CleanupMachineDependencies(context.Context) error
-
 	// PreReconcileHook is a hook called at the beginning of the worker reconciliation flow.
 	PreReconcileHook(context.Context) error
 	// PostReconcileHook is a hook called at the end of the worker reconciliation flow.
@@ -69,18 +59,6 @@ type WorkerDelegate interface {
 	PreDeleteHook(context.Context) error
 	// PostDeleteHook is a hook called at the end of the worker deletion flow.
 	PostDeleteHook(context.Context) error
-}
-
-// WorkerCredentialsDelegate is an interface that can optionally be implemented to be
-// used during the Worker reconciliation to keep all machine class secrets up to date.
-// DEPRECATED: extensions should instead provide credentials only (!) via the machine class field .spec.credentialsSecretRef
-// referencing the Worker's secret reference (spec.SecretRef). This way all machine classes
-// reference the same secret - there is no need anymore to update all machine class secrets.
-// please see [here](https://github.com/gardener/machine-controller-manager/pull/578) for more details
-type WorkerCredentialsDelegate interface {
-	// GetMachineControllerManagerCloudCredentials should return the IaaS credentials
-	// with the secret keys used by the machine-controller-manager.
-	GetMachineControllerManagerCloudCredentials(context.Context) (map[string][]byte, error)
 }
 
 // DelegateFactory acts upon Worker resources.

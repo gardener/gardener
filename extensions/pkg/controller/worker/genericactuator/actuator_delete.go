@@ -75,17 +75,6 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 		return fmt.Errorf("failed while waiting for the machine class credentials secret to be acquired: %w", err)
 	}
 
-	if workerCredentialsDelegate, ok := workerDelegate.(WorkerCredentialsDelegate); ok {
-		// Update cloud credentials for all existing machine class secrets
-		cloudCredentials, err := workerCredentialsDelegate.GetMachineControllerManagerCloudCredentials(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get the cloud credentials in namespace %s: %w", worker.Namespace, err)
-		}
-		if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, log, cloudCredentials, worker.Namespace); err != nil {
-			return fmt.Errorf("failed to update cloud credentials in machine class secrets for namespace %s: %w", worker.Namespace, err)
-		}
-	}
-
 	// Mark all existing machines to become forcefully deleted.
 	log.Info("Marking all machines to become forcefully deleted")
 	if err := a.markAllMachinesForcefulDeletion(ctx, log, worker.Namespace); err != nil {
@@ -124,12 +113,6 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 	// Delete the machine-controller-manager.
 	if err := a.deleteMachineControllerManager(ctx, log, worker); err != nil {
 		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
-	}
-
-	// Cleanup machine dependencies.
-	// TODO(dkistner): Remove in a future release.
-	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
-		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
 	}
 
 	// Call post deletion hook after Worker deletion has happened.
@@ -276,25 +259,17 @@ func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx conte
 	acquiredOrReleased := false
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		// Check whether the finalizer of the machine class credentials secret has been added or removed.
-		// This check is only applicable when the given workerDelegate does not implement the
-		// deprecated WorkerCredentialsDelegate interface, i.e. machine classes reference a separate
-		// Secret for cloud provider credentials.
 		if !acquiredOrReleased {
-			_, ok := workerDelegate.(WorkerCredentialsDelegate)
-			if ok {
-				acquiredOrReleased = true
-			} else {
-				secret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
-				if err != nil {
-					return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
-				}
+			secret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
+			if err != nil {
+				return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
+			}
 
-				// We need to check for both mcmFinalizer and mcmProviderFinalizer:
-				// - mcmFinalizer is the finalizer used by machine controller manager and its in-tree providers
-				// - mcmProviderFinalizer is the finalizer used by out-of-tree machine controller providers
-				if (controllerutil.ContainsFinalizer(secret, mcmFinalizer) || controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer)) == acquired {
-					acquiredOrReleased = true
-				}
+			// We need to check for both mcmFinalizer and mcmProviderFinalizer:
+			// - mcmFinalizer is the finalizer used by machine controller manager and its in-tree providers
+			// - mcmProviderFinalizer is the finalizer used by out-of-tree machine controller providers
+			if (controllerutil.ContainsFinalizer(secret, mcmFinalizer) || controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer)) == acquired {
+				acquiredOrReleased = true
 			}
 		}
 
