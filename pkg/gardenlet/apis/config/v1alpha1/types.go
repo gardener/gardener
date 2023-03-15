@@ -437,32 +437,6 @@ type SeedConfig struct {
 	gardencorev1beta1.SeedTemplate `json:",inline"`
 }
 
-// FluentBit contains configuration for Fluent Bit.
-type FluentBit struct {
-	// ServiceSection defines [SERVICE] configuration for the fluent-bit.
-	// If it is nil, fluent-bit uses default service configuration.
-	// +optional
-	ServiceSection *string `json:"service,omitempty" yaml:"service,omitempty"`
-	// InputSection defines [INPUT] configuration for the fluent-bit.
-	// If it is nil, fluent-bit uses default input configuration.
-	// +optional
-	InputSection *string `json:"input,omitempty" yaml:"input,omitempty"`
-	// OutputSection defines [OUTPUT] configuration for the fluent-bit.
-	// If it is nil, fluent-bit uses default output configuration.
-	// +optional
-	OutputSection *string `json:"output,omitempty" yaml:"output,omitempty"`
-	// NetworkPolicy defines settings for the fluent-bit NetworkPolicy.
-	// +optional
-	NetworkPolicy *FluentBitNetworkPolicy `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
-}
-
-// FluentBitNetworkPolicy defines settings for the fluent-bit NetworkPolicy.
-type FluentBitNetworkPolicy struct {
-	// AdditionalEgressIPBlocks contains IP CIDRs for the egress network policy.
-	// +optional
-	AdditionalEgressIPBlocks []string `json:"additionalEgressIPBlocks,omitempty" yaml:"additionalEgressIPBlocks,omitempty"`
-}
-
 // Loki contains configuration for the Loki.
 type Loki struct {
 	// Enabled is used to enable or disable the shoot and seed Loki.
@@ -502,9 +476,6 @@ type Logging struct {
 	// Enabled is used to enable or disable logging stack for clusters.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	// FluentBit contains configurations for the fluent-bit
-	// +optional
-	FluentBit *FluentBit `json:"fluentBit,omitempty" yaml:"fluentBit,omitempty"`
 	// Loki contains configuration for the Loki
 	// +optional
 	Loki *Loki `json:"loki,omitempty" yaml:"loki,omitempty"`
