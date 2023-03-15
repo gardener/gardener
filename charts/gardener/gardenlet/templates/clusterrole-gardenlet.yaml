@@ -156,12 +156,21 @@ rules:
   - clusteroutputs.fluentbit.fluent.io
   - clusterparsers.fluentbit.fluent.io
   - fluentbits.fluentbit.fluent.io
+  - clusterfilters.fluentd.fluent.io
+  - clusterfluentdconfigs.fluentd.fluent.io
+  - clusteroutputs.fluentd.fluent.io
+  - filters.fluentd.fluent.io
+  - fluentdconfigs.fluentd.fluent.io
+  - fluentds.fluentd.fluent.io
+  - outputs.fluentd.fluent.io
   verbs:
   - delete
 - apiGroups:
   - apps
   resources:
   - deployments
+  # TODO(Kristian-ZH): remove this when the old fluent-bit deletion logic is removed
+  - daemonsets
   - statefulsets
   - replicasets
   verbs:

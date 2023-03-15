@@ -30,6 +30,10 @@ images:
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
   tag: "v0.17.0"
+- name: fluent-operator
+  sourceRepository: github.com/fluent/fluent-operator
+  repository: eu.gcr.io/gardener-project/gardener/fluent-operator
+  tag: "v1.7.0"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -364,9 +368,9 @@ images:
 
 # Logging
 - name: fluent-bit
-  sourceRepository: github.com/fluent/fluent-bit
-  repository: eu.gcr.io/gardener-project/3rd/fluent/fluent-bit
-  tag: "1.9.7"
+  sourceRepository: github.com/fluent/fluent-operator
+  repository: eu.gcr.io/gardener-project/gardener/fluent-bit
+  tag: "v2.0.9"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

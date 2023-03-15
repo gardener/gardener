@@ -50,8 +50,4 @@ type CentralLoggingConfig struct {
 	Filters []*fluentbitv1alpha2.ClusterFilter
 	// Parser contains the parsers for specific component.
 	Parsers []*fluentbitv1alpha2.ClusterParser
-	// UserExposed defines if the component is exposed to the end-user.
-	UserExposed bool
-	// PodPrefixes is the list of prefixes of the pod names when logging config is user-exposed.
-	PodPrefixes []string
 }

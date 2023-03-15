@@ -25,16 +25,5 @@ rules:
   - apps
   resources:
   - daemonsets
-  resourceNames:
-  - fluent-bit
-  verbs:
-  - delete
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps
-  resources:
-  - daemonsets
   verbs:
   - create
