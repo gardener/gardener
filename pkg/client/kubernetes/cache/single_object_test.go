@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 )
@@ -79,7 +80,7 @@ var _ = Describe("SingleObject", func() {
 		clock = testclock.NewFakeClock(time.Now())
 
 		maxIdleTime = 100 * time.Millisecond
-		singleObjectCache = NewSingleObject(logr.Discard(), nil, cache.Options{Resync: resync}, newCacheFunc, clock, maxIdleTime, 50*time.Millisecond)
+		singleObjectCache = NewSingleObject(logr.Discard(), nil, cache.Options{Resync: resync}, kubernetes.GardenScheme, newCacheFunc, clock, maxIdleTime, 50*time.Millisecond)
 
 		var wg wait.Group
 		ctx, cancel := context.WithCancel(ctx)
@@ -99,62 +100,38 @@ var _ = Describe("SingleObject", func() {
 
 	Describe("#Get", func() {
 		It("should successfully delegate to stored cache", func() {
-			By("cache does not exist yet")
-			var (
-				cacheCtx  context.Context
-				startChan = make(chan struct{})
-			)
-			mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
-				cacheCtx = ctx
-				startChan <- struct{}{}
-				return nil
-			})
-
-			mockCache.EXPECT().WaitForCacheSync(ctx).Return(true)
-			mockCache.EXPECT().Get(ctx, key, obj)
-			Expect(singleObjectCache.Get(ctx, key, obj)).To(Succeed())
-
-			By("ensure mock cache was started")
-			// The `Start()` call of the cache is done as part of a go function, hence it can race with this test.
-			// Before making assertions on `cacheCtx` we should wait for it to have been set.
-			Eventually(startChan).Should(Receive())
-
-			By("cache is re-used")
-			mockCache.EXPECT().Get(ctx, key, obj)
-			Expect(singleObjectCache.Get(ctx, key, obj)).To(Succeed())
-
-			By("cache expires")
-			clock.Step(2 * maxIdleTime)
-			Eventually(func() <-chan struct{} {
-				return cacheCtx.Done()
-			}).Should(BeClosed())
-
-			By("cache is re-created")
-			startChan2 := expectStart(mockCache)
-			mockCache.EXPECT().WaitForCacheSync(ctx).Return(true)
-			mockCache.EXPECT().Get(ctx, key, obj)
-			Expect(singleObjectCache.Get(ctx, key, obj)).To(Succeed())
-			Eventually(startChan2).Should(Receive())
+			testCache(ctx, mockCache, clock,
+				func() {
+					mockCache.EXPECT().Get(ctx, key, obj)
+				},
+				func() error {
+					return singleObjectCache.Get(ctx, key, obj)
+				})
 		})
 	})
 
 	Describe("#GetInformer", func() {
 		It("should delegate call to stored cache", func() {
-			startChan := expectStart(mockCache)
-			mockCache.EXPECT().WaitForCacheSync(ctx).Return(true).AnyTimes()
-			mockCache.EXPECT().GetInformer(ctx, obj)
-			Expect(singleObjectCache.GetInformer(ctx, obj)).To(Succeed())
-			Eventually(startChan).Should(Receive())
+			testCache(ctx, mockCache, clock,
+				func() {
+					mockCache.EXPECT().GetInformer(ctx, obj)
+				},
+				func() error {
+					_, err := singleObjectCache.GetInformer(ctx, obj)
+					return err
+				})
 		})
 	})
 
 	Describe("#IndexField", func() {
 		It("should delegate call to stored cache", func() {
-			startChan := expectStart(mockCache)
-			mockCache.EXPECT().WaitForCacheSync(ctx).Return(true)
-			mockCache.EXPECT().IndexField(ctx, obj, "", nil)
-			Expect(singleObjectCache.IndexField(ctx, obj, "", nil)).To(Succeed())
-			Eventually(startChan).Should(Receive())
+			testCache(ctx, mockCache, clock,
+				func() {
+					mockCache.EXPECT().IndexField(ctx, obj, "", nil)
+				},
+				func() error {
+					return singleObjectCache.IndexField(ctx, obj, "", nil)
+				})
 		})
 	})
 
@@ -180,4 +157,46 @@ func expectStart(mockCache *mockcache.MockCache) <-chan struct{} {
 	})
 
 	return testChan
+}
+
+func testCache(ctx context.Context, mockCache *mockcache.MockCache, clock *testclock.FakeClock, setupExpectation func(), testCall func() error) {
+
+	maxIdleTime := 100 * time.Millisecond
+
+	By("cache does not exist yet")
+	var (
+		cacheCtx  context.Context
+		startChan = make(chan struct{})
+	)
+	mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		cacheCtx = ctx
+		startChan <- struct{}{}
+		return nil
+	})
+
+	mockCache.EXPECT().WaitForCacheSync(ctx).Return(true)
+	setupExpectation()
+	Expect(testCall()).To(Succeed())
+
+	By("ensure mock cache was started")
+	// The `Start()` call of the cache is done as part of a go function, hence it can race with this test.
+	// Before making assertions on `cacheCtx` we should wait for it to have been set.
+	Eventually(startChan).Should(Receive())
+
+	By("cache is re-used")
+	setupExpectation()
+	Expect(testCall()).To(Succeed())
+
+	By("cache expires")
+	clock.Step(2 * maxIdleTime)
+	Eventually(func() <-chan struct{} {
+		return cacheCtx.Done()
+	}).Should(BeClosed())
+
+	By("cache is re-created")
+	startChan2 := expectStart(mockCache)
+	mockCache.EXPECT().WaitForCacheSync(ctx).Return(true)
+	setupExpectation()
+	Expect(testCall()).To(Succeed())
+	Eventually(startChan2).Should(Receive())
 }

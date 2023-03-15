@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
@@ -39,6 +40,7 @@ type singleObject struct {
 	config   *rest.Config
 	newCache cache.NewCacheFunc
 	opts     func() cache.Options
+	scheme   *runtime.Scheme
 
 	lock             sync.RWMutex
 	objectKeyToCache map[client.ObjectKey]*objectCache
@@ -58,12 +60,13 @@ type objectCache struct {
 // This cache maintains a separate cache per `client.ObjectKey` and invalidates them when not accessed for the
 // given `maxIdleTime`. A new cache for a particular object is added or re-added as soon as the caches `Get()` function is invoked.
 // Please note that object types are not differentiated by this cache (only object keys), i.e. it must not be used with mixed GVKs.
-func NewSingleObject(log logr.Logger, config *rest.Config, opts cache.Options, newCache cache.NewCacheFunc, clock clock.Clock, maxIdleTime, garbageCollectionInterval time.Duration) cache.Cache {
+func NewSingleObject(log logr.Logger, config *rest.Config, opts cache.Options, scheme *runtime.Scheme, newCache cache.NewCacheFunc, clock clock.Clock, maxIdleTime, garbageCollectionInterval time.Duration) cache.Cache {
 	return &singleObject{
 		log:                       log,
 		config:                    config,
 		newCache:                  newCache,
 		opts:                      func() cache.Options { return opts },
+		scheme:                    scheme,
 		objectKeyToCache:          make(map[client.ObjectKey]*objectCache),
 		clock:                     clock,
 		garbageCollectionInterval: garbageCollectionInterval,
@@ -95,40 +98,45 @@ func (s *singleObject) WaitForCacheSync(_ context.Context) bool {
 }
 
 func (s *singleObject) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	cache, err := s.getOrCreateCache(ctx, key)
+	cache, err := s.getOrCreateCache(ctx, key, obj)
 	if err != nil {
 		return err
 	}
 
-	now := s.clock.Now()
-	cache.lastAccessTime.Store(&now)
-
-	return cache.cache.Get(ctx, key, obj, opts...)
+	return cache.Get(ctx, key, obj, opts...)
 }
 
-func (s *singleObject) getOrCreateCache(ctx context.Context, key client.ObjectKey) (*objectCache, error) {
-	found, objectCache := func() (bool, *objectCache) {
+func (s *singleObject) getOrCreateCache(ctx context.Context, key client.ObjectKey, obj client.Object) (cache.Cache, error) {
+	found, cache := func() (bool, *objectCache) {
 		s.lock.RLock()
 		defer s.lock.RUnlock()
 		objectCache, ok := s.objectKeyToCache[key]
 		return ok, objectCache
 	}()
 
-	if found {
-		s.log.V(1).Info("Cache found", "key", key)
-		return objectCache, nil
+	if !found {
+		var err error
+		cache, err = s.createCache(ctx, key, obj)
+		if err != nil {
+			return nil, err
+		}
+		s.logWithGVK(obj).V(1).Info("Cache not found", "key", key)
 	}
 
-	return s.createCache(ctx, key)
+	now := s.clock.Now()
+	cache.lastAccessTime.Store(&now)
+	return cache.cache, nil
 }
 
-func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*objectCache, error) {
+func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey, obj client.Object) (*objectCache, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	log := s.logWithGVK(obj)
+
 	// Cache could have been created since last read lock was set, so we need to check again if the cache is available.
 	if objectCache, ok := s.objectKeyToCache[key]; ok {
-		s.log.V(1).Info("Cache found before creation", "key", key)
+		log.V(1).Info("Cache found before creation", "key", key)
 		return objectCache, nil
 	}
 
@@ -137,7 +145,7 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 	opts.DefaultSelector = cache.ObjectSelector{Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: key.Name})}
 	opts.SelectorsByObject = nil
 
-	s.log.V(1).Info("Creating new cache", "key", key)
+	log.V(1).Info("Creating new cache", "key", key)
 	c, err := s.newCache(s.config, opts)
 	if err != nil {
 		return nil, err
@@ -146,9 +154,9 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 	cacheCtx, cancel := context.WithCancel(ctx)
 
 	go func() {
-		s.log.V(1).Info("Starting new cache", "key", key)
+		s.logWithGVK(obj).V(1).Info("Starting new cache", "key", key)
 		if err := c.Start(cacheCtx); err != nil {
-			s.log.Error(err, "Cache failed to start", "key", key)
+			log.Error(err, "Cache failed to start", "key", key)
 		}
 	}()
 
@@ -165,19 +173,19 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 }
 
 func (s *singleObject) GetInformer(ctx context.Context, obj client.Object) (cache.Informer, error) {
-	cache, err := s.getOrCreateCache(ctx, client.ObjectKeyFromObject(obj))
+	cache, err := s.getOrCreateCache(ctx, client.ObjectKeyFromObject(obj), obj)
 	if err != nil {
 		return nil, err
 	}
-	return cache.cache.GetInformer(ctx, obj)
+	return cache.GetInformer(ctx, obj)
 }
 
 func (s *singleObject) IndexField(ctx context.Context, obj client.Object, field string, extractValue client.IndexerFunc) error {
-	cache, err := s.getOrCreateCache(ctx, client.ObjectKeyFromObject(obj))
+	cache, err := s.getOrCreateCache(ctx, client.ObjectKeyFromObject(obj), obj)
 	if err != nil {
 		return err
 	}
-	return cache.cache.IndexField(ctx, obj, field, extractValue)
+	return cache.IndexField(ctx, obj, field, extractValue)
 }
 
 func (s *singleObject) List(_ context.Context, _ client.ObjectList, _ ...client.ListOption) error {
@@ -186,4 +194,11 @@ func (s *singleObject) List(_ context.Context, _ client.ObjectList, _ ...client.
 
 func (s *singleObject) GetInformerForKind(_ context.Context, _ schema.GroupVersionKind) (cache.Informer, error) {
 	return nil, fmt.Errorf("the GetInformerForKind operation is not supported by singleObject cache")
+}
+
+func (s *singleObject) logWithGVK(obj client.Object) logr.Logger {
+	if gvk, _, err := s.scheme.ObjectKinds(obj); err == nil && len(gvk) > 0 {
+		return s.log.WithValues("groupVersion", gvk[0].GroupVersion().String(), "kind", gvk[0].Kind)
+	}
+	return s.log
 }

@@ -103,8 +103,8 @@ func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.
 }
 
 // SingleObjectCacheFunc returns a cache.NewCacheFunc for the SingleObject implementation.
-func SingleObjectCacheFunc(log logr.Logger) cache.NewCacheFunc {
+func SingleObjectCacheFunc(log logr.Logger, scheme *runtime.Scheme) cache.NewCacheFunc {
 	return func(config *rest.Config, options cache.Options) (cache.Cache, error) {
-		return kubernetescache.NewSingleObject(log, config, options, cache.New, clock.RealClock{}, 10*time.Minute, time.Minute), nil
+		return kubernetescache.NewSingleObject(log, config, options, scheme, cache.New, clock.RealClock{}, 10*time.Minute, time.Minute), nil
 	}
 }
