@@ -57,7 +57,7 @@ type objectCache struct {
 // NewSingleObject creates a new instance of the singleObject cache.Cache implementation.
 // This cache maintains a separate cache per `client.ObjectKey` and invalidates them when not accessed for the
 // given `maxIdleTime`. A new cache for a particular object is added or re-added as soon as the caches `Get()` function is invoked.
-// Please note, that object types are not differentiated by this cache (only object keys), i.e. it must not be used with mixed GVKs.
+// Please note that object types are not differentiated by this cache (only object keys), i.e. it must not be used with mixed GVKs.
 func NewSingleObject(log logr.Logger, config *rest.Config, opts cache.Options, newCache cache.NewCacheFunc, clock clock.Clock, maxIdleTime, garbageCollectionInterval time.Duration) cache.Cache {
 	return &singleObject{
 		log:                       log,
@@ -115,7 +115,7 @@ func (s *singleObject) getOrCreateCache(ctx context.Context, key client.ObjectKe
 	}()
 
 	if found {
-		s.log.Info("Cache found", "key", key)
+		s.log.V(1).Info("Cache found", "key", key)
 		return objectCache, nil
 	}
 
@@ -128,7 +128,7 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 
 	// Cache could have been created since last read lock was set, so we need to check again if the cache is available.
 	if objectCache, ok := s.objectKeyToCache[key]; ok {
-		s.log.Info("Cache found before creation", "key", key)
+		s.log.V(1).Info("Cache found before creation", "key", key)
 		return objectCache, nil
 	}
 
@@ -137,7 +137,7 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 	opts.DefaultSelector = cache.ObjectSelector{Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: key.Name})}
 	opts.SelectorsByObject = nil
 
-	s.log.Info("Creating new cache", "key", key)
+	s.log.V(1).Info("Creating new cache", "key", key)
 	c, err := s.newCache(s.config, opts)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 	cacheCtx, cancel := context.WithCancel(ctx)
 
 	go func() {
-		s.log.Info("Starting new cache", "key", key)
+		s.log.V(1).Info("Starting new cache", "key", key)
 		if err := c.Start(cacheCtx); err != nil {
 			s.log.Error(err, "Cache failed to start", "key", key)
 		}

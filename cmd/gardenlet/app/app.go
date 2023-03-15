@@ -283,8 +283,6 @@ func (g *garden) Start(ctx context.Context) error {
 		opts.Scheme = kubernetes.GardenScheme
 		opts.Logger = log
 
-		// gardenlet does not have the required RBAC permissions for listing/watching the following resources, so let's
-		// prevent any attempts to cache them.
 		opts.ClientDisableCacheFor = []client.Object{
 			&corev1.Event{},
 			&eventsv1.Event{},
@@ -301,14 +299,15 @@ func (g *garden) Start(ctx context.Context) error {
 				},
 			}
 
-			// gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We don't use
-			// the above selector mechanism here since we want to still fall back to reading secrets with the API reader
-			// (i.e., not from cache) in case the respective secret is not found in the cache. This is realized by this
-			// aggregator cache we are using here.
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
-					&corev1.Secret{}:                            cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We don't use
+					// any selector mechanism here since we want to still fall back to reading secrets with the API reader
+					// (i.e., not from cache) in case the respective secret is not found in the cache.
+					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					// Gardenlet does not have the required RBAC permissions for listing/watching the following resources on cluster level.
+					// Hence, we need to watch them individually with the help of a SingleObject cache.
 					&corev1.ConfigMap{}:                         kubernetes.SingleObjectCacheFunc(log),
 					&corev1.Namespace{}:                         kubernetes.SingleObjectCacheFunc(log),
 					&coordinationv1.Lease{}:                     kubernetes.SingleObjectCacheFunc(log),
