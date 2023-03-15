@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 2,
-  "iteration": 1603364567524,
+  "id": 7,
+  "iteration": 1678889425749,
   "links": [],
   "panels": [
     {
@@ -41,7 +41,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -73,7 +72,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -154,7 +153,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -186,7 +184,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -269,14 +267,6 @@
           "legendFormat": "Discovery (container)",
           "refId": "B",
           "step": 2
-        },
-        {
-          "expr": "seed:container_memory_working_set_bytes:sum_by_container{container=\"istio-proxy\"}",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "Sidecar (container)",
-          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -328,7 +318,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -360,7 +349,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -378,6 +367,7 @@
           "refId": "A"
         },
         {
+          "exemplar": true,
           "expr": "sum(irate(process_cpu_seconds_total{job=\"istiod\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -385,16 +375,6 @@
           "intervalFactor": 2,
           "legendFormat": "Discovery (process)",
           "refId": "C",
-          "step": 2
-        },
-        {
-          "expr": "seed:container_cpu_usage_seconds_total:sum_by_container{container=\"istio-proxy\"}",
-          "format": "time_series",
-          "hide": false,
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "Sidecar (container)",
-          "refId": "B",
           "step": 2
         }
       ],
@@ -447,7 +427,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -479,7 +458,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -556,7 +535,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -566,7 +544,7 @@
       "gridPos": {
         "h": 7,
         "w": 8,
-        "x": 24,
+        "x": 16,
         "y": 7
       },
       "hiddenSeries": false,
@@ -588,7 +566,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -671,7 +649,6 @@
       "description": "Shows the rate of pilot pushes",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -704,7 +681,7 @@
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -810,7 +787,6 @@
       "description": "Captures a variety of pilot errors",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -844,7 +820,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -983,7 +959,6 @@
       "description": "Shows the total time it takes to push a config update to a proxy",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1015,7 +990,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1102,7 +1077,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1136,7 +1110,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1227,7 +1201,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1259,7 +1232,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1357,7 +1330,6 @@
       "description": "Shows details about Envoy proxies in the mesh",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1389,7 +1361,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1474,7 +1446,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1506,7 +1477,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1575,7 +1546,6 @@
       "description": "Shows the size of XDS requests and responses",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1609,7 +1579,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1716,7 +1686,6 @@
       "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1749,7 +1718,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1821,7 +1790,6 @@
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1853,7 +1821,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.1",
+      "pluginVersion": "7.5.17",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1917,7 +1885,7 @@
       }
     }
   ],
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "istio"
@@ -1937,13 +1905,18 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(pilot_services{}, pod)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "istiod",
         "multi": true,
         "name": "istiod",
         "options": [],
-        "query": "label_values(pilot_services{}, pod)",
+        "query": {
+          "query": "label_values(pilot_services{}, pod)",
+          "refId": "prometheus-istiod-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1967,13 +1940,18 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(envoy_server_hot_restart_epoch{}, pod)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Ingress Gateway",
         "multi": true,
         "name": "igw",
         "options": [],
-        "query": "label_values(envoy_server_hot_restart_epoch{}, pod)",
+        "query": {
+          "query": "label_values(envoy_server_hot_restart_epoch{}, pod)",
+          "refId": "prometheus-igw-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1987,7 +1965,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
