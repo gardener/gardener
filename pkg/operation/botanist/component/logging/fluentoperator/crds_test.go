@@ -29,7 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/fluentoperator"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/fluentoperator"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

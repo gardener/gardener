@@ -27,15 +27,15 @@ import (
 
 var (
 	//go:embed assets/crd-fluentbit.fluent.io_clusterfilters.yaml
-	clusterFilterCRD string
+	fluentBitClusterFilterCRD string
 	//go:embed assets/crd-fluentbit.fluent.io_clusterfluentbitconfigs.yaml
-	clusterFBConfigCRD string
+	fluentBitClusterFBConfigCRD string
 	//go:embed assets/crd-fluentbit.fluent.io_clusterinputs.yaml
-	clusterInputCRD string
+	fluentBitClusterInputCRD string
 	//go:embed assets/crd-fluentbit.fluent.io_clusteroutputs.yaml
-	clusterOutputCRD string
+	fluentBitClusterOutputCRD string
 	//go:embed assets/crd-fluentbit.fluent.io_clusterparsers.yaml
-	clusterParserCRD string
+	fluentBitClusterParserCRD string
 	//go:embed assets/crd-fluentbit.fluent.io_fluentbits.yaml
 	fluentBitCRD string
 
@@ -44,11 +44,11 @@ var (
 
 func init() {
 	resources = append(resources,
-		clusterFilterCRD,
-		clusterFBConfigCRD,
-		clusterInputCRD,
-		clusterOutputCRD,
-		clusterParserCRD,
+		fluentBitClusterFilterCRD,
+		fluentBitClusterFBConfigCRD,
+		fluentBitClusterInputCRD,
+		fluentBitClusterOutputCRD,
+		fluentBitClusterParserCRD,
 		fluentBitCRD,
 	)
 }
