@@ -81,6 +81,9 @@ spec:
               mode: "Off"
             - containerName: telegraf
               mode: "Off"
+            - containerName: init-large-dir
+              mode: "Off"
+
 {{- end }}
   weightBasedScalingIntervals:
     - vpaWeight: 100

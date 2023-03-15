@@ -4,6 +4,7 @@ global:
     loki-curator: image-repository:image-tag
     kube-rbac-proxy: image-repository:image-tag
     telegraf: image-repository:image-tag
+    tune2fs: image-repository:image-tag
   fluentbit:
     labels:
       gardener.cloud/role: logging
