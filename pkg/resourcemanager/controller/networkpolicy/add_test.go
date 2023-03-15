@@ -43,6 +43,7 @@ var _ = Describe("Add", func() {
 	)
 
 	BeforeEach(func() {
+		log = logr.Discard()
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(resourcemanagerclient.TargetScheme).Build()
 		reconciler = &Reconciler{
 			TargetClient: fakeClient,
@@ -200,6 +201,36 @@ var _ = Describe("Add", func() {
 		})
 	})
 
+	Describe("#MapNetworkPolicyToService", func() {
+		var (
+			serviceName      = "svc"
+			serviceNamespace = "svcns"
+			networkPolicy    *networkingv1.NetworkPolicy
+		)
+
+		BeforeEach(func() {
+			networkPolicy = &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
+				"networking.resources.gardener.cloud/service-name":      serviceName,
+				"networking.resources.gardener.cloud/service-namespace": serviceNamespace,
+			}}}
+		})
+
+		It("should map to the referenced service", func() {
+			Expect(reconciler.MapNetworkPolicyToService(ctx, log, nil, networkPolicy)).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: serviceNamespace, Name: serviceName}},
+			))
+		})
+
+		It("should return nil if the object is has no reference", func() {
+			networkPolicy.Labels = nil
+			Expect(reconciler.MapNetworkPolicyToService(ctx, log, nil, networkPolicy)).To(BeNil())
+		})
+
+		It("should return nil if the object is nil", func() {
+			Expect(reconciler.MapNetworkPolicyToService(ctx, log, nil, nil)).To(BeNil())
+		})
+	})
+
 	Describe("#MapToAllServices", func() {
 		var (
 			service1 *corev1.Service
@@ -207,8 +238,6 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			log = logr.Discard()
-
 			service1 = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace1"}}
 			service2 = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service2", Namespace: "namespace2"}}
 		})
@@ -229,10 +258,6 @@ var _ = Describe("Add", func() {
 	})
 
 	Describe("#MapIngressToServices", func() {
-		BeforeEach(func() {
-			log = logr.Discard()
-		})
-
 		It("should map to all referenced services", func() {
 			var (
 				namespace = "some-namespace"

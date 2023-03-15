@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -54,6 +55,7 @@ import (
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // Name is a const for the name of this component.
@@ -250,7 +252,38 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager:            mgr,
 		BootstrapRunnables: []manager.Runnable{&bootstrappers.IdentityDeterminer{Logger: log, SourceClient: mgr.GetClient(), Config: cfg}},
-		ActualRunnables:    []manager.Runnable{manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(mgr, mgr, targetCluster, cfg) })},
+		ActualRunnables: []manager.Runnable{
+			manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(mgr, mgr, targetCluster, cfg) }),
+			// Remove all old network policy controller related finalizers from existing Service objects.
+			// TODO(rfranzke): Remove this code in a future version.
+			manager.RunnableFunc(func(context.Context) error {
+				if !cfg.Controllers.NetworkPolicy.Enabled {
+					return nil
+				}
+
+				var (
+					finalizer = "resources.gardener.cloud/networkpolicy-controller"
+					fns       []flow.TaskFn
+				)
+
+				serviceList := &corev1.ServiceList{}
+				if err := mgr.GetClient().List(ctx, serviceList); err != nil {
+					return err
+				}
+
+				for _, svc := range serviceList.Items {
+					service := svc
+
+					if controllerutil.ContainsFinalizer(&service, finalizer) {
+						fns = append(fns, func(ctx context.Context) error {
+							return controllerutils.RemoveFinalizers(ctx, mgr.GetClient(), &service, finalizer)
+						})
+					}
+				}
+
+				return flow.Parallel(fns...)(ctx)
+			}),
+		},
 	}); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}

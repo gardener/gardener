@@ -258,14 +258,6 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 	})
 
 	Context("service in handled namespace", func() {
-		JustBeforeEach(func() {
-			By("Wait until finalizer was set on service")
-			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
-				return service.Finalizers
-			}).Should(ConsistOf("resources.gardener.cloud/networkpolicy-controller"))
-		})
-
 		It("should create the expected network policies", func() {
 			By("Wait until ingress policy was created for first port")
 			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
@@ -393,6 +385,37 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 			By("Wait until all policies are deleted")
 			ensureNetworkPoliciesGetDeleted()
+		})
+
+		It("should clean up the policies when the service is already gone", func() {
+			networkPolicy1 := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "policy1",
+					Namespace: namespace.Name,
+					Labels: map[string]string{
+						"networking.resources.gardener.cloud/service-name":      "foo",
+						"networking.resources.gardener.cloud/service-namespace": namespace.Name,
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, networkPolicy1)).To(Succeed())
+
+			networkPolicy2 := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "policy2",
+					Namespace: namespace.Name,
+					Labels: map[string]string{
+						"networking.resources.gardener.cloud/service-name":      "foo",
+						"networking.resources.gardener.cloud/service-namespace": "bar",
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, networkPolicy2)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy1), networkPolicy1)).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy2), networkPolicy1)).To(BeNotFoundError())
+			}).Should(Succeed())
 		})
 	})
 

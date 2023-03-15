@@ -75,6 +75,25 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		return err
 	}
 
+	networkPolicy := &metav1.PartialObjectMetadata{}
+	networkPolicy.SetGroupVersionKind(networkingv1.SchemeGroupVersion.WithKind("NetworkPolicy"))
+
+	networkPolicyPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+		{Key: resourcesv1alpha1.NetworkingServiceName, Operator: metav1.LabelSelectorOpExists},
+		{Key: resourcesv1alpha1.NetworkingServiceNamespace, Operator: metav1.LabelSelectorOpExists},
+	}})
+	if err != nil {
+		return err
+	}
+
+	if err := c.Watch(
+		source.NewKindWithCache(networkPolicy, targetCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
+		networkPolicyPredicate,
+	); err != nil {
+		return err
+	}
+
 	if r.Config.IngressControllerPeer != nil {
 		if err := c.Watch(
 			source.NewKindWithCache(&networkingv1.Ingress{}, targetCluster.GetCache()),
@@ -139,6 +158,18 @@ func (r *Reconciler) IngressPredicate() predicate.Predicate {
 			return !apiequality.Semantic.DeepEqual(oldIngress.Spec.Rules, ingress.Spec.Rules)
 		},
 	}
+}
+
+// MapNetworkPolicyToService is a mapper.MapFunc for mapping a NetworkPolicy to the referenced service.
+func (r *Reconciler) MapNetworkPolicyToService(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	if obj == nil || obj.GetLabels() == nil {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{
+		Name:      obj.GetLabels()[resourcesv1alpha1.NetworkingServiceName],
+		Namespace: obj.GetLabels()[resourcesv1alpha1.NetworkingServiceNamespace],
+	}}}
 }
 
 // MapToAllServices is a mapper.MapFunc for mapping a Namespace to all Services.

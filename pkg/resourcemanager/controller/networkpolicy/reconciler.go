@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -38,8 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
-
-const finalizerName = "resources.gardener.cloud/networkpolicy-controller"
 
 // Reconciler reconciles Service objects and creates NetworkPolicy objects.
 type Reconciler struct {
@@ -53,52 +50,34 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	service := &corev1.Service{}
-	if err := r.TargetClient.Get(ctx, request.NamespacedName, service); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(1).Info("Object is gone, stop reconciling")
-			return reconcile.Result{}, nil
-		}
-		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
-	}
-
 	networkPolicyList := &metav1.PartialObjectMetadataList{}
 	networkPolicyList.SetGroupVersionKind(networkingv1.SchemeGroupVersion.WithKind("NetworkPolicyList"))
 	if err := r.TargetClient.List(ctx, networkPolicyList, client.MatchingLabels{
-		resourcesv1alpha1.NetworkingServiceName:      service.Name,
-		resourcesv1alpha1.NetworkingServiceNamespace: service.Namespace,
+		resourcesv1alpha1.NetworkingServiceName:      request.NamespacedName.Name,
+		resourcesv1alpha1.NetworkingServiceNamespace: request.NamespacedName.Namespace,
 	}); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed listing network policies for service %s: %w", client.ObjectKeyFromObject(service), err)
+		return reconcile.Result{}, fmt.Errorf("failed listing network policies for service %s: %w", request.NamespacedName, err)
 	}
 
-	isNamespaceHandled, err := r.namespaceIsHandled(ctx, service.Namespace)
+	isNamespaceHandled, err := r.namespaceIsHandled(ctx, request.NamespacedName.Namespace)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed checking whether namespace %s is handled: %w", service.Namespace, err)
+		return reconcile.Result{}, fmt.Errorf("failed checking whether namespace %s is handled: %w", request.NamespacedName.Namespace, err)
 	}
 
-	if service.DeletionTimestamp != nil || service.Spec.Selector == nil || !isNamespaceHandled {
-		if !controllerutil.ContainsFinalizer(service, finalizerName) {
-			return reconcile.Result{}, nil
-		}
+	onlyDeleteStalePolicies := !isNamespaceHandled
 
+	service := &corev1.Service{}
+	if err := r.TargetClient.Get(ctx, request.NamespacedName, service); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+		}
+		log.V(1).Info("Object is gone, cleaning up")
+		onlyDeleteStalePolicies = true
+	}
+
+	if onlyDeleteStalePolicies || service.DeletionTimestamp != nil || service.Spec.Selector == nil {
 		deleteTaskFns := r.deleteStalePolicies(networkPolicyList, nil)
-		if err := flow.Parallel(deleteTaskFns...)(ctx); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.TargetClient, service, finalizerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-		}
-
-		return reconcile.Result{}, nil
-	}
-
-	if !controllerutil.ContainsFinalizer(service, finalizerName) {
-		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.TargetClient, service, finalizerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
-		}
+		return reconcile.Result{}, flow.Parallel(deleteTaskFns...)(ctx)
 	}
 
 	namespaceNames, err := r.fetchRelevantNamespaceNames(ctx, service)
@@ -118,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *Reconciler) namespaceIsHandled(ctx context.Context, namespaceName string) (bool, error) {
 	namespace := &metav1.PartialObjectMetadata{}
 	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
-	if err := r.TargetClient.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace); err != nil {
+	if err := r.TargetClient.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace); client.IgnoreNotFound(err) != nil {
 		return false, fmt.Errorf("failed to get namespace %q: %w", namespaceName, err)
 	}
 
