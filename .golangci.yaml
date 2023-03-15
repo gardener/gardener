@@ -12,7 +12,6 @@ run:
   - ".*\\.pb\\.go$"
   - "zz_generated\\..*\\.go$"
   - "openapi_generated\\.go$"
-  - pkg/operation/botanist/component/fluentoperator/doc.go # This file blank import, which should be only in a main or test package
 
 linters:
   disable:
@@ -97,6 +96,14 @@ linters-settings:
         alias: logf
       - pkg: github.com/golang/mock/gomock
         alias: gmock
+      - pkg: github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2
+        alias: fluentbitv1alpha2
+      - pkg: github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/filter
+        alias: fluentbitv1alpha2filter
+      - pkg: github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/parser
+        alias: fluentbitv1alpha2parser
+      - pkg: github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/input
+        alias: fluentbitv1alpha2input
       # Gradener external imported packages
       - pkg: github.com/gardener/hvpa-controller/api/v1alpha1
         alias: hvpav1alpha1
