@@ -81,11 +81,11 @@ var _ = Describe("Machines", func() {
 
 	Describe("#WorkerPoolHash", func() {
 		var (
-			p                           extensionsv1alpha1.WorkerPool
-			c                           *extensionscontroller.Cluster
-			hash                        string
-			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
-			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
+			p                               extensionsv1alpha1.WorkerPool
+			c                               *extensionscontroller.Cluster
+			hash, hashWithoutProviderConfig string
+			lastCARotationInitiation        = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			lastSAKeyRotationInitiation     = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
 		)
 
 		BeforeEach(func() {
@@ -130,6 +130,8 @@ var _ = Describe("Machines", func() {
 			var err error
 			hash, err = WorkerPoolHash(p, c)
 			Expect(err).ToNot(HaveOccurred())
+			hashWithoutProviderConfig, err = WorkerPoolHashWithProviderConfigOption(p, c, false)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
@@ -137,6 +139,10 @@ var _ = Describe("Machines", func() {
 				actual, err := WorkerPoolHash(p, c)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
+
+				actual, err = WorkerPoolHashWithProviderConfigOption(p, c, false)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(hashWithoutProviderConfig))
 			})
 
 			It("when changing minimum", func() {
@@ -210,6 +216,10 @@ var _ = Describe("Machines", func() {
 				actual, err := WorkerPoolHash(p, c)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
+
+				actual, err = WorkerPoolHashWithProviderConfigOption(p, c, false)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hashWithoutProviderConfig))
 			})
 
 			It("when changing machine type", func() {
@@ -231,10 +241,6 @@ var _ = Describe("Machines", func() {
 
 			It("when changing volume size", func() {
 				p.Volume.Size = "100Mi"
-			})
-
-			It("when changing provider config", func() {
-				p.ProviderConfig.Raw = nil
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
@@ -261,6 +267,8 @@ var _ = Describe("Machines", func() {
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = nil
 				hash, err = WorkerPoolHash(p, c)
 				Expect(err).ToNot(HaveOccurred())
+				hashWithoutProviderConfig, err = WorkerPoolHashWithProviderConfigOption(p, c, false)
+				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
 			})
@@ -276,12 +284,37 @@ var _ = Describe("Machines", func() {
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = nil
 				hash, err = WorkerPoolHash(p, c)
 				Expect(err).ToNot(HaveOccurred())
+				hashWithoutProviderConfig, err = WorkerPoolHashWithProviderConfigOption(p, c, false)
+				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
 			})
 
 			It("when enabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}
+			})
+		})
+		Describe("hash value when providerConfig changes", func() {
+			BeforeEach(func() {
+				p.ProviderConfig.Raw = nil
+			})
+
+			It("should not change when excluding PC from hash", func() {
+				actual, err := WorkerPoolHashWithProviderConfigOption(p, c, false)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(hashWithoutProviderConfig))
+			})
+
+			It("should change when excluding PC from hash", func() {
+				actual, err := WorkerPoolHashWithProviderConfigOption(p, c, true)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hash))
+				Expect(actual).To(Equal(hashWithoutProviderConfig))
+
+				actual, err = WorkerPoolHash(p, c)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hash))
+				Expect(actual).To(Equal(hashWithoutProviderConfig))
 			})
 		})
 	})

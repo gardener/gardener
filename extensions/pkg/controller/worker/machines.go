@@ -120,6 +120,11 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
 func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
+	return WorkerPoolHashWithProviderConfigOption(pool, cluster, true, additionalData...)
+}
+
+// WorkerPoolHashWithProviderConfigOption returns a hash value for a given worker pool and a given cluster resource.
+func WorkerPoolHashWithProviderConfigOption(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, includeProviderConfig bool, additionalData ...string) (string, error) {
 	kubernetesVersion := cluster.Shoot.Spec.Kubernetes.Version
 	if pool.KubernetesVersion != nil {
 		kubernetesVersion = *pool.KubernetesVersion
@@ -143,8 +148,10 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 		}
 	}
 
-	if pool.ProviderConfig != nil && pool.ProviderConfig.Raw != nil {
-		data = append(data, string(pool.ProviderConfig.Raw))
+	if includeProviderConfig {
+		if pool.ProviderConfig != nil && pool.ProviderConfig.Raw != nil {
+			data = append(data, string(pool.ProviderConfig.Raw))
+		}
 	}
 
 	data = append(data, additionalData...)
