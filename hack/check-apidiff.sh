@@ -20,7 +20,7 @@ set -o pipefail
 
 tmpDir=$(mktemp -d)
 function cleanup_output {
-    rm -rf "$tmpDir"
+  rm -rf "$tmpDir"
 }
 trap cleanup_output EXIT
 
@@ -29,52 +29,52 @@ temp=0
 
 # PULL_BASE_SHA env variable is set by default in prow presubmit jobs
 if [ -n "${PULL_BASE_SHA:-}" ]; then
-    echo "invoking: go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=."
-    go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=. > ${tmpDir}/output.txt
+  echo "invoking: go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=."
+  go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=. >${tmpDir}/output.txt
 else
-    echo "invoking: go-apidiff master --print-compatible --repo-path=."
-    go-apidiff master --print-compatible --repo-path=. > ${tmpDir}/output.txt
+  echo "invoking: go-apidiff master --print-compatible --repo-path=."
+  go-apidiff master --print-compatible --repo-path=. >${tmpDir}/output.txt
 fi
 
 exported_pkg=(
-"gardener/gardener/extensions/"
-"gardener/gardener/pkg/api/"
-"gardener/gardener/pkg/apis/"
-"gardener/gardener/pkg/chartrenderer/"
-"gardener/gardener/pkg/client/"
-"gardener/gardener/pkg/controllerutils/"
-"gardener/gardener/pkg/extensions/"
-"gardener/gardener/pkg/gardenlet/apis/config/"
-"gardener/gardener/pkg/logger/"
-"gardener/gardener/pkg/mock/controller-runtime/client/"
-"gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/"
-"gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/"
-"gardener/gardener/pkg/scheduler/"
-"gardener/gardener/pkg/utils/"
-"gardener/gardener/test/framework/"
+  "gardener/gardener/extensions/"
+  "gardener/gardener/pkg/api/"
+  "gardener/gardener/pkg/apis/"
+  "gardener/gardener/pkg/chartrenderer/"
+  "gardener/gardener/pkg/client/"
+  "gardener/gardener/pkg/controllerutils/"
+  "gardener/gardener/pkg/extensions/"
+  "gardener/gardener/pkg/gardenlet/apis/config/"
+  "gardener/gardener/pkg/logger/"
+  "gardener/gardener/pkg/mock/controller-runtime/client/"
+  "gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/"
+  "gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/"
+  "gardener/gardener/pkg/scheduler/"
+  "gardener/gardener/pkg/utils/"
+  "gardener/gardener/test/framework/"
 )
 
 # check the changes only for the package that is in the exported_pkg list
 while IFS= read -r line; do
-    if [[ $line =~ ^"github.com/gardener/gardener" ]]; then
-        temp=0
-        for x in ${exported_pkg[*]}; do
-            if [[ $line =~ $x ]]; then
-                retval=1
-                temp=1
-                echo "$line" >>  ${tmpDir}/result.txt
-            fi
-        done
-    else
-        if [[ $temp -eq 1 ]]; then
-            echo "$line" >>  ${tmpDir}/result.txt
-        fi
+  if [[ $line =~ ^"github.com/gardener/gardener" ]]; then
+    temp=0
+    for x in ${exported_pkg[*]}; do
+      if [[ $line =~ $x ]]; then
+        retval=1
+        temp=1
+        echo "$line" >>${tmpDir}/result.txt
+      fi
+    done
+  else
+    if [[ $temp -eq 1 ]]; then
+      echo "$line" >>${tmpDir}/result.txt
     fi
-done < "${tmpDir}/output.txt"
+  fi
+done <"${tmpDir}/output.txt"
 
 if [[ $retval -eq 1 ]]; then
-    echo >&2 "FAIL: contains compatible/incompatible changes:"
-    cat ${tmpDir}/result.txt
+  echo >&2 "FAIL: contains compatible/incompatible changes:"
+  cat ${tmpDir}/result.txt
 fi
 
 exit $retval
