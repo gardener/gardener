@@ -380,11 +380,11 @@ import "networking/v1alpha3/sidecar.proto";
 // apiVersion: networking.istio.io/v1alpha3
 // kind: EnvoyFilter
 // metadata:
-//   name: wasm-service
+//   name: listener-filter-example
 //   namespace: myns
 // spec:
 //   configPatches:
-//   - applyTo: BOOTSTRAP
+//   - applyTo: LISTENER_FILTER
 //     patch:
 //       operation: MERGE
 //       value:
@@ -405,6 +405,30 @@ import "networking/v1alpha3/sidecar.proto";
 //                   local:
 //                     filename: "/etc/envoy_filter_http_wasm_example.wasm"
 // ```
+//
+// The following example inserts an `envoy.filters.listener.proxy_protocol` listener filter before the `envoy.filters.listener.tls_inspector`.
+//
+// ```yaml
+// apiVersion: networking.istio.io/v1alpha3
+// kind: EnvoyFilter
+// metadata:
+//   name: wasm-service
+//   namespace: myns
+// spec:
+//   configPatches:
+//   - applyTo: LISTENER_FILTER
+//     match:
+//       context: SIDECAR_INBOUND # will match outbound listeners in all sidecars
+//       listener:
+//         portNumber: 15006
+//         listenerFilter: "envoy.filters.listener.tls_inspector"
+//     patch:
+//       operation: INSERT_BEFORE
+//       value:
+//         # This is the full filter config including the name and typed_config section.
+//         name: "envoy.filters.listener.proxy_protocol"
+//         typed_config:
+//           "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
 package istio.networking.v1alpha3;
 
 option go_package = "istio.io/api/networking/v1alpha3";
@@ -473,6 +497,9 @@ message EnvoyFilter {
 
     // Applies the patch to bootstrap configuration.
     BOOTSTRAP = 10;
+
+    // Applies the patch to the listener filter.
+    LISTENER_FILTER = 11;
   };
 
   // PatchContext selects a class of configurations based on the
@@ -692,6 +719,10 @@ message EnvoyFilter {
     // filter if specified) and not to other filter chains in the
     // listener.
     FilterChainMatch filter_chain = 3;
+
+    // Match a specific listener filter. If specified, the
+    // patch will be applied to the listener filter.
+    string listener_filter = 5;
 
     // Match a specific listener by its name. The listeners generated
     // by Pilot are typically named as IP:Port.

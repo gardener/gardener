@@ -35,7 +35,7 @@
             "type": "integer"
           },
           "protocol": {
-            "description": "The protocol exposed on the port. MUST BE one of HTTP|HTTPS|GRPC|HTTP2|MONGO|TCP|TLS. TLS implies the connection will be routed based on the SNI header to the destination without terminating the TLS connection.",
+            "description": "The protocol exposed on the port. MUST BE one of HTTP|HTTPS|GRPC|HTTP2|MONGO|TCP|TLS. TLS can be either used to terminate non-HTTP based connections on a specific port or to route traffic based on SNI header to the destination without terminating the TLS connection.",
             "type": "string"
           },
           "name": {
@@ -43,8 +43,9 @@
             "type": "string"
           },
           "targetPort": {
-            "description": "The port number on the endpoint where the traffic will be received. Applicable only when used with ServiceEntries.",
-            "type": "integer"
+            "description": "The port number on the endpoint where the traffic will be received. Applicable only when used with ServiceEntries. $hide_from_docs",
+            "type": "integer",
+            "deprecated": true
           }
         }
       },

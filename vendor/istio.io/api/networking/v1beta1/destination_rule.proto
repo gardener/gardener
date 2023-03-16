@@ -508,10 +508,37 @@ message LoadBalancerSettings {
 
   // Consistent Hash-based load balancing can be used to provide soft
   // session affinity based on HTTP headers, cookies or other
-  // properties. The affinity to a particular destination host will be
+  // properties. The affinity to a particular destination host may be
   // lost when one or more hosts are added/removed from the destination
   // service.
+  //
+  // Note: consistent hashing is less reliable at maintaining affinity than common
+  // "sticky sessions" implementations, which often encode a specific destination in
+  // a cookie, ensuring affinity is maintained as long as the backend remains.
+  // With consistent hash, the guarantees are weaker; any host addition or removal can
+  // break affinity for `1/backends` requests.
+  //
+  // Warning: consistent hashing depends on each proxy having a consistent view of endpoints.
+  // This is not the case when locality load balancing is enabled. Locality load balancing
+  // and consistent hash will only work together when all proxies are in the same locality,
+  // or a high level load balancer handles locality affinity.
   message ConsistentHashLB {
+
+    message RingHash {
+      // The minimum number of virtual nodes to use for the hash
+      // ring. Defaults to 1024. Larger ring sizes result in more granular
+      // load distributions. If the number of hosts in the load balancing
+      // pool is larger than the ring size, each host will be assigned a
+      // single virtual node.
+      uint64 minimum_ring_size = 1;
+    };
+  
+    message MagLev {
+      // The table size for Maglev hashing. This helps in controlling the 
+      // disruption when the backend hosts change.
+      // Increasing the table size reduces the amount of disruption. 
+      uint64 table_size = 1;
+    };
     // Describes a HTTP cookie that will be used as the hash key for the
     // Consistent Hash load balancer. If the cookie is not present, it will
     // be generated.
@@ -540,12 +567,20 @@ message LoadBalancerSettings {
       string http_query_parameter_name = 5;
     };
 
-    // The minimum number of virtual nodes to use for the hash
-    // ring. Defaults to 1024. Larger ring sizes result in more granular
-    // load distributions. If the number of hosts in the load balancing
-    // pool is larger than the ring size, each host will be assigned a
-    // single virtual node.
-    uint64 minimum_ring_size = 4;
+        // The hash algorithm to use. 
+        // Please refer to https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#ring-hash
+        // and https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#maglev for
+        // considerations on choosing an algorithm.
+        // Defaults to RingHash if not specified.
+        oneof hash_algorithm {
+          // The ring/modulo hash load balancer implements consistent hashing to backend hosts.
+          RingHash ring_hash = 6;
+          // The Maglev load balancer implements consistent hashing to backend hosts. 
+          MagLev maglev = 7;
+        };
+
+    // Deprecated. Use RingHash instead.
+    uint64 minimum_ring_size = 4 [deprecated=true];
   };
 
   // (-- TODO: Enable Subset load balancing after moving to v2 API Also
@@ -566,6 +601,9 @@ message LoadBalancerSettings {
   // remains in warmup mode starting from its creation time for the duration of this window and
   // Istio progressively increases amount of traffic for that endpoint instead of sending proportional amount of traffic.
   // This should be enabled for services that require warm up time to serve full production load with reasonable latency.
+  // Please note that this is most effective when few new endpoints come up like scale event in Kubernetes. When all the 
+  // endpoints are relatively new like new deployment, this is not very effective as all endpoints end up getting same 
+  // amount of requests.
   // Currently this is only supported for ROUND_ROBIN and LEAST_REQUEST load balancers.
   google.protobuf.Duration warmup_duration_secs = 4;
 }
@@ -1027,7 +1065,7 @@ message ClientTLSSettings {
   // If specified, this list overrides the value of subject_alt_names
   // from the ServiceEntry. If unspecified, automatic validation of upstream
   // presented certificate for new upstream connections will be done based on the
-  // downstream HTTP host/authority header, provided `VERIFY_CERT_AT_CLIENT`
+  // downstream HTTP host/authority header, provided `VERIFY_CERTIFICATE_AT_CLIENT`
   // and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
   repeated string subject_alt_names = 5;
 

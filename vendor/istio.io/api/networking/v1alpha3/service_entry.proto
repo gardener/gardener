@@ -15,7 +15,6 @@
 syntax = "proto3";
 
 import "google/api/field_behavior.proto";
-import "networking/v1alpha3/gateway.proto";
 import "networking/v1alpha3/sidecar.proto";
 import "networking/v1alpha3/workload_entry.proto";
 
@@ -446,7 +445,7 @@ import "networking/v1alpha3/workload_entry.proto";
 // The following example demonstrates the use of wildcards in the hosts for
 // external services. If the connection has to be routed to the IP address
 // requested by the application (i.e. application resolves DNS and attempts
-// to connect to a specific IP), the discovery mode must be set to `NONE`.
+// to connect to a specific IP), the resolution mode must be set to `NONE`.
 //
 // {{<tabset category-name="example">}}
 // {{<tab name="v1alpha3" category-value="v1alpha3">}}
@@ -663,11 +662,7 @@ import "networking/v1alpha3/workload_entry.proto";
 // VM-based instances with sidecars as well as a set of Kubernetes
 // pods managed by a standard deployment object. Consumers of this
 // service in the mesh will be automatically load balanced across the
-// VMs and Kubernetes.  VM for the `details.bookinfo.com`
-// service. This VM has sidecar installed and bootstrapped using the
-// `details-legacy` service account. The sidecar receives HTTP traffic
-// on port 80 (wrapped in istio mutual TLS) and forwards it to the
-// application on the localhost on the same port.
+// VMs and Kubernetes.
 //
 // {{<tabset category-name="example">}}
 // {{<tab name="v1alpha3" category-value="v1alpha3">}}
@@ -790,7 +785,7 @@ option go_package = "istio.io/api/networking/v1alpha3";
 // +cue-gen:ServiceEntry:printerColumn:name=Hosts,type=string,JSONPath=.spec.hosts,description="The hosts associated with the ServiceEntry"
 // +cue-gen:ServiceEntry:printerColumn:name=Location,type=string,JSONPath=.spec.location,description="Whether the service is external to the
 // mesh or part of the mesh (MESH_EXTERNAL or MESH_INTERNAL)"
-// +cue-gen:ServiceEntry:printerColumn:name=Resolution,type=string,JSONPath=.spec.resolution,description="Service discovery mode for the hosts
+// +cue-gen:ServiceEntry:printerColumn:name=Resolution,type=string,JSONPath=.spec.resolution,description="Service resolution mode for the hosts
 // (NONE, STATIC, or DNS)"
 // +cue-gen:ServiceEntry:printerColumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp
 // representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations.
@@ -826,8 +821,8 @@ message ServiceEntry {
   // supplies its own set of endpoints, the ServiceEntry will be
   // treated as a decorator of the existing Kubernetes
   // service. Properties in the service entry will be added to the
-  // Kubernetes service if applicable. Currently, the only the
-  // following additional properties will be considered by `istiod`:
+  // Kubernetes service if applicable. Currently, only the following
+  // additional properties will be considered by `istiod`:
   //
   // 1. subjectAltNames: In addition to verifying the SANs of the
   //    service accounts associated with the pods of the service, the
@@ -854,7 +849,7 @@ message ServiceEntry {
   // The ports associated with the external service. If the
   // Endpoints are Unix domain socket addresses, there must be exactly one
   // port.
-  repeated Port ports = 3 [(google.api.field_behavior) = REQUIRED];
+  repeated ServicePort ports = 3 [(google.api.field_behavior) = REQUIRED];
 
   // Location specifies whether the service is part of Istio mesh or
   // outside the mesh.  Location determines the behavior of several
@@ -922,7 +917,7 @@ message ServiceEntry {
     DNS_ROUND_ROBIN = 3;
   };
 
-  // Service discovery mode for the hosts. Care must be taken
+  // Service resolution mode for the hosts. Care must be taken
   // when setting the resolution mode to NONE for a TCP port without
   // accompanying IP addresses. In such cases, traffic to any IP on
   // said port will be allowed (i.e. `0.0.0.0:<port>`).
@@ -966,4 +961,23 @@ message ServiceEntry {
   // to derive the additional subject alternate names that should be
   // verified.
   repeated string subject_alt_names = 8;
+}
+
+// ServicePort describes the properties of a specific port of a service.
+message ServicePort {
+  // A valid non-negative integer port number.
+  uint32 number = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The protocol exposed on the port.
+  // MUST BE one of HTTP|HTTPS|GRPC|HTTP2|MONGO|TCP|TLS.
+  // TLS implies the connection will be routed based on the SNI header to
+  // the destination without terminating the TLS connection.
+  string protocol = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Label assigned to the port.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // The port number on the endpoint where the traffic will be
+  // received. If unset, default to `number`.
+  uint32 target_port = 4;
 }

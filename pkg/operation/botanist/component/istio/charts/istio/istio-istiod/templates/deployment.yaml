@@ -127,6 +127,12 @@ spec:
         - name: istio-kubeconfig
           mountPath: /var/run/secrets/remote
           readOnly: true
+        - name: istio-csr-dns-cert
+          mountPath: /var/run/secrets/istiod/tls
+          readOnly: true
+        - name: istio-csr-ca-configmap
+          mountPath: /var/run/secrets/istiod/ca
+          readOnly: true
       volumes:
       # Technically not needed on this pod - but it helps debugging/testing SDS
       # Should be removed after everything works.
@@ -152,6 +158,15 @@ spec:
       - name: config-volume
         configMap:
           name: istio
+      - name: istio-csr-dns-cert
+        secret:
+          secretName: istiod-tls
+          optional: true
+      - name: istio-csr-ca-configmap
+        configMap:
+          name: istio-ca-root-cert
+          defaultMode: 420
+          optional: true
       priorityClassName: gardener-system-critical
       affinity:
         podAntiAffinity:

@@ -35,3 +35,34 @@ message WorkloadSelector {
   // the configuration namespace in which the resource is present.
   map<string, string> match_labels = 1 [(google.api.field_behavior) = REQUIRED];
 }
+
+// PortSelector is the criteria for specifying if a policy can be applied to 
+// a listener having a specific port.
+message PortSelector {
+  // Port number
+  uint32 number = 1;
+}
+
+// WorkloadMode allows selection of the role of the underlying workload in
+// network traffic. A workload is considered as acting as a SERVER if it is
+// the destination of the traffic (that is, traffic direction, from the
+// perspective of the workload is *inbound*). If the workload is the source of
+// the network traffic, it is considered to be in CLIENT mode (traffic is
+// *outbound* from the workload).
+enum WorkloadMode {
+  // Default value, which will be interpreted by its own usage.
+  UNDEFINED = 0;
+
+  // Selects for scenarios when the workload is the
+  // source of the network traffic. In addition, 
+  // if the workload is a gateway, selects this.
+  CLIENT = 1;
+
+  // Selects for scenarios when the workload is the
+  // destination of the network traffic.
+  SERVER = 2;
+
+  // Selects for scenarios when the workload is either the
+  // source or destination of the network traffic.
+  CLIENT_AND_SERVER = 3;
+}

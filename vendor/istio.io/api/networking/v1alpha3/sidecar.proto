@@ -60,6 +60,8 @@ import "networking/v1alpha3/virtual_service.proto";
 // configuration_*. This global default `Sidecar` configuration should not have
 // any `workloadSelector`.
 //
+// **NOTE 3**: *_A `Sidecar` is not applicable to gateways, even though gateways are istio-proxies_*.
+//
 // The example below declares a global default `Sidecar` configuration
 // in the root namespace called `istio-config`, that configures
 // sidecars in all namespaces to allow egress traffic only to other
