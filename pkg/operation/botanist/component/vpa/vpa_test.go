@@ -1853,14 +1853,8 @@ func replaceTargetSubstrings(in string) string {
 }
 
 func adaptNetworkPolicyLabelsForClusterTypeSeed(labels map[string]string) {
-	for k := range labels {
-		if k == "networking.gardener.cloud/from-prometheus" {
-			continue
-		}
-
-		delete(labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
-		labels["networking.gardener.cloud/to-runtime-apiserver"] = "allowed"
-	}
+	delete(labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
+	labels["networking.gardener.cloud/to-runtime-apiserver"] = "allowed"
 }
 
 const (

@@ -112,7 +112,7 @@ var _ = Describe("ResourceManager", func() {
 		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
 		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
-		ingressControllerPeer                = &resourcemanagerv1alpha1.IngressControllerPeer{
+		ingressControllerSelector            = &resourcemanagerv1alpha1.IngressControllerSelector{
 			Namespace:   "foo",
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"bar": "baz"}},
 		}
@@ -306,8 +306,8 @@ var _ = Describe("ResourceManager", func() {
 			ClusterIdentity:     &clusterIdentity,
 			ConcurrentSyncs:     &concurrentSyncs,
 			FullNetworkPolicies: true,
-			NetworkPolicyControllerIncludesGardenNamespace: true,
-			NetworkPolicyControllerIngressControllerPeer:   ingressControllerPeer,
+			NetworkPolicyControllerIncludesGardenNamespace:   true,
+			NetworkPolicyControllerIngressControllerSelector: ingressControllerSelector,
 			HealthSyncPeriod:                     &healthSyncPeriod,
 			Image:                                image,
 			MaxConcurrentHealthWorkers:           &maxConcurrentHealthWorkers,
@@ -468,7 +468,7 @@ var _ = Describe("ResourceManager", func() {
 						{MatchLabels: map[string]string{"gardener.cloud/role": "extension"}},
 						{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "garden"}},
 					},
-					IngressControllerPeer: ingressControllerPeer,
+					IngressControllerSelector: ingressControllerSelector,
 				}
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.EndpointSliceHints.Enabled = true

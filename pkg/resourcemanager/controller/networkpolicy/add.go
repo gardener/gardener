@@ -94,7 +94,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		return err
 	}
 
-	if r.Config.IngressControllerPeer != nil {
+	if r.Config.IngressControllerSelector != nil {
 		if err := c.Watch(
 			source.NewKindWithCache(&networkingv1.Ingress{}, targetCluster.GetCache()),
 			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),

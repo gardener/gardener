@@ -420,7 +420,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
 			gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 			true,
-			&resourcemanagerv1alpha1.IngressControllerPeer{
+			&resourcemanagerv1alpha1.IngressControllerSelector{
 				Namespace: v1beta1constants.GardenNamespace,
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
 					v1beta1constants.LabelApp:      nginxingress.LabelAppValue,

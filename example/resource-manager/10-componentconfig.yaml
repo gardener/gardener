@@ -60,7 +60,7 @@ controllers:
   # namespaceSelectors:
   # - matchLabels:
   #     kubernetes.io/metadata.name: default
-    ingressControllerPeer:
+    ingressControllerSelector:
       namespace: default
       podSelector:
         matchLabels:

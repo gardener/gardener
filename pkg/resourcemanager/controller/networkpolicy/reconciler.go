@@ -227,7 +227,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 	for _, p := range portsExposedViaIngresses {
 		port := p
 		policyID := policyIDFor(service.Name, port)
-		addTasksForPort(port, policyID, r.Config.IngressControllerPeer.Namespace, r.Config.IngressControllerPeer.PodSelector, ingressPolicyObjectMetaWhenExposedViaIngressFor, egressPolicyObjectMetaWhenExposedViaIngressFor)
+		addTasksForPort(port, policyID, r.Config.IngressControllerSelector.Namespace, r.Config.IngressControllerSelector.PodSelector, ingressPolicyObjectMetaWhenExposedViaIngressFor, egressPolicyObjectMetaWhenExposedViaIngressFor)
 	}
 
 	return taskFns, desiredObjectMetaKeys, nil
@@ -356,7 +356,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 }
 
 func (r *Reconciler) portsExposedByIngressResources(ctx context.Context, service *corev1.Service) ([]networkingv1.NetworkPolicyPort, error) {
-	if r.Config.IngressControllerPeer == nil {
+	if r.Config.IngressControllerSelector == nil {
 		return nil, nil
 	}
 

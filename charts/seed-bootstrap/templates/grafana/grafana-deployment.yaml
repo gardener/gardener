@@ -31,7 +31,7 @@ spec:
         networking.gardener.cloud/to-seed-prometheus: allowed
         networking.resources.gardener.cloud/to-aggregate-prometheus-web-tcp-9090: allowed
         networking.resources.gardener.cloud/to-seed-prometheus-web-tcp-9090: allowed
-        networking.resources.gardener.cloud/to-loki-tcp-metrics: allowed
+        networking.resources.gardener.cloud/to-logging-tcp-metrics: allowed
     spec:
       automountServiceAccountToken: false
       priorityClassName: gardener-system-600

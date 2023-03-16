@@ -48,7 +48,7 @@ func NewGardenerResourceManager(
 	endpointSliceHintsEnabled bool,
 	fullNetworkPoliciesEnabled bool,
 	networkPolicyControllerIncludesGardenNamespace bool,
-	networkPolicyControllerIngressControllerPeer *resourcemanagerv1alpha1.IngressControllerPeer,
+	networkPolicyControllerIngressControllerSelector *resourcemanagerv1alpha1.IngressControllerSelector,
 	zones []string,
 ) (
 	component.DeployWaiter,
@@ -66,17 +66,17 @@ func NewGardenerResourceManager(
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:                                pointer.Int(20),
-		DefaultSeccompProfileEnabled:                   defaultSeccompProfileEnabled,
-		EndpointSliceHintsEnabled:                      endpointSliceHintsEnabled,
-		FullNetworkPolicies:                            fullNetworkPoliciesEnabled,
-		NetworkPolicyControllerIncludesGardenNamespace: networkPolicyControllerIncludesGardenNamespace,
-		NetworkPolicyControllerIngressControllerPeer:   networkPolicyControllerIngressControllerPeer,
-		HealthSyncPeriod:                               &metav1.Duration{Duration: time.Minute},
-		Image:                                          image.String(),
-		LogLevel:                                       logLevel,
-		LogFormat:                                      logFormat,
-		MaxConcurrentTokenInvalidatorWorkers:           pointer.Int(5),
+		ConcurrentSyncs:                                  pointer.Int(20),
+		DefaultSeccompProfileEnabled:                     defaultSeccompProfileEnabled,
+		EndpointSliceHintsEnabled:                        endpointSliceHintsEnabled,
+		FullNetworkPolicies:                              fullNetworkPoliciesEnabled,
+		NetworkPolicyControllerIncludesGardenNamespace:   networkPolicyControllerIncludesGardenNamespace,
+		NetworkPolicyControllerIngressControllerSelector: networkPolicyControllerIngressControllerSelector,
+		HealthSyncPeriod:                                 &metav1.Duration{Duration: time.Minute},
+		Image:                                            image.String(),
+		LogLevel:                                         logLevel,
+		LogFormat:                                        logFormat,
+		MaxConcurrentTokenInvalidatorWorkers:             pointer.Int(5),
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
 		PodTopologySpreadConstraintsEnabled: true,

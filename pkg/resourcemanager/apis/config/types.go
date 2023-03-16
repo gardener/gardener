@@ -178,14 +178,14 @@ type NetworkPolicyControllerConfig struct {
 	// NamespaceSelectors is a list of label selectors for namespaces in which the controller shall reconcile Service
 	// objects. An empty list means all namespaces.
 	NamespaceSelectors []metav1.LabelSelector
-	// IngressControllerPeer contains the pod and namespace selectors for an ingress-controller. If provided, this
+	// IngressControllerSelector contains the pod and namespace selectors for an ingress controller. If provided, this
 	// NetworkPolicy controller watches Ingress resources and automatically creates NetworkPolicy resources allowing
 	// the respective ingress/egress traffic for the backends exposed by the Ingresses.
-	IngressControllerPeer *IngressControllerPeer
+	IngressControllerSelector *IngressControllerSelector
 }
 
-// IngressControllerPeer contains the pod selector and namespace for an ingress-controller.
-type IngressControllerPeer struct {
+// IngressControllerSelector contains the pod selector and namespace for an ingress controller.
+type IngressControllerSelector struct {
 	// Namespace is the name of the namespace in which the ingress controller runs.
 	Namespace string
 	// PodSelector is the selector for the ingress controller pods.

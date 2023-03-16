@@ -10,46 +10,19 @@ spec:
   ingress:
   - from:
     - podSelector:
-        matchLabels:
-          app: gardener
-          role: apiserver
+        # Do not use matchLabels here, otherwise the commonLabels defined in the kustomization.yaml will overwrite
+        # app=gardener to app=etcd which effectively breaks the NetworkPolicy.
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - gardener
+        - key: role
+          operator: In
+          values:
+          - apiserver
     ports:
     - port: 2379
       protocol: TCP
   policyTypes:
-  - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-everything-gardener-controlplane
-  namespace: garden
-spec:
-  podSelector:
-    matchExpressions:
-    - key: app
-      operator: In
-      values:
-      - gardener
-    - key: role
-      operator: In
-      values:
-      - admission-controller
-      - apiserver
-      - controller-manager
-      - scheduler
-  ingress:
-  - from:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: 0.0.0.0/0
-  egress:
-  - to:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: 0.0.0.0/0
-  policyTypes:
-  - Egress
   - Ingress

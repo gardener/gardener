@@ -5,6 +5,8 @@ generatorOptions:
   disableNameSuffixHash: true
 
 namespace: garden
+commonLabels:
+  app: etcd
 
 secretGenerator:
 - name: etcd-tls

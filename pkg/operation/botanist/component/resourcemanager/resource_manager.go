@@ -256,9 +256,9 @@ type Values struct {
 	// NetworkPolicyControllerIncludesGardenNamespace describes whether the 'garden' namespace should be targeted by the
 	// network policy controller.
 	NetworkPolicyControllerIncludesGardenNamespace bool
-	// NetworkPolicyControllerIngressControllerPeer is the peer information of the ingress-controller for the network policy
-	// controller.
-	NetworkPolicyControllerIngressControllerPeer *resourcemanagerv1alpha1.IngressControllerPeer
+	// NetworkPolicyControllerIngressControllerSelector is the peer information of the ingress controller for the
+	// network policy controller.
+	NetworkPolicyControllerIngressControllerSelector *resourcemanagerv1alpha1.IngressControllerSelector
 	// Image is the container image.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -586,7 +586,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
 			},
-			IngressControllerPeer: r.values.NetworkPolicyControllerIngressControllerPeer,
+			IngressControllerSelector: r.values.NetworkPolicyControllerIngressControllerSelector,
 		}
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true

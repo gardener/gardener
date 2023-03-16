@@ -92,7 +92,7 @@ global:
       # namespaceSelectors:
       # - matchLabels:
       #     foo: bar
-      # ingressControllerPeer:
+      # ingressControllerSelector:
       #   namespace: default
       #   podSelector:
       #     matchLabels:

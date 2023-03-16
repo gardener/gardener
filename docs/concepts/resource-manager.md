@@ -750,7 +750,7 @@ controllers:
   # namespaceSelectors:
   # - matchLabels:
   #     kubernetes.io/metadata.name: default
-    ingressControllerPeer:
+    ingressControllerSelector:
       namespace: default
       podSelector:
         matchLabels:
@@ -779,7 +779,7 @@ spec:
         pathType: Prefix
 ```
 
-As a result, the controller automatically would create the following `NetworkPolicy`s:
+As a result, the controller would automatically create the following `NetworkPolicy`s:
 
 
 ```yaml
