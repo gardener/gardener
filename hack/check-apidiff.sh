@@ -75,6 +75,21 @@ done <"${tmpDir}/output.txt"
 if [[ $retval -eq 1 ]]; then
   echo >&2 "FAIL: contains compatible/incompatible changes:"
   cat ${tmpDir}/result.txt
+
+  cat <<EOF
+
+The apidiff check failed – don't worry!
+This check is optional and hence not required to pass before merging a PR.
+
+The apidiff check makes changes to the go packages' API surface visible.
+For example, other repositories rely on a stable API of the extensions library located in gardener/gardener/extensions.
+When introducing incompatible changes in the extensions library, those dependants need to adapt to these changes when upgrading their go dependencies.
+To make this process easier for your fellow developers, try to keep incompatible changes limited.
+For all other cases, please check all incompatible changes listed above and add a friendly release note about them to your PR.
+Even better: you could explain how to adapt to the breaking changes in your PR's description or add a short doc.
+
+If your PR only contains compatible API changes, no action is required. You're good to go!
+EOF
 fi
 
 exit $retval
