@@ -141,6 +141,20 @@ func ProtocolPtr(protocol corev1.Protocol) *corev1.Protocol {
 	return &protocol
 }
 
+// TimePtr returns a time.Time pointer to its argument.
+func TimePtr(t time.Time) *time.Time {
+	return &t
+}
+
+// TimePtrDeref dereferences the time.Time ptr and returns it if not nil, or else
+// returns def.
+func TimePtrDeref(ptr *time.Time, def time.Time) time.Time {
+	if ptr != nil {
+		return *ptr
+	}
+	return def
+}
+
 // IntStrPtrFromInt returns an intstr.IntOrString pointer to its argument.
 func IntStrPtrFromInt(port int) *intstr.IntOrString {
 	v := intstr.FromInt(port)

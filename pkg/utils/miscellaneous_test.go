@@ -15,6 +15,8 @@
 package utils_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
@@ -133,6 +135,26 @@ baz`, spaces)).To(Equal(`foo
 	Describe("#IntStrPtrFromString", func() {
 		It("should return a pointer", func() {
 			Expect(IntStrPtrFromString("foo")).Should(gstruct.PointTo(Equal(intstr.FromString("foo"))))
+		})
+	})
+
+	Describe("#TimePtr", func() {
+		It("should return a pointer", func() {
+			now := time.Now()
+			Expect(TimePtr(now)).Should(gstruct.PointTo(Equal(now)))
+		})
+	})
+
+	Describe("#TimePtrDeref", func() {
+		now := time.Now()
+		def := now.Add(-time.Second)
+
+		It("should return the pointer", func() {
+			Expect(TimePtrDeref(&now, def)).Should(Equal(now))
+		})
+
+		It("should return the default", func() {
+			Expect(TimePtrDeref(nil, def)).Should(Equal(def))
 		})
 	})
 })

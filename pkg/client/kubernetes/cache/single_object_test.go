@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 )
@@ -50,7 +49,7 @@ var _ = Describe("SingleObject", func() {
 		mockCache         *mockcache.MockCache
 		singleObjectCache cache.Cache
 		clock             *testclock.FakeClock
-		maxIdleTime       time.Duration
+		maxIdleTime       = 100 * time.Millisecond
 	)
 
 	BeforeEach(func() {
@@ -79,8 +78,7 @@ var _ = Describe("SingleObject", func() {
 		}
 		clock = testclock.NewFakeClock(time.Now())
 
-		maxIdleTime = 100 * time.Millisecond
-		singleObjectCache = NewSingleObject(logr.Discard(), nil, cache.Options{Resync: resync}, kubernetes.GardenScheme, newCacheFunc, clock, maxIdleTime, 50*time.Millisecond)
+		singleObjectCache = NewSingleObject(logr.Discard(), nil, newCacheFunc, cache.Options{Resync: resync}, clock, maxIdleTime, 50*time.Millisecond)
 
 		var wg wait.Group
 		ctx, cancel := context.WithCancel(ctx)
@@ -160,7 +158,6 @@ func expectStart(mockCache *mockcache.MockCache) <-chan struct{} {
 }
 
 func testCache(ctx context.Context, mockCache *mockcache.MockCache, clock *testclock.FakeClock, setupExpectation func(), testCall func() error) {
-
 	maxIdleTime := 100 * time.Millisecond
 
 	By("cache does not exist yet")
@@ -168,6 +165,7 @@ func testCache(ctx context.Context, mockCache *mockcache.MockCache, clock *testc
 		cacheCtx  context.Context
 		startChan = make(chan struct{})
 	)
+
 	mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 		cacheCtx = ctx
 		startChan <- struct{}{}
