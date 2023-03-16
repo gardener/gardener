@@ -22,6 +22,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,16 +31,18 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ManagedSeed controller test", func() {
 	var (
-		shoot                    *gardencorev1beta1.Shoot
-		managedSeed              *seedmanagementv1alpha1.ManagedSeed
-		shootKubeconfigSecret    *corev1.Secret
-		shootSecretBinding       *gardencorev1beta1.SecretBinding
-		shootCloudProviderSecret *corev1.Secret
+		shoot                            *gardencorev1beta1.Shoot
+		managedSeed                      *seedmanagementv1alpha1.ManagedSeed
+		shootKubeconfigSecret            *corev1.Secret
+		shootSecretBinding               *gardencorev1beta1.SecretBinding
+		shootCloudProviderSecret         *corev1.Secret
+		backupSecretName, seedSecretName string
 
 		reconcileShoot = func() {
 			By("Patch the Shoot as Reconciled")
@@ -52,15 +55,16 @@ var _ = Describe("ManagedSeed controller test", func() {
 		}
 
 		checkIfSeedSecretsCreated = func() {
-			secret := &corev1.Secret{}
+			By("Verify if seed secrets are created")
 			EventuallyWithOffset(1, func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-backup-secret", Namespace: gardenNamespaceGarden.Name}, secret)).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-seed-secret", Namespace: gardenNamespaceGarden.Name}, secret)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: backupSecretName, Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: seedSecretName, Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(Succeed())
 			}).Should(Succeed())
 		}
 
 		checkIfGardenletWasDeployed = func() {
+			By("Verify if gardenlet is deployed")
 			EventuallyWithOffset(1, func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardener.cloud:system:gardenlet:apiserver-sni"}, &rbacv1.ClusterRole{})).To(Succeed())
@@ -85,6 +89,9 @@ var _ = Describe("ManagedSeed controller test", func() {
 			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespaceGarden), &corev1.Namespace{})).To(Succeed())
 		}).Should(Succeed())
 
+		backupSecretName = "backup-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+		seedSecretName = "seed-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 		gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
@@ -108,12 +115,12 @@ var _ = Describe("ManagedSeed controller test", func() {
 							Provider: "test",
 							Region:   pointer.String("bar"),
 							SecretRef: corev1.SecretReference{
-								Name:      "test-backup-secret",
+								Name:      backupSecretName,
 								Namespace: gardenNamespaceGarden.Name,
 							},
 						},
 						SecretRef: &corev1.SecretReference{
-							Name:      "test-seed-secret",
+							Name:      seedSecretName,
 							Namespace: gardenNamespaceGarden.Name,
 						},
 					},
@@ -326,10 +333,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
 			}).Should(Succeed())
 
-			By("Verify if seed secrets are created")
 			checkIfSeedSecretsCreated()
-
-			By("Verify if gardenlet is deployed")
 			checkIfGardenletWasDeployed()
 		})
 	})
@@ -346,14 +350,14 @@ var _ = Describe("ManagedSeed controller test", func() {
 			Expect(testClient.Delete(ctx, managedSeed)).To(Succeed())
 
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-backup-secret", Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "test-seed-secret", Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespaceGarden.Name}, &appsv1.Deployment{})).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: backupSecretName, Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: seedSecretName, Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespaceShoot}, &appsv1.Deployment{})).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: gardenNamespaceShoot}, &corev1.Namespace{})).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(BeNotFoundError())
 			}).Should(Succeed())
 		})
 	})
-
 })
 
 func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }
