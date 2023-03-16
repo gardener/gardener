@@ -838,6 +838,9 @@ spec:
   - Egress
 ```
 
+> ℹ️ Note that `Ingress` resources reference the service port while `NetworkPolicy`s reference the target port/container port.
+> The controller automatically translates this when reconciling the `NetworkPolicy` resources.
+
 ### [`Node` Controller](../../pkg/resourcemanager/controller/node)
 
 Gardenlet configures kubelet of shoot worker nodes to register the `Node` object with the `node.gardener.cloud/critical-components-not-ready` taint (effect `NoSchedule`).
