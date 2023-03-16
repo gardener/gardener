@@ -117,15 +117,17 @@ func (r *Reconciler) reconcile(
 	patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
 	dataList := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	oldSecretData := dataList.Get(secret.Name).DeepCopy()
 	dataList.Upsert(&gardencorev1beta1.GardenerResourceData{
 		Name:   secret.Name,
 		Labels: secret.Labels,
 		Type:   "secret",
 		Data:   runtime.RawExtension{Raw: dataJSON},
 	})
+	newSecretData := dataList.Get(secret.Name)
 
-	// If the data list does not change, do not even try to send an empty PATCH request.
-	if apiequality.Semantic.DeepEqual(shootState.Spec.Gardener, dataList) {
+	// If the secret data did not change, do not even try to send an empty PATCH request.
+	if apiequality.Semantic.DeepEqual(oldSecretData, newSecretData) {
 		return reconcile.Result{}, nil
 	}
 
