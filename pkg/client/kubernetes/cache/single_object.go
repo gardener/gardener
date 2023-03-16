@@ -43,9 +43,11 @@ type singleObject struct {
 	newCache   cache.NewCacheFunc
 	opts       func() cache.Options
 
+	started   bool
 	startWait chan struct{} // startWait is a channel that is closed after the cache has been started
-	lock      sync.RWMutex
-	store     map[client.ObjectKey]*objectCache
+
+	lock  sync.RWMutex
+	store map[client.ObjectKey]*objectCache
 
 	clock                     clock.Clock
 	garbageCollectionInterval time.Duration
@@ -94,6 +96,7 @@ func (s *singleObject) Start(ctx context.Context) error {
 	logger.V(1).Info("Starting")
 
 	s.parentCtx = ctx
+	s.started = true
 	close(s.startWait)
 
 	wait.Until(func() {
@@ -152,6 +155,10 @@ func (s *singleObject) IndexField(ctx context.Context, obj client.Object, field 
 }
 
 func (s *singleObject) getOrCreateCache(key client.ObjectKey) (cache.Cache, error) {
+	if !s.started {
+		return nil, &cache.ErrCacheNotStarted{}
+	}
+
 	log := s.log.WithValues("key", key)
 
 	cache, found := func() (*objectCache, bool) {
