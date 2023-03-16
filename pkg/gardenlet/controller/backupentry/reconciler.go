@@ -230,7 +230,6 @@ func (r *Reconciler) reconcileBackupEntry(
 	}
 
 	if lastObservedError != nil {
-		lastObservedError := v1beta1helper.NewErrorWithCodes(lastObservedError, v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 		reconcileErr := &gardencorev1beta1.LastError{
 			Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
 			Description: lastObservedError.Error(),
@@ -413,10 +412,9 @@ func (r *Reconciler) migrateBackupEntry(
 					lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
 				}
 
-				lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 				migrateError := &gardencorev1beta1.LastError{
-					Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
-					Description: lastObservedError.Error(),
+					Codes:       v1beta1helper.ExtractErrorCodes(lastError),
+					Description: lastError.Error(),
 				}
 
 				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, migrateError.Description)

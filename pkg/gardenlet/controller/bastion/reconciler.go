@@ -162,7 +162,7 @@ func (r *Reconciler) reconcileBastion(
 
 	if lastObservedError != nil {
 		message := fmt.Sprintf("Error while waiting for %s %s/%s to become ready", extensionsv1alpha1.BastionResource, extensionBastion.Namespace, extensionBastion.Name)
-		err := v1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+		err := fmt.Errorf("%s: %w", message, lastObservedError)
 
 		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 			log.Error(patchErr, "Failed patching ready condition")

@@ -29,7 +29,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 const (
@@ -162,7 +161,6 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 			return &healthcheck.SingleCheckResult{
 				Status: gardencorev1beta1.ConditionFalse,
 				Detail: err.Error(),
-				Codes:  v1beta1helper.DeprecatedDetermineErrorCodes(err), // TODO(acumino): Drop error code detection here once extensions get adapted to parse error code from `SingleCheckResult`.
 			}, nil
 		}
 
@@ -190,7 +188,6 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Codes:  v1beta1helper.DeprecatedDetermineErrorCodes(err), // TODO(acumino): Drop error code detection here once extensions get adapted to parse error code from `SingleCheckResult`.
 		}, nil
 	}
 
