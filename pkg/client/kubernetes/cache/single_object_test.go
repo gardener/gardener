@@ -98,7 +98,7 @@ var _ = Describe("SingleObject", func() {
 
 	Describe("#Get", func() {
 		It("should successfully delegate to stored cache", func() {
-			testCache(ctx, mockCache, clock,
+			testCache(ctx, mockCache, clock, maxIdleTime,
 				func() {
 					mockCache.EXPECT().Get(ctx, key, obj)
 				},
@@ -110,7 +110,7 @@ var _ = Describe("SingleObject", func() {
 
 	Describe("#GetInformer", func() {
 		It("should delegate call to stored cache", func() {
-			testCache(ctx, mockCache, clock,
+			testCache(ctx, mockCache, clock, maxIdleTime,
 				func() {
 					mockCache.EXPECT().GetInformer(ctx, obj)
 				},
@@ -123,7 +123,7 @@ var _ = Describe("SingleObject", func() {
 
 	Describe("#IndexField", func() {
 		It("should delegate call to stored cache", func() {
-			testCache(ctx, mockCache, clock,
+			testCache(ctx, mockCache, clock, maxIdleTime,
 				func() {
 					mockCache.EXPECT().IndexField(ctx, obj, "", nil)
 				},
@@ -157,9 +157,7 @@ func expectStart(mockCache *mockcache.MockCache) <-chan struct{} {
 	return testChan
 }
 
-func testCache(ctx context.Context, mockCache *mockcache.MockCache, clock *testclock.FakeClock, setupExpectation func(), testCall func() error) {
-	maxIdleTime := 100 * time.Millisecond
-
+func testCache(ctx context.Context, mockCache *mockcache.MockCache, clock *testclock.FakeClock, maxIdleTime time.Duration, setupExpectation func(), testCall func() error) {
 	By("cache does not exist yet")
 	var (
 		cacheCtx  context.Context
@@ -174,20 +172,20 @@ func testCache(ctx context.Context, mockCache *mockcache.MockCache, clock *testc
 
 	mockCache.EXPECT().WaitForCacheSync(ctx).Return(true)
 	setupExpectation()
-	Expect(testCall()).To(Succeed())
+	ExpectWithOffset(1, testCall()).To(Succeed())
 
 	By("ensure mock cache was started")
 	// The `Start()` call of the cache is done as part of a go function, hence it can race with this test.
 	// Before making assertions on `cacheCtx` we should wait for it to have been set.
-	Eventually(startChan).Should(Receive())
+	EventuallyWithOffset(1, startChan).Should(Receive())
 
 	By("cache is re-used")
 	setupExpectation()
-	Expect(testCall()).To(Succeed())
+	ExpectWithOffset(1, testCall()).To(Succeed())
 
 	By("cache expires")
 	clock.Step(2 * maxIdleTime)
-	Eventually(func() <-chan struct{} {
+	EventuallyWithOffset(1, func() <-chan struct{} {
 		return cacheCtx.Done()
 	}).Should(BeClosed())
 
@@ -195,6 +193,6 @@ func testCache(ctx context.Context, mockCache *mockcache.MockCache, clock *testc
 	startChan2 := expectStart(mockCache)
 	mockCache.EXPECT().WaitForCacheSync(ctx).Return(true)
 	setupExpectation()
-	Expect(testCall()).To(Succeed())
-	Eventually(startChan2).Should(Receive())
+	ExpectWithOffset(1, testCall()).To(Succeed())
+	EventuallyWithOffset(1, startChan2).Should(Receive())
 }
