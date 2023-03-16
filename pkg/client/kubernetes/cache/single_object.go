@@ -37,13 +37,15 @@ import (
 var _ cache.Cache = &singleObject{}
 
 type singleObject struct {
+	parentCtx  context.Context
 	log        logr.Logger
 	restConfig *rest.Config
 	newCache   cache.NewCacheFunc
 	opts       func() cache.Options
 
-	lock  sync.RWMutex
-	store map[client.ObjectKey]*objectCache
+	startWait chan struct{} // startWait is a channel that is closed after the cache has been started
+	lock      sync.RWMutex
+	store     map[client.ObjectKey]*objectCache
 
 	clock                     clock.Clock
 	garbageCollectionInterval time.Duration
@@ -75,6 +77,7 @@ func NewSingleObject(
 		restConfig:                restConfig,
 		newCache:                  newCache,
 		opts:                      func() cache.Options { return opts },
+		startWait:                 make(chan struct{}),
 		store:                     make(map[client.ObjectKey]*objectCache),
 		clock:                     clock,
 		garbageCollectionInterval: garbageCollectionInterval,
@@ -83,8 +86,15 @@ func NewSingleObject(
 }
 
 func (s *singleObject) Start(ctx context.Context) error {
+	if s.parentCtx != nil {
+		return fmt.Errorf("the Start method cannot be called multiple times")
+	}
+
 	logger := s.log.WithName("garbage-collector").WithValues("interval", s.garbageCollectionInterval, "maxIdleTime", s.maxIdleTime)
 	logger.V(1).Info("Starting")
+
+	s.parentCtx = ctx
+	close(s.startWait)
 
 	wait.Until(func() {
 		s.lock.Lock()
@@ -118,15 +128,15 @@ func (s *singleObject) Start(ctx context.Context) error {
 }
 
 func (s *singleObject) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	cache, err := s.getOrCreateCache(ctx, key)
+	cache, err := s.getOrCreateCache(key)
 	if err != nil {
 		return err
 	}
 	return cache.Get(ctx, key, obj, opts...)
 }
 
-func (s *singleObject) GetInformer(ctx context.Context, obj client.Object) (cache.V(1).Informer, error) {
-	cache, err := s.getOrCreateCache(ctx, client.ObjectKeyFromObject(obj))
+func (s *singleObject) GetInformer(ctx context.Context, obj client.Object) (cache.Informer, error) {
+	cache, err := s.getOrCreateCache(client.ObjectKeyFromObject(obj))
 	if err != nil {
 		return nil, err
 	}
@@ -134,14 +144,14 @@ func (s *singleObject) GetInformer(ctx context.Context, obj client.Object) (cach
 }
 
 func (s *singleObject) IndexField(ctx context.Context, obj client.Object, field string, extractValue client.IndexerFunc) error {
-	cache, err := s.getOrCreateCache(ctx, client.ObjectKeyFromObject(obj))
+	cache, err := s.getOrCreateCache(client.ObjectKeyFromObject(obj))
 	if err != nil {
 		return err
 	}
 	return cache.IndexField(ctx, obj, field, extractValue)
 }
 
-func (s *singleObject) getOrCreateCache(ctx context.Context, key client.ObjectKey) (cache.Cache, error) {
+func (s *singleObject) getOrCreateCache(key client.ObjectKey) (cache.Cache, error) {
 	log := s.log.WithValues("key", key)
 
 	cache, found := func() (*objectCache, bool) {
@@ -155,7 +165,7 @@ func (s *singleObject) getOrCreateCache(ctx context.Context, key client.ObjectKe
 		log.V(1).Info("Cache not found, creating it")
 
 		var err error
-		cache, err = s.createCache(ctx, key)
+		cache, err = s.createAndStartCache(key)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +178,7 @@ func (s *singleObject) getOrCreateCache(ctx context.Context, key client.ObjectKe
 	return cache.cache, nil
 }
 
-func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*objectCache, error) {
+func (s *singleObject) createAndStartCache(key client.ObjectKey) (*objectCache, error) {
 	log := s.log.WithValues("key", key)
 
 	s.lock.Lock()
@@ -191,7 +201,7 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 		return nil, fmt.Errorf("failed creating new cache: %w", err)
 	}
 
-	cacheCtx, cancel := context.WithCancel(ctx)
+	cacheCtx, cancel := context.WithCancel(s.parentCtx)
 
 	go func() {
 		log.V(1).Info("Starting new cache")
@@ -201,7 +211,7 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 	}()
 
 	log.V(1).Info("Waiting for cache to be synced")
-	if !cache.WaitForCacheSync(ctx) {
+	if !cache.WaitForCacheSync(s.parentCtx) {
 		cancel()
 		return nil, fmt.Errorf("failed waiting for cache to be synced")
 	}
@@ -215,14 +225,19 @@ func (s *singleObject) createCache(ctx context.Context, key client.ObjectKey) (*
 	return s.store[key], nil
 }
 
-func (s *singleObject) WaitForCacheSync(_ context.Context) bool {
-	return true
+func (s *singleObject) WaitForCacheSync(ctx context.Context) bool {
+	select {
+	case <-s.startWait:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 func (s *singleObject) List(_ context.Context, _ client.ObjectList, _ ...client.ListOption) error {
 	return fmt.Errorf("the List operation is not supported by singleObject cache")
 }
 
-func (s *singleObject) GetInformerForKind(_ context.Context, _ schema.GroupVersionKind) (cache.V(1).Informer, error) {
+func (s *singleObject) GetInformerForKind(_ context.Context, _ schema.GroupVersionKind) (cache.Informer, error) {
 	return nil, fmt.Errorf("the GetInformerForKind operation is not supported by singleObject cache")
 }
