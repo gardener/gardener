@@ -87,61 +87,6 @@ var _ = Describe("Strategy", func() {
 				nil,
 			),
 		)
-
-		Context("enableBasicAuthentication field", func() {
-			It("should drop the enableBasicAuthentication field when the kubeAPIServer is not nil", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-					EnableBasicAuthentication: pointer.Bool(false),
-				}
-
-				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
-
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(BeNil())
-			})
-
-			It("should do nothing when kubeAPIServer is nil", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = nil
-
-				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
-
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
-			})
-		})
-
-		DescribeTable("kubernetesDashboard.authenticationMode field",
-			func(addons *core.Addons, expected *core.Addons) {
-				shoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Addons: addons,
-					},
-				}
-
-				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
-
-				Expect(shoot.Spec.Addons).To(Equal(expected))
-			},
-
-			Entry("addons field is nil",
-				nil,
-				nil,
-			),
-			Entry("kubernetesDashboard field is nil",
-				&core.Addons{KubernetesDashboard: nil},
-				&core.Addons{KubernetesDashboard: nil},
-			),
-			Entry("authMode is nil",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
-			),
-			Entry("authMode is basic",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("basic")}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-			),
-			Entry("authMode is token",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-			),
-		)
 	})
 
 	Describe("#PrepareForUpdate", func() {
@@ -551,72 +496,6 @@ var _ = Describe("Strategy", func() {
 				),
 			)
 		})
-
-		Context("enableBasicAuthentication field", func() {
-			var (
-				oldShoot *core.Shoot
-				newShoot *core.Shoot
-			)
-
-			BeforeEach(func() {
-				oldShoot = &core.Shoot{}
-				newShoot = oldShoot.DeepCopy()
-			})
-
-			It("should drop the enableBasicAuthentication field when the kubeAPIServer is not nil", func() {
-				newShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-					EnableBasicAuthentication: pointer.Bool(false),
-				}
-
-				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-
-				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(BeNil())
-			})
-
-			It("should do nothing when kubeAPIServer is nil", func() {
-				newShoot.Spec.Kubernetes.KubeAPIServer = nil
-
-				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-
-				Expect(newShoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
-			})
-		})
-
-		DescribeTable("kubernetesDashboard.authenticationMode field",
-			func(addons *core.Addons, expected *core.Addons) {
-				newShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Addons: addons,
-					},
-				}
-				oldShoot := &core.Shoot{}
-
-				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-
-				Expect(newShoot.Spec.Addons).To(Equal(expected))
-			},
-
-			Entry("addons field is nil",
-				nil,
-				nil,
-			),
-			Entry("kubernetesDashboard field is nil",
-				&core.Addons{KubernetesDashboard: nil},
-				&core.Addons{KubernetesDashboard: nil},
-			),
-			Entry("authMode is nil",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
-			),
-			Entry("authMode is basic",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("basic")}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-			),
-			Entry("authMode is token",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-			),
-		)
 	})
 
 	Describe("#Canonicalize", func() {
@@ -626,6 +505,7 @@ var _ = Describe("Strategy", func() {
 			shoot = &core.Shoot{
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
+						Version: "1.24.0",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							AdmissionPlugins: []core.AdmissionPlugin{
 								{
@@ -696,6 +576,64 @@ var _ = Describe("Strategy", func() {
 				))
 			})
 		})
+
+		Context("enableBasicAuthentication field", func() {
+			It("should drop the enableBasicAuthentication field when the kubeAPIServer is not nil", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					EnableBasicAuthentication: pointer.Bool(false),
+				}
+
+				shootregistry.NewStrategy(0).Canonicalize(shoot)
+
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(BeNil())
+			})
+
+			It("should do nothing when kubeAPIServer is nil", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = nil
+
+				shootregistry.NewStrategy(0).Canonicalize(shoot)
+
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
+			})
+		})
+
+		DescribeTable("kubernetesDashboard.authenticationMode field",
+			func(addons *core.Addons, expected *core.Addons) {
+				shoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							Version: "1.24.8",
+						},
+						Addons: addons,
+					},
+				}
+
+				shootregistry.NewStrategy(0).Canonicalize(shoot)
+
+				Expect(shoot.Spec.Addons).To(Equal(expected))
+			},
+
+			Entry("addons field is nil",
+				nil,
+				nil,
+			),
+			Entry("kubernetesDashboard field is nil",
+				&core.Addons{KubernetesDashboard: nil},
+				&core.Addons{KubernetesDashboard: nil},
+			),
+			Entry("authMode is nil",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
+			),
+			Entry("authMode is basic",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("basic")}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+			),
+			Entry("authMode is token",
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
+			),
+		)
 	})
 })
 
