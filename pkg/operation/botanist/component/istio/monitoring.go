@@ -170,15 +170,15 @@ metric_relabel_configs:
 metrics_path: /stats/prometheus
 kubernetes_sd_configs:
 - role: endpoints
-  namespaces:
-    names: [ ` + v1beta1constants.DefaultSNIIngressNamespace + ` ]
+  selectors:
+   label: istio=ingressgateway
 relabel_configs:
 - source_labels:
   - __meta_kubernetes_service_name
   - __meta_kubernetes_endpoint_port_name
   - __meta_kubernetes_namespace
   action: keep
-  regex: ` + v1beta1constants.DefaultSNIIngressServiceName + `;tls-tunnel;` + v1beta1constants.DefaultSNIIngressNamespace + `
+  regex: ` + v1beta1constants.DefaultSNIIngressServiceName + `;tls-tunnel;` + v1beta1constants.DefaultSNIIngressNamespace + `.*
 - source_labels: [__meta_kubernetes_pod_ip]
   action: replace
   target_label: __address__
