@@ -1087,7 +1087,7 @@ profiles:
     value: example/gardener-local/gardenlet/values-provider-extensions.yaml
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/provider-extensions/gardenlet/values.yaml
+    value: example/provider-extensions/gardenlet/{{.SEED_VALUES}}
   - op: replace
     path: /deploy/helm/hooks/after/0/host/command
     value:

@@ -1,5 +1,5 @@
 GlobalKnownHostsFile /gardener-apiserver-ssh-keys/known_hosts
-IdentityFile /gardener-apiserver-ssh-keys/provider-extensions_id_rsa
+IdentityFile /gardener-apiserver-ssh-keys/seed_id_rsa
 
 # Keep alive ssh connections by sending a packet every 10 seconds
 ServerAliveInterval 10

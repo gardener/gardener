@@ -28,8 +28,6 @@ REPO_ROOT                                  := $(shell dirname $(realpath $(lastw
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/local/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/local2/kubeconfig
 GARDENER_EXTENSIONS_KUBECONFIG             := $(REPO_ROOT)/example/gardener-local/kind/extensions/kubeconfig
-GARDENER_EXTENSIONS_SEED_NAME              := provider-extensions
-GARDENER_EXTENSIONS_SEED_KUBECONFIG        := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG   := $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/kubeconfig
 GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG    := $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/kubeconfig
 GARDENER_LOCAL_OPERATOR_KUBECONFIG         := $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
@@ -38,12 +36,17 @@ GARDENER_NEXT_RELEASE                      := $(VERSION)
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
 ACTIVATE_SEEDAUTHORIZER                    := false
-SEED_NAME                                  := ""
+SEED_NAME                                  ?= provider-extensions
+SEED_KUBECONFIG                            := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
 IPFAMILY                                   := ipv4
 PARALLEL_E2E_TESTS                         := 5
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
+
+ifneq ($(SEED_NAME),provider-extensions)
+	SEED_KUBECONFIG := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig-$(SEED_NAME)
+endif
 
 ifndef ARTIFACTS
 	export ARTIFACTS=/tmp/artifacts
@@ -368,9 +371,9 @@ gardener-extensions-%: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
 gardener-extensions-%: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
 
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig --seed-name $(SEED_NAME)
+	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
 gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig --seed-name $(SEED_NAME)
+	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
 
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local

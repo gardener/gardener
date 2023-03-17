@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardener-apiserver-tunnel-ssh
-  namespace: relay
   labels:
     app: gardener-apiserver-tunnel-ssh
 spec:

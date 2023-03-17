@@ -20,30 +20,37 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 usage() {
   echo "Usage:"
-  echo "> create-host-keys.sh [ -h | <host> <port> ]"
+  echo "> create-host-keys.sh [ -h | <seed-name> <host> <port> ]"
   echo
   echo ">> For example: create-host-keys.sh localhost 22"
 
   exit 0
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
+if [ "$1" == "-h" ] || [ "$#" -ne 3 ]; then
   usage
 fi
 
-host=$1
-port=$2
+seed=$1
+host=$2
+port=$3
 
-ssh-keygen -q -C "" -N "" -t rsa -b 4096 -f "$SCRIPT_DIR"/sshd/host-keys/ssh_host_rsa_key <<< y >/dev/null
-ssh-keygen -q -C "" -N "" -t ecdsa -f "$SCRIPT_DIR"/sshd/host-keys/ssh_host_ecdsa_key <<< y >/dev/null
-ssh-keygen -q -C "" -N "" -t ed25519 -f "$SCRIPT_DIR"/sshd/host-keys/ssh_host_ed25519_key <<< y >/dev/null
+base_dir="$SCRIPT_DIR/seeds/$seed"
+if [ ! -d "$base_dir" ]; then
+  echo "missing seed directory: $base_dir"
+  exit 1
+fi
 
-rm -rf "$SCRIPT_DIR"/ssh/client-keys/known_hosts
+ssh-keygen -q -C "" -N "" -t rsa -b 4096 -f "$base_dir"/sshd/host-keys/ssh_host_rsa_key <<< y >/dev/null
+ssh-keygen -q -C "" -N "" -t ecdsa -f "$base_dir"/sshd/host-keys/ssh_host_ecdsa_key <<< y >/dev/null
+ssh-keygen -q -C "" -N "" -t ed25519 -f "$base_dir"/sshd/host-keys/ssh_host_ed25519_key <<< y >/dev/null
+
+rm -rf "$base_dir"/ssh/client-keys/known_hosts
 
 {
-    echo "[$host]:$port $(cat "$SCRIPT_DIR"/sshd/host-keys/ssh_host_rsa_key.pub)"
-    echo "[$host]:$port $(cat "$SCRIPT_DIR"/sshd/host-keys/ssh_host_ecdsa_key.pub)"
-    echo "[$host]:$port $(cat "$SCRIPT_DIR"/sshd/host-keys/ssh_host_ed25519_key.pub)"
-} >> "$SCRIPT_DIR"/ssh/client-keys/known_hosts
+    echo "[$host]:$port $(cat "$base_dir"/sshd/host-keys/ssh_host_rsa_key.pub)"
+    echo "[$host]:$port $(cat "$base_dir"/sshd/host-keys/ssh_host_ecdsa_key.pub)"
+    echo "[$host]:$port $(cat "$base_dir"/sshd/host-keys/ssh_host_ed25519_key.pub)"
+} >> "$base_dir"/ssh/client-keys/known_hosts
 
-echo "$host" > "$SCRIPT_DIR"/ssh/client-keys/host
+echo "$host" > "$base_dir"/ssh/client-keys/host

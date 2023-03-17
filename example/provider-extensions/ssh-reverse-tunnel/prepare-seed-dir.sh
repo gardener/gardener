@@ -20,34 +20,27 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 usage() {
   echo "Usage:"
-  echo "> create-client-keys.sh [ -h | <seed-name> <host> ]"
+  echo "> prepare-seed-dir.sh [ -h | <seed-name> ]"
   echo
-  echo ">> For example: create-client-keys.sh localhost provider-extensions"
+  echo ">> For example: prepare-seed-dir.sh provider-extensions"
 
   exit 0
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
+if [ "$1" == "-h" ] || [ "$#" -ne 1 ]; then
   usage
 fi
 
 name=$1
-host=$2
 
 base_dir="$SCRIPT_DIR/seeds/$name"
+echo "seed directory: $base_dir"
 if [ ! -d "$base_dir" ]; then
-  echo "missing seed directory: $base_dir"
-  exit 1
+  mkdir -p "$base_dir"
 fi
-
-ssh-keygen -q -N "" -C "root@$host" -f "$base_dir"/ssh/client-keys/seed_id_rsa <<< y >/dev/null
-
-rm -rf "$base_dir"/sshd/host-keys/authorized_keys
-
-for f in "$base_dir"/ssh/client-keys/*_id_rsa.pub
-do
-    [ -e "$f" ] || continue
-    cat "$f" >> "$base_dir"/sshd/host-keys/authorized_keys
-done
-
-
+cp -r "$SCRIPT_DIR"/seed-template/sshd "$base_dir"
+cp -r "$SCRIPT_DIR"/seed-template/ssh "$base_dir"
+mkdir -p "$base_dir/ssh/client-keys"
+mkdir -p "$base_dir/sshd/host-keys"
+sed -i -e "s/namespace: relay$/namespace: relay-$name/g" "$base_dir/ssh/kustomization.yaml"
+sed -i -e "s/name: relay$/name: relay-$name/g" "$base_dir/ssh/namespace.yaml"

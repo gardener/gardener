@@ -90,6 +90,30 @@ This will first prepare the basic configuration of your KinD and Gardener cluste
 Afterwards, the images for the Garden cluster are built and deployed into the KinD cluster.
 Finally, the images for the Seed cluster are built, pushed to a container registry on the Seed, and the `gardenlet` is started.
 
+### Adding Additional Seeds
+
+Additional seed(s) can be added by running
+
+```bash
+SEED_NAME=<seed-name> make gardener-extensions-up
+```
+
+The seed cluster preparations are similar to the first seed:
+
+The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig-<seed-name>`.
+Additionally, please maintain the configuration of your seed in `./example/provider-extensions/gardenlet/values-<seed-name>.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `SEED_NAME=<seed-name> make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
+
+### Removing a Seed
+
+If you have multiple seeds and want to remove one, just use
+
+```bash
+SEED_NAME=<seed-name> make gardener-extensions-down
+```
+
+If it is not the last seed, this command will only remove the seed, but leave the local Gardener cluster and the other seeds untouched.
+To remove all seeds and to cleanup the local Gardener cluster, you have to run the command for each seed.
+
 ## Pause and Unpause the KinD Cluster
 
 The KinD cluster can be paused by stopping and keeping its docker container. This can be done by running:
