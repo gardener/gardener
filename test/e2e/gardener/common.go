@@ -84,8 +84,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Networking: gardencorev1beta1.Networking{
-				Type:           "calico",
-				ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"apiVersion":"calico.networking.extensions.gardener.cloud/v1alpha1","kind":"NetworkConfig","typha":{"enabled":false},"backend":"none"}`)},
+				Type:           "cilium",
+				ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"apiVersion":"cilium.networking.extensions.gardener.cloud/v1alpha1","kind":"NetworkConfig"}`)},
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",

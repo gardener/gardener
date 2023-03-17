@@ -12,13 +12,18 @@ spec:
   secretBindingName: local # dummy, doesn't contain any credentials
   region: local
   networking:
-    type: calico
+    #type: calico
+    #providerConfig:
+    #  apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
+    #  kind: NetworkConfig
+    #  backend: none
+    #  typha:
+    #    enabled: false
+    type: cilium
     providerConfig:
-      apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
+      apiVersion: cilium.networking.extensions.gardener.cloud/v1alpha1
       kind: NetworkConfig
-      backend: none
-      typha:
-        enabled: false
+    #  tunnel: geneve
   provider:
     type: local
     workers:
