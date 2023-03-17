@@ -302,9 +302,6 @@ kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up regis
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
-gardener-extensions-up gardener-extensions-down: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
-gardener-extensions-up gardener-extensions-down: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
-
 kind-up: $(KIND) $(KUBECTL) $(HELM)
 	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind-down: $(KIND)
@@ -345,16 +342,18 @@ export SKAFFOLD_BUILD_CONCURRENCY = 0
 gardener%up gardenlet%up operator-up: export SKAFFOLD_DEFAULT_REPO = localhost:5001
 gardener%up gardenlet%up operator-up: export SKAFFOLD_PUSH = true
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
-gardener-up gardener-down gardener-ha-single-zone-up gardener-ha-single-zone-down gardener-ha-multi-zone-up gardener-ha-multi-zone-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
-gardener-extensions-up gardener-extensions-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
-
+gardener%up gardener%down gardenlet%up gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 # set ldflags for skaffold
-gardener-up gardener-extensions-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up operator-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+gardener%up gardenlet%up operator-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) run
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
+
+gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
+gardener-extensions-%: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
+gardener-extensions-%: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
 
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig --seed-name $(SEED_NAME)
