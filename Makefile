@@ -404,11 +404,13 @@ tear-down-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+operator-%: export SKAFFOLD_FILENAME = skaffold-operator.yaml
+
 operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run -f skaffold-operator.yaml
+	$(SKAFFOLD) run
 operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -f skaffold-operator.yaml
+	$(SKAFFOLD) delete
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
