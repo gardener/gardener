@@ -67,8 +67,6 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	shoot.Status = core.ShootStatus{}
 
 	dropDisabledFields(shoot, nil)
-	dropEnableBasicAuthenticationField(shoot)
-	setKubernetesDashboardAuthMode(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -83,8 +81,6 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	}
 
 	dropDisabledFields(newShoot, oldShoot)
-	dropEnableBasicAuthenticationField(newShoot)
-	setKubernetesDashboardAuthMode(newShoot)
 }
 
 // dropDisabledFields removes disabled fields from shoot.
@@ -93,23 +89,6 @@ func dropDisabledFields(newShoot, oldShoot *core.Shoot) {
 	oldShootIsHA := oldShoot != nil && helper.IsHAControlPlaneConfigured(oldShoot)
 	if !utilfeature.DefaultFeatureGate.Enabled(features.HAControlPlanes) && !oldShootIsHA && newShoot.Spec.ControlPlane != nil {
 		newShoot.Spec.ControlPlane.HighAvailability = nil
-	}
-}
-
-// dropEnableBasicAuthenticationField sets the enableBasicAuthentication to nil.
-func dropEnableBasicAuthenticationField(shoot *core.Shoot) {
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
-		shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = nil
-	}
-}
-
-// setKubernetesDashboardAuthMode sets the kubernetes-dashboard authentication mode to "token", if its current value is not "token" (for example "basic").
-func setKubernetesDashboardAuthMode(shoot *core.Shoot) {
-	if shoot.Spec.Addons != nil && shoot.Spec.Addons.KubernetesDashboard != nil {
-		if authMode := shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode; authMode != nil && *authMode != core.KubernetesDashboardAuthModeToken {
-			defaultAuthMode := core.KubernetesDashboardAuthModeToken
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
-		}
 	}
 }
 
@@ -190,6 +169,8 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
 		cleanupAdmissionPlugins(shoot)
 	}
+	dropEnableBasicAuthenticationField(shoot)
+	setKubernetesDashboardAuthMode(shoot)
 }
 
 func cleanupAdmissionPlugins(shoot *core.Shoot) {
@@ -205,6 +186,23 @@ func cleanupAdmissionPlugins(shoot *core.Shoot) {
 	}
 
 	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = admissionPlugins
+}
+
+// dropEnableBasicAuthenticationField sets the enableBasicAuthentication to nil.
+func dropEnableBasicAuthenticationField(shoot *core.Shoot) {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+		shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = nil
+	}
+}
+
+// setKubernetesDashboardAuthMode sets the kubernetes-dashboard authentication mode to "token", if its current value is not "token" (for example "basic").
+func setKubernetesDashboardAuthMode(shoot *core.Shoot) {
+	if shoot.Spec.Addons != nil && shoot.Spec.Addons.KubernetesDashboard != nil {
+		if authMode := shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode; authMode != nil && *authMode != core.KubernetesDashboardAuthModeToken {
+			defaultAuthMode := core.KubernetesDashboardAuthModeToken
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
+		}
+	}
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {
