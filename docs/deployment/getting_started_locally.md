@@ -92,6 +92,28 @@ make gardener-up
 This will first build the base image (which might take a bit if you do it for the first time).
 Afterwards, the Gardener resources will be deployed into the cluster.
 
+## Developing Gardener
+
+```bash
+make gardener-dev
+```
+
+This is similar to `make gardener-up` but additionally starts a [skaffold dev loop](https://skaffold.dev/docs/workflows/dev/).
+After the initial deployment, skaffold starts watching source files.
+Once it has detected changes, press any key to trigger a new build and deployment of the changed components.
+
+Tip: you can set the `SKAFFOLD_MODULE` environment variable to select specific modules of the skaffold configuration (see [`skaffold.yaml`](../../skaffold.yaml)) that skaffold should watch, build, and deploy.
+This significantly reduces turnaround times during development.
+
+For example, if you want to develop changes to gardenlet:
+
+```bash
+# initial deployment of all components
+make gardener-up
+# start iterating on gardenlet without deploying other components
+make gardener-dev SKAFFOLD_MODULE=gardenlet
+```
+
 ## Creating a `Shoot` Cluster
 
 You can wait for the `Seed` to be ready by running:
