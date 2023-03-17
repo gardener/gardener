@@ -67,8 +67,6 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	shoot.Status = core.ShootStatus{}
 
 	dropDisabledFields(shoot, nil)
-	dropEnableBasicAuthenticationField(shoot)
-	setKubernetesDashboardAuthMode(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
