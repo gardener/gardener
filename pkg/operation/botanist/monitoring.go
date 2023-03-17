@@ -402,6 +402,11 @@ func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
+	//TODO(rickardsjp, istvanballok): Remove in the next release once the Grafana to Plutono migration is complete.
+	if err := b.DeleteGrafana(ctx); err != nil {
+		return err
+	}
+
 	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngress),
 		secretsmanager.Persist(),
 		secretsmanager.Rotate(secretsmanager.InPlace),
@@ -597,6 +602,11 @@ func (b *Botanist) deployPlutonoCharts(ctx context.Context, credentialsSecret *c
 // DeletePlutono will delete all plutono resources from the seed cluster.
 func (b *Botanist) DeletePlutono(ctx context.Context) error {
 	return common.DeletePlutono(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
+}
+
+// DeleteGrafana will delete all Grafana resources from the seed cluster.
+func (b *Botanist) DeleteGrafana(ctx context.Context) error {
+	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts

@@ -212,3 +212,46 @@ func DeletePlutono(ctx context.Context, k8sClient kubernetes.Interface, namespac
 		),
 	)
 }
+
+// DeleteGrafana deletes the Grafana resources that are no longer necessary due to the migration to Plutono.
+func DeleteGrafana(ctx context.Context, k8sClient kubernetes.Interface, namespace string) error {
+	if k8sClient == nil {
+		return fmt.Errorf("require kubernetes client")
+	}
+
+	deleteOptions := []client.DeleteAllOfOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			"component": "grafana",
+		},
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &appsv1.Deployment{}, append(deleteOptions, client.PropagationPolicy(metav1.DeletePropagationForeground))...); err != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...); err != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &networkingv1.Ingress{}, deleteOptions...); err != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.Secret{}, deleteOptions...); err != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().Delete(
+		ctx,
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grafana",
+				Namespace: namespace,
+			}},
+	); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	return nil
+}
