@@ -2941,8 +2941,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("Maintenance.AutoUpdate.KubernetesVersion: false != true"),
 			}))))
 		})
 

@@ -122,8 +122,9 @@ var _ = Describe("validation", func() {
 			errorList := ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("RegistrationRef.APIVersion: another-api-version != "),
 			}))))
 		})
 

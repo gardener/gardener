@@ -16,7 +16,9 @@ package validation
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/go-test/deep"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -169,8 +171,11 @@ func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrat
 	allErrs := field.ErrorList{}
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new, old, fldPath)...)
-		return allErrs
+		errorList := apivalidation.ValidateImmutableField(new, old, fldPath)
+		if diff := deep.Equal(new, old); diff != nil {
+			errorList = field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
+		}
+		return errorList
 	}
 
 	kindTypeToPrimary := make(map[string]*bool, len(old.Resources))

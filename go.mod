@@ -13,6 +13,7 @@ require (
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.48.1
 	github.com/go-logr/logr v1.2.3
+	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/google/gnostic v0.5.7-v3refs
