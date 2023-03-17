@@ -18,10 +18,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +35,24 @@ import (
 const (
 	defaultCacheResyncPeriod = 6 * time.Hour
 )
+
+// NewRuntimeCache creates a new cache.Cache with the given config and options. It can be used
+// for creating new controller-runtime clients with caches.
+func NewRuntimeCache(config *rest.Config, options cache.Options) (cache.Cache, error) {
+	if err := setCacheOptionsDefaults(&options); err != nil {
+		return nil, err
+	}
+
+	return cache.New(config, options)
+}
+
+func setCacheOptionsDefaults(options *cache.Options) error {
+	if options.Resync == nil {
+		options.Resync = pointer.Duration(defaultCacheResyncPeriod)
+	}
+
+	return nil
+}
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
 	if options.Mapper == nil {
@@ -82,20 +102,14 @@ func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.
 	}
 }
 
-// NewRuntimeCache creates a new cache.Cache with the given config and options. It can be used
-// for creating new controller-runtime clients with caches.
-func NewRuntimeCache(config *rest.Config, options cache.Options) (cache.Cache, error) {
-	if err := setCacheOptionsDefaults(&options); err != nil {
-		return nil, err
+// SingleObjectCacheFunc returns a cache.NewCacheFunc for the SingleObject implementation.
+func SingleObjectCacheFunc(log logr.Logger, scheme *runtime.Scheme, obj client.Object) cache.NewCacheFunc {
+	logger := log.WithName("single-object-cache")
+	if gvk, _, err := scheme.ObjectKinds(obj); err == nil && len(gvk) > 0 {
+		logger = logger.WithValues("groupVersion", gvk[0].GroupVersion().String(), "kind", gvk[0].Kind)
 	}
 
-	return cache.New(config, options)
-}
-
-func setCacheOptionsDefaults(options *cache.Options) error {
-	if options.Resync == nil {
-		options.Resync = pointer.Duration(defaultCacheResyncPeriod)
+	return func(restConfig *rest.Config, options cache.Options) (cache.Cache, error) {
+		return kubernetescache.NewSingleObject(logger, restConfig, cache.New, options, clock.RealClock{}, 10*time.Minute, time.Minute), nil
 	}
-
-	return nil
 }

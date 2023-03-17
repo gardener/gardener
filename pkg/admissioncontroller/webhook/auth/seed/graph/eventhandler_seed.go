@@ -19,10 +19,12 @@ import (
 	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -94,10 +96,14 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeSeed, "", seed.Name)
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeSeed, "", seed.Name)
 	g.deleteAllIncomingEdges(VertexTypeLease, VertexTypeSeed, "", seed.Name)
+	g.deleteAllIncomingEdges(VertexTypeConfigMap, VertexTypeSeed, "", seed.Name)
 
 	seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", seed.Name)
 	namespaceVertex := g.getOrCreateVertex(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed.Name))
 	g.addEdge(namespaceVertex, seedVertex)
+
+	configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, metav1.NamespaceSystem, v1beta1constants.ClusterIdentity)
+	g.addEdge(configMapVertex, seedVertex)
 
 	leaseVertex := g.getOrCreateVertex(VertexTypeLease, gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name)
 	g.addEdge(leaseVertex, seedVertex)
