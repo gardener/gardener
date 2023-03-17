@@ -1,6 +1,17 @@
 groups:
 - name: node-exporter.rules
   rules:
+  - alert: NodeKubeletDown
+    expr: count_over_time((sum by (node)(kube_node_status_condition{condition="Ready",status!="true"}) == 1)[10m:]) == 9
+    for: 10m
+    labels:
+      service: node-exporter
+      severity: warning
+      type: seed
+      visibility: owner
+    annotations:
+      summary: Nodes not ready for more than 10 minutes 
+      description: Shows the number of nodes that are in the NotReady state for more than 10 minutes due to the kubelet not responding
   - alert: NodeExporterDown
     expr: absent(up{job="node-exporter"} == 1)
     for: 1h
