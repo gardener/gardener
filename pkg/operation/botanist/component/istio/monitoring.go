@@ -171,7 +171,8 @@ metrics_path: /stats/prometheus
 kubernetes_sd_configs:
 - role: endpoints
   selectors:
-    label: istio=ingressgateway
+  - role: "endpoints"
+    field: "metadata.name=` + v1beta1constants.DefaultSNIIngressServiceName + `"
 relabel_configs:
 - source_labels:
   - __meta_kubernetes_service_name
