@@ -509,7 +509,7 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 		return err
 	}
 
-	// drop loki service in garden namespace since this one should not be mutated
+	// drop loki services of non-shoot namespaces since they should not be mutated
 	for i := len(serviceList.Items) - 1; i >= 0; i-- {
 		if !strings.HasPrefix(serviceList.Items[i].Namespace, v1beta1constants.TechnicalIDPrefix) {
 			serviceList.Items = append(serviceList.Items[:i], serviceList.Items[i+1:]...)
@@ -524,7 +524,7 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 		return err
 	}
 
-	// drop prometheus services in garden namespace since they one should not be mutated
+	// drop prometheus services of non-shoot namespaces since they one should not be mutated
 	for i := len(serviceList.Items) - 1; i >= 0; i-- {
 		if !strings.HasPrefix(serviceList.Items[i].Namespace, v1beta1constants.TechnicalIDPrefix) {
 			serviceList.Items = append(serviceList.Items[:i], serviceList.Items[i+1:]...)

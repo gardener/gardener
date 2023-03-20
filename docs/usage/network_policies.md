@@ -44,7 +44,7 @@ As a result, in most cases no special/custom-crafted `NetworkPolicy`s must be cr
 
 As part of the seed reconciliation flow, the `gardenlet` deploys various Prometheus instances into the `garden` namespace.
 See also [this document](../development/monitoring-stack.md) for more information.
-Each pod that should be scraped for metrics be these instances must have a `Service` which is annotated with
+Each pod that should be scraped for metrics by these instances must have a `Service` which is annotated with
 
 ```yaml
 annotations:
@@ -87,7 +87,7 @@ This automatically allows the needed network traffic from the Prometheus pod.
 
 For shoot clusters, the concepts mentioned above don't apply and are not enabled.
 Instead, `gardenlet` only deploys a few "custom" `NetworkPolicy`s for the shoot system components running in the `kube-system` namespace.
-All other namespaces in the shoot cluster do not contain network policies deployed by ``gardenlet``.
+All other namespaces in the shoot cluster do not contain network policies deployed by `gardenlet`.
 
 As a best practice, every pod deployed into the `kube-system` namespace should use appropriate `NetworkPolicy` in order to only allow **required** network traffic.
 Therefore, pods should have labels matching to the selectors of the available network policies.
