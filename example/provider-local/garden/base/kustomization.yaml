@@ -11,3 +11,4 @@ resources:
 
 patchesStrategicMerge:
 - patch-controller-registrations.yaml
+- patch-controller-deployment.yaml
