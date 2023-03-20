@@ -42,8 +42,6 @@ var _ = Describe("Logging", func() {
     Parser              kubernetesDashboardParser
     Reserve_Data        True
 `))
-			Expect(loggingConfig.UserExposed).To(BeTrue())
-			Expect(loggingConfig.PodPrefixes).To(ConsistOf("kubernetes-dashboard", "dashboard-metrics-scraper"))
 		})
 	})
 })

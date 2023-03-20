@@ -39,10 +39,5 @@ const (
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the machine-controller-manager logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{
-		Filters:     loggingFilter,
-		Parsers:     loggingParser,
-		UserExposed: true,
-		PodPrefixes: []string{v1beta1constants.DeploymentNameMachineControllerManager},
-	}, nil
+	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
 }

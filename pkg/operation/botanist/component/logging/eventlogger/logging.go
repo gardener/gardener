@@ -35,10 +35,5 @@ const (
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the event-logger logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{
-		Filters:     filter,
-		Parsers:     "",
-		UserExposed: false,
-		PodPrefixes: []string{},
-	}, nil
+	return component.CentralLoggingConfig{Filters: filter, Parsers: ""}, nil
 }

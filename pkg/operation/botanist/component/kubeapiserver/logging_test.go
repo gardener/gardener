@@ -59,8 +59,6 @@ var _ = Describe("Logging", func() {
     Match               kubernetes.*kube-apiserver*apiserver-proxy-pod-mutator*
     Copy                level    severity
 `))
-			Expect(loggingConfig.UserExposed).To(BeTrue())
-			Expect(loggingConfig.PodPrefixes).To(ConsistOf("kube-apiserver"))
 		})
 	})
 })

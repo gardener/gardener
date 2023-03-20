@@ -42,7 +42,6 @@ var _ = Describe("Logging", func() {
     Parser              kubeStateMetricsParser
     Reserve_Data        True
 `))
-			Expect(loggingConfig.UserExposed).To(BeFalse())
 		})
 	})
 })
