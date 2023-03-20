@@ -110,6 +110,61 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_SeedSettingDependencyWatchdog", func() {
+		var obj *SeedSettingDependencyWatchdog
+
+		BeforeEach(func() {
+			obj = &SeedSettingDependencyWatchdog{}
+		})
+
+		It("should default the settings", func() {
+			SetDefaults_SeedSettingDependencyWatchdog(obj)
+
+			Expect(obj.Weeder.Enabled).To(BeTrue())
+			Expect(obj.Prober.Enabled).To(BeTrue())
+			Expect(obj.Endpoint).To(BeNil())
+			Expect(obj.Probe).To(BeNil())
+		})
+
+		It("should not default the seed settings because they were provided", func() {
+			var (
+				dwdWeederEnabled = false
+				dwdProberEnabled = false
+			)
+
+			obj = &SeedSettingDependencyWatchdog{
+				Weeder: &SeedSettingDependencyWatchdogWeeder{Enabled: dwdWeederEnabled},
+				Prober: &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
+			}
+
+			SetDefaults_SeedSettingDependencyWatchdog(obj)
+
+			Expect(obj.Weeder.Enabled).To(Equal(dwdWeederEnabled))
+			Expect(obj.Prober.Enabled).To(Equal(dwdProberEnabled))
+			Expect(obj.Endpoint).To(BeNil())
+			Expect(obj.Probe).To(BeNil())
+		})
+
+		It("should not default the seed settings because they were provided using deprecated fields", func() {
+			var (
+				dwdEndpointEnabled = false
+				dwdProbeEnabled    = false
+			)
+
+			obj = &SeedSettingDependencyWatchdog{
+				Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
+				Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
+			}
+
+			SetDefaults_SeedSettingDependencyWatchdog(obj)
+
+			Expect(obj.Weeder).To(BeNil())
+			Expect(obj.Prober).To(BeNil())
+			Expect(obj.Endpoint.Enabled).To(Equal(dwdEndpointEnabled))
+			Expect(obj.Probe.Enabled).To(Equal(dwdProbeEnabled))
+		})
+	})
+
 	Describe("#SetObjectDefaults_Shoot", func() {
 		var obj *Shoot
 

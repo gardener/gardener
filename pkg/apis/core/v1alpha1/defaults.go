@@ -86,7 +86,14 @@ func SetDefaults_SeedNetworks(obj *SeedNetworks) {
 
 // SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
 func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
-	// TODO(himanshu-kun): add defaulting logic once deprecated fields are removed
+	// TODO(himanshu-kun): update once deprecated fields are removed
+	// If any of the new or deprecated fields is set, then syncing logic should take care, as this runs before that.
+	if obj.Weeder == nil && obj.Endpoint == nil {
+		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
+	}
+	if obj.Prober == nil && obj.Probe == nil {
+		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
+	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.

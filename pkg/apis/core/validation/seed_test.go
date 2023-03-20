@@ -883,24 +883,6 @@ var _ = Describe("Seed Validation Tests", func() {
 
 					Expect(errorList).To(BeEmpty())
 				})
-				It("should not allow deprecated and new field to be different", func() {
-					seed.Spec.Settings = &core.SeedSettings{
-						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{
-							Prober: &core.SeedSettingDependencyWatchdogProber{Enabled: true},
-							Probe:  &core.SeedSettingDependencyWatchdogProbe{Enabled: false},
-						},
-					}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.settings.dependencyWatchdog"),
-							"Detail": Equal("prober and probe cannot have different values"),
-						})),
-					))
-				})
 			})
 
 			It("should prevent enabling topology-aware routing on single-zone Seed cluster", func() {

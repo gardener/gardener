@@ -195,16 +195,3 @@ func ValidateIPFamilies(ipFamilies []core.IPFamily, fldPath *field.Path) field.E
 
 	return allErrs
 }
-
-func validateDependencyWatchdogSettings(settings *core.SeedSettingDependencyWatchdog, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if settings.Weeder != nil && settings.Endpoint != nil && settings.Weeder.Enabled != settings.Endpoint.Enabled {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "weeder and endpoint cannot have different values"))
-	}
-
-	if settings.Prober != nil && settings.Probe != nil && settings.Prober.Enabled != settings.Probe.Enabled {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "prober and probe cannot have different values"))
-	}
-
-	return allErrs
-}

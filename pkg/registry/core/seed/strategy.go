@@ -77,25 +77,29 @@ func syncDependencyWatchdogSettings(seed *core.Seed) {
 	// keeping the field `weeder` and `endpoint` in sync
 	// Case 1: If weeder is specified, endpoint isn't -> do nothing
 	// Case 2: If weeder isn't specified, endpoint is -> make weeder=endpoint
-	// Case 3: If both are specified, give preference to weeder field -> do nothing, as endpoint field is not used by clients
+	// Case 3: If both are specified, give preference to weeder field -> set endpoint=weeder
 	// Case 4: If both not specified, default weeder.enabled to true
 	if seed.Spec.Settings.DependencyWatchdog.Weeder == nil {
 		seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: true}
 		if seed.Spec.Settings.DependencyWatchdog.Endpoint != nil {
 			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: seed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled}
 		}
+	} else {
+		seed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{Enabled: seed.Spec.Settings.DependencyWatchdog.Weeder.Enabled}
 	}
 
 	//keeping the field `prober` and `probe` in sync
 	// Case 1: If prober is specified, probe isn't -> do nothing
 	// Case 2: If prober isn't specified, probe is -> make prober=probe
-	// Case 3: If both are specified, give preference to prober field -> do nothing, as probe field is not used by clients
+	// Case 3: If both are specified, give preference to prober field -> set probe=prober
 	// Case 4: If both not specified, default prober.enabled to true
 	if seed.Spec.Settings.DependencyWatchdog.Prober == nil {
 		seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: true}
 		if seed.Spec.Settings.DependencyWatchdog.Probe != nil {
 			seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: seed.Spec.Settings.DependencyWatchdog.Probe.Enabled}
 		}
+	} else {
+		seed.Spec.Settings.DependencyWatchdog.Probe = &core.SeedSettingDependencyWatchdogProbe{Enabled: seed.Spec.Settings.DependencyWatchdog.Prober.Enabled}
 	}
 }
 

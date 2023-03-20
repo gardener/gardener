@@ -180,23 +180,6 @@ var _ = Describe("Utils tests", func() {
 			}
 		})
 
-		It("should not allow if deprecated field is different than new field", func() {
-			seed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{
-				Enabled: true,
-			}
-			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{
-				Enabled: false,
-			}
-			allErrs := ValidateSeed(seed)
-
-			Expect(allErrs).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.settings.dependencyWatchdog"),
-					"Detail": Equal(`weeder and endpoint cannot have different values`),
-				}))))
-		})
-
 		It("should allow if deprecated fields are not set", func() {
 			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{
 				Enabled: true,
