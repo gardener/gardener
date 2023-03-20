@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		extra          = make(map[string]authorizationv1.ExtraValue)
 	)
 
-	ctx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
 	csr := &certificatesv1.CertificateSigningRequest{}

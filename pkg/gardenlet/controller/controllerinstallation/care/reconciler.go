@@ -29,6 +29,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -46,9 +47,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenCtx, cancel := context.WithTimeout(ctx, r.Config.SyncPeriod.Duration)
+	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
-	seedCtx, cancel := context.WithTimeout(ctx, r.Config.SyncPeriod.Duration/2)
+	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}

@@ -43,7 +43,7 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	ctx, cancel := context.WithTimeout(ctx, r.Config.SyncPeriod.Duration)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}

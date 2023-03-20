@@ -70,9 +70,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenCtx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout)
+	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
-	seedCtx, cancel := context.WithTimeout(ctx, controllerutils.DefaultReconciliationTimeout/2)
+	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
@@ -170,7 +170,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	// TODO(timuthy, rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets promoted to GA.
-	if err := r.reconcileNetworkPoliciesInSeed(ctx, namespace.Name); err != nil {
+	if err := r.reconcileNetworkPoliciesInSeed(seedCtx, namespace.Name); err != nil {
 		return reconcile.Result{}, err
 	}
 
