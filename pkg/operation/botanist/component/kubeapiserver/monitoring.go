@@ -43,6 +43,7 @@ const (
 	monitoringMetricApiserverCRDWebhookConversionDurationSeconds         = "apiserver_crd_webhook_conversion_duration_seconds_.+"
 	monitoringMetricApiserverCurrentInflightRequests                     = "apiserver_current_inflight_requests"
 	monitoringMetricApiserverCurrentInqueueRequests                      = "apiserver_current_inqueue_requests"
+	monitoringMetricApiserverLongrunningRequests                         = "apiserver_longrunning_requests"
 	monitoringMetricApiserverResponseSizes                               = "apiserver_response_sizes_.+"
 	monitoringMetricApiserverRegisteredWatchers                          = "apiserver_registered_watchers"
 	monitoringMetricApiserverRequestDurationSeconds                      = "apiserver_request_duration_seconds_.+"
@@ -218,6 +219,7 @@ var (
 		monitoringMetricApiserverCRDWebhookConversionDurationSeconds,
 		monitoringMetricApiserverCurrentInflightRequests,
 		monitoringMetricApiserverCurrentInqueueRequests,
+		monitoringMetricApiserverLongrunningRequests,
 		monitoringMetricApiserverResponseSizes,
 		monitoringMetricApiserverRegisteredWatchers,
 		monitoringMetricApiserverRequestDurationSeconds,
