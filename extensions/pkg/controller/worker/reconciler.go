@@ -257,9 +257,3 @@ func (r *reconciler) restore(
 
 	return reconcile.Result{}, nil
 }
-
-func isWorkerMigrated(worker *extensionsv1alpha1.Worker) bool {
-	return worker.Status.LastOperation != nil &&
-		worker.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate &&
-		worker.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
-}

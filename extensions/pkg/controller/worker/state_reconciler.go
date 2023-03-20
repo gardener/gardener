@@ -15,15 +15,22 @@
 package worker
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
+	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -31,21 +38,13 @@ import (
 )
 
 type stateReconciler struct {
-	actuator StateActuator
-
 	client client.Client
 }
 
 // NewStateReconciler creates a new reconcile.Reconciler that reconciles
 // Worker's State resources of Gardener's `extensions.gardener.cloud` API group.
-func NewStateReconciler(actuator StateActuator) reconcile.Reconciler {
-	return &stateReconciler{
-		actuator: actuator,
-	}
-}
-
-func (r *stateReconciler) InjectFunc(f inject.Func) error {
-	return f(r.actuator)
+func NewStateReconciler() reconcile.Reconciler {
+	return &stateReconciler{}
 }
 
 func (r *stateReconciler) InjectClient(client client.Client) error {
@@ -65,24 +64,182 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	// Deletion flow
 	if worker.DeletionTimestamp != nil {
-		// Nothing to do
 		return reconcile.Result{}, nil
 	}
 
-	// Reconcile flow
-	operationType := v1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
-	if operationType != gardencorev1beta1.LastOperationTypeReconcile {
+	if v1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation) != gardencorev1beta1.LastOperationTypeReconcile {
 		return reconcile.Result{Requeue: true}, nil
-	} else if isWorkerMigrated(worker) {
+	}
+
+	if isWorkerMigrated(worker) {
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.actuator.Reconcile(ctx, log, worker); err != nil {
+	state, err := r.computeState(ctx, worker.Namespace)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	rawState, err := json.Marshal(state)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Previously, this actuator was using 'update'/PUT calls to write the state into the Worker status. However, this
+	// unnecessarily persisted also null-ed fields. Below PATCH call does not remove them, hence we have to reset the
+	// state once to ensure these null-ed fields disappear.
+	// TODO(rfranzke): Remove this in a future version.
+	if worker.Status.State != nil && strings.Contains(string(worker.Status.State.Raw), `"creationTimestamp":null`) {
+		patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		worker.Status.State = nil
+		if err := r.client.Status().Patch(ctx, worker, patch); err != nil {
+			return reconcilerutils.ReconcileErr(fmt.Errorf("error updating Worker state: %w", err))
+		}
+	}
+
+	// If the state did not change, do not even try to send an empty PATCH request.
+	if worker.Status.State != nil && bytes.Equal(rawState, worker.Status.State.Raw) {
+		return reconcile.Result{}, nil
+	}
+
+	patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	worker.Status.State = &runtime.RawExtension{Raw: rawState}
+	if err := r.client.Status().Patch(ctx, worker, patch); err != nil {
 		return reconcilerutils.ReconcileErr(fmt.Errorf("error updating Worker state: %w", err))
 	}
 
 	log.Info("Successfully updated Worker state")
 	return reconcile.Result{}, nil
+}
+
+func (r *stateReconciler) computeState(ctx context.Context, namespace string) (*State, error) {
+	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
+	if err := r.client.List(ctx, existingMachineDeployments, client.InNamespace(namespace)); err != nil {
+		return nil, err
+	}
+
+	machineSets, err := r.getExistingMachineSetsMap(ctx, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	machines, err := r.getExistingMachinesMap(ctx, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	workerState := &State{MachineDeployments: make(map[string]*MachineDeploymentState)}
+
+	for _, deployment := range existingMachineDeployments.Items {
+		machineDeploymentState := &MachineDeploymentState{}
+		machineDeploymentState.Replicas = deployment.Spec.Replicas
+
+		machineDeploymentMachineSets, ok := machineSets[deployment.Name]
+		if !ok {
+			continue
+		}
+
+		addMachineSetToMachineDeploymentState(machineDeploymentMachineSets, machineDeploymentState)
+
+		for _, machineSet := range machineDeploymentMachineSets {
+			currentMachines := append(machines[machineSet.Name], machines[deployment.Name]...)
+			if len(currentMachines) <= 0 {
+				continue
+			}
+
+			for index := range currentMachines {
+				addMachineToMachineDeploymentState(&currentMachines[index], machineDeploymentState)
+			}
+		}
+
+		workerState.MachineDeployments[deployment.Name] = machineDeploymentState
+	}
+
+	return workerState, nil
+}
+
+// getExistingMachineSetsMap returns a map of existing MachineSets as values and their owners as keys
+func (r *stateReconciler) getExistingMachineSetsMap(ctx context.Context, namespace string) (map[string][]machinev1alpha1.MachineSet, error) {
+	existingMachineSets := &machinev1alpha1.MachineSetList{}
+	if err := r.client.List(ctx, existingMachineSets, client.InNamespace(namespace)); err != nil {
+		return nil, err
+	}
+
+	// When we read from the cache we get unsorted results, hence, we sort to prevent unnecessary state updates from happening.
+	sort.Slice(existingMachineSets.Items, func(i, j int) bool { return existingMachineSets.Items[i].Name < existingMachineSets.Items[j].Name })
+
+	return extensionsworkerhelper.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
+}
+
+// getExistingMachinesMap returns a map of the existing Machines as values and the name of their owner
+// no matter of being machineSet or MachineDeployment. If a Machine has a ownerReference the key(owner)
+// will be the MachineSet if not the key will be the name of the MachineDeployment which is stored as
+// a label. We assume that there is no MachineDeployment and MachineSet with the same names.
+func (r *stateReconciler) getExistingMachinesMap(ctx context.Context, namespace string) (map[string][]machinev1alpha1.Machine, error) {
+	existingMachines := &machinev1alpha1.MachineList{}
+	if err := r.client.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
+		return nil, err
+	}
+
+	// We temporarily filter out machines without provider ID or node label (VMs which got created but not yet joined the cluster)
+	// to prevent unnecessarily persisting them in the Worker state.
+	// TODO: Remove this again once machine-controller-manager supports backing off creation/deletion of failed machines, see
+	// https://github.com/gardener/machine-controller-manager/issues/483.
+	var filteredMachines []machinev1alpha1.Machine
+	for _, machine := range existingMachines.Items {
+		if _, ok := machine.Labels["node"]; ok || machine.Spec.ProviderID != "" {
+			filteredMachines = append(filteredMachines, machine)
+		}
+	}
+
+	// When we read from the cache we get unsorted results, hence, we sort to prevent unnecessary state updates from happening.
+	sort.Slice(filteredMachines, func(i, j int) bool { return filteredMachines[i].Name < filteredMachines[j].Name })
+
+	return extensionsworkerhelper.BuildOwnerToMachinesMap(filteredMachines), nil
+}
+
+func addMachineSetToMachineDeploymentState(machineSets []machinev1alpha1.MachineSet, machineDeploymentState *MachineDeploymentState) {
+	if len(machineSets) < 1 || machineDeploymentState == nil {
+		return
+	}
+
+	// remove redundant data from the machine set
+	for index := range machineSets {
+		machineSet := &machineSets[index]
+		machineSet.ObjectMeta = metav1.ObjectMeta{
+			Name:        machineSet.Name,
+			Namespace:   machineSet.Namespace,
+			Annotations: machineSet.Annotations,
+			Labels:      machineSet.Labels,
+		}
+		machineSet.OwnerReferences = nil
+		machineSet.Status = machinev1alpha1.MachineSetStatus{}
+	}
+
+	machineDeploymentState.MachineSets = machineSets
+}
+
+func addMachineToMachineDeploymentState(machine *machinev1alpha1.Machine, machineDeploymentState *MachineDeploymentState) {
+	if machine == nil || machineDeploymentState == nil {
+		return
+	}
+
+	// remove redundant data from the machine
+	machine.ObjectMeta = metav1.ObjectMeta{
+		Name:        machine.Name,
+		Namespace:   machine.Namespace,
+		Annotations: machine.Annotations,
+		Labels:      machine.Labels,
+	}
+	machine.OwnerReferences = nil
+	machine.Status = machinev1alpha1.MachineStatus{}
+
+	machineDeploymentState.Machines = append(machineDeploymentState.Machines, *machine)
+}
+
+func isWorkerMigrated(worker *extensionsv1alpha1.Worker) bool {
+	return worker.Status.LastOperation != nil &&
+		worker.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate &&
+		worker.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 }

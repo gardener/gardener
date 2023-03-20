@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,14 +117,21 @@ func (r *Reconciler) reconcile(
 	patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
 	dataList := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	oldSecretData := dataList.Get(secret.Name).DeepCopy()
 	dataList.Upsert(&gardencorev1beta1.GardenerResourceData{
 		Name:   secret.Name,
 		Labels: secret.Labels,
 		Type:   "secret",
 		Data:   runtime.RawExtension{Raw: dataJSON},
 	})
-	shootState.Spec.Gardener = dataList
+	newSecretData := dataList.Get(secret.Name)
 
+	// If the secret data did not change, do not even try to send an empty PATCH request.
+	if apiequality.Semantic.DeepEqual(oldSecretData, newSecretData) {
+		return reconcile.Result{}, nil
+	}
+
+	shootState.Spec.Gardener = dataList
 	return reconcile.Result{}, r.GardenClient.Patch(ctx, shootState, patch)
 }
 

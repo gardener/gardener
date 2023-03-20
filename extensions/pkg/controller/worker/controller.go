@@ -94,14 +94,6 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 
 func addStateUpdatingController(mgr manager.Manager, options controller.Options, extensionType string) error {
 	var (
-		stateActuator   = NewStateActuator()
-		stateReconciler = NewStateReconciler(stateActuator)
-
-		addStateUpdatingControllerOptions = controller.Options{
-			MaxConcurrentReconciles: options.MaxConcurrentReconciles,
-			Reconciler:              stateReconciler,
-		}
-
 		machinePredicates = []predicate.Predicate{
 			predicate.Or(
 				MachineNodeInfoHasChanged(),
@@ -113,7 +105,10 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 		}
 	)
 
-	ctrl, err := controller.New(ControllerNameState, mgr, addStateUpdatingControllerOptions)
+	ctrl, err := controller.New(ControllerNameState, mgr, controller.Options{
+		MaxConcurrentReconciles: options.MaxConcurrentReconciles,
+		Reconciler:              NewStateReconciler(),
+	})
 	if err != nil {
 		return err
 	}
