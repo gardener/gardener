@@ -202,6 +202,10 @@ revendor:
 clean:
 	@hack/clean.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 
+.PHONY: add-license-headers
+add-license-headers: $(GO_ADD_LICENSE)
+	@./hack/add-license-header.sh
+
 .PHONY: check-generate
 check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
@@ -271,6 +275,10 @@ test-cov-clean:
 .PHONY: check-apidiff
 check-apidiff: $(GO_APIDIFF)
 	@./hack/check-apidiff.sh
+
+.PHONY: check-license
+check-license: $(GO_ADD_LICENSE)
+	@./hack/check-license-header.sh
 
 .PHONY: check-vulnerabilities
 check-vulnerabilities: $(GO_VULN_CHECK)
