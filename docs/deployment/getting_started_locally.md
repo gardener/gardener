@@ -60,10 +60,19 @@ With this, mirrored images don't have to be pulled again after recreating the cl
 The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
 Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
 
-## Outgoing IPv6 Single-Stack Networking (optional)
+## Setting Up IPv6 Single-Stack Networking (optional)
 
-If you want to test IPv6-related features, we need to configure NAT for outgoing traffic from the kind network to the internet.
-After `make kind-up IPFAMILY=ipv6`, check the network created by kind:
+First, ensure that your `/etc/hosts` file contains an entry resolving `localhost` to the IPv6 loopback address:
+
+```text
+::1 localhost
+```
+
+Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
+However, we need `localhost` to resolve to both `127.0.0.1` and `::1` so that we can talk to our registry via a single address (`localhost:5001`).
+
+Next, we need to configure NAT for outgoing traffic from the kind network to the internet.
+After executing `make kind-up IPFAMILY=ipv6`, check the network created by kind:
 
 ```bash
 $ docker network inspect kind | jq '.[].IPAM.Config[].Subnet'
@@ -79,6 +88,7 @@ default via 192.168.195.1 dev enp3s0 proto dhcp src 192.168.195.34 metric 100
 ```
 
 Configure NAT for traffic from the kind cluster to the internet using the IPv6 range and the network device from the previous two steps:
+
 ```bash
 ip6tables -t nat -A POSTROUTING -o enp3s0 -s fc00:f853:ccd:e793::/64 -j MASQUERADE
 ```
