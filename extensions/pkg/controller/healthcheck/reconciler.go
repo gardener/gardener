@@ -112,6 +112,17 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
+	// clenaup conditions from extension status
+	if len(r.registeredExtension.cleanupConditions) > 0 {
+		newConditions := []gardencorev1beta1.Condition{}
+		for _, condition := range extension.GetExtensionStatus().GetConditions() {
+			if !r.registeredExtension.cleanupConditions.Has(condition.Type) {
+				newConditions = append(newConditions, condition)
+			}
+		}
+		extension.GetExtensionStatus().SetConditions(newConditions)
+	}
+
 	if extensionscontroller.IsHibernationEnabled(cluster) {
 		var conditions []condition
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
