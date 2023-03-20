@@ -31,6 +31,7 @@ import (
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	"github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
@@ -76,10 +77,11 @@ type DefaultAddArgs struct {
 // They are used as the .type field of the Condition that the HealthCheck controller writes to the extension resource.
 // The field groupVersionKind stores the GroupVersionKind of the extension resource
 type RegisteredExtension struct {
-	extension            extensionsv1alpha1.Object
-	getExtensionObjFunc  GetExtensionObjectFunc
-	healthConditionTypes []string
-	groupVersionKind     schema.GroupVersionKind
+	extension              extensionsv1alpha1.Object
+	getExtensionObjFunc    GetExtensionObjectFunc
+	healthConditionTypes   []string
+	groupVersionKind       schema.GroupVersionKind
+	conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType]
 }
 
 // DefaultRegistration configures the default health check NewActuator to execute the provided health checks and adds it to the provided controller-runtime manager.
@@ -93,7 +95,7 @@ type RegisteredExtension struct {
 // custom predicates allow for fine-grained control which resources to watch
 // healthChecks defines the checks to execute mapped to the healthConditionTypes its contributing to (e.g checkDeployment in Seed -> ControlPlaneHealthy).
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
-func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck) error {
+func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck, conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType]) error {
 	predicates := append(DefaultPredicates(), customPredicates...)
 	opts.Controller.RecoverPanic = pointer.Bool(true)
 
@@ -105,7 +107,7 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, get
 		GetExtensionObjListFunc: getExtensionObjListFunc,
 	}
 
-	if err := args.RegisterExtension(getExtensionObjFunc, getHealthCheckTypes(healthChecks), kind); err != nil {
+	if err := args.RegisterExtension(getExtensionObjFunc, getHealthCheckTypes(healthChecks), kind, conditionTypesToRemove); err != nil {
 		return err
 	}
 
@@ -123,17 +125,18 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, get
 // The controller writes the healthCheckTypes as a condition.type into the extension resource.
 // To contribute to the Shoot's health, the Gardener checks each extension for a Health Condition Type of SystemComponentsHealthy, EveryNodeReady, ControlPlaneHealthy.
 // However extensions are free to choose any healthCheckType
-func (a *AddArgs) RegisterExtension(getExtensionObjFunc GetExtensionObjectFunc, conditionTypes []string, kind schema.GroupVersionKind) error {
+func (a *AddArgs) RegisterExtension(getExtensionObjFunc GetExtensionObjectFunc, conditionTypes []string, kind schema.GroupVersionKind, conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType]) error {
 	acc, err := extensions.Accessor(getExtensionObjFunc())
 	if err != nil {
 		return err
 	}
 
 	a.registeredExtension = &RegisteredExtension{
-		extension:            acc,
-		healthConditionTypes: conditionTypes,
-		groupVersionKind:     kind,
-		getExtensionObjFunc:  getExtensionObjFunc,
+		extension:              acc,
+		healthConditionTypes:   conditionTypes,
+		groupVersionKind:       kind,
+		getExtensionObjFunc:    getExtensionObjFunc,
+		conditionTypesToRemove: conditionTypesToRemove,
 	}
 	return nil
 }
