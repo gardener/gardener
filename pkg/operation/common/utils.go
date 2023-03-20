@@ -223,3 +223,16 @@ func DeleteGrafana(ctx context.Context, k8sClient kubernetes.Interface, namespac
 
 	return nil
 }
+
+// PatchKubeAPIServerDeploymentMeta patches metadata of a Kubernetes API-Server deployment
+func PatchKubeAPIServerDeploymentMeta(ctx context.Context, clientSet kubernetes.Interface, namespace string, mutate func(deployment *metav1.PartialObjectMetadata)) error {
+	meta := &metav1.PartialObjectMetadata{}
+	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+	if err := clientSet.Client().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(meta.DeepCopy())
+	mutate(meta)
+	return clientSet.Client().Patch(ctx, meta, patch)
+}

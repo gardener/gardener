@@ -15,6 +15,12 @@
 package common
 
 const (
+	// AnnotationKeyNewEncryptionKeyPopulated is an annotation indicating that the new ETCD encryption key was populated
+	AnnotationKeyNewEncryptionKeyPopulated = "credentials.gardener.cloud/new-encryption-key-populated"
+
+	// AnnotationKeyEtcdSnapshotted is an annotation indicating that ETCD snapshot was completed
+	AnnotationKeyEtcdSnapshotted = "credentials.gardener.cloud/etcd-snapshotted"
+
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
 

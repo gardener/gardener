@@ -35,7 +35,6 @@ import (
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -45,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -376,7 +376,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string) corev1.ResourceRequirements {
 	var (
-		validScalingClasses = sets.New[string]("small", "medium", "large", "xlarge", "2xlarge")
+		validScalingClasses = sets.New("small", "medium", "large", "xlarge", "2xlarge")
 		cpuRequest          string
 		memoryRequest       string
 	)
@@ -480,11 +480,6 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	}
 }
 
-const (
-	annotationKeyNewEncryptionKeyPopulated = "credentials.gardener.cloud/new-encryption-key-populated"
-	annotationKeyEtcdSnapshotted           = "credentials.gardener.cloud/etcd-snapshotted"
-)
-
 func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context) (kubeapiserver.ETCDEncryptionConfig, error) {
 	config := kubeapiserver.ETCDEncryptionConfig{
 		RotationPhase:         v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
@@ -503,7 +498,7 @@ func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context)
 		// If the new encryption key was not yet populated to all replicas then we should still use the old key for
 		// encryption of data. Only if all replicas know the new key we can switch and start encrypting with the new/
 		// current key, see https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key.
-		if !metav1.HasAnnotation(deployment.ObjectMeta, annotationKeyNewEncryptionKeyPopulated) {
+		if !metav1.HasAnnotation(deployment.ObjectMeta, common.AnnotationKeyNewEncryptionKeyPopulated) {
 			config.EncryptWithCurrentKey = false
 		}
 	}
@@ -631,8 +626,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
 			// annotation) and redeploy it with the option to use the current/new key for encryption, see
 			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
-			if err := b.patchKubeAPIServerDeploymentMeta(ctx, func(meta *metav1.PartialObjectMetadata) {
-				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, annotationKeyNewEncryptionKeyPopulated, "true")
+			if err := common.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
+				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, common.AnnotationKeyNewEncryptionKeyPopulated, "true")
 			}); err != nil {
 				return err
 			}
@@ -646,8 +641,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 
 	case gardencorev1beta1.RotationCompleting:
-		if err := b.patchKubeAPIServerDeploymentMeta(ctx, func(meta *metav1.PartialObjectMetadata) {
-			delete(meta.Annotations, annotationKeyNewEncryptionKeyPopulated)
+		if err := common.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
+			delete(meta.Annotations, common.AnnotationKeyNewEncryptionKeyPopulated)
 		}); err != nil {
 			return err
 		}
@@ -738,16 +733,4 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
-}
-
-func (b *Botanist) patchKubeAPIServerDeploymentMeta(ctx context.Context, mutate func(deployment *metav1.PartialObjectMetadata)) error {
-	meta := &metav1.PartialObjectMetadata{}
-	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := b.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
-		return err
-	}
-
-	patch := client.MergeFrom(meta.DeepCopy())
-	mutate(meta)
-	return b.SeedClientSet.Client().Patch(ctx, meta, patch)
 }
