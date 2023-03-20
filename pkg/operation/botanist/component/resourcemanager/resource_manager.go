@@ -253,6 +253,12 @@ type Values struct {
 	HealthSyncPeriod *metav1.Duration
 	// FullNetworkPolicies makes the network policy controller to consider all relevant namespaces.
 	FullNetworkPolicies bool
+	// NetworkPolicyControllerIncludesGardenNamespace describes whether the 'garden' namespace should be targeted by the
+	// network policy controller.
+	NetworkPolicyControllerIncludesGardenNamespace bool
+	// NetworkPolicyControllerIngressControllerSelector is the peer information of the ingress controller for the
+	// network policy controller.
+	NetworkPolicyControllerIngressControllerSelector *resourcemanagerv1alpha1.IngressControllerSelector
 	// Image is the container image.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -580,6 +586,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
 			},
+			IngressControllerSelector: r.values.NetworkPolicyControllerIngressControllerSelector,
 		}
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true
@@ -587,6 +594,12 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		if r.values.FullNetworkPolicies {
 			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
 				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
+			)
+		}
+
+		if r.values.NetworkPolicyControllerIncludesGardenNamespace {
+			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
+				metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
 			)
 		}
 	}
@@ -691,10 +704,17 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
 		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		portMetrics := networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt(metricsPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-		}))
+		}
+
+		if !r.values.TargetDiffersFromSourceCluster {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, resourcemanagerconstants.ServerPort))
+		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
+		}
 
 		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
@@ -1871,15 +1891,16 @@ func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 }
 
 func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
-	if r.values.TargetDiffersFromSourceCluster {
-		return map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
-		}
+	labels := map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
-	return nil
+	if r.values.TargetDiffersFromSourceCluster {
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
+	}
+
+	return labels
 }
 
 func appLabel() map[string]string {

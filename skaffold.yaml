@@ -447,6 +447,14 @@ build:
       main: ./cmd/gardener-admission-controller
 deploy:
   helm:
+    hooks:
+      before:
+      - host:
+          command:
+          - kubectl
+          - apply
+          - -f
+          - example/gardener-local/controlplane/networkpolicy.yaml
     releases:
     - name: gardener-controlplane
       chartPath: charts/gardener/controlplane

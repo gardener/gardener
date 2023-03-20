@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: from-gardener-apiserver-to-etcd-tcp-2379
+  namespace: garden
+spec:
+  podSelector:
+    matchLabels:
+      app: etcd
+  ingress:
+  - from:
+    - podSelector:
+        # Do not use matchLabels here, otherwise the commonLabels defined in the kustomization.yaml will overwrite
+        # app=gardener to app=etcd which effectively breaks the NetworkPolicy.
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - gardener
+        - key: role
+          operator: In
+          values:
+          - apiserver
+    ports:
+    - port: 2379
+      protocol: TCP
+  policyTypes:
+  - Ingress

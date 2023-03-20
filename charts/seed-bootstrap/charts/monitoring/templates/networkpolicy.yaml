@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.deployAllowAllAccessNetworkPolicy }}
 # TODO(rfranzke): Drop this network policy in a future release.
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
@@ -24,3 +25,4 @@ spec:
   policyTypes:
   - Egress
   - Ingress
+{{- end }}

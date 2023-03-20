@@ -19,6 +19,12 @@ spec:
       labels:
         app: aggregate-prometheus
         role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-istio-system-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-all-istio-ingresses-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-all-shoots-prometheus-web-tcp-9090: allowed
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: aggregate-prometheus

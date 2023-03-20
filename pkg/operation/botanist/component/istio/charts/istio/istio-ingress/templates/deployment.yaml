@@ -26,6 +26,7 @@ spec:
         networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012: allowed
 {{- if .Values.vpn.enabled }}
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
+        networking.resources.gardener.cloud/to-garden-reversed-vpn-auth-server-tcp-9001: allowed
 {{- range $i := until (int .Values.vpn.highAvailabilityReplicas) }}
         networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-{{$i}}-tcp-1194: allowed
 {{- end }}

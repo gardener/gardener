@@ -347,6 +347,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					PolicyTypes: []networkingv1.PolicyType{"Ingress", "Egress"},
 				}
 			},
+			inGardenNamespace:             true,
 			inIstioSystemNamespace:        true,
 			inIstioIngressNamespace:       true,
 			inIstioExposureClassNamespace: true,

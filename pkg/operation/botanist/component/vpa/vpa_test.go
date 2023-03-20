@@ -126,6 +126,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingRecommenderMetricsReader   *rbacv1.ClusterRoleBinding
 		clusterRoleRecommenderCheckpointActor        *rbacv1.ClusterRole
 		clusterRoleBindingRecommenderCheckpointActor *rbacv1.ClusterRoleBinding
+		serviceRecommenderFor                        func(component.ClusterType) *corev1.Service
 		shootAccessSecretRecommender                 *corev1.Secret
 		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType) *appsv1.Deployment
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
@@ -134,7 +135,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleAdmissionController         *rbacv1.ClusterRole
 		clusterRoleBindingAdmissionController  *rbacv1.ClusterRoleBinding
 		shootAccessSecretAdmissionController   *corev1.Secret
-		serviceAdmissionControllerFor          func(bool) *corev1.Service
+		serviceAdmissionControllerFor          func(component.ClusterType, bool) *corev1.Service
 		deploymentAdmissionControllerFor       func(bool, component.ClusterType) *appsv1.Deployment
 		podDisruptionBudgetAdmissionController *policyv1.PodDisruptionBudget
 		vpaAdmissionController                 *vpaautoscalingv1.VerticalPodAutoscaler
@@ -519,6 +520,39 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 			}},
 		}
+		serviceRecommenderFor = func(clusterType component.ClusterType) *corev1.Service {
+			obj := &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpa-recommender",
+					Namespace: namespace,
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "vpa-recommender"},
+					Ports: []corev1.ServicePort{{
+						Port:       8942,
+						TargetPort: intstr.FromInt(8942),
+					}},
+				},
+			}
+
+			if clusterType == "seed" {
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-seed-scrape-targets",
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":8942}]`,
+				}
+			} else if clusterType == "shoot" {
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+					"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
+				}
+			}
+
+			return obj
+		}
 		shootAccessSecretRecommender = &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
@@ -777,7 +811,7 @@ var _ = Describe("VPA", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
-		serviceAdmissionControllerFor = func(topologyAwareRoutingEnabled bool) *corev1.Service {
+		serviceAdmissionControllerFor = func(clusterType component.ClusterType, topologyAwareRoutingEnabled bool) *corev1.Service {
 			obj := &corev1.Service{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "v1",
@@ -794,6 +828,10 @@ var _ = Describe("VPA", func() {
 						TargetPort: intstr.FromInt(10250),
 					}},
 				},
+			}
+
+			if clusterType == "seed" {
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
 			}
 
 			if topologyAwareRoutingEnabled {
@@ -1284,7 +1322,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(23))
+				Expect(managedResourceSecret.Data).To(HaveLen(24))
 
 				By("Verify vpa-updater resources")
 				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
@@ -1292,7 +1330,7 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
 
 				deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeSeed)
-				dropNetworkingLabels(deploymentUpdater.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(serviceAccountUpdater)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleUpdater)))
@@ -1309,7 +1347,7 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name)
 
 				deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed)
-				dropNetworkingLabels(deploymentRecommender.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceAccountRecommender)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderMetricsReader)))
@@ -1317,6 +1355,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceRecommenderFor(component.ClusterTypeSeed))))
 				Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
 
 				By("Verify vpa-admission-controller resources")
@@ -1325,12 +1364,12 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
 
 				deploymentAdmissionController := deploymentAdmissionControllerFor(true, component.ClusterTypeSeed)
-				dropNetworkingLabels(deploymentAdmissionController.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentAdmissionController.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccountAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAdmissionController)))
-				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-webhook.yaml"])).To(Equal(componenttest.Serialize(serviceAdmissionControllerFor(false))))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-webhook.yaml"])).To(Equal(componenttest.Serialize(serviceAdmissionControllerFor(component.ClusterTypeSeed, false))))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(deploymentAdmissionController)))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetAdmissionController)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(vpaAdmissionController)))
@@ -1412,7 +1451,7 @@ var _ = Describe("VPA", func() {
 					valuesUpdater.EvictionTolerance,
 					component.ClusterTypeSeed,
 				)
-				dropNetworkingLabels(deploymentUpdater.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
 				deploymentRecommender := deploymentRecommenderFor(
 					true,
@@ -1420,7 +1459,7 @@ var _ = Describe("VPA", func() {
 					valuesRecommender.RecommendationMarginFraction,
 					component.ClusterTypeSeed,
 				)
-				dropNetworkingLabels(deploymentRecommender.Spec.Template.Labels)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(deploymentUpdater)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
@@ -1516,6 +1555,12 @@ var _ = Describe("VPA", func() {
 				deploymentRecommender.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentRecommender))
 
+				service := &corev1.Service{}
+				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-recommender"), service)).To(Succeed())
+				serviceRecommender := serviceRecommenderFor(component.ClusterTypeShoot)
+				serviceRecommender.ResourceVersion = "1"
+				Expect(service).To(Equal(serviceRecommender))
+
 				vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), vpa)).To(Succeed())
 				vpaRecommender.ResourceVersion = "1"
@@ -1533,9 +1578,9 @@ var _ = Describe("VPA", func() {
 				shootAccessSecretAdmissionController.ResourceVersion = "1"
 				Expect(secret).To(Equal(shootAccessSecretAdmissionController))
 
-				service := &corev1.Service{}
+				service = &corev1.Service{}
 				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-webhook"), service)).To(Succeed())
-				serviceAdmissionController := serviceAdmissionControllerFor(false)
+				serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false)
 				serviceAdmissionController.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceAdmissionController))
 
@@ -1592,7 +1637,7 @@ var _ = Describe("VPA", func() {
 
 					service := &corev1.Service{}
 					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-webhook"), service)).To(Succeed())
-					serviceAdmissionController := serviceAdmissionControllerFor(true)
+					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, true)
 					serviceAdmissionController.ResourceVersion = "1"
 					Expect(service).To(Equal(serviceAdmissionController))
 				})
@@ -1634,10 +1679,11 @@ var _ = Describe("VPA", func() {
 
 				By("Create vpa-recommender runtime resources")
 				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot))).To(Succeed())
+				Expect(c.Create(ctx, serviceRecommenderFor(component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 
 				By("Create vpa-admission-controller runtime resources")
-				Expect(c.Create(ctx, serviceAdmissionControllerFor(false))).To(Succeed())
+				Expect(c.Create(ctx, serviceAdmissionControllerFor(component.ClusterTypeSeed, false))).To(Succeed())
 				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true, component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, podDisruptionBudgetAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, vpaAdmissionController)).To(Succeed())
@@ -1653,10 +1699,11 @@ var _ = Describe("VPA", func() {
 
 				By("Verify vpa-recommender runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceRecommenderFor(component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("Verify vpa-admission-controller runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionControllerFor(false)), &corev1.Service{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionControllerFor(component.ClusterTypeSeed, false)), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
@@ -1805,16 +1852,9 @@ func replaceTargetSubstrings(in string) string {
 	return strings.Replace(in, ":target:", ":source:", -1)
 }
 
-func dropNetworkingLabels(labels map[string]string) {
-	for k := range labels {
-		if k == "networking.gardener.cloud/from-prometheus" {
-			continue
-		}
-
-		if strings.HasPrefix(k, "networking.gardener.cloud/") || strings.HasPrefix(k, "networking.resources.gardener.cloud/") {
-			delete(labels, k)
-		}
-	}
+func adaptNetworkPolicyLabelsForClusterTypeSeed(labels map[string]string) {
+	delete(labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
+	labels["networking.gardener.cloud/to-runtime-apiserver"] = "allowed"
 }
 
 const (

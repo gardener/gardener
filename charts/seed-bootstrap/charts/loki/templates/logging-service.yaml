@@ -7,11 +7,15 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml .Values.labels | indent 4 }}
-{{- if or .Values.annotations (eq .Values.clusterType "shoot") }}
+{{- if or .Values.annotations .Values.clusterType }}
   annotations:
-{{- if eq .Values.clusterType "shoot" }}
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
     networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":"metrics","protocol":"TCP"}{{ if .Values.rbacSidecarEnabled }},{"port":{{ .Values.telegraf.port }},"protocol":"TCP"}{{ end }}]'
+{{- if eq .Values.clusterType "seed" }}
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+{{- else if eq .Values.clusterType "shoot" }}
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
+    networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-shoots
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
 {{- end }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 4 }}

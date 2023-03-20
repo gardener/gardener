@@ -28,6 +28,7 @@ import (
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,6 +83,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -417,6 +419,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 			gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
 			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
 			gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+			true,
+			&resourcemanagerv1alpha1.IngressControllerSelector{
+				Namespace: v1beta1constants.GardenNamespace,
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+					v1beta1constants.LabelApp:      nginxingress.LabelAppValue,
+					nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
+				}},
+			},
 			seed.GetInfo().Spec.Provider.Zones,
 		)
 		if err != nil {
@@ -792,9 +802,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"images":       imagevector.ImageMapToValues(seedImages),
 		},
 		"prometheus": map[string]interface{}{
-			"resources":               monitoringResources["prometheus"],
-			"storage":                 seed.GetValidVolumeSize("10Gi"),
-			"additionalScrapeConfigs": centralScrapeConfigs.String(),
+			"deployAllowAllAccessNetworkPolicy": !gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+			"resources":                         monitoringResources["prometheus"],
+			"storage":                           seed.GetValidVolumeSize("10Gi"),
+			"additionalScrapeConfigs":           centralScrapeConfigs.String(),
 			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
 		},
 		"aggregatePrometheus": map[string]interface{}{
@@ -861,7 +872,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), sniEnabledOrInUse, r.GardenNamespace)
+	networkPolicies, err := defaultNetworkPolicies(seedClient, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -885,9 +896,17 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// TODO(rfranzke): Delete this in a future version.
 	{
 		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-aggregate-prometheus", Namespace: r.GardenNamespace}},
 		); err != nil {
+			return err
+		}
+
+	}
+
+	if gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+		if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
 			return err
 		}
 	}

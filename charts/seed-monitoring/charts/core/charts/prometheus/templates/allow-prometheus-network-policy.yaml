@@ -1,3 +1,4 @@
+# TODO(rfranzke): This NetworkPolicy is deprecated and will be removed in the future.
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
@@ -17,36 +18,5 @@ spec:
     - podSelector:
         matchLabels:
           networking.gardener.cloud/from-prometheus: allowed
-    - podSelector:
-        matchLabels:
-          app: prometheus
-          role: monitoring
-      namespaceSelector:
-        matchLabels:
-          role: garden
-    - podSelector:
-        matchLabels:
-          component: alertmanager
-          role: monitoring
-      namespaceSelector:
-        matchLabels:
-          role: garden
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: nginx-ingress
-          component: controller
-      namespaceSelector:
-        matchLabels:
-          role: garden
-    - podSelector:
-        matchLabels:
-          app: aggregate-prometheus
-          role: monitoring
-      namespaceSelector:
-        matchLabels:
-          role: garden
   policyTypes:
   - Egress
-  - Ingress

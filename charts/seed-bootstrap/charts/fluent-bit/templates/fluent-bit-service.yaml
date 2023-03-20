@@ -3,6 +3,9 @@ kind: Service
 metadata:
   name: fluent-bit
   namespace: {{ .Release.Namespace }}
+  annotations:
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ .Values.ports.metrics }},"protocol":"TCP"},{"port":{{ .Values.ports.outputPluginMetrics }},"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
 spec:
   selector:
 {{ toYaml .Values.labels | indent 4 }}

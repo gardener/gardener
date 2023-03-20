@@ -223,16 +223,12 @@ func defaultIstio(
 
 func defaultNetworkPolicies(
 	c client.Client,
-	seed *gardencorev1beta1.Seed,
-	sniEnabled bool,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	return networkpolicies.NewBootstrapper(c, gardenNamespaceName, networkpolicies.GlobalValues{
-		SNIEnabled: sniEnabled,
-	}), nil
+	return networkpolicies.NewBootstrapper(c, gardenNamespaceName), nil
 }
 
 func defaultDependencyWatchdogs(

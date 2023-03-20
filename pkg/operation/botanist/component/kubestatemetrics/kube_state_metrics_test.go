@@ -199,11 +199,14 @@ var _ = Describe("KubeStateMetrics", func() {
 				},
 			}
 
+			obj.Annotations = map[string]string{
+				"networking.resources.gardener.cloud/from-policy-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
+			}
+			if clusterType == component.ClusterTypeSeed {
+				obj.Annotations["networking.resources.gardener.cloud/from-policy-pod-label-selector"] = "all-seed-scrape-targets"
+			}
 			if clusterType == component.ClusterTypeShoot {
-				obj.Annotations = map[string]string{
-					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":8080}]`,
-				}
+				obj.Annotations["networking.resources.gardener.cloud/from-policy-pod-label-selector"] = "all-scrape-targets"
 			}
 
 			return obj

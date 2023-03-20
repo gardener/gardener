@@ -20,9 +20,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 
@@ -33,12 +36,13 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
-	recommender                  = "vpa-recommender"
-	recommenderPortServer  int32 = 8080
-	recommenderPortMetrics int32 = 8942
+	recommender            = "vpa-recommender"
+	recommenderPortServer  = 8080
+	recommenderPortMetrics = 8942
 )
 
 // ValuesRecommender is a set of configuration values for the vpa-recommender.
@@ -61,6 +65,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingMetricsReader   = v.emptyClusterRoleBinding("metrics-reader")
 		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
+		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
 	)
 
@@ -73,6 +78,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleBindingCheckpointActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
 		}},
+		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderService(service) }},
 	}
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
@@ -173,6 +179,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: utils.MergeStringMaps(getAllLabels(recommender), map[string]string{
+					v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
 					// TODO(rfranzke): Replace this label as soon as gardener-resource-manager's NetworkPolicy
 					//  controller is active for the garden namespace (seed-prometheus scrapes all vpa-recommenders in
 					//  all namespaces).
@@ -223,9 +230,14 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		},
 	}
 
-	if v.values.ClusterType == component.ClusterTypeShoot {
+	switch v.values.ClusterType {
+	case component.ClusterTypeSeed:
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+
+	case component.ClusterTypeShoot:
+		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}
@@ -265,4 +277,28 @@ func (v *vpa) computeRecommenderCommands() []string {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
 	}
 	return out
+}
+
+func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
+	switch v.values.ClusterType {
+	case component.ClusterTypeSeed:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     utils.IntStrPtrFromInt(recommenderPortMetrics),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		}))
+
+	// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
+	//  Conceptionally, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
+	//  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
+	case component.ClusterTypeShoot:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+	}
+
+	service.Spec.Selector = getAppLabel(recommender)
+	desiredPorts := []corev1.ServicePort{{
+		Port:       recommenderPortMetrics,
+		TargetPort: intstr.FromInt(recommenderPortMetrics),
+	}}
+	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
 }

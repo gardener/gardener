@@ -168,6 +168,10 @@ var _ = Describe("HVPA", func() {
 					"gardener.cloud/role": "hvpa",
 					"app":                 "hvpa-controller",
 				},
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":9569}]`,
+					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-seed-scrape-targets",
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Type:            corev1.ServiceTypeClusterIP,
@@ -203,8 +207,10 @@ var _ = Describe("HVPA", func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"gardener.cloud/role": "hvpa",
-							"app":                 "hvpa-controller",
+							"gardener.cloud/role":              "hvpa",
+							"app":                              "hvpa-controller",
+							"networking.gardener.cloud/to-dns": "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{

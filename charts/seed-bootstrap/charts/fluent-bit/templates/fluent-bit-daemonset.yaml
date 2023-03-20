@@ -24,6 +24,8 @@ spec:
 {{ toYaml .Values.labels | indent 8 }}
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-logging-tcp-metrics: allowed
+        networking.resources.gardener.cloud/to-all-shoots-loki-tcp-metrics: allowed
     spec:
       initContainers:
       - name: install-plugin

@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-egress-from-gardenlet
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  podSelector:
+    matchLabels:
+      app: gardener
+      role: gardenlet
+      release: {{ .Release.Name }}
+  egress:
+  - to:
+    - namespaceSelector: {}
+      podSelector: {}
+    - ipBlock:
+        cidr: 0.0.0.0/0
+  policyTypes:
+  - Egress

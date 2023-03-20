@@ -273,6 +273,8 @@ subjects:
 			serviceControllerYAML = `apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":80},{"protocol":"TCP","port":443}]'
   creationTimestamp: null
   labels:
     app: nginx-ingress
@@ -468,6 +470,9 @@ spec:
       labels:
         app: nginx-ingress
         component: controller
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-nginx-ingress-k8s-backend-tcp-8080: allowed
         release: addons
         seccompprofile.resources.gardener.cloud/skip: "true"
     spec:

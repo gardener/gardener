@@ -199,7 +199,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
 		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
+		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace)
 		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		systemResources  = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})

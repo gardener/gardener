@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
@@ -42,7 +41,6 @@ var _ = Describe("Seed Care controller tests", func() {
 	var (
 		requiredManagedResources = []string{
 			etcd.Druid,
-			networkpolicies.ManagedResourceControlName,
 			clusteridentity.ManagedResourceControlName,
 			clusterautoscaler.ManagedResourceControlName,
 			kubestatemetrics.ManagedResourceName,

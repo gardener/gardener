@@ -112,6 +112,10 @@ var _ = Describe("ResourceManager", func() {
 		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
 		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
+		ingressControllerSelector            = &resourcemanagerv1alpha1.IngressControllerSelector{
+			Namespace:   "foo",
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"bar": "baz"}},
+		}
 
 		allowAll                       []rbacv1.PolicyRule
 		allowManagedResources          []rbacv1.PolicyRule
@@ -298,10 +302,12 @@ var _ = Describe("ResourceManager", func() {
 			},
 		}
 		cfg = Values{
-			AlwaysUpdate:                         &alwaysUpdate,
-			ClusterIdentity:                      &clusterIdentity,
-			ConcurrentSyncs:                      &concurrentSyncs,
-			FullNetworkPolicies:                  true,
+			AlwaysUpdate:        &alwaysUpdate,
+			ClusterIdentity:     &clusterIdentity,
+			ConcurrentSyncs:     &concurrentSyncs,
+			FullNetworkPolicies: true,
+			NetworkPolicyControllerIncludesGardenNamespace:   true,
+			NetworkPolicyControllerIngressControllerSelector: ingressControllerSelector,
 			HealthSyncPeriod:                     &healthSyncPeriod,
 			Image:                                image,
 			MaxConcurrentHealthWorkers:           &maxConcurrentHealthWorkers,
@@ -460,7 +466,9 @@ var _ = Describe("ResourceManager", func() {
 						{MatchLabels: map[string]string{"gardener.cloud/role": "istio-ingress"}},
 						{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "handler.exposureclass.gardener.cloud/name", Operator: metav1.LabelSelectorOpExists}}},
 						{MatchLabels: map[string]string{"gardener.cloud/role": "extension"}},
+						{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "garden"}},
 					},
+					IngressControllerSelector: ingressControllerSelector,
 				}
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.EndpointSliceHints.Enabled = true
@@ -2055,6 +2063,8 @@ subjects:
 		Context("target cluster = source cluster", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
+				service.Annotations["networking.resources.gardener.cloud/from-policy-pod-label-selector"] = "all-seed-scrape-targets"
+				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
 				configMap = configMapFor(&watchedNamespace, nil)
 				deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, &watchedNamespace, nil, false, nil)
 
@@ -2075,8 +2085,6 @@ subjects:
 				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(pdbV1.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				// Remove networking label from deployment template
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-runtime-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 
 				utilruntime.Must(references.InjectAnnotations(deployment))

@@ -16,6 +16,7 @@ package nginxingress
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -39,6 +40,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -46,15 +49,19 @@ import (
 
 const (
 	name = "nginx-ingress"
-	// ManagedResourceName is the name of the of the nginx-ingress managed resource.
+	// ManagedResourceName is the name of the nginx-ingress managed resource.
 	ManagedResourceName = name
 
-	labelAppValue        = "nginx-ingress"
-	labelKeyComponent    = "component"
-	labelValueController = "controller"
-	labelValueBackend    = "nginx-ingress-k8s-backend"
-	labelKeyRelease      = "release"
-	labelValueAddons     = "addons"
+	// LabelAppValue is the value of the 'app' label for the ingress controller.
+	LabelAppValue = "nginx-ingress"
+	// LabelKeyComponent is the 'component' key used in labels.
+	LabelKeyComponent = "component"
+	// LabelValueController is the value of the 'component' label for the ingress controller.
+	LabelValueController = "controller"
+
+	labelValueBackend = "nginx-ingress-k8s-backend"
+	labelKeyRelease   = "release"
+	labelValueAddons  = "addons"
 
 	controllerName            = "nginx-ingress-controller"
 	depoloymentNameController = "nginx-ingress-controller"
@@ -145,7 +152,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controllerName,
-			Labels:    getLabels(labelValueController, ""),
+			Labels:    getLabels(LabelValueController, ""),
 			Namespace: n.namespace,
 		},
 		Data: n.values.ConfigData,
@@ -163,7 +170,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: n.namespace,
-				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
+				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
@@ -172,7 +179,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceNameController,
 				Namespace: n.namespace,
-				Labels:    getLabels(labelValueController, ""),
+				Labels:    getLabels(LabelValueController, ""),
 			},
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeLoadBalancer,
@@ -190,14 +197,14 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						TargetPort: intstr.FromInt(int(containerPortControllerHttps)),
 					},
 				},
-				Selector: getLabels(labelValueController, labelValueAddons),
+				Selector: getLabels(LabelValueController, labelValueAddons),
 			},
 		}
 
 		serviceBackend = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceNameBackend,
-				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
+				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 				Namespace: n.namespace,
 			},
 			Spec: corev1.ServiceSpec{
@@ -214,7 +221,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:seed:" + name + ":role",
 				Namespace: n.namespace,
-				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
+				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -250,7 +257,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:seed:" + name + ":role-binding",
 				Namespace: n.namespace,
-				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
+				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -267,7 +274,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "gardener.cloud:seed:" + name,
-				Labels: map[string]string{v1beta1constants.LabelApp: labelAppValue},
+				Labels: map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -321,7 +328,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "gardener.cloud:seed:" + name,
-				Labels: map[string]string{v1beta1constants.LabelApp: labelAppValue},
+				Labels: map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -339,7 +346,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentNameBackend,
 				Namespace: n.namespace,
-				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
+				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32(1),
@@ -396,7 +403,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      depoloymentNameController,
 				Namespace: n.namespace,
-				Labels:    getLabels(labelValueController, ""),
+				Labels:    getLabels(LabelValueController, ""),
 				Annotations: map[string]string{
 					references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
 				},
@@ -405,11 +412,15 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Replicas:             pointer.Int32(2),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(labelValueController, labelValueAddons),
+					MatchLabels: getLabels(LabelValueController, labelValueAddons),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: getLabels(labelValueController, labelValueAddons),
+						Labels: utils.MergeStringMaps(getLabels(LabelValueController, labelValueAddons), map[string]string{
+							v1beta1constants.LabelNetworkPolicyToDNS:                                        v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                           v1beta1constants.LabelNetworkPolicyAllowed,
+							gardenerutils.NetworkPolicyLabel(serviceNameBackend, int(containerPortBackend)): v1beta1constants.LabelNetworkPolicyAllowed,
+						}),
 						Annotations: map[string]string{
 							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
 							// volume and hence using the function won't have any effect.
@@ -544,12 +555,12 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
 				Namespace: n.namespace,
-				Labels:    getLabels(labelValueController, ""),
+				Labels:    getLabels(LabelValueController, ""),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MinAvailable: &intStrOne,
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(labelValueController, labelValueAddons),
+					MatchLabels: getLabels(LabelValueController, labelValueAddons),
 				},
 			},
 		}
@@ -558,12 +569,12 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
 				Namespace: n.namespace,
-				Labels:    getLabels(labelValueController, ""),
+				Labels:    getLabels(LabelValueController, ""),
 			},
 			Spec: policyv1beta1.PodDisruptionBudgetSpec{
 				MinAvailable: &intStrOne,
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(labelValueController, labelValueAddons),
+					MatchLabels: getLabels(LabelValueController, labelValueAddons),
 				},
 			},
 		}
@@ -577,7 +588,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		ingressClass = &networkingv1.IngressClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   n.values.IngressClass,
-				Labels: getLabels(labelValueController, ""),
+				Labels: getLabels(LabelValueController, ""),
 			},
 			Spec: networkingv1.IngressClassSpec{
 				Controller: "k8s.io/" + n.values.IngressClass,
@@ -586,6 +597,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add = append(deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add, "SYS_CHROOT")
 	}
+
+	metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, containerPortControllerHttp, containerPortControllerHttps))
 
 	return registry.AddAllAndSerialize(
 		clusterRole,
@@ -606,8 +619,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 func getLabels(componentLabelValue string, releaseLabelValue string) map[string]string {
 	labels := map[string]string{
-		v1beta1constants.LabelApp: labelAppValue,
-		labelKeyComponent:         componentLabelValue,
+		v1beta1constants.LabelApp: LabelAppValue,
+		LabelKeyComponent:         componentLabelValue,
 	}
 	if releaseLabelValue != "" {
 		labels[labelKeyRelease] = releaseLabelValue

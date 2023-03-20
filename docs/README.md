@@ -20,7 +20,6 @@
   * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
 * [etcd](concepts/etcd.md)
-* [Network Policies](concepts/network_policies.md)
 * [Relation between Gardener API and Cluster API](concepts/cluster-api.md)
 
 ## Usage
@@ -42,7 +41,7 @@
 * [Hibernate a Cluster](usage/shoot_hibernate.md)
 * [IPv6 in Gardener Clusters](usage/ipv6.md)
 * [`ManagedIstio` feature](usage/istio.md)
-* [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
+* [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](usage/network_policies.md)
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Projects](usage/projects.md)
@@ -128,7 +127,6 @@
 * [Adding Support For A New Kubernetes Version](development/new-kubernetes-version.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
-* [Network Policies in the Seed Cluster](development/seed_network_policies.md)
 * [`PriorityClasses` in Gardener Clusters](development/priority-classes.md)
 * [High Availability Of Deployed Components](development/high-availability.md)
 * [Checklist For Adding New Components](development/component-checklist.md)

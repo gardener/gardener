@@ -287,11 +287,12 @@ spec:
 
 					if role == RoleProbe {
 						out += `
-        networking.gardener.cloud/to-all-shoot-apiservers: allowed
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-private-networks: allowed
         networking.gardener.cloud/to-public-networks: allowed
-        networking.gardener.cloud/to-runtime-apiserver: allowed`
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443: allowed
+        networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed`
 					}
 
 					out += `

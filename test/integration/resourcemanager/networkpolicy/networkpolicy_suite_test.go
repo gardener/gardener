@@ -57,6 +57,9 @@ var (
 	mgrClient  client.Client
 
 	testRunID string
+
+	ingressControllerNamespace   = "ingress-ctrl-ns"
+	ingressControllerPodSelector = metav1.LabelSelector{MatchLabels: map[string]string{"app": "ingress-controller"}}
 )
 
 var _ = BeforeSuite(func() {
@@ -96,6 +99,10 @@ var _ = BeforeSuite(func() {
 		Config: config.NetworkPolicyControllerConfig{
 			ConcurrentSyncs:    pointer.Int(5),
 			NamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{testID: testRunID}}},
+			IngressControllerSelector: &config.IngressControllerSelector{
+				Namespace:   ingressControllerNamespace,
+				PodSelector: ingressControllerPodSelector,
+			},
 		},
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
