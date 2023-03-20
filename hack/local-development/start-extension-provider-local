@@ -37,7 +37,6 @@ trap cleanup_kubeconfig EXIT
 export LEADER_ELECTION_NAMESPACE=garden
 export GO111MODULE=on
 export GARDENER_SHOOT_CLIENT=external
-export PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION=true
 
 # The namespace for the provider-local extension controller is required for various reasons
 # (heartbeats, secrets management, network policies, ...).
