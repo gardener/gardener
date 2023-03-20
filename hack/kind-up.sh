@@ -115,6 +115,48 @@ if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   cp "$KUBECONFIG" "$PATH_KUBECONFIG"
 fi
 
+# Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
+# Historically, we used the docker container name for this, but this differs between clusters with different names
+# and doesn't work in IPv6 kind clusters: https://github.com/kubernetes-sigs/kind/issues/3114
+# Hence, we "manually" inject a host configuration into the cluster that always resolves to the kind container's IP,
+# that serves our garden cluster API.
+# This works in
+# - the first and the second kind cluster
+# - in IPv4 and IPv6 kind clusters
+# - in ManagedSeeds
+
+garden_cluster="$CLUSTER_NAME"
+if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
+  # garden-local2 is used as a second seed cluster, the first kind cluster runs the gardener control plane
+  garden_cluster="gardener-local"
+fi
+
+ip_address_field="IPAddress"
+if [[ "$IPFAMILY" == "ipv6" ]]; then
+  ip_address_field="GlobalIPv6Address"
+fi
+
+garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
+
+# Inject garden.local.gardener.cloud into all nodes
+kubectl get nodes -o name |\
+  cut -d/ -f2 |\
+  xargs -I {} docker exec {} sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
+
+# Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
+kubectl -n kube-system get configmap coredns -ojson | \
+  yq '.data.Corefile' | \
+  sed '0,/ready.*$/s//&'" \n\
+    hosts { \n\
+      $garden_cluster_ip garden.local.gardener.cloud \n\
+      fallthrough \n\
+    } \
+"'/' | \
+  kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
+  kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
+
+kubectl -n kube-system rollout restart deployment coredns
+
 if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
   kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry" --server-side
   kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
