@@ -112,11 +112,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	// clenaup conditions from extension status
-	if len(r.registeredExtension.cleanupConditions) > 0 {
-		newConditions := []gardencorev1beta1.Condition{}
+	// cleanup conditions from extension status
+	if len(r.registeredExtension.conditionTypesToRemove) > 0 {
+		var newConditions []gardencorev1beta1.Condition
 		for _, condition := range extension.GetExtensionStatus().GetConditions() {
-			if !r.registeredExtension.cleanupConditions.Has(condition.Type) {
+			if !r.registeredExtension.conditionTypesToRemove.Has(condition.Type) {
 				newConditions = append(newConditions, condition)
 			}
 		}
