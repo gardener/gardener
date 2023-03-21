@@ -42,6 +42,7 @@ type singleObject struct {
 	restConfig *rest.Config
 	newCache   cache.NewCacheFunc
 	opts       func() cache.Options
+	gvk        schema.GroupVersionKind
 
 	started   bool
 	startWait chan struct{} // startWait is a channel that is closed after the cache has been started
@@ -70,6 +71,7 @@ func NewSingleObject(
 	restConfig *rest.Config,
 	newCache cache.NewCacheFunc,
 	opts cache.Options,
+	gvk schema.GroupVersionKind,
 	clock clock.Clock,
 	maxIdleTime time.Duration,
 	garbageCollectionInterval time.Duration,
@@ -79,6 +81,7 @@ func NewSingleObject(
 		restConfig:                restConfig,
 		newCache:                  newCache,
 		opts:                      func() cache.Options { return opts },
+		gvk:                       gvk,
 		startWait:                 make(chan struct{}),
 		store:                     make(map[client.ObjectKey]*objectCache),
 		clock:                     clock,
@@ -172,10 +175,12 @@ func (s *singleObject) getOrCreateCache(key client.ObjectKey) (cache.Cache, erro
 		log.V(1).Info("Cache not found, creating it")
 
 		var err error
-		cache, err = s.createAndStartCache(key)
+		cache, err = s.createAndStartCache(log, key)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		log.V(1).Info("Cache found, accessing it")
 	}
 
 	now := s.clock.Now().UTC()
@@ -185,9 +190,7 @@ func (s *singleObject) getOrCreateCache(key client.ObjectKey) (cache.Cache, erro
 	return cache.cache, nil
 }
 
-func (s *singleObject) createAndStartCache(key client.ObjectKey) (*objectCache, error) {
-	log := s.log.WithValues("key", key)
-
+func (s *singleObject) createAndStartCache(log logr.Logger, key client.ObjectKey) (*objectCache, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -217,10 +220,24 @@ func (s *singleObject) createAndStartCache(key client.ObjectKey) (*objectCache, 
 		}
 	}()
 
+	waitForSyncCtx, waitForSyncCancel := context.WithTimeout(s.parentCtx, 5*time.Second)
+	defer waitForSyncCancel()
+
 	log.V(1).Info("Waiting for cache to be synced")
-	if !cache.WaitForCacheSync(s.parentCtx) {
+	if !cache.WaitForCacheSync(waitForSyncCtx) {
 		cancel()
 		return nil, fmt.Errorf("failed waiting for cache to be synced")
+	}
+
+	// The controller-runtime starts informers (which start the real WATCH on the API servers) only lazily with the
+	// first call on the cache. Hence, after we have started the cache above and waited for its sync, in fact no
+	// informer was started yet.
+	// Hence, when we newly start a cache here, we need to perform a call on such cache to make it starting the
+	// underlying informer. This is blocking because it implicitly waits for this informer to be synced. That's why we
+	// use a context with a small timeout, especially to exit early in case of any permission errors.
+	if _, err := cache.GetInformerForKind(waitForSyncCtx, s.gvk); err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed getting informer: %w", err)
 	}
 
 	log.V(1).Info("Cache was synced successfully")

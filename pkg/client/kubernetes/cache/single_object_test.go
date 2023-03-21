@@ -43,6 +43,7 @@ var _ = Describe("SingleObject", func() {
 		ctrl      *gomock.Controller
 
 		obj    *corev1.Secret
+		gvk    = corev1.SchemeGroupVersion.WithKind("Secret")
 		key    client.ObjectKey
 		resync = pointer.Duration(time.Second)
 
@@ -78,7 +79,7 @@ var _ = Describe("SingleObject", func() {
 		}
 		clock = testclock.NewFakeClock(time.Now())
 
-		singleObjectCache = NewSingleObject(logr.Discard(), nil, newCacheFunc, cache.Options{Resync: resync}, clock, maxIdleTime, 50*time.Millisecond)
+		singleObjectCache = NewSingleObject(logr.Discard(), nil, newCacheFunc, cache.Options{Resync: resync}, gvk, clock, maxIdleTime, 50*time.Millisecond)
 
 		var cancel context.CancelFunc
 		parentCtx, cancel = context.WithCancel(context.Background())
@@ -97,7 +98,7 @@ var _ = Describe("SingleObject", func() {
 
 	Describe("#Get", func() {
 		It("should successfully delegate to stored cache", func() {
-			testCache(parentCtx, mockCache, clock, maxIdleTime,
+			testCache(parentCtx, mockCache, gvk, clock, maxIdleTime,
 				func() {
 					mockCache.EXPECT().Get(ctx, key, obj)
 				},
@@ -119,7 +120,7 @@ var _ = Describe("SingleObject", func() {
 			})
 
 			It("should not stop the cache when the context of the caller is canceled", func() {
-				testCache(parentCtx, mockCache, clock, maxIdleTime,
+				testCache(parentCtx, mockCache, gvk, clock, maxIdleTime,
 					func() {
 						mockCache.EXPECT().Get(tmpCtx, key, obj)
 					},
@@ -135,7 +136,7 @@ var _ = Describe("SingleObject", func() {
 
 	Describe("#GetInformer", func() {
 		It("should delegate call to stored cache", func() {
-			testCache(parentCtx, mockCache, clock, maxIdleTime,
+			testCache(parentCtx, mockCache, gvk, clock, maxIdleTime,
 				func() {
 					mockCache.EXPECT().GetInformer(ctx, obj)
 				},
@@ -149,7 +150,7 @@ var _ = Describe("SingleObject", func() {
 
 	Describe("#IndexField", func() {
 		It("should delegate call to stored cache", func() {
-			testCache(parentCtx, mockCache, clock, maxIdleTime,
+			testCache(parentCtx, mockCache, gvk, clock, maxIdleTime,
 				func() {
 					mockCache.EXPECT().IndexField(ctx, obj, "", nil)
 				},
@@ -174,11 +175,22 @@ var _ = Describe("SingleObject", func() {
 	})
 })
 
-func testCache(parentCtx context.Context, mockCache *mockcache.MockCache, clock *testclock.FakeClock, maxIdleTime time.Duration, setupExpectation func(), testCall func() error) {
+func testCache(
+	parentCtx context.Context,
+	mockCache *mockcache.MockCache,
+	gvk schema.GroupVersionKind,
+	clock *testclock.FakeClock,
+	maxIdleTime time.Duration,
+	setupExpectation func(),
+	testCall func() error,
+) {
 	var (
 		cacheCtx  context.Context
 		startChan = make(chan struct{})
 	)
+
+	waitForSyncCtx, waitForSyncCancel := context.WithTimeout(parentCtx, 5*time.Second)
+	defer waitForSyncCancel()
 
 	By("cache does not exist yet")
 	mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
@@ -186,7 +198,8 @@ func testCache(parentCtx context.Context, mockCache *mockcache.MockCache, clock 
 		startChan <- struct{}{}
 		return nil
 	})
-	mockCache.EXPECT().WaitForCacheSync(parentCtx).Return(true)
+	mockCache.EXPECT().WaitForCacheSync(gomock.AssignableToTypeOf(waitForSyncCtx)).Return(true)
+	mockCache.EXPECT().GetInformerForKind(gomock.AssignableToTypeOf(waitForSyncCtx), gvk)
 	setupExpectation()
 	ExpectWithOffset(1, testCall()).To(Succeed())
 	EventuallyWithOffset(1, startChan).Should(Receive())
@@ -210,7 +223,8 @@ func testCache(parentCtx context.Context, mockCache *mockcache.MockCache, clock 
 		startChan2 <- struct{}{}
 		return nil
 	})
-	mockCache.EXPECT().WaitForCacheSync(parentCtx).Return(true)
+	mockCache.EXPECT().WaitForCacheSync(gomock.AssignableToTypeOf(waitForSyncCtx)).Return(true)
+	mockCache.EXPECT().GetInformerForKind(gomock.AssignableToTypeOf(waitForSyncCtx), gvk)
 	setupExpectation()
 	ExpectWithOffset(1, testCall()).To(Succeed())
 	EventuallyWithOffset(1, startChan2).Should(Receive())
