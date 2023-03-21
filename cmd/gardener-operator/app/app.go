@@ -17,8 +17,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	goruntime "runtime"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -130,8 +132,8 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		Host:                   cfg.Server.Webhooks.BindAddress,
 		Port:                   cfg.Server.Webhooks.Port,
 		CertDir:                "/tmp/gardener-operator-cert",
-		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,

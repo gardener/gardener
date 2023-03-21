@@ -17,8 +17,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	goruntime "runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -152,8 +154,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		Scheme:                  kubernetes.SeedScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
-		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
