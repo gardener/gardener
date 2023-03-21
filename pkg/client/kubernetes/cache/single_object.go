@@ -229,12 +229,12 @@ func (s *singleObject) createAndStartCache(log logr.Logger, key client.ObjectKey
 		return nil, fmt.Errorf("failed waiting for cache to be synced")
 	}
 
-	// The controller-runtime starts informers (which start the real WATCH on the API servers) only lazy with the first
-	// call on the cache. Hence, after we have started the cache above and waited for its sync, in fact no informer was
-	// started yet.
+	// The controller-runtime starts informers (which start the real WATCH on the API servers) only lazily with the
+	// first call on the cache. Hence, after we have started the cache above and waited for its sync, in fact no
+	// informer was started yet.
 	// Hence, when we newly start a cache here, we need to perform a call on such cache to make it starting the
 	// underlying informer. This is blocking because it implicitly waits for this informer to be synced. That's why we
-	// use a context with a small timeout.
+	// use a context with a small timeout, especially to exit early in case of any permission errors.
 	if _, err := cache.GetInformerForKind(waitForSyncCtx, s.gvk); err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed getting informer: %w", err)
