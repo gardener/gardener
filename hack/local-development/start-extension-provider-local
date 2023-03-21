@@ -23,10 +23,16 @@ CONTAINER_PATH=/etc/gardener/local-backupbuckets
 
 WEBHOOK_SERVER_PORT=${WEBHOOK_SERVER_PORT:-8444}
 WEBHOOK_CERT_DIR=${WEBHOOK_CERT_DIR:-/tmp/gardener-extensions-cert}
-SERVICE_HOST_IP=${SERVICE_HOST_IP:-127.0.0.1}
-SERVICE_ZONE_0_IP=${SERVICE_ZONE_0_IP:-127.0.0.10}
-SERVICE_ZONE_1_IP=${SERVICE_ZONE_1_IP:-127.0.0.11}
-SERVICE_ZONE_2_IP=${SERVICE_ZONE_2_IP:-127.0.0.12}
+service_host_ip=${SERVICE_HOST_IP:-127.0.0.1}
+service_zone_0_ip=${SERVICE_ZONE_0_IP:-127.0.0.10}
+service_zone_1_ip=${SERVICE_ZONE_1_IP:-127.0.0.11}
+service_zone_2_ip=${SERVICE_ZONE_2_IP:-127.0.0.12}
+if [[ "$IPFAMILY" == "ipv6" ]]; then
+  service_host_ip=${SERVICE_HOST_IP:-::1}
+  service_zone_0_ip=${SERVICE_ZONE_0_IP:-::10}
+  service_zone_1_ip=${SERVICE_ZONE_1_IP:-::11}
+  service_zone_2_ip=${SERVICE_ZONE_2_IP:-::12}
+fi
 METRICS_BIND_ADDRESS=${METRICS_BIND_ADDRESS:-:8080}
 HEALTH_BIND_ADDRESS=${HEALTH_BIND_ADDRESS:-:8081}
 
@@ -60,13 +66,13 @@ $SUDO go run \
   --leader-election=false \
   --webhook-config-mode=url \
   --webhook-config-server-port="${WEBHOOK_SERVER_PORT}" \
-  --webhook-config-url=$(get_host_address):${WEBHOOK_SERVER_PORT} \
+  --webhook-config-url="$(get_host_address)":${WEBHOOK_SERVER_PORT} \
   --webhook-config-cert-dir="${WEBHOOK_CERT_DIR}" \
   --webhook-config-namespace="${EXTENSION_NAMESPACE}" \
-  --service-host-ip="${SERVICE_HOST_IP}" \
-  --service-zone-0-ip="${SERVICE_ZONE_0_IP}" \
-  --service-zone-1-ip="${SERVICE_ZONE_1_IP}" \
-  --service-zone-2-ip="${SERVICE_ZONE_2_IP}" \
+  --service-host-ip="${service_host_ip}" \
+  --service-zone-0-ip="${service_zone_0_ip}" \
+  --service-zone-1-ip="${service_zone_1_ip}" \
+  --service-zone-2-ip="${service_zone_2_ip}" \
   --metrics-bind-address="${METRICS_BIND_ADDRESS}" \
   --health-bind-address="${HEALTH_BIND_ADDRESS}" \
   --heartbeat-namespace="${EXTENSION_NAMESPACE}" \

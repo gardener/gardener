@@ -72,7 +72,7 @@ GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 # Rules for local development scenarios #
 #########################################
 
-dev-setup register-local-env: export IPFAMILY := $(IPFAMILY)
+dev-setup register-local-env start-extension-provider-local: export IPFAMILY := $(IPFAMILY)
 
 .PHONY: dev-setup
 dev-setup:

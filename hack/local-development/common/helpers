@@ -143,14 +143,18 @@ get_host_address () {
   local ip_address=""
 
   if ! [[ "$(uname -s)" == *"Darwin"* ]] && ! [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]]; then
-    if [[ -z "$IPFAMILY" && $(echo "$IPFAMILY" | awk '{print tolower($0)}') == "ipv6" ]]; then
+    if [[ "$IPFAMILY" == "ipv6" ]]; then
       ip_route=$(ip route get 1::)
     else
       ip_route=$(ip route get 1)
     fi
 
     ip_address=$(echo ${ip_route#*src} | awk '{print $1}')
-    echo "$ip_address"
+    if [[ "$IPFAMILY" == "ipv6" ]]; then
+      echo "[$ip_address]"
+    else
+      echo "$ip_address"
+    fi
   else
     echo "host.docker.internal"
   fi

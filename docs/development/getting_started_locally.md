@@ -81,7 +81,7 @@ Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
 However, we need `localhost` to resolve to both `127.0.0.1` and `::1` so that we can talk to our registry via a single address (`localhost:5001`).
 
 Next, we need to configure NAT for outgoing traffic from the kind network to the internet.
-After executing `make kind-up IPFAMILY=ipv6`, check the network created by kind:
+After executing `make kind-up KIND_ENV=local IPFAMILY=ipv6`, check the network created by kind:
 
 ```bash
 $ docker network inspect kind | jq '.[].IPAM.Config[].Subnet'
@@ -128,7 +128,7 @@ make dev-setup DEV_SETUP_WITH_WEBHOOKS=true                                   # 
 make start-controller-manager                                                 # starting gardener-controller-manager
 ```
 
-> For IPv6 use `make dev-setup IPFAMILY=ipv6` instead.
+> For IPv6 use `make dev-setup DEV_SETUP_WITH_WEBHOOKS=true IPFAMILY=ipv6` instead.
 
 (Optional): In a new terminal pane, run:
 
@@ -150,6 +150,8 @@ In a new terminal pane, run:
 ```bash
 make start-extension-provider-local                                           # starting gardener-extension-provider-local
 ```
+
+> For IPv6 use `make start-extension-provider-local IPFAMILY=ipv6` instead.
 
 ℹ️ The [`provider-local`](../extensions/provider-local.md) is started with elevated privileges since it needs to manipulate your `/etc/hosts` file to enable you accessing the created shoot clusters from your local machine, see [this](../extensions/provider-local.md#dnsrecord) for more details.
 
