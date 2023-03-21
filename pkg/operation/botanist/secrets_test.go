@@ -16,15 +16,12 @@ package botanist_test
 
 import (
 	"context"
-	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,7 +34,6 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -317,253 +313,6 @@ var _ = Describe("Secrets", func() {
 			Expect(secret3.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
 		})
 	})
-
-	Context("service account signing key secret rotation", func() {
-		var (
-			namespace1, namespace2 *corev1.Namespace
-			sa1, sa2, sa3          *corev1.ServiceAccount
-			suffix                 = "-4c6b7a"
-		)
-
-		BeforeEach(func() {
-			namespace1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}}
-			namespace2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns2"}}
-
-			Expect(shootClient.Create(ctx, namespace1)).To(Succeed())
-			Expect(shootClient.Create(ctx, namespace2)).To(Succeed())
-
-			sa1 = &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{Name: "sa1", Namespace: namespace1.Name},
-				Secrets:    []corev1.ObjectReference{{Name: "sa1secret1"}},
-			}
-			sa2 = &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{Name: "sa2", Namespace: namespace2.Name},
-				Secrets:    []corev1.ObjectReference{{Name: "sa2-token" + suffix}, {Name: "sa2secret1"}},
-			}
-			sa3 = &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{Name: "sa3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "service-account-key-current"}},
-				Secrets:    []corev1.ObjectReference{{Name: "sa3secret1"}},
-			}
-
-			Expect(shootClient.Create(ctx, sa1)).To(Succeed())
-			Expect(shootClient.Create(ctx, sa2)).To(Succeed())
-			Expect(shootClient.Create(ctx, sa3)).To(Succeed())
-		})
-
-		Describe("#CreateNewServiceAccountSecrets", func() {
-			It("should create new service account secrets and make them the first in the list", func() {
-				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: seedNamespace}})).To(Succeed())
-
-				Expect(botanist.CreateNewServiceAccountSecrets(ctx)).To(Succeed())
-
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
-
-				Expect(sa1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
-				Expect(sa2.Labels).NotTo(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
-				Expect(sa3.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
-				Expect(sa1.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa1-token" + suffix}, corev1.ObjectReference{Name: "sa1secret1"}))
-				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}, corev1.ObjectReference{Name: "sa2secret1"}))
-				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa3secret1"}))
-
-				sa1Secret := &corev1.Secret{}
-				Expect(shootClient.Get(ctx, kubernetesutils.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret)).To(Succeed())
-				verifyCreatedSATokenSecret(sa1Secret, sa1.Name)
-			})
-		})
-
-		Describe("#DeleteOldServiceAccountSecrets", func() {
-			It("should delete old service account secrets", func() {
-				now := time.Now()
-
-				By("Create old ServiceAccount secrets")
-				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name:              "sa1secret1",
-					Namespace:         sa1.Namespace,
-					CreationTimestamp: metav1.Time{Time: now},
-				}})).To(Succeed())
-				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name:              "sa2secret1",
-					Namespace:         sa2.Namespace,
-					CreationTimestamp: metav1.Time{Time: now},
-				}})).To(Succeed())
-				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name:              "sa3secret1",
-					Namespace:         sa3.Namespace,
-					CreationTimestamp: metav1.Time{Time: now},
-				}})).To(Succeed())
-
-				By("Set credentials rotation status in Shoot")
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Status: gardencorev1beta1.ShootStatus{
-						Credentials: &gardencorev1beta1.ShootCredentials{
-							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
-								ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
-									LastInitiationFinishedTime: &metav1.Time{Time: now.Add(time.Minute)},
-								},
-							},
-						},
-					},
-				})
-
-				By("Create new ServiceAccount secret")
-				Expect(shootClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name:              sa2.Secrets[0].Name,
-					Namespace:         sa2.Namespace,
-					CreationTimestamp: metav1.Time{Time: botanist.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Add(time.Minute)},
-				}})).To(Succeed())
-
-				By("Run cleanup procedure")
-				Expect(botanist.DeleteOldServiceAccountSecrets(ctx)).To(Succeed())
-
-				By("Read ServiceAccounts after running cleanup procedure")
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
-
-				By("Performing assertions")
-				Expect(shootClient.Get(ctx, client.ObjectKey{Name: "sa1secret1", Namespace: sa1.Namespace}, &corev1.Secret{})).To(BeNotFoundError())
-				Expect(shootClient.Get(ctx, client.ObjectKey{Name: "sa2secret1", Namespace: sa2.Namespace}, &corev1.Secret{})).To(BeNotFoundError())
-				Expect(shootClient.Get(ctx, client.ObjectKey{Name: "sa3secret1", Namespace: sa3.Namespace}, &corev1.Secret{})).To(BeNotFoundError())
-
-				Expect(sa1.Secrets).To(BeEmpty())
-
-				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}))
-				Expect(shootClient.Get(ctx, client.ObjectKey{Name: sa2.Secrets[0].Name, Namespace: sa2.Namespace}, &corev1.Secret{})).To(Succeed())
-
-				Expect(sa3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
-				Expect(sa3.Secrets).To(BeEmpty())
-			})
-		})
-	})
-
-	Context("etcd encryption key secret rotation", func() {
-		var (
-			namespace1, namespace2    *corev1.Namespace
-			secret1, secret2, secret3 *corev1.Secret
-			kubeAPIServerDeployment   *appsv1.Deployment
-		)
-
-		BeforeEach(func() {
-			namespace1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}}
-			namespace2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns2"}}
-
-			Expect(shootClient.Create(ctx, namespace1)).To(Succeed())
-			Expect(shootClient.Create(ctx, namespace2)).To(Succeed())
-
-			secret1 = &corev1.Secret{
-				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-				ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: namespace1.Name},
-			}
-			secret2 = &corev1.Secret{
-				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-				ObjectMeta: metav1.ObjectMeta{Name: "secret2", Namespace: namespace2.Name},
-			}
-			secret3 = &corev1.Secret{
-				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-				ObjectMeta: metav1.ObjectMeta{Name: "secret3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
-			}
-
-			Expect(shootClient.Create(ctx, secret1)).To(Succeed())
-			Expect(shootClient.Create(ctx, secret2)).To(Succeed())
-			Expect(shootClient.Create(ctx, secret3)).To(Succeed())
-
-			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
-			Expect(seedClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
-		})
-
-		Describe("#RewriteSecretsAddLabel", func() {
-			It("should patch all secrets and add the label if not already done", func() {
-				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: seedNamespace}})).To(Succeed())
-
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				secret1ResourceVersion := secret1.ResourceVersion
-				secret2ResourceVersion := secret2.ResourceVersion
-				secret3ResourceVersion := secret3.ResourceVersion
-
-				Expect(botanist.RewriteSecretsAddLabel(ctx)).To(Succeed())
-
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				Expect(secret1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-				Expect(secret2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-				Expect(secret3.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-
-				Expect(secret1.ResourceVersion).NotTo(Equal(secret1ResourceVersion))
-				Expect(secret2.ResourceVersion).NotTo(Equal(secret2ResourceVersion))
-				Expect(secret3.ResourceVersion).To(Equal(secret3ResourceVersion))
-			})
-		})
-
-		Describe("#SnapshotETCDAfterRewritingSecrets", func() {
-			var (
-				ctrl     *gomock.Controller
-				etcdMain *mocketcd.MockInterface
-			)
-
-			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				etcdMain = mocketcd.NewMockInterface(ctrl)
-
-				botanist.Shoot.Components = &shootpkg.Components{
-					ControlPlane: &shootpkg.ControlPlane{
-						EtcdMain: etcdMain,
-					},
-				}
-			})
-
-			AfterEach(func() {
-				ctrl.Finish()
-			})
-
-			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
-				etcdMain.EXPECT().Snapshot(ctx, gomock.Any())
-
-				Expect(botanist.SnapshotETCDAfterRewritingSecrets(ctx)).To(Succeed())
-
-				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
-				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
-			})
-		})
-
-		Describe("#RewriteSecretsRemoveLabel", func() {
-			It("should patch all secrets and remove the label if not already done", func() {
-				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
-				Expect(seedClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
-
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				secret1ResourceVersion := secret1.ResourceVersion
-				secret2ResourceVersion := secret2.ResourceVersion
-				secret3ResourceVersion := secret3.ResourceVersion
-
-				Expect(botanist.RewriteSecretsRemoveLabel(ctx)).To(Succeed())
-
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				Expect(secret1.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
-				Expect(secret2.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
-				Expect(secret3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
-
-				Expect(secret1.ResourceVersion).To(Equal(secret1ResourceVersion))
-				Expect(secret2.ResourceVersion).To(Equal(secret2ResourceVersion))
-				Expect(secret3.ResourceVersion).NotTo(Equal(secret3ResourceVersion))
-
-				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
-				Expect(kubeAPIServerDeployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/etcd-snapshotted"))
-			})
-		})
-	})
 })
 
 func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.GomegaMatcher) {
@@ -585,9 +334,4 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 
 func rawData(key, value string) []byte {
 	return []byte(`{"` + key + `":"` + utils.EncodeBase64([]byte(value)) + `"}`)
-}
-
-func verifyCreatedSATokenSecret(secret *corev1.Secret, serviceAccountName string) {
-	ExpectWithOffset(1, secret.Type).To(Equal(corev1.SecretTypeServiceAccountToken))
-	ExpectWithOffset(1, secret.Annotations).To(HaveKeyWithValue("kubernetes.io/service-account.name", serviceAccountName))
 }
