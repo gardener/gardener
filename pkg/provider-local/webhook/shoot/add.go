@@ -15,10 +15,7 @@
 package shoot
 
 import (
-	"os"
-
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -43,33 +40,11 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	failurePolicy := admissionregistrationv1.Fail
 
-	args := shoot.Args{
+	return shoot.New(mgr, shoot.Args{
 		Types:         []extensionswebhook.Type{{Obj: &corev1.ConfigMap{}}},
 		Mutator:       NewMutator(),
 		FailurePolicy: &failurePolicy,
-	}
-
-	// With https://github.com/gardener/gardener/pull/7578, provider-local temporarily mutates the CoreDNS configuration
-	// since the cluster network is not working properly in the shoots. However, this breaks the development setup
-	// (https://github.com/gardener/gardener/blob/master/docs/development/getting_started_locally.md) because it is not
-	// possible to determine the shoot namespace when running out of the seed cluster. Hence, `MutatorWithShootClient`
-	// cannot be used.
-	// Since all this is just a temporary workaround and was motivated by fixing flaky e2e tests, we can also work
-	// without it for development scenarios for the time being.
-	// So when the `PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION` environment variable is not set then we enable the webhook
-	// (default scenario), otherwise we continue with above mutator (only for the local development scenario from
-	// above).
-	if os.Getenv("PROVIDER_LOCAL_DISABLE_COREDNS_MUTATION") == "" {
-		args.Mutator = nil
-		args.MutatorWithShootClient = NewMutatorWithShootClient(NewMutator())
-		args.Types = append(args.Types,
-			extensionswebhook.Type{Obj: &corev1.Node{}},
-			extensionswebhook.Type{Obj: &corev1.Service{}},
-			extensionswebhook.Type{Obj: &appsv1.Deployment{}},
-		)
-	}
-
-	return shoot.New(mgr, args)
+	})
 }
 
 // AddToManager creates a webhook with the default options and adds it to the manager.

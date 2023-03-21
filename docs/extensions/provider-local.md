@@ -18,9 +18,9 @@ The motivation for maintaining such extension is the following:
 The following enlists the current limitations of the implementation.
 Please note that all of them are not technical limitations/blockers, but simply advanced scenarios that we haven't had invested yet into.
 
-1. Shoot clusters can only have multiple nodes, but inter-pod communication for pods on different nodes does not work.
+1. Shoot clusters can have multiple nodes, but inter-pod communication for pods on different nodes only works with cilium as CNI plugin in the shoot cluster.
 
-   _We are using the [`networking-calico`](https://github.com/gardener/gardener-extension-networking-calico/) extension for the CNI plugin in shoot clusters, however, it doesn't seem to be configured correctly yet to support this scenario._
+   _We are using the [`networking-cilium`](https://github.com/gardener/gardener-extension-networking-cilium/) extension for the CNI plugin in shoot clusters per default. If the [`networking-calico`](https://github.com/gardener/gardener-extension-networking-calico/) extension should be used instead, however, cross-node pod-to-pod communication will not work out of the box. If required, setting `.spec.allowIPIPPacketsFromWorkloads` to `true` in the `FelixConfiguration` of the seed cluster can mitigate this issue._
 
 2. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
 
