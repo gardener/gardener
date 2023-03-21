@@ -858,7 +858,8 @@ var _ = Describe("Seed Validation Tests", func() {
 					))
 				})
 			})
-			Context("dependencyWatchdog", func() {
+
+			Context("dependency watchdog", func() {
 				It("should allow both weeder and endpoint settings to be set, if equal", func() {
 					seed.Spec.Settings = &core.SeedSettings{
 						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{
@@ -871,6 +872,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 					Expect(errorList).To(BeEmpty())
 				})
+
 				It("should allow both prober and probe settings to be set, if equal", func() {
 					seed.Spec.Settings = &core.SeedSettings{
 						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{

@@ -57,9 +57,8 @@ spec:
         enabled: true # crashlooping pods will be restarted once their dependants become ready
       prober:
         enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
-      probe: #deprecated
+      probe: # deprecated
         enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
-
     excessCapacityReservation:
       enabled: true # this seed will deploy excess-capacity-reservation pods
     scheduling:

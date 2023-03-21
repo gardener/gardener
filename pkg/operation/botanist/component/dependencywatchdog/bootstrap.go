@@ -169,7 +169,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// TODO: (himanshu-kun) remove after few releases
+	// TODO(himanshu-kun): remove after few releases
 	// First clean-up unsupported DWD managedResource and all the objects managed by it which includes old version of DWD weeder and prober as well.
 	if err := b.deleteOldDWDManagedResource(ctx); err != nil {
 		return err
@@ -337,7 +337,7 @@ func (b *bootstrapper) getRolePolicyRules() []rbacv1.PolicyRule {
 		resourceName = dwdWeederDefaultLockObjectName
 	}
 
-	rules := []rbacv1.PolicyRule{
+	return []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"coordination.k8s.io"},
 			Resources: []string{"leases"},
@@ -355,8 +355,6 @@ func (b *bootstrapper) getRolePolicyRules() []rbacv1.PolicyRule {
 			Verbs:     []string{"create", "get", "update", "patch"},
 		},
 	}
-
-	return rules
 }
 
 func (b *bootstrapper) getClusterRolePolicyRules() []rbacv1.PolicyRule {

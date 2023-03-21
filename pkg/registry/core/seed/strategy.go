@@ -75,6 +75,7 @@ func syncDependencyWatchdogSettings(seed *core.Seed) {
 		return
 	}
 	// keeping the field `weeder` and `endpoint` in sync
+	// TODO: Once the deprecated `Endpoint` / `Probe` fields are removed from the API, move the defaulting code back to `pkg/apis/core/*/defaults.go`.
 	// Case 1: If weeder is specified, endpoint isn't -> do nothing
 	// Case 2: If weeder isn't specified, endpoint is -> make weeder=endpoint
 	// Case 3: If both are specified, give preference to weeder field -> set endpoint=weeder

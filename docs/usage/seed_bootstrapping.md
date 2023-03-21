@@ -37,11 +37,11 @@ As a result, the customer's workload will go down and become unreachable.
 
 This is exactly the situation that the DWD prevents:
 It regularly tries to talk to the `kube-apiserver`s of the shoot clusters, once by using their load balancer, and once by talking via the in-cluster `Service`.
-If it detects that the `kube-apiserver` is reachable internally but not externally it scales down `machine-controller-manager`, `cluster-autoscaler`(if enabled) and `kube-controller-manager` to `0`.
+If it detects that the `kube-apiserver` is reachable internally but not externally, it scales down `machine-controller-manager`, `cluster-autoscaler` (if enabled) and `kube-controller-manager` to `0`.
 This will prevent it from marking the shoot worker nodes as "unready". This will also prevent the `machine-controller-manager` from deleting potentially healthy nodes.
-As soon as the `kube-apiserver` is reachable externally again, `kube-controller-manager` , `machine-controller-manager` and `cluster-autoscaler` are restored to the state prior to scale-down.
+As soon as the `kube-apiserver` is reachable externally again, `kube-controller-manager`, `machine-controller-manager` and `cluster-autoscaler` are restored to the state prior to scale-down.
 
-### Weeder 
+### Weeder
 
 The `dependency-watchdog-weeder` deployment is responsible for above mentioned second point.
 

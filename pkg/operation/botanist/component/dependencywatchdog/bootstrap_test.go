@@ -498,6 +498,7 @@ status:
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			})
+
 			// TODO(himanshu-kun): Remove these tests after complete migration to DWD v1
 			It("should successfully clean-up old unsupported DWD managed resource and create managed resource and secret for role "+string(values.Role), func() {
 				oldManagedResourceName := ManagedResourceDependencyWatchdogProbe

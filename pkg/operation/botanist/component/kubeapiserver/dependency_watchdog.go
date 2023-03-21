@@ -99,5 +99,4 @@ func NewDependencyWatchdogProberConfiguration() ([]proberapi.DependentResourceIn
 			},
 		},
 	}, nil
-
 }
