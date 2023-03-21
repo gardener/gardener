@@ -104,12 +104,16 @@ func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.
 
 // SingleObjectCacheFunc returns a cache.NewCacheFunc for the SingleObject implementation.
 func SingleObjectCacheFunc(log logr.Logger, scheme *runtime.Scheme, obj client.Object) cache.NewCacheFunc {
-	logger := log.WithName("single-object-cache")
-	if gvk, _, err := scheme.ObjectKinds(obj); err == nil && len(gvk) > 0 {
-		logger = logger.WithValues("groupVersion", gvk[0].GroupVersion().String(), "kind", gvk[0].Kind)
-	}
-
 	return func(restConfig *rest.Config, options cache.Options) (cache.Cache, error) {
-		return kubernetescache.NewSingleObject(logger, restConfig, cache.New, options, clock.RealClock{}, 10*time.Minute, time.Minute), nil
+		gvk, err := apiutil.GVKForObject(obj, scheme)
+		if err != nil {
+			return nil, err
+		}
+
+		logger := log.
+			WithName("single-object-cache").
+			WithValues("groupVersion", gvk.GroupVersion().String(), "kind", gvk.Kind)
+
+		return kubernetescache.NewSingleObject(logger, restConfig, cache.New, options, gvk, clock.RealClock{}, 10*time.Minute, time.Minute), nil
 	}
 }
