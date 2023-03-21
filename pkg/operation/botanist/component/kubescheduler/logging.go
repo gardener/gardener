@@ -39,6 +39,5 @@ const (
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the kube-scheduler logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters:     loggingFilter,Parsers:     loggingParser,
-	}, nil
+	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
 }
