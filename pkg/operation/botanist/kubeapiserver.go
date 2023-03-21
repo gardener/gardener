@@ -626,7 +626,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
 			// annotation) and redeploy it with the option to use the current/new key for encryption, see
 			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
-			if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
+			if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
 				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")
 			}); err != nil {
 				return err
@@ -641,7 +641,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 
 	case gardencorev1beta1.RotationCompleting:
-		if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
+		if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
 			delete(meta.Annotations, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated)
 		}); err != nil {
 			return err

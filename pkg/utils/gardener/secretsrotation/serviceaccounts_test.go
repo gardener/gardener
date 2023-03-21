@@ -27,7 +27,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -41,9 +40,8 @@ var _ = Describe("Service accounts", func() {
 
 		kubeAPIServerNamespace = "shoot--foo--bar"
 
-		runtimeClient   client.Client
-		targetClient    client.Client
-		targetClientSet kubernetes.Interface
+		runtimeClient client.Client
+		targetClient  client.Client
 
 		fakeSecretsManager secretsmanager.Interface
 
@@ -53,7 +51,6 @@ var _ = Describe("Service accounts", func() {
 	BeforeEach(func() {
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		targetClientSet = kubernetesfake.NewClientSetBuilder().WithClient(targetClient).Build()
 
 		fakeSecretsManager = fakesecretsmanager.New(runtimeClient, kubeAPIServerNamespace)
 
@@ -96,7 +93,7 @@ var _ = Describe("Service accounts", func() {
 			It("should create new service account secrets and make them the first in the list", func() {
 				Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: kubeAPIServerNamespace}})).To(Succeed())
 
-				Expect(CreateNewServiceAccountSecrets(ctx, logger, targetClientSet, fakeSecretsManager)).To(Succeed())
+				Expect(CreateNewServiceAccountSecrets(ctx, logger, targetClient, fakeSecretsManager)).To(Succeed())
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
@@ -147,7 +144,7 @@ var _ = Describe("Service accounts", func() {
 				}})).To(Succeed())
 
 				By("Run cleanup procedure")
-				Expect(DeleteOldServiceAccountSecrets(ctx, logger, targetClientSet, lastInitiationFinishedTime)).To(Succeed())
+				Expect(DeleteOldServiceAccountSecrets(ctx, logger, targetClient, lastInitiationFinishedTime)).To(Succeed())
 
 				By("Read ServiceAccounts after running cleanup procedure")
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())

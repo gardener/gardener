@@ -452,7 +452,7 @@ func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logg
 			return retryutils.SevereError(err)
 		}
 		lastOperation := shoot.Status.LastOperation
-		if !sets.New[string](shoot.Finalizers...).Has(gardencorev1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+		if !sets.New(shoot.Finalizers...).Has(gardencorev1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 			return retryutils.Ok()
 		}
 		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1beta1.GardenerName))

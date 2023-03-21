@@ -28,7 +28,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -41,10 +40,8 @@ var _ = Describe("ETCD", func() {
 
 		kubeAPIServerNamespace = "shoot--foo--bar"
 
-		runtimeClient    client.Client
-		runtimeClientSet kubernetes.Interface
-		targetClient     client.Client
-		targetClientSet  kubernetes.Interface
+		runtimeClient client.Client
+		targetClient  client.Client
 
 		fakeSecretsManager secretsmanager.Interface
 
@@ -53,9 +50,7 @@ var _ = Describe("ETCD", func() {
 
 	BeforeEach(func() {
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		runtimeClientSet = kubernetesfake.NewClientSetBuilder().WithClient(runtimeClient).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		targetClientSet = kubernetesfake.NewClientSetBuilder().WithClient(targetClient).Build()
 
 		fakeSecretsManager = fakesecretsmanager.New(runtimeClient, kubeAPIServerNamespace)
 
@@ -109,7 +104,7 @@ var _ = Describe("ETCD", func() {
 				secret2ResourceVersion := secret2.ResourceVersion
 				secret3ResourceVersion := secret3.ResourceVersion
 
-				Expect(RewriteSecretsAddLabel(ctx, logger, targetClientSet, fakeSecretsManager)).To(Succeed())
+				Expect(RewriteSecretsAddLabel(ctx, logger, targetClient, fakeSecretsManager)).To(Succeed())
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
@@ -143,7 +138,7 @@ var _ = Describe("ETCD", func() {
 			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
 				etcdMain.EXPECT().Snapshot(ctx, gomock.Any())
 
-				Expect(SnapshotETCDAfterRewritingSecrets(ctx, runtimeClientSet, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace)).To(Succeed())
+				Expect(SnapshotETCDAfterRewritingSecrets(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace)).To(Succeed())
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
@@ -163,7 +158,7 @@ var _ = Describe("ETCD", func() {
 				secret2ResourceVersion := secret2.ResourceVersion
 				secret3ResourceVersion := secret3.ResourceVersion
 
-				Expect(RewriteSecretsRemoveLabel(ctx, logger, runtimeClientSet, targetClientSet, kubeAPIServerNamespace)).To(Succeed())
+				Expect(RewriteSecretsRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace)).To(Succeed())
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())

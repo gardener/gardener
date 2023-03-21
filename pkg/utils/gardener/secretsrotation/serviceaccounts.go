@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -39,7 +38,7 @@ import (
 
 // CreateNewServiceAccountSecrets creates new secrets for all service accounts in the target cluster. This should only
 // be executed in the 'Preparing' phase of the service account signing key rotation operation.
-func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, clientSet kubernetes.Interface, secretsManager secretsmanager.Interface) error {
+func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, c client.Client, secretsManager secretsmanager.Interface) error {
 	serviceAccountKeySecret, found := secretsManager.Get(v1beta1constants.SecretNameServiceAccountKey, secretsmanager.Current)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
@@ -47,7 +46,7 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 	secretNameSuffix := utils.ComputeSecretChecksum(serviceAccountKeySecret.Data)[:6]
 
 	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := clientSet.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
+	if err := c.List(ctx, serviceAccountList, client.MatchingLabelsSelector{
 		Selector: labels.NewSelector().Add(
 			utils.MustNewRequirement(labelKeyRotationKeyName, selection.NotEquals, serviceAccountKeySecret.Name),
 		)},
@@ -94,7 +93,7 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 				return err
 			}
 
-			if err := clientSet.Client().Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
+			if err := c.Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
 				log.Error(err, "Error creating new ServiceAccount secret")
 				return err
 			}
@@ -105,7 +104,7 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 			return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
 				// Make sure we have the most recent version of the service account when we reach this point (which might
 				// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
-				if err := clientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
+				if err := c.Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
 					return retry.SevereError(err)
 				}
 
@@ -113,7 +112,7 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 				metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
 				serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
 
-				if err := clientSet.Client().Patch(ctx, &serviceAccount, patch); err != nil {
+				if err := c.Patch(ctx, &serviceAccount, patch); err != nil {
 					if apierrors.IsConflict(err) {
 						return retry.MinorError(err)
 					}
@@ -130,9 +129,9 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 
 // DeleteOldServiceAccountSecrets deletes old secrets for all service accounts in the target cluster. This should only
 // be executed in the 'Completing' phase of the service account signing key rotation operation.
-func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, clientSet kubernetes.Interface, serviceAccountLastInitiationFinishedTime time.Time) error {
+func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, c client.Client, serviceAccountLastInitiationFinishedTime time.Time) error {
 	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := clientSet.Client().List(ctx, serviceAccountList); err != nil {
+	if err := c.List(ctx, serviceAccountList); err != nil {
 		return err
 	}
 
@@ -166,7 +165,7 @@ func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 			for _, secretReference := range serviceAccount.Secrets {
 				secretMeta := &metav1.PartialObjectMetadata{}
 				secretMeta.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
-				if err := clientSet.Client().Get(ctx, client.ObjectKey{Name: secretReference.Name, Namespace: serviceAccount.Namespace}, secretMeta); err != nil {
+				if err := c.Get(ctx, client.ObjectKey{Name: secretReference.Name, Namespace: serviceAccount.Namespace}, secretMeta); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return err
 					}
@@ -183,7 +182,7 @@ func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 				return nil
 			}
 
-			if err := kubernetesutils.DeleteObjects(ctx, clientSet.Client(), secretsToDelete...); err != nil {
+			if err := kubernetesutils.DeleteObjects(ctx, c, secretsToDelete...); err != nil {
 				log.Error(err, "Error deleting old ServiceAccount secrets")
 				return err
 			}
@@ -196,7 +195,7 @@ func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 				// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
 				// Also, when deleting above secrets, kube-controller-manager might already remove them from the service
 				// account which definitely changes the object.
-				if err := clientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
+				if err := c.Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
 					return retry.SevereError(err)
 				}
 
@@ -204,7 +203,7 @@ func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, client
 				delete(serviceAccount.Labels, labelKeyRotationKeyName)
 				serviceAccount.Secrets = remainingSecrets
 
-				if err := clientSet.Client().Patch(ctx, &serviceAccount, patch); err != nil {
+				if err := c.Patch(ctx, &serviceAccount, patch); err != nil {
 					if apierrors.IsConflict(err) {
 						return retry.MinorError(err)
 					}
