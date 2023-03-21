@@ -84,17 +84,24 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 
 ## Local Development
 
-The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy the `gardener-operator`.
+The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy and develop the `gardener-operator`.
 
 ```shell
+# prepare a kind cluster
 make kind-operator-up
+
+# deploy gardener-operator
+# option 1: one-time build and deployment
 make operator-up
+# option 2: full dev loop, press any key to build and deploy new changes
+make operator-dev
 
 # now you can create Garden resources, for example
 kubectl create -f example/operator/20-garden.yaml
 # alternatively, you can run the e2e test
 make test-e2e-local-operator
 
+# clean up
 make operator-down
 make kind-operator-down
 ```
@@ -104,12 +111,12 @@ An alternative approach is to start the process locally and manually deploy the 
 
 ```shell
 kubectl create -f example/operator/10-crd-operator.gardener.cloud_gardens.yaml
-make KUBECONFIG=... start-operator
+make start-operator KUBECONFIG=...
 
 # now you can create Garden resources, for example
 kubectl create -f example/operator/20-garden.yaml
 # alternatively, you can run the e2e test
-make KUBECONFIG=... test-e2e-local-operator
+make test-e2e-local-operator KUBECONFIG=...
 ```
 
 ## Implementation Details

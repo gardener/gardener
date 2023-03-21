@@ -302,9 +302,6 @@ kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up regis
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
-gardener-extensions-up gardener-extensions-down: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
-gardener-extensions-up gardener-extensions-down: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
-
 kind-up: $(KIND) $(KUBECTL) $(HELM)
 	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind-down: $(KIND)
@@ -342,17 +339,28 @@ kind-operator-down: $(KIND)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
+gardener%up gardener%dev gardenlet%up gardenlet%dev operator-up operator-dev: export SKAFFOLD_DEFAULT_REPO = localhost:5001
+gardener%up gardener%dev gardenlet%up gardenlet%dev operator-up operator-dev: export SKAFFOLD_PUSH = true
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
-gardener-up gardener-down gardener-ha-single-zone-up gardener-ha-single-zone-down gardener-ha-multi-zone-up gardener-ha-multi-zone-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
-gardener-extensions-up gardener-extensions-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
-
+gardener%up gardener%dev gardener%down gardenlet%up gardenlet%dev gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 # set ldflags for skaffold
-gardener-up gardener-extensions-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up operator-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+gardener%up gardener%dev gardenlet%up gardenlet%dev operator-up operator-dev: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+# skaffold dev cleans up deployed modules by default, disable this
+gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_CLEANUP = false
+# skaffold dev triggers new builds and deployments immediately on file changes by default,
+# this is too heavy in a large project like gardener, so trigger new builds and deployments manually instead.
+gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_TRIGGER = manual
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
+	$(SKAFFOLD) run
+gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+	$(SKAFFOLD) dev
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
+
+gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
+gardener-extensions-%: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
+gardener-extensions-%: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
 
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig --seed-name $(SEED_NAME)
@@ -370,7 +378,11 @@ tear-down-local-env: $(KUBECTL)
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
+gardenlet-kind2-dev: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) dev -m provider-local,gardenlet -p kind2
 gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
@@ -380,7 +392,9 @@ tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
 gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-single-zone
+	$(SKAFFOLD) run -p ha-single-zone
+gardener-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) dev -p ha-single-zone
 gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh --skaffold-profile ha-single-zone
 register-kind-ha-single-zone-env: $(KUBECTL)
@@ -392,7 +406,9 @@ tear-down-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
 gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-multi-zone
+	$(SKAFFOLD) run -p ha-multi-zone
+gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) dev -p ha-multi-zone
 gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh --skaffold-profile ha-multi-zone
 register-kind-ha-multi-zone-env: $(KUBECTL)
@@ -403,11 +419,15 @@ tear-down-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+operator-%: export SKAFFOLD_FILENAME = skaffold-operator.yaml
+
 operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -f skaffold-operator.yaml
+	$(SKAFFOLD) run
+operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) dev
 operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -f skaffold-operator.yaml
+	$(SKAFFOLD) delete
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
